@@ -1,0 +1,52 @@
+# Turbo
+.turbo
+
+# Build output
+target
+dist
+build
+out-tsc
+.output
+
+# Temporary files
+tmp
+.tmp
+.cache
+.eslintcache
+tsconfig.tsbuildinfo
+
+# Dependencies
+node_modules
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.prod*
+
+# Editors
+
+## VS Code
+.vscode
+.history
+
+## JetBrains
+.idea
+.idea_modules
+*.iml
+*.ipr
+*.iws
+
+# OS
+
+## Linux
+*~
+.Trash-*
+
+## MacOS
+.DS_Store
+._*

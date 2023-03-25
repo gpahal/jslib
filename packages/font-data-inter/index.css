@@ -1,0 +1,129 @@
+/* cyrillic-ext */
+@font-face {
+  font-family: "Inter";
+  font-style: oblique 0deg 10deg;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./files/cyrillic-ext.woff2") format("woff2");
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: "Inter";
+  font-style: oblique 0deg 10deg;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./files/cyrillic.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek-ext */
+@font-face {
+  font-family: "Inter";
+  font-style: oblique 0deg 10deg;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./files/greek-ext.woff2") format("woff2");
+  unicode-range: U+1F00-1FFF;
+}
+/* greek */
+@font-face {
+  font-family: "Inter";
+  font-style: oblique 0deg 10deg;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./files/greek.woff2") format("woff2");
+  unicode-range: U+0370-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: "Inter";
+  font-style: oblique 0deg 10deg;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./files/vietnamese.woff2") format("woff2");
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0,
+    U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: "Inter";
+  font-style: oblique 0deg 10deg;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./files/latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: "Inter";
+  font-style: oblique 0deg 10deg;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./files/latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F,
+    U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* fallback -apple-system */
+@font-face {
+  font-family: "Inter fallback -apple-system";
+  src: local("-apple-system");
+  size-adjust: 115.309868%;
+  ascent-override: 84.012757%;
+  descent-override: -20.941596%;
+  line-gap-override: 0%;
+}
+/* fallback BlinkMacSystemFont */
+@font-face {
+  font-family: "Inter fallback BlinkMacSystemFont";
+  src: local("BlinkMacSystemFont");
+  size-adjust: 115.309868%;
+  ascent-override: 84.012757%;
+  descent-override: -20.941596%;
+  line-gap-override: 0%;
+}
+/* fallback Segoe UI */
+@font-face {
+  font-family: "Inter fallback Segoe UI";
+  src: local("Segoe UI");
+  size-adjust: 107.164359%;
+  ascent-override: 90.398525%;
+  descent-override: -22.533357%;
+  line-gap-override: 0%;
+}
+/* fallback Roboto */
+@font-face {
+  font-family: "Inter fallback Roboto";
+  src: local("Roboto");
+  size-adjust: 107.282772%;
+  ascent-override: 90.298748%;
+  descent-override: -22.508485%;
+  line-gap-override: 0%;
+}
+/* fallback Helvetica Neue */
+@font-face {
+  font-family: "Inter fallback Helvetica Neue";
+  src: local("Helvetica Neue");
+  size-adjust: 106.057428%;
+  ascent-override: 91.342022%;
+  descent-override: -22.768539%;
+  line-gap-override: 0%;
+}
+/* fallback Arial */
+@font-face {
+  font-family: "Inter fallback Arial";
+  src: local("Arial");
+  size-adjust: 107.401448%;
+  ascent-override: 90.19897%;
+  descent-override: -22.483614%;
+  line-gap-override: 0%;
+}
+/* fallback Noto Sans */
+@font-face {
+  font-family: "Inter fallback Noto Sans";
+  src: local("Noto Sans");
+  size-adjust: 100.653228%;
+  ascent-override: 96.246292%;
+  descent-override: -23.991011%;
+  line-gap-override: 0%;
+}

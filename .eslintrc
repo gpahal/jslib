@@ -1,0 +1,139 @@
+{
+  "root": true,
+  "env": {
+    "node": true,
+    "browser": true,
+    "es2022": true
+  },
+  "parser": "@babel/eslint-parser",
+  "parserOptions": {
+    "sourceType": "module",
+    "ecmaVersion": "latest",
+    "requireConfigFile": false
+  },
+  "ignorePatterns": ["node_modules", "dist", "build", "public", "coverage", "tmp"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:vitest-globals/recommended",
+    "turbo",
+    "prettier"
+  ],
+  "plugins": ["unicorn", "node", "import"],
+  "settings": {
+    "import/ignore": ["node_modules", "\\.(md|mdx|mdoc|json|css|svg)$"],
+    "import/parsers": {
+      "@typescript-eslint/parser": [".ts"]
+    },
+    "import/resolver": {
+      "eslint-import-resolver-node": {
+        "extensions": [".js", ".ts"]
+      },
+      "eslint-import-resolver-typescript": {
+        "alwaysTryTypes": true
+      }
+    }
+  },
+  "rules": {
+    "no-constant-condition": "off",
+    "import/order": [
+      "error",
+      {
+        "newlines-between": "always",
+        "alphabetize": {
+          "order": "asc"
+        },
+        "pathGroupsExcludedImportTypes": ["builtin"],
+        "warnOnUnassignedImports": true,
+        "groups": [
+          "builtin",
+          "external",
+          "internal",
+          ["parent", "sibling", "index"],
+          "object",
+          "type",
+          "unknown"
+        ],
+        "pathGroups": [
+          {
+            "pattern": "^@gpahal/.*",
+            "group": "internal",
+            "position": "after"
+          },
+          {
+            "pattern": "^~.*",
+            "group": "internal",
+            "position": "after"
+          },
+          {
+            "pattern": "*.css",
+            "patternOptions": { "matchBase": true },
+            "group": "unknown",
+            "position": "after"
+          }
+        ]
+      }
+    ],
+    "import/first": "error",
+    "import/newline-after-import": "error",
+    "import/no-absolute-path": "error",
+    "import/no-extraneous-dependencies": [
+      "error",
+      {
+        "devDependencies": true,
+        "peerDependencies": true,
+        "optionalDependencies": false
+      }
+    ],
+    "import/no-mutable-exports": "error",
+    "import/no-named-default": "error",
+    "import/no-self-import": "error",
+    "import/no-duplicates": "error",
+    "import/no-amd": "error",
+    "import/no-webpack-loader-syntax": "error"
+  },
+  "overrides": [
+    {
+      "files": ["*.ts"],
+      "parser": "@typescript-eslint/parser",
+      "extends": [
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:import/typescript"
+      ],
+      "parserOptions": {
+        "sourceType": "module",
+        "ecmaVersion": "latest",
+        "warnOnUnsupportedTypeScriptVersion": true,
+        "project": "./tsconfig.eslint.json"
+      },
+      "rules": {
+        "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports" }],
+        "@typescript-eslint/no-floating-promises": "error",
+        "@typescript-eslint/no-non-null-assertion": "off",
+        "@typescript-eslint/no-unused-vars": [
+          "error",
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_",
+            "destructuredArrayIgnorePattern": "^_"
+          }
+        ],
+        "unicorn/filename-case": [
+          "error",
+          {
+            "cases": {
+              "kebabCase": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/*.test.{js,mjs,cjs,ts}"],
+      "env": {
+        "vitest-globals/env": true
+      }
+    }
+  ]
+}

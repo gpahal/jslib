@@ -1,0 +1,52 @@
+{
+  "name": "@gpahal/og-image",
+  "version": "0.0.2",
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./wasm": {
+      "require": "./dist/wasm.cjs",
+      "import": "./dist/wasm.js",
+      "types": "./dist/wasm.d.ts"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "README.md",
+    "package.json",
+    "dist",
+    "wasm.js"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "prepublishOnly": "pnpm build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "satori": "^0.4.4",
+    "satori-html": "^0.3.2",
+    "yoga-wasm-web": "^0.3.3"
+  },
+  "devDependencies": {
+    "@gpahal/font": "workspace:*",
+    "@gpahal/font-data-inter": "workspace:*",
+    "@gpahal/font-data-source-code-pro": "workspace:*",
+    "@types/react": "^18.0.29",
+    "cross-fetch": "^3.1.5",
+    "preact": "^10.13.1"
+  }
+}

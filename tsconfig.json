@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "files": [],
+  "references": [
+    { "path": "packages/font" },
+    { "path": "packages/font-data-inter" },
+    { "path": "packages/font-data-source-code-pro" },
+    { "path": "packages/font-fallback" },
+    { "path": "packages/image" },
+    { "path": "packages/image-node" },
+    { "path": "packages/logger" },
+    { "path": "packages/markdoc" },
+    { "path": "packages/og-image" },
+    { "path": "packages/std" },
+    { "path": "packages/std-node" },
+    { "path": "packages/tailwind-color-themes" },
+    { "path": "packages/tailwind-variants" }
+  ]
+}

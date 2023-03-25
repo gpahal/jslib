@@ -1,0 +1,44 @@
+{
+  "name": "@gpahal/font-data-inter",
+  "version": "0.0.6",
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./index.css",
+    "./font-info": {
+      "require": "./dist/font-info.cjs",
+      "import": "./dist/font-info.js",
+      "types": "./dist/font-info.d.ts"
+    },
+    "./files/*": "./files/*"
+  },
+  "typesVersions": {
+    "*": {
+      "font-info": [
+        "dist/font-info.d.ts"
+      ]
+    }
+  },
+  "main": "index.css",
+  "files": [
+    "README.md",
+    "package.json",
+    "dist",
+    "index.css",
+    "files"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
+  "devDependencies": {
+    "@gpahal/font": "workspace:*"
+  }
+}

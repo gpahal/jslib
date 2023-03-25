@@ -1,0 +1,16 @@
+export const IGNORED_FILES = [
+  "**/.git/**",
+  "**/target/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/out-tsc/**",
+  "**/.output/**",
+  "**/tmp/**",
+  "**/.tmp/**",
+  "**/.cache/**",
+  "**/.eslintcache/**",
+  "**/node_modules/**",
+  "**/.vscode/**",
+  "**/.idea/**",
+  "**/.idea_modules/**",
+];
