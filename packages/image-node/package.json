@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/image-node",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -34,9 +34,9 @@
   },
   "devDependencies": {
     "@types/sharp": "^0.31.1",
-    "sharp": "^0.31.3"
+    "sharp": "^0.32.0"
   },
   "peerDependencies": {
-    "sharp": "^0.31.3"
+    "sharp": "^0.32.0"
   }
 }

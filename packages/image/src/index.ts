@@ -70,20 +70,21 @@ export type TransformImageSrcRequest = BaseTransformImageRequest & {
 export type TransformImageSrcFn = (request: TransformImageSrcRequest) => string;
 
 type MaxWidthImageLayout = {
-  layout: "max-width";
+  type: "max-width";
   maxWidth: number;
 };
 
 type VwRatioImageLayout = {
-  layout: "vw-ratio";
+  type: "vw-ratio";
   vwRatio: number;
+  maxWidth?: number;
 };
 
 type ImageLayout = MaxWidthImageLayout | VwRatioImageLayout;
 
 const DEVICE_WIDTHS = [640, 750, 828, 960, 1080, 1280, 1920, 2048, 3840] as const;
 
-const DEFAULT_DEVICE_WIDTH = DEVICE_WIDTHS[5]!;
+const DEFAULT_DEVICE_WIDTH = DEVICE_WIDTHS[6]!;
 const SMALLEST_DEVICE_WIDTH = DEVICE_WIDTHS[0]!;
 const LARGEST_DEVICE_WIDTH = DEVICE_WIDTHS[DEVICE_WIDTHS.length - 1]!;
 
@@ -93,7 +94,7 @@ const LOW_RESOLUTION_WIDTH = 32 as const;
 const LOW_RESOLUTION_OUTPUT_FORMAT = "png" as const;
 
 function getImageLayoutBreakpoints(layout: ImageLayout): number[] {
-  switch (layout.layout) {
+  switch (layout.type) {
     case "max-width":
       return getMaxWidthImageLayoutBreakpoints(layout);
     case "vw-ratio":
@@ -105,18 +106,28 @@ function getMaxWidthImageLayoutBreakpoints({ maxWidth }: MaxWidthImageLayout): n
   return [maxWidth, ...DEVICE_WIDTHS.filter((w) => w < maxWidth)];
 }
 
-function getVwRatioImageLayoutBreakpoints({ vwRatio }: VwRatioImageLayout): number[] {
+function getVwRatioImageLayoutBreakpoints({
+  vwRatio,
+  maxWidth: layoutMaxWidth,
+}: VwRatioImageLayout): number[] {
   const minWidth = SMALLEST_DEVICE_WIDTH * vwRatio;
-  const maxWidth = LARGEST_DEVICE_WIDTH * vwRatio;
+  let maxWidth = LARGEST_DEVICE_WIDTH * vwRatio;
+  if (layoutMaxWidth != null && layoutMaxWidth > 0) {
+    maxWidth = Math.min(maxWidth, layoutMaxWidth);
+  }
   return [...IMAGE_WIDTHS, ...DEVICE_WIDTHS].filter((w) => w >= minWidth && w <= maxWidth);
 }
 
 function getImageLayoutSizesAttribute(layout: ImageLayout): string {
-  switch (layout.layout) {
+  switch (layout.type) {
     case "max-width":
       return `(min-width: ${layout.maxWidth}px) ${layout.maxWidth}px, 100vw`;
     case "vw-ratio":
-      return `${layout.vwRatio}vw`;
+      return `${
+        layout.maxWidth != null && layout.maxWidth > 0
+          ? `(min-width: ${layout.maxWidth}px) ${layout.maxWidth}px, `
+          : ""
+      }${layout.vwRatio}vw`;
   }
 }
 
@@ -239,7 +250,7 @@ function getImageStyle({
 
   style.width = "100%";
   style.aspectRatio = `${aspectRatio}`;
-  if (layout.layout === "max-width") {
+  if (layout.maxWidth != null) {
     style.maxWidth = pixelate(layout.maxWidth);
     style.maxHeight = pixelate(layout.maxWidth / aspectRatio);
   }
@@ -281,7 +292,7 @@ export function transformNonTransformableImageSourcePropsToHTMLProps({
 function getNonTransformableImageSourceProps({
   src,
   aspectRatio,
-  layout = { layout: "vw-ratio", vwRatio: 1 },
+  layout = { type: "vw-ratio", vwRatio: 1 },
   background,
   objectFit = "cover",
 }: NonTransformableImageSourceOptions): NonTransformableImageSourceProps {
@@ -343,8 +354,11 @@ function getImageSourceProps({
     getNonTransformableImageSourceProps(nonTransformableOptions);
   const style = nonTransformableImageSourceProps.style;
 
-  const { aspectRatio, layout = { layout: "vw-ratio", vwRatio: 1 } } = nonTransformableOptions;
-  const finalWidth = layout.layout === "max-width" ? layout.maxWidth : DEFAULT_DEVICE_WIDTH;
+  const { aspectRatio, layout = { type: "vw-ratio", vwRatio: 1 } } = nonTransformableOptions;
+  const finalWidth =
+    layout.maxWidth != null
+      ? Math.min(layout.maxWidth, DEFAULT_DEVICE_WIDTH)
+      : DEFAULT_DEVICE_WIDTH;
   let src = nonTransformableImageSourceProps.src;
   src = transformer({
     src,
