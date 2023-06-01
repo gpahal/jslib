@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -37,7 +37,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "satori": "^0.4.4",
+    "satori": "^0.9.1",
     "satori-html": "^0.3.2",
     "yoga-wasm-web": "^0.3.3"
   },
@@ -45,8 +45,7 @@
     "@gpahal/font": "workspace:*",
     "@gpahal/font-data-inter": "workspace:*",
     "@gpahal/font-data-source-code-pro": "workspace:*",
-    "@types/react": "^18.0.33",
-    "cross-fetch": "^3.1.5",
-    "preact": "^10.13.2"
+    "@types/react": "^18.2.8",
+    "preact": "^10.15.1"
   }
 }

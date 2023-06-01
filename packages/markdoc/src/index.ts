@@ -5,7 +5,7 @@ import { stripSuffix } from "@gpahal/std/string";
 import { getExtension } from "@gpahal/std/url";
 import Markdoc from "@markdoc/markdoc";
 import libCalculateReadTime from "reading-time";
-import { parse as parseToml } from "toml";
+import yaml, { YAMLException } from 'js-yaml';
 
 import type { FileMap, FsFileMapItem, FsModule, WalkOptions } from "@gpahal/std/fs";
 import type { Prettify } from "@gpahal/std/object";
@@ -65,7 +65,7 @@ export type ParseResultMarkdocError = {
   markdocErrors: ValidateError[];
 };
 
-export class TomlError extends CustomError {
+export class YamlError extends CustomError {
   public constructor(
     message: string,
     public readonly line: number,
@@ -75,10 +75,10 @@ export class TomlError extends CustomError {
   }
 }
 
-export type ParseResultTomlError = {
+export type ParseResultYamlError = {
   isSuccessful: false;
-  type: "toml";
-  tomlError: TomlError;
+  type: "yaml";
+  yamlError: YamlError;
 };
 
 export type ParseResultZodError<TFrontmatterSchema extends FrontmatterSchema> = {
@@ -89,7 +89,7 @@ export type ParseResultZodError<TFrontmatterSchema extends FrontmatterSchema> = 
 
 export type ParseResultError<TFrontmatterSchema extends FrontmatterSchema> =
   | ParseResultMarkdocError
-  | ParseResultTomlError
+  | ParseResultYamlError
   | ParseResultZodError<TFrontmatterSchema>;
 
 export type ParseResult<TFrontmatterSchema extends FrontmatterSchema> =
@@ -138,8 +138,8 @@ export function formatParseResultError<TFrontmatterSchema extends FrontmatterSch
   switch (error.type) {
     case "markdoc":
       return formatMarkdocErrors(error.markdocErrors);
-    case "toml":
-      return formatTomlError(error.tomlError);
+    case "yaml":
+      return formatYamlError(error.yamlError);
     case "zod":
       return formatZodError(error.zodError);
     default:
@@ -167,7 +167,7 @@ export function formatMarkdocError(error: ValidateError): string {
   }`;
 }
 
-export function formatTomlError(error: TomlError): string {
+export function formatYamlError(error: YamlError): string {
   return `${formatErrorLocation(error)}: ${error.message}`;
 }
 
@@ -206,7 +206,7 @@ function formatErrorLocation(location?: { line: number; column?: number }): stri
 
 function parseFrontmatterRaw(
   node: Node,
-): { isSuccessful: true; frontmatterRaw: FrontmatterRaw } | ParseResultTomlError {
+): { isSuccessful: true; frontmatterRaw: FrontmatterRaw } | ParseResultYamlError {
   const s = node.attributes["frontmatter"];
   if (!s) {
     return { isSuccessful: true, frontmatterRaw: {} };
@@ -215,17 +215,21 @@ function parseFrontmatterRaw(
   if (typeof s !== "string") {
     return {
       isSuccessful: false,
-      type: "toml",
-      tomlError: new TomlError("Frontmatter must be a TOML object", 1, 1),
+      type: "yaml",
+      yamlError: new YamlError("Frontmatter must be a YAML object", 1, 1),
     };
   }
 
   let parsedFrontmatter: unknown;
   try {
-    parsedFrontmatter = parseToml(s);
+    parsedFrontmatter = yaml.load(s);
   } catch (e) {
     let line = 1;
     let column = 1;
+    if (e instanceof YAMLException) {
+      line = e.mark.line;
+      column = e.mark.column;
+    }
     if (
       e instanceof Error &&
       "line" in e &&
@@ -238,9 +242,9 @@ function parseFrontmatterRaw(
     }
     return {
       isSuccessful: false,
-      type: "toml",
-      tomlError: new TomlError(
-        `Frontmatter must be a TOML object: ${getErrorMessage(e)}`,
+      type: "yaml",
+      yamlError: new YamlError(
+        `Frontmatter must be a YAML object: ${getErrorMessage(e)}`,
         line,
         column,
       ),
@@ -253,8 +257,8 @@ function parseFrontmatterRaw(
   if (typeof parsedFrontmatter !== "object") {
     return {
       isSuccessful: false,
-      type: "toml",
-      tomlError: new TomlError("Frontmatter must be a TOML object", 1, 1),
+      type: "yaml",
+      yamlError: new YamlError("Frontmatter must be a YAML object", 1, 1),
     };
   }
   return { isSuccessful: true, frontmatterRaw: parsedFrontmatter as Record<string, unknown> };
