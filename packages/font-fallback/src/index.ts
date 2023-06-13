@@ -64,8 +64,8 @@ export type FontFallbackCssProperties = {
 export function getFontFallbackCssString(fallbackCssProperties: FontFallbackCssProperties): string {
   return `/* fallback ${fallbackCssProperties.fallbackFamilyName} */
 @font-face {
-  font-family: "${fallbackCssProperties.familyName}";
-  src: local("${fallbackCssProperties.fallbackFamilyName}");
+  font-family: ${familyNameToString(fallbackCssProperties.familyName)};
+  src: local(${familyNameToString(fallbackCssProperties.fallbackFamilyName)});
   size-adjust: ${toPercentage(fallbackCssProperties.sizeAdjust)};
   ascent-override: ${toPercentage(fallbackCssProperties.ascentOverride)};
   descent-override: ${toPercentage(fallbackCssProperties.descentOverride)};
@@ -113,6 +113,24 @@ async function getFontFallbackCssProperties(
     descentOverride: originalFontMetrics.descent / unitsPerEm,
     lineGapOverride: originalFontMetrics.lineGap / unitsPerEm,
   };
+}
+
+const FAMILY_NAME_KEYWORDS = [
+  "inherit",
+  "serif",
+  "sans-serif",
+  "cursive",
+  "fantasy",
+  "system-ui",
+  "monospace",
+  "ui-serif",
+  "ui-sans-serif",
+  "ui-monospace",
+  "ui-rounded",
+];
+
+function familyNameToString(familyName: string): string {
+  return FAMILY_NAME_KEYWORDS.includes(familyName) ? familyName : `"${familyName}"`;
 }
 
 function toPercentage(value: number, fractionDigits = 6): string {

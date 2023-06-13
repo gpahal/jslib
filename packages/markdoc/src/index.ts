@@ -4,8 +4,8 @@ import { convertFsFileMapToFileMap, flattenFileMap, someFileMap, walkDir } from 
 import { stripSuffix } from "@gpahal/std/string";
 import { getExtension } from "@gpahal/std/url";
 import Markdoc from "@markdoc/markdoc";
+import yaml, { YAMLException } from "js-yaml";
 import libCalculateReadTime from "reading-time";
-import yaml, { YAMLException } from 'js-yaml';
 
 import type { FileMap, FsFileMapItem, FsModule, WalkOptions } from "@gpahal/std/fs";
 import type { Prettify } from "@gpahal/std/object";

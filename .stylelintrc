@@ -6,6 +6,8 @@
       {
         "ignoreAtRules": ["tailwind", "apply", "variants", "responsive", "screen", "layer"]
       }
-    ]
+    ],
+    "font-family-name-quotes": "always-unless-keyword",
+    "number-max-precision": 6
   }
 }

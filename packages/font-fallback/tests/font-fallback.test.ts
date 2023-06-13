@@ -24,7 +24,7 @@ test("font-fallback", async () => {
   const fallbacks = await getFontFallbacksCssProperties(fontMetrics, FALLBACK_FONT_FAMILIES);
   expect(fallbacks).not.toBeNull();
 
-  console.info(`Fallback fonts:\n\n${fallbacks.map(getFontFallbackCssString).join("\n")}`);
+  console.info(`Fallback fonts:\n\n${fallbacks.map(getFontFallbackCssString).join("\n\n")}`);
 
   expect(fallbacks.length).toBe(FALLBACK_FONT_FAMILIES.length);
 });

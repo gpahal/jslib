@@ -1,9 +1,5 @@
 module.exports = {
-  "**/*.{js,mjs,cjs,ts}": [
-    "prettier --check --plugin-search-dir=. --ignore-path=.gitignore",
-    "eslint",
-  ],
+  "**/*.{js,mjs,cjs,ts}": ["eslint --fix"],
   "**/*.{ts}": ["tsc-files --noEmit"],
-  "**/*.{json}": ["prettier --check --plugin-search-dir=. --ignore-path=.gitignore"],
-  "**/*.css": ["prettier --check --plugin-search-dir=. --ignore-path=.gitignore", "stylelint"],
+  "**/*.css": ["stylelint --fix"],
 };
