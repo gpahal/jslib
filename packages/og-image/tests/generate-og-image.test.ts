@@ -1,41 +1,34 @@
-import { readFile } from "node:fs/promises";
+import { readFile } from 'node:fs/promises'
 
-import { FONT_PROPERTIES } from "@gpahal/font";
-import { getInterFontFamily, getInterFontInfoList } from "@gpahal/font-data-inter/font-info";
-import {
-  getSourceCodeProFontFamily,
-  getSourceCodeProFontInfoList,
-} from "@gpahal/font-data-source-code-pro/font-info";
+import { FONT_PROPERTIES } from '@gpahal/font'
+import { getInterFontFamily, getInterFontInfoList } from '@gpahal/font-data-inter/font-info'
+import { getSourceCodeProFontFamily, getSourceCodeProFontInfoList } from '@gpahal/font-data-source-code-pro/font-info'
 
-import { generateOgImage, html } from "../src";
+import { generateOgImage, html } from '../src'
 
 function getImportPath(importPath: string): string {
   try {
-    return require.resolve(importPath);
+    return require.resolve(importPath)
   } catch {
-    return "";
+    return ''
   }
 }
 
 const INTER_FONT_PROPERTIES_WiTH_URL = FONT_PROPERTIES.map((properties) => {
   return {
     ...FONT_PROPERTIES,
-    location: getImportPath(
-      `@gpahal/font-data-inter/files/${properties.weight}-${properties.style}.woff`,
-    ),
-  };
-}).filter((properties) => !!properties.location);
+    location: getImportPath(`@gpahal/font-data-inter/files/${properties.weight}-${properties.style}.woff`),
+  }
+}).filter((properties) => !!properties.location)
 
 const SOURCE_CODE_PROP_FONT_PROPERTIES_WiTH_URL = FONT_PROPERTIES.map((properties) => {
   return {
     ...FONT_PROPERTIES,
-    location: getImportPath(
-      `@gpahal/font-data-source-code-pro/files/${properties.weight}-${properties.style}.woff`,
-    ),
-  };
-}).filter((properties) => !!properties.location);
+    location: getImportPath(`@gpahal/font-data-source-code-pro/files/${properties.weight}-${properties.style}.woff`),
+  }
+}).filter((properties) => !!properties.location)
 
-test("generate-og-image", async () => {
+test('generate-og-image', async () => {
   const code = `
     function sum(a, b) {
       return a + b;
@@ -44,14 +37,12 @@ test("generate-og-image", async () => {
     const a = 5;
     const b = 10;
     const sum = a + b;
-  `;
+  `
   const svg = await generateOgImage(
     html` <div
       style="${`width: 100%; display: flex; flex-direction: column; align-items: center; justify-items: center; background-color: #FFFFFF; color: #000000;`}"
     >
-      <h1
-        style="${`font-family: ${getInterFontFamily()}; font-size: 24px; line-height: 32px; font-weight: 800;`}"
-      >
+      <h1 style="${`font-family: ${getInterFontFamily()}; font-size: 24px; line-height: 32px; font-weight: 800;`}">
         Heading
       </h1>
       <p
@@ -69,13 +60,10 @@ test("generate-og-image", async () => {
     {
       fonts: [
         ...(await getInterFontInfoList(INTER_FONT_PROPERTIES_WiTH_URL, readFile)),
-        ...(await getSourceCodeProFontInfoList(
-          SOURCE_CODE_PROP_FONT_PROPERTIES_WiTH_URL,
-          readFile,
-        )),
+        ...(await getSourceCodeProFontInfoList(SOURCE_CODE_PROP_FONT_PROPERTIES_WiTH_URL, readFile)),
       ],
     },
-  );
+  )
 
-  expect(svg).toBeTruthy();
-});
+  expect(svg).toBeTruthy()
+})

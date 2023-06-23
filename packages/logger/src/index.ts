@@ -1,21 +1,19 @@
-import { createLogger, format, transports } from "winston";
+import { Format } from 'logform'
+import { createLogger, format, Logger as LibLogger, transports } from 'winston'
 
-import type { Format } from "logform";
-import type { Logger as LibLogger } from "winston";
-
-const TRANSPORT_CONSOLE = new transports.Console();
+const TRANSPORT_CONSOLE = new transports.Console()
 
 export type LoggerLevel =
-  | "silly"
-  | "debug"
-  | "verbose"
-  | "http"
-  | "info"
-  | "help"
-  | "warn"
-  | "error"
-  | "critical"
-  | "silent";
+  | 'silly'
+  | 'debug'
+  | 'verbose'
+  | 'http'
+  | 'info'
+  | 'help'
+  | 'warn'
+  | 'error'
+  | 'critical'
+  | 'silent'
 
 const levels: Record<LoggerLevel, number> = {
   silly: 10,
@@ -28,57 +26,53 @@ const levels: Record<LoggerLevel, number> = {
   error: 80,
   critical: 90,
   silent: 100,
-};
+}
 
 export type LoggerOptions = {
-  level?: LoggerLevel;
-  prefix?: string;
-  showOutputAsJSON?: boolean;
-  isVerbose?: boolean;
-};
+  level?: LoggerLevel
+  prefix?: string
+  showOutputAsJSON?: boolean
+  isVerbose?: boolean
+}
 
 export class Logger {
-  readonly #logger: LibLogger;
+  readonly #logger: LibLogger
 
   constructor({ level, prefix, showOutputAsJSON, isVerbose }: LoggerOptions = {}) {
     const formats: Format[] = [
       format((info) => {
-        info.message = normalizeMessage(String(info.message), prefix);
-        info["originalLevel"] = info.level;
-        return info;
+        info.message = normalizeMessage(String(info.message), prefix)
+        info['originalLevel'] = info.level
+        return info
       })(),
-    ];
+    ]
     if (isVerbose) {
-      formats.push(format.timestamp());
+      formats.push(format.timestamp())
     }
 
     if (showOutputAsJSON) {
-      formats.push(format.json());
+      formats.push(format.json())
     } else if (isVerbose) {
       formats.push(
         format.colorize(),
         format.align(),
         format.printf(
           ({ timestamp, level, message, ...rest }) =>
-            `${timestamp} [${level}] ${message}${
-              Object.keys(rest).length > 0 ? ` ${JSON.stringify(2)}` : ""
-            }`,
+            `${timestamp} [${level}] ${message}${Object.keys(rest).length > 0 ? ` ${JSON.stringify(2)}` : ''}`,
         ),
-      );
+      )
     } else {
       formats.push(
         format((info) => {
-          info["originalLevel"] = info.level;
-          return info;
+          info['originalLevel'] = info.level
+          return info
         })(),
         format.colorize(),
         format.printf(
           ({ originalLevel, level, message }) =>
-            `${
-              originalLevel === "error" || originalLevel === "warn" ? `[${level}] ` : ""
-            }${message}`,
+            `${originalLevel === 'error' || originalLevel === 'warn' ? `[${level}] ` : ''}${message}`,
         ),
-      );
+      )
     }
 
     this.#logger = createLogger({
@@ -86,65 +80,65 @@ export class Logger {
       level,
       format: format.combine(...formats),
       transports: [TRANSPORT_CONSOLE],
-    });
-    this.#logger.on("finish", this.#flushLoggerTransports.bind(this));
+    })
+    this.#logger.on('finish', this.#flushLoggerTransports.bind(this))
   }
 
   async #flushLoggerTransports(): Promise<void> {
     const p = new Promise((resolve) => {
-      process.stdout.once("drain", () => resolve(undefined));
-    });
-    process.stdout.write("");
-    await p;
+      process.stdout.once('drain', () => resolve(undefined))
+    })
+    process.stdout.write('')
+    await p
   }
 
   silly(message: string): void {
-    this.#logger.silly(message);
+    this.#logger.silly(message)
   }
 
   debug(message: string): void {
-    this.#logger.debug(message);
+    this.#logger.debug(message)
   }
 
   verbose(message: string): void {
-    this.#logger.verbose(message);
+    this.#logger.verbose(message)
   }
 
   http(message: string): void {
-    this.#logger.http(message);
+    this.#logger.http(message)
   }
 
   info(message: string): void {
-    this.#logger.info(message);
+    this.#logger.info(message)
   }
 
   help(message: string): void {
-    this.#logger.help(message);
+    this.#logger.help(message)
   }
 
   warn(message: string): void {
-    this.#logger.warn(message);
+    this.#logger.warn(message)
   }
 
   error(message: string): void {
-    this.#logger.error(message);
+    this.#logger.error(message)
   }
 
   critical(message: string): void {
-    this.#logger.crit(message);
+    this.#logger.crit(message)
   }
 }
 
 function normalizeMessage(message: string, prefix?: string): string {
-  return `${prefix ? `[${prefix}] ` : ""}${message
+  return `${prefix ? `[${prefix}] ` : ''}${message
     .trim()
-    .replace(/^silly:/i, "")
-    .replace(/^debug:/i, "")
-    .replace(/^verbose:/i, "")
-    .replace(/^http:/i, "")
-    .replace(/^info:/i, "")
-    .replace(/^warn:/i, "")
-    .replace(/^error:/i, "")
-    .replace(/^fatal:/i, "")
-    .trim()}`;
+    .replace(/^silly:/i, '')
+    .replace(/^debug:/i, '')
+    .replace(/^verbose:/i, '')
+    .replace(/^http:/i, '')
+    .replace(/^info:/i, '')
+    .replace(/^warn:/i, '')
+    .replace(/^error:/i, '')
+    .replace(/^fatal:/i, '')
+    .trim()}`
 }

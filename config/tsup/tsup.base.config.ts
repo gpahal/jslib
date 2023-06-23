@@ -1,14 +1,14 @@
-import { IGNORED_FILES } from "../ignored-files";
+import { Options } from 'tsup'
 
-import type { Options } from "tsup";
+import { IGNORED_FILES } from '../ignored-files'
 
 export function getBaseConfig(options: Options): Options {
-  const isDevEnv = process.env["NODE_ENV"] === "development" || !!options.watch;
+  const isDevEnv = process.env['NODE_ENV'] === 'development' || !!options.watch
   return {
-    entry: ["src/*"],
-    format: ["esm", "cjs"],
+    entry: ['src/*'],
+    format: ['esm', 'cjs'],
     env: {
-      NODE_ENV: isDevEnv ? "development" : "production",
+      NODE_ENV: isDevEnv ? 'development' : 'production',
     },
     clean: true,
     splitting: false,
@@ -16,5 +16,5 @@ export function getBaseConfig(options: Options): Options {
     dts: !isDevEnv,
     minify: !isDevEnv,
     ignoreWatch: IGNORED_FILES,
-  };
+  }
 }

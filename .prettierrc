@@ -1,9 +1,24 @@
 {
+  "plugins": ["@ianvs/prettier-plugin-sort-imports"],
+  "endOfLine": "lf",
+  "printWidth": 120,
   "tabWidth": 2,
-  "printWidth": 100,
   "trailingComma": "all",
-  "semi": true,
-  "singleQuote": false,
-  "arrowParens": "always",
-  "bracketSpacing": true
+  "semi": false,
+  "singleQuote": true,
+  "importOrder": [
+    "<BUILTIN_MODULES>",
+    "",
+    "^(react/(.*)$)|^(react$)",
+    "^(next/(.*)$)|^(next$)",
+    "",
+    "<THIRD_PARTY_MODULES>",
+    "",
+    "^@gpahal/(.*)$",
+    "",
+    "^@/(.*)$",
+    "",
+    "^[../]",
+    "^[./]"
+  ]
 }

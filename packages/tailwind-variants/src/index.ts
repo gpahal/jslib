@@ -1,5 +1,5 @@
-import plugin from "tailwindcss/plugin";
+import plugin from 'tailwindcss/plugin'
 
 export default plugin(({ addVariant }) => {
-  addVariant("hocus", ["&:hover", "&:focus"]);
-});
+  addVariant('hocus', ['&:hover', '&:focus'])
+})

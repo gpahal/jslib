@@ -1,7 +1,7 @@
-import type { FontInfo, FontPropertiesWithLocation } from "@gpahal/font";
+import { FontInfo, FontPropertiesWithLocation } from '@gpahal/font'
 
 export function getInterFontFamily(): string {
-  return "Inter";
+  return 'Inter'
 }
 
 export function getInterFallbackFontFamilies(): string[] {
@@ -12,28 +12,28 @@ export function getInterFallbackFontFamilies(): string[] {
     '"Inter fallback Roboto"',
     '"Inter fallback Helvetica Neue"',
     '"Inter fallback Arial"',
-  ];
+  ]
 }
 
 export async function getInterFontInfoList(
   propertiesList: FontPropertiesWithLocation[],
-  fetchFontData: (location: string) => FontInfo["data"],
+  fetchFontData: (location: string) => FontInfo['data'],
 ): Promise<FontInfo[]> {
-  const seen = new Set<string>();
-  const infos: FontInfo[] = [];
+  const seen = new Set<string>()
+  const infos: FontInfo[] = []
   for (const properties of propertiesList) {
-    const key = `${properties.weight}-${properties.style}`;
+    const key = `${properties.weight}-${properties.style}`
     if (seen.has(key)) {
-      continue;
+      continue
     }
 
-    seen.add(key);
+    seen.add(key)
     infos.push({
-      name: "Inter",
+      name: 'Inter',
       data: fetchFontData(properties.location),
       ...properties,
-    });
+    })
   }
 
-  return infos;
+  return infos
 }

@@ -1,16 +1,15 @@
 /// <reference types="vitest" />
 /// <reference types="vite/client" />
 
-import tsconfigPaths from "vite-tsconfig-paths";
-
-import type { UserConfig } from "vite";
+import { UserConfig } from 'vite'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 const config = {
   plugins: [tsconfigPaths()],
   test: {
     globals: true,
-    environment: "node",
+    environment: 'node',
   },
-} satisfies UserConfig;
+} satisfies UserConfig
 
-export default config;
+export default config
