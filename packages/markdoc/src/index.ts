@@ -1,13 +1,24 @@
 import { pushToArray } from "@gpahal/std/array";
 import { CustomError, getErrorMessage } from "@gpahal/std/error";
-import { convertFsFileMapToFileMap, flattenFileMap, someFileMap, walkDir } from "@gpahal/std/fs";
+import {
+  convertFsFileMapToFileMap,
+  flattenFileMap,
+  someFileMap,
+  walkDirectory,
+} from "@gpahal/std/fs";
 import { stripSuffix } from "@gpahal/std/string";
 import { getExtension } from "@gpahal/std/url";
 import Markdoc from "@markdoc/markdoc";
 import yaml, { YAMLException } from "js-yaml";
 import libCalculateReadTime from "reading-time";
 
-import type { FileMap, FsFileMapItem, FsModule, WalkOptions } from "@gpahal/std/fs";
+import type {
+  ConvertFsFileMapToFileMapOptions,
+  FileMap,
+  FsFileMapItem,
+  FsModule,
+  WalkOptions,
+} from "@gpahal/std/fs";
 import type { Prettify } from "@gpahal/std/object";
 import type {
   Config as TransformConfig,
@@ -288,33 +299,34 @@ function findNodeTextContents(node: Node): string[] | undefined {
   return textContents;
 }
 
-export type ParseDirOptions<TFrontmatterSchema extends FrontmatterSchema> = Prettify<
-  ParseOptions<TFrontmatterSchema> & Omit<WalkOptions<Node>, "processFile">
+export type ParseDirectoryOptions<TFrontmatterSchema extends FrontmatterSchema> = Prettify<
+  ParseOptions<TFrontmatterSchema> &
+    Omit<WalkOptions<Node>, "getFileData"> &
+    ConvertFsFileMapToFileMapOptions<ParseResult<TFrontmatterSchema>>
 >;
 
-export type ParseDirResultSuccess<TFrontmatterSchema extends FrontmatterSchema> = {
+export type ParseDirectoryResultSuccess<TFrontmatterSchema extends FrontmatterSchema> = {
   isSuccessful: true;
   data: FileMap<ParseResultSuccess<TFrontmatterSchema>>;
 };
 
-export type ParseDirResultError<TFrontmatterSchema extends FrontmatterSchema> = {
+export type ParseDirectoryResultError<TFrontmatterSchema extends FrontmatterSchema> = {
   isSuccessful: false;
   data: FileMap<ParseResult<TFrontmatterSchema>>;
 };
 
-export type ParseDirResult<TFrontmatterSchema extends FrontmatterSchema> =
-  | ParseDirResultSuccess<TFrontmatterSchema>
-  | ParseDirResultError<TFrontmatterSchema>;
+export type ParseDirectoryResult<TFrontmatterSchema extends FrontmatterSchema> =
+  | ParseDirectoryResultSuccess<TFrontmatterSchema>
+  | ParseDirectoryResultError<TFrontmatterSchema>;
 
-export async function parseDir<TFrontmatterSchema extends FrontmatterSchema>(
+export async function parseDirectory<TFrontmatterSchema extends FrontmatterSchema>(
   fsModule: FsModule,
-  dir: string,
-  indexFileNames: string[],
-  options?: ParseDirOptions<TFrontmatterSchema>,
-): Promise<ParseDirResult<TFrontmatterSchema>> {
-  const fileMap = await walkDir(fsModule, dir, {
+  directory: string,
+  options: ParseDirectoryOptions<TFrontmatterSchema>,
+): Promise<ParseDirectoryResult<TFrontmatterSchema>> {
+  const fileMap = await walkDirectory(fsModule, directory, {
     ...options,
-    processFile: async ({ absolutePath }) => {
+    getFileData: async ({ absolutePath }) => {
       const source = await fsModule.readFile(absolutePath);
       return await parse(source, options);
     },
@@ -327,8 +339,14 @@ export async function parseDir<TFrontmatterSchema extends FrontmatterSchema>(
   const finalFileMap = fileMap
     ? fileMap
     : new Map<string, FsFileMapItem<ParseResult<TFrontmatterSchema>>>();
-  const intrusiveFileMap = convertFsFileMapToFileMap(finalFileMap, indexFileNames, {
-    convertFileName: stripMdocExtension,
+  const intrusiveFileMap = convertFsFileMapToFileMap(finalFileMap, {
+    ...options,
+    transformFileName: (fileName, fsFileMapFileItem) => {
+      const fileNameWithoutExtension = stripMdocExtension(fileName);
+      return options?.transformFileName
+        ? options.transformFileName(fileNameWithoutExtension, fsFileMapFileItem)
+        : fileNameWithoutExtension;
+    },
   });
   const hasError = someFileMap(intrusiveFileMap, (item) => !item.isSuccessful);
   return hasError
@@ -339,7 +357,7 @@ export async function parseDir<TFrontmatterSchema extends FrontmatterSchema>(
       };
 }
 
-export function formatParseDirResultErrors<TFrontmatterSchema extends FrontmatterSchema>(
+export function formatParseDirectoryResultErrors<TFrontmatterSchema extends FrontmatterSchema>(
   result: FileMap<ParseResult<TFrontmatterSchema>>,
 ): string {
   const flattenedFileList = flattenFileMap(result);

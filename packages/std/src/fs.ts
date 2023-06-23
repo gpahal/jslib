@@ -16,21 +16,23 @@ export type FsFileOptions = {
 };
 
 export type WalkOptions<T> = {
-  processFile: (options: FsFileOptions) => Promise<T>;
-  dirFilter?: (options: FsFileOptions) => boolean;
+  directoryFilter?: (options: FsFileOptions) => boolean;
   fileFilter?: (options: FsFileOptions) => boolean;
+  getFileData: (options: FsFileOptions) => Promise<T>;
 };
 
-export type FsFileMapDirItem<T> = {
-  inner: FsFileMap<T>;
+export type FsFileMapDirectoryItem<T> = {
+  children: FsFileMap<T>;
 };
 export type FsFileMapFileItem<T> = {
   data: T;
 };
-export type FsFileMapItem<T> = FsFileMapDirItem<T> | FsFileMapFileItem<T>;
+export type FsFileMapItem<T> = FsFileMapDirectoryItem<T> | FsFileMapFileItem<T>;
 
-export function isFsFileMapDirValue<T>(item: FsFileMapItem<T>): item is FsFileMapDirItem<T> {
-  return "inner" in item;
+export function isFsFileMapDirectoryValue<T>(
+  item: FsFileMapItem<T>,
+): item is FsFileMapDirectoryItem<T> {
+  return "children" in item;
 }
 
 export function isFsFileMapFileValue<T>(item: FsFileMapItem<T>): item is FsFileMapFileItem<T> {
@@ -39,19 +41,19 @@ export function isFsFileMapFileValue<T>(item: FsFileMapItem<T>): item is FsFileM
 
 export type FsFileMap<T> = Map<string, FsFileMapItem<T>>;
 
-export async function walkDir<T = undefined>(
+export async function walkDirectory<T = undefined>(
   fsModule: FsModule,
-  dir: string,
+  directory: string,
   options: WalkOptions<T>,
 ): Promise<FsFileMap<T> | undefined> {
-  const absoluteDirPath = await fsModule.resolvePath(dir.trim());
+  const absoluteDirPath = await fsModule.resolvePath(directory.trim());
   const isDirectory = await fsModule.isDirectory(absoluteDirPath);
   if (!isDirectory) {
     return;
   }
 
   const map = new Map<string, FsFileMapItem<T>>();
-  await walkDirInternal(
+  await walkDirectoryInternal(
     fsModule,
     map,
     absoluteDirPath,
@@ -62,7 +64,7 @@ export async function walkDir<T = undefined>(
   return map;
 }
 
-async function walkDirInternal<T>(
+async function walkDirectoryInternal<T>(
   fsModule: FsModule,
   fsFileMap: FsFileMap<T>,
   absoluteDirPath: string,
@@ -72,8 +74,8 @@ async function walkDirInternal<T>(
 ): Promise<void> {
   if (
     options &&
-    options.dirFilter &&
-    !options.dirFilter({
+    options.directoryFilter &&
+    !options.directoryFilter({
       absolutePath: absoluteDirPath,
       relativePath: relativeDirPath,
       name: dirName,
@@ -108,11 +110,18 @@ async function walkFileInternal<T>(
 
   const isDirectory = await fsModule.isDirectory(absoluteFilepath);
   if (isDirectory) {
-    const inner = new Map<string, FsFileMapItem<T>>();
-    fsFileMap.set(fileName, { inner });
-    await walkDirInternal(fsModule, inner, absoluteFilepath, relativeDirPath, fileName, options);
+    const children = new Map<string, FsFileMapItem<T>>();
+    fsFileMap.set(fileName, { children });
+    await walkDirectoryInternal(
+      fsModule,
+      children,
+      absoluteFilepath,
+      relativeDirPath,
+      fileName,
+      options,
+    );
   } else if (!options || !options.fileFilter || options.fileFilter(fileOptions)) {
-    const data = await options.processFile(fileOptions);
+    const data = await options.getFileData(fileOptions);
     fsFileMap.set(fileName, { data });
   }
 }
@@ -128,111 +137,93 @@ export type FileMapItem<T> = {
 
 export type FileMap<T> = Map<string, FileMapItem<T>>;
 
-export type ConvertFsFileMapToFileMapOptions = {
-  convertFileName?: (fileName: string) => string;
+export type ConvertFsFileMapToFileMapOptions<T> = {
+  getIndexFileName: (fileMap: FileMap<T>, parent: FileMapItem<T>) => string | undefined;
+  transformDirectoryName?: (directoryName: string) => string;
+  transformFileName?: (fileName: string, fsFileMapFileItem: FsFileMapFileItem<T>) => string;
 };
 
 export function convertFsFileMapToFileMap<T>(
   fsFileMap: FsFileMap<T>,
-  indexFileNames: string[],
-  options?: ConvertFsFileMapToFileMapOptions,
+  options: ConvertFsFileMapToFileMapOptions<T>,
 ): FileMap<T> {
-  // { p: { inner: { i: {}, c: {} } } }
-  // [i]
-  const finalIndexFileNames = options?.convertFileName
-    ? indexFileNames.map(options.convertFileName)
-    : indexFileNames;
-  return convertFsFileMapToFileMapInternal(fsFileMap, finalIndexFileNames, options);
+  return convertFsFileMapToFileMapInternal(fsFileMap, options);
 }
 
 function convertFsFileMapToFileMapInternal<T>(
   fsFileMap: FsFileMap<T>,
-  indexFileNames: string[],
-  options?: ConvertFsFileMapToFileMapOptions,
+  options: ConvertFsFileMapToFileMapOptions<T>,
   parent?: FileMapItem<T>,
-  indexFileName?: string,
 ): FileMap<T> {
   const fileMap = new Map<string, FileMapItem<T>>();
-  for (const [fileName, fileMapItem] of fsFileMap.entries()) {
-    const finalFileName = options?.convertFileName ? options.convertFileName(fileName) : fileName;
-    if (finalFileName !== indexFileName) {
-      fileMap.set(
-        finalFileName,
-        convertFsFileMapItemToFileMapItemInternal(
-          fileMapItem,
-          indexFileNames,
-          finalFileName,
-          options,
-          parent,
-        ),
-      );
+  for (const [fileName, fsFileMapItem] of fsFileMap.entries()) {
+    const fileMapItem = convertFsFileMapItemToFileMapItemInternal(
+      fsFileMapItem,
+      fileName,
+      options,
+      parent,
+    );
+    fileMap.set(
+      fileMapItem.pathParts[fileMapItem.pathParts.length - 1]!,
+      convertFsFileMapItemToFileMapItemInternal(fsFileMapItem, fileName, options, parent),
+    );
+  }
+  if (parent) {
+    const indexFileName = options.getIndexFileName(fileMap, parent);
+    if (indexFileName == null) {
+      throw new Error(`Directory '${parent.path}' doesn't have an index file`);
     }
+
+    const indexFileMapItem = fileMap.get(indexFileName);
+    if (!indexFileMapItem) {
+      throw new Error(`Index file '${indexFileName}' not found in directory '${parent.path}'`);
+    } else if (indexFileMapItem.children && indexFileMapItem.children.size > 0) {
+      throw new Error(`Index file '${indexFileName}' in directory '${parent.path} is not a file`);
+    }
+
+    fileMap.delete(indexFileName);
+    fileMap.forEach((item) => {
+      item.parent = parent;
+    });
+
+    parent.data = indexFileMapItem.data;
+    parent.children = fileMap;
   }
   return fileMap;
 }
 
 function convertFsFileMapItemToFileMapItemInternal<T>(
   fsFileMapItem: FsFileMapItem<T>,
-  indexFileNames: string[],
   fileName: string,
-  options?: ConvertFsFileMapToFileMapOptions,
+  options: ConvertFsFileMapToFileMapOptions<T>,
   parent?: FileMapItem<T>,
 ): FileMapItem<T> {
+  const finalFileName = isFsFileMapDirectoryValue(fsFileMapItem)
+    ? options.transformDirectoryName
+      ? options.transformDirectoryName(fileName)
+      : fileName
+    : options.transformFileName
+    ? options.transformFileName(fileName, fsFileMapItem)
+    : fileName;
+  const pathParts = parent ? [...parent.pathParts, finalFileName] : [finalFileName];
+  const path = parent ? joinPathParts(parent.path, finalFileName) : finalFileName;
   if (isFsFileMapFileValue(fsFileMapItem)) {
     return {
-      pathParts: parent ? [...parent.pathParts, fileName] : [fileName],
-      path: parent ? joinPathParts(parent.path, fileName) : fileName,
+      pathParts,
+      path,
       data: fsFileMapItem.data,
-      parent: parent || undefined,
+      parent,
     };
+  } else {
+    const fileMapItem = {
+      pathParts,
+      path,
+      data: undefined as unknown as T,
+      parent,
+    };
+    convertFsFileMapToFileMapInternal(fsFileMapItem.children, options, fileMapItem);
+    return fileMapItem;
   }
-
-  let map = fsFileMapItem.inner;
-  if (options?.convertFileName) {
-    map = new Map(
-      Array.from(map.entries()).map(([key, value]) => [
-        options?.convertFileName?.(key) ?? key,
-        value,
-      ]),
-    );
-  }
-
-  let indexFileName: string | undefined;
-  let indexFileData: T | undefined;
-  for (const fileName of indexFileNames) {
-    const item = map.get(fileName);
-    if (item) {
-      if (isFsFileMapDirValue(item)) {
-        throw new Error(
-          `Index file '${joinPathParts(parent?.path || "", fileName)}' cannot be a directory`,
-        );
-      }
-      indexFileName = fileName;
-      indexFileData = item.data;
-    }
-  }
-  if (!indexFileName || !indexFileData) {
-    throw new Error(
-      `Index file cannot be found in directory${
-        parent ? joinPathParts(parent.path, fileName) : fileName
-      }`,
-    );
-  }
-
-  const fileMapItem: FileMapItem<T> = {
-    pathParts: parent ? [...parent.path, fileName] : [fileName],
-    path: parent ? joinPathParts(parent.path, fileName) : fileName,
-    data: indexFileData,
-    parent: parent || undefined,
-  };
-  fileMapItem.children = convertFsFileMapToFileMapInternal(
-    map,
-    indexFileNames,
-    options,
-    fileMapItem,
-    indexFileName,
-  );
-  return fileMapItem;
 }
 
 export function mapFileMap<T, U>(fileMap: FileMap<T>, fn: (_: T) => U): FileMap<U> {
