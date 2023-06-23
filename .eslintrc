@@ -11,13 +11,7 @@
     "ecmaVersion": "latest",
     "requireConfigFile": false
   },
-  "ignorePatterns": ["node_modules", "dist", "build", "public", "coverage", "tmp"],
-  "extends": [
-    "eslint:recommended",
-    "plugin:vitest-globals/recommended",
-    "turbo",
-    "prettier"
-  ],
+  "extends": ["eslint:recommended", "plugin:vitest-globals/recommended", "turbo", "prettier"],
   "plugins": ["unicorn", "node", "import"],
   "settings": {
     "import/ignore": ["node_modules", "\\.(md|mdx|mdoc|json|css|svg)$"],
