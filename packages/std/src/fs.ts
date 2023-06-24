@@ -1,7 +1,5 @@
 import { trim } from '~/string'
 
-import { NonEmptyArray } from './array'
-
 export type FsModule = {
   getBasename: (path: string) => string
   joinPath: (...paths: string[]) => string | Promise<string>
@@ -113,7 +111,7 @@ async function walkFileInternal<T>(
 export type WithOriginalFileName<T> = T & { originalFileName: string }
 
 export type FileMapItem<T> = {
-  pathParts: NonEmptyArray<string>
+  pathParts: string[]
   path: string
   data: T
 
@@ -259,7 +257,7 @@ function joinPathParts(...parts: string[]): string {
 }
 
 export type FlattenedFileMapItem<T> = {
-  pathParts: NonEmptyArray<string>
+  pathParts: string[]
   path: string
   data: T
 
@@ -352,7 +350,7 @@ export function sortFlattenedFileMap<T>(
 }
 
 export type FileMapPathIndexItem<T> = {
-  pathParts: NonEmptyArray<string>
+  pathParts: string[]
   path: string
   data: T
 
