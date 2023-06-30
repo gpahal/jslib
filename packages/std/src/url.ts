@@ -23,7 +23,7 @@ export function isAbsoluteUrl(urlString: string): boolean {
   return !!ABSOLUTE_PATH_REGEX.exec(urlString) && isUrl(urlString)
 }
 
-export type Href = string | URL
+export type Href = string | { pathname?: string | null | undefined }
 
 export function isPathnameActive(href: Href, currentPathname: string): { isActive: boolean; isExactMatch: boolean } {
   let pathname = ''
@@ -39,7 +39,7 @@ export function isPathnameActive(href: Href, currentPathname: string): { isActiv
       pathname = href
     }
   } else {
-    pathname = href.pathname
+    pathname = href.pathname || ''
   }
 
   pathname = trim(pathname, '/')
