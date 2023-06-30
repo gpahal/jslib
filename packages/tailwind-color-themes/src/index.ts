@@ -1,9 +1,13 @@
+import Color from 'color'
 import { withOptions } from 'tailwindcss/plugin'
 import { PluginAPI } from 'tailwindcss/types/config'
 
 import { kebabCase } from '@gpahal/std/string'
 
+type TailwindColorFn = (_: { opacityVariable?: string; opacityValue?: string }) => string
+
 export type ColorTheme = { [key: string]: string | ColorTheme }
+export type TailwindColorTheme = { [key: string]: string | TailwindColorFn | TailwindColorTheme }
 
 export type ColorThemeSelection = {
   mediaQuery?: string
@@ -17,6 +21,21 @@ export type ColorThemeConfig = {
   themes?: ColorThemeSelection[]
 }
 
+function toColor(value: string): Color {
+  try {
+    return Color(value)
+  } catch (e) {
+    throw new Error(`Invalid color value '${value}'`)
+  }
+}
+
+function validateNoAlpha(color: Color): void {
+  const alpha = color.alpha()
+  if (alpha != null && alpha < 1) {
+    throw new Error('Colors should be without alpha')
+  }
+}
+
 function transformKeyPathToVarName(keyPath: string[]): string {
   return `${keyPath
     .filter((p) => p && p.length > 0)
@@ -28,13 +47,21 @@ function transformKeyPathToVarNameAccess(keyPath: string[]): string {
   return `--${transformKeyPathToVarName(keyPath)}`
 }
 
+function transformValueToVarValue(value: string) {
+  const color = toColor(value)
+  validateNoAlpha(color)
+
+  const rgb = color.rgb().array()
+  return rgb.map((v) => Math.round(v)).join(' ')
+}
+
 function themeColorsToVarsHelper(keyPath: string[], colorTheme: ColorTheme, acc: ColorTheme) {
   Object.entries(colorTheme).forEach(([key, value]) => {
     const newKeyPath = [...keyPath, key]
     if (typeof value === 'object') {
       themeColorsToVarsHelper(newKeyPath, value, acc)
     } else {
-      acc[transformKeyPathToVarNameAccess(newKeyPath)] = value
+      acc[transformKeyPathToVarNameAccess(newKeyPath)] = transformValueToVarValue(value)
     }
   })
 }
@@ -45,11 +72,28 @@ function themeColorsToVars(prefix: string, colorTheme: ColorTheme): ColorTheme {
   return acc
 }
 
-function transformValueToVarUse(prefix: string, keyPath: string[]): string {
-  return `var(${transformKeyPathToVarNameAccess(prefix ? [prefix, ...keyPath] : keyPath)})`
+function transformValueToVarUseHelper(varName: string): TailwindColorFn {
+  return ({ opacityVariable, opacityValue } = {}) => {
+    if (opacityValue != null) {
+      return `rgb(var(${varName}) / ${opacityValue})`
+    } else if (opacityVariable != null) {
+      return `rgb(var(${varName}) / var(${opacityVariable}, 1))`
+    } else {
+      return `rgb(var(${varName}))`
+    }
+  }
 }
 
-function themeColorsToVarThemeHelper(prefix: string, keyPath: string[], colorTheme: ColorTheme, acc: ColorTheme) {
+function transformValueToVarUse(prefix: string, keyPath: string[]): TailwindColorFn {
+  return transformValueToVarUseHelper(transformKeyPathToVarNameAccess(prefix ? [prefix, ...keyPath] : keyPath))
+}
+
+function themeColorsToVarThemeHelper(
+  prefix: string,
+  keyPath: string[],
+  colorTheme: ColorTheme,
+  acc: TailwindColorTheme,
+) {
   Object.entries(colorTheme).forEach(([key, value]) => {
     const newKeyPath = key ? [...keyPath, key] : keyPath
     if (typeof value === 'object') {
