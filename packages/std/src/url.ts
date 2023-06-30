@@ -30,21 +30,25 @@ export function isAbsoluteUrl(url: Url): boolean {
   return !!ABSOLUTE_PATH_REGEX.exec(urlString) && isUrl(urlString)
 }
 
-export function isPathnameActive(url: Url, currentPathname: string): { isActive: boolean; isExactMatch: boolean } {
-  let pathname = ''
+export function getPathname(url: Url): string {
   if (isString(url)) {
     if (isAbsoluteUrl(url)) {
-      try {
-        const urlObject = new URL(url)
-        pathname = urlObject.pathname
-      } catch {
-        return { isActive: false, isExactMatch: false }
-      }
+      const urlObject = new URL(url)
+      return urlObject.pathname
     } else {
-      pathname = url
+      return new URL(url, 'http://test.com').pathname
     }
   } else {
-    pathname = url.pathname
+    return url.pathname
+  }
+}
+
+export function isPathnameActive(url: Url, currentPathname: string): { isActive: boolean; isExactMatch: boolean } {
+  let pathname = ''
+  try {
+    pathname = getPathname(url)
+  } catch {
+    return { isActive: false, isExactMatch: false }
   }
 
   pathname = trim(pathname, '/')
@@ -54,12 +58,6 @@ export function isPathnameActive(url: Url, currentPathname: string): { isActive:
     isActive: isExactMatch || currentPathname.startsWith(pathname + '/'),
     isExactMatch,
   }
-}
-
-export function removeQueryString(url: Url): string {
-  const urlString = getUrlString(url)
-  const index = urlString.lastIndexOf('?')
-  return index > 0 ? urlString.substring(0, index) : urlString
 }
 
 export function getExtension(urlOrFilePath: Url): string {
