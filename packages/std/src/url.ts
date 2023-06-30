@@ -25,11 +25,16 @@ export function isAbsoluteUrl(urlString: string): boolean {
 
 export type Href = string | URL
 
-export function isPathnameActive(href: Href, currentPathname: string, exactMatch?: boolean): boolean {
+export function isPathnameActive(href: Href, currentPathname: string): { isActive: boolean; isExactMatch: boolean } {
   let pathname = ''
   if (isString(href)) {
     if (isAbsoluteUrl(href)) {
-      return false
+      try {
+        const url = new URL(href)
+        pathname = url.pathname
+      } catch {
+        return { isActive: false, isExactMatch: false }
+      }
     } else {
       pathname = href
     }
@@ -39,7 +44,11 @@ export function isPathnameActive(href: Href, currentPathname: string, exactMatch
 
   pathname = trim(pathname, '/')
   currentPathname = trim(pathname, '/')
-  return currentPathname === pathname ? true : exactMatch ? false : currentPathname.startsWith(pathname + '/')
+  const isExactMatch = pathname === currentPathname
+  return {
+    isActive: isExactMatch || currentPathname.startsWith(pathname + '/'),
+    isExactMatch,
+  }
 }
 
 export function removeQueryString(urlString: string) {
