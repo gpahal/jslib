@@ -9,10 +9,10 @@ export function isUrl(urlString: string): boolean {
   }
 }
 
-export type Url = string | { href?: string | null | undefined; pathname?: string | null | undefined }
+export type Url = string | URL
 
 export function getUrlString(url: Url): string {
-  return isString(url) ? url : url.href || ''
+  return isString(url) ? url : url.href
 }
 
 /**
@@ -44,7 +44,7 @@ export function isPathnameActive(url: Url, currentPathname: string): { isActive:
       pathname = url
     }
   } else {
-    pathname = url.pathname || ''
+    pathname = url.pathname
   }
 
   pathname = trim(pathname, '/')
