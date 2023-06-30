@@ -9,6 +9,12 @@ export function isUrl(urlString: string): boolean {
   }
 }
 
+export type Url = string | { href?: string | null | undefined; pathname?: string | null | undefined }
+
+export function getUrlString(url: Url): string {
+  return isString(url) ? url : url.href || ''
+}
+
 /**
  * Handles:
  * - //
@@ -19,27 +25,26 @@ export function isUrl(urlString: string): boolean {
  */
 const ABSOLUTE_PATH_REGEX = /^(?:[a-zA-Z]+:)?\/\//
 
-export function isAbsoluteUrl(urlString: string): boolean {
+export function isAbsoluteUrl(url: Url): boolean {
+  const urlString = getUrlString(url)
   return !!ABSOLUTE_PATH_REGEX.exec(urlString) && isUrl(urlString)
 }
 
-export type Href = string | { pathname?: string | null | undefined }
-
-export function isPathnameActive(href: Href, currentPathname: string): { isActive: boolean; isExactMatch: boolean } {
+export function isPathnameActive(url: Url, currentPathname: string): { isActive: boolean; isExactMatch: boolean } {
   let pathname = ''
-  if (isString(href)) {
-    if (isAbsoluteUrl(href)) {
+  if (isString(url)) {
+    if (isAbsoluteUrl(url)) {
       try {
-        const url = new URL(href)
-        pathname = url.pathname
+        const urlObject = new URL(url)
+        pathname = urlObject.pathname
       } catch {
         return { isActive: false, isExactMatch: false }
       }
     } else {
-      pathname = href
+      pathname = url
     }
   } else {
-    pathname = href.pathname || ''
+    pathname = url.pathname || ''
   }
 
   pathname = trim(pathname, '/')
@@ -51,12 +56,14 @@ export function isPathnameActive(href: Href, currentPathname: string): { isActiv
   }
 }
 
-export function removeQueryString(urlString: string) {
+export function removeQueryString(url: Url): string {
+  const urlString = getUrlString(url)
   const index = urlString.lastIndexOf('?')
   return index > 0 ? urlString.substring(0, index) : urlString
 }
 
-export function getExtension(urlStringOrFilePath: string): string {
+export function getExtension(urlOrFilePath: Url): string {
+  const urlStringOrFilePath = getUrlString(urlOrFilePath)
   const basename = urlStringOrFilePath.split(/[\\/]/).pop()
   if (!basename) {
     return ''
