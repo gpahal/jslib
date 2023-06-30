@@ -1,8 +1,8 @@
-import { trim } from '~/string'
+import { isString, trim } from '~/string'
 
-export function isUrl(endpoint: string): boolean {
+export function isUrl(urlString: string): boolean {
   try {
-    new URL(endpoint)
+    new URL(urlString)
     return true
   } catch {
     return false
@@ -20,23 +20,26 @@ export function isUrl(endpoint: string): boolean {
 const ABSOLUTE_PATH_REGEX = /^(?:[a-zA-Z]+:)?\/\//
 
 export function isAbsoluteUrl(urlString: string): boolean {
-  return !!ABSOLUTE_PATH_REGEX.exec(urlString)
+  return !!ABSOLUTE_PATH_REGEX.exec(urlString) && isUrl(urlString)
 }
 
-export function getAbsoluteUrl(currentUrl: URL, urlString: string): URL {
-  if (isAbsoluteUrl(urlString)) {
-    return new URL(urlString)
-  }
-  if (!urlString.startsWith('/')) {
-    urlString = `/${urlString}`
-  }
-  return new URL(`${currentUrl.origin}${urlString}`)
-}
+export type Href = string | URL
 
-export function isHrefActive(currentUrl: URL, href?: string) {
-  const currentPathname = trim(currentUrl.pathname, '/')
-  const hrefPathname = trim(getAbsoluteUrl(currentUrl, href || '').pathname, '/')
-  return hrefPathname ? currentPathname.startsWith(hrefPathname) : currentPathname === hrefPathname
+export function isPathnameActive(href: Href, currentPathname: string, exactMatch?: boolean): boolean {
+  let pathname = ''
+  if (isString(href)) {
+    if (isAbsoluteUrl(href)) {
+      return false
+    } else {
+      pathname = href
+    }
+  } else {
+    pathname = href.pathname
+  }
+
+  pathname = trim(pathname, '/')
+  currentPathname = trim(pathname, '/')
+  return currentPathname === pathname ? true : exactMatch ? false : currentPathname.startsWith(pathname + '/')
 }
 
 export function removeQueryString(urlString: string) {
