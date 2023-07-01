@@ -256,7 +256,7 @@ function joinPathParts(...parts: string[]): string {
   return parts.join('/')
 }
 
-export type FlattenedFileMapItem<T> = {
+export type FlattenedFileMapIndexItem<T> = {
   pathParts: string[]
   path: string
   data: T
@@ -266,43 +266,43 @@ export type FlattenedFileMapItem<T> = {
   childrenIndices?: number[]
 }
 
-export type FlattenedFileMap<T> = FlattenedFileMapItem<T>[]
+export type FlattenedFileMapIndex<T> = FlattenedFileMapIndexItem<T>[]
 
-export function flattenFileMap<T>(
+export function createFlattenedFileMapIndex<T>(
   fileMap: FileMap<T>,
   compareFn?: (a: FileMapItem<T>, b: FileMapItem<T>) => number,
-): FlattenedFileMap<T> {
-  return flattenFileMapInternal(fileMap, compareFn)
+): FlattenedFileMapIndex<T> {
+  return createFlattenedFileMapIndexInternal(fileMap, compareFn)
 }
 
-function flattenFileMapInternal<T>(
+function createFlattenedFileMapIndexInternal<T>(
   fileMap: FileMap<T>,
   compareFn?: (a: FileMapItem<T>, b: FileMapItem<T>) => number,
   parentIndex?: number,
-): FlattenedFileMap<T> {
-  const flattenedFileMap: FlattenedFileMap<T> = []
+): FlattenedFileMapIndex<T> {
+  const flattenedFileMapIndex: FlattenedFileMapIndex<T> = []
   const fileMapItems = Array.from(fileMap.values())
   if (fileMapItems.length === 0) {
-    return flattenedFileMap
+    return flattenedFileMapIndex
   }
 
   fileMapItems.sort(compareFn || compareFileMapItem)
   for (const fileMapItem of fileMapItems) {
-    const curr: FlattenedFileMapItem<T> = {
+    const curr: FlattenedFileMapIndexItem<T> = {
       pathParts: fileMapItem.pathParts,
       path: fileMapItem.path,
       data: fileMapItem.data,
-      index: flattenedFileMap.length,
+      index: flattenedFileMapIndex.length,
       parentIndex,
       childrenIndices: undefined,
     }
     const currChildren = fileMapItem.children
-      ? flattenFileMapInternal(fileMapItem.children, compareFn, curr.index)
+      ? createFlattenedFileMapIndexInternal(fileMapItem.children, compareFn, curr.index)
       : undefined
-    flattenedFileMap.push(curr)
-    const startIndex = flattenedFileMap.length
+    flattenedFileMapIndex.push(curr)
+    const startIndex = flattenedFileMapIndex.length
     if (currChildren) {
-      flattenedFileMap.push(...currChildren)
+      flattenedFileMapIndex.push(...currChildren)
       const childrenIndices: number[] = []
       currChildren.forEach((_, index) => {
         childrenIndices.push(startIndex + index)
@@ -310,18 +310,18 @@ function flattenFileMapInternal<T>(
       curr.childrenIndices = childrenIndices
     }
   }
-  return flattenedFileMap
+  return flattenedFileMapIndex
 }
 
-export function unflattenFlattenedFileMap<T>(flattenedFileMap: FlattenedFileMap<T>): FileMap<T> {
+export function unflattenFlattenedFileMapIndex<T>(flattenedFileMap: FlattenedFileMapIndex<T>): FileMap<T> {
   const indices = flattenedFileMap
     .map((item, index) => (item.parentIndex == null ? index : -1))
     .filter((index) => index >= 0)
-  return unflattenFlattenedFileMapInternal(flattenedFileMap, indices)
+  return unflattenFlattenedFileMapIndexInternal(flattenedFileMap, indices)
 }
 
-function unflattenFlattenedFileMapInternal<T>(
-  flattenedFileMap: FlattenedFileMap<T>,
+function unflattenFlattenedFileMapIndexInternal<T>(
+  flattenedFileMap: FlattenedFileMapIndex<T>,
   indices: number[],
   parent?: FileMapItem<T>,
 ): FileMap<T> {
@@ -334,72 +334,60 @@ function unflattenFlattenedFileMapInternal<T>(
       children: undefined,
     }
     if (curr.childrenIndices) {
-      currItem.children = unflattenFlattenedFileMapInternal(flattenedFileMap, curr.childrenIndices, currItem)
+      currItem.children = unflattenFlattenedFileMapIndexInternal(flattenedFileMap, curr.childrenIndices, currItem)
     }
     fileMap.set(curr.path, currItem)
   }
   return fileMap
 }
 
-export function sortFlattenedFileMap<T>(
-  flattenedFileMap: FlattenedFileMap<T>,
+export function sortFlattenedFileMapIndex<T>(
+  flattenedFileMap: FlattenedFileMapIndex<T>,
   compareFn?: (a: FileMapItem<T>, b: FileMapItem<T>) => number,
-): FlattenedFileMap<T> {
-  const fileMap = unflattenFlattenedFileMap(flattenedFileMap)
-  return flattenFileMap(fileMap, compareFn)
+): FlattenedFileMapIndex<T> {
+  const fileMap = unflattenFlattenedFileMapIndex(flattenedFileMap)
+  return createFlattenedFileMapIndex(fileMap, compareFn)
 }
 
-export type FileMapPathIndexItem<T> = {
+export type FileMapIndexItem<T> = {
   pathParts: string[]
   path: string
   data: T
 
   index: number
-  parent?: FileMapPathIndexItem<T>
-  children?: FileMapPathIndexItem<T>[]
+  parent?: FileMapIndexItem<T>
+  children?: FileMapIndex<T>
 }
 
-export type FileMapPathIndex<T> = Map<string, FileMapPathIndexItem<T>>
+export type FileMapIndex<T> = FileMapIndexItem<T>[]
 
-export function createFileMapIndex<T>(flattenedFileMap: FlattenedFileMap<T>): FileMapPathIndex<T> {
-  const flattenedFilePathMap = new Map<string, FlattenedFileMapItem<T>>()
-  flattenedFileMap.forEach((item) => {
-    flattenedFilePathMap.set(item.path, item)
-  })
-
-  const fileMap = unflattenFlattenedFileMap(flattenedFileMap)
-  const fileMapPathIndex = new Map<string, FileMapPathIndexItem<T>>()
-  fileMap.forEach((fileMapItem) => {
-    createFileMapIndexItemInternal(fileMapPathIndex, flattenedFilePathMap, fileMapItem)
-  })
-  return fileMapPathIndex
+export function createFileMapIndex<T>(flattenedFileMapIndex: FlattenedFileMapIndex<T>): FileMapIndex<T> {
+  return flattenedFileMapIndex
+    .filter((flattenedFileMapIndexItem) => flattenedFileMapIndexItem.parentIndex == null)
+    .map((flattenedFileMapIndexItem) =>
+      createFileMapIndexItemInternal(flattenedFileMapIndex, flattenedFileMapIndexItem),
+    )
 }
 
 export function createFileMapIndexItemInternal<T>(
-  fileMapPathIndex: FileMapPathIndex<T>,
-  flattenedFilePathMap: Map<string, FlattenedFileMapItem<T>>,
-  fileMapItem: FileMapItem<T>,
-  parent?: FileMapPathIndexItem<T>,
-): FileMapPathIndexItem<T> {
-  const flattenedFileMapItem = flattenedFilePathMap.get(fileMapItem.path)!
-  const fileMapPathIndexItem: FileMapPathIndexItem<T> = {
-    pathParts: fileMapItem.pathParts,
-    path: fileMapItem.path,
-    data: fileMapItem.data,
-    index: flattenedFileMapItem.index,
+  flattenedFileMapIndex: FlattenedFileMapIndex<T>,
+  flattenedFileMapIndexItem: FlattenedFileMapIndexItem<T>,
+  parent?: FileMapIndexItem<T>,
+): FileMapIndexItem<T> {
+  const fileMapIndexItem: FileMapIndexItem<T> = {
+    pathParts: flattenedFileMapIndexItem.pathParts,
+    path: flattenedFileMapIndexItem.path,
+    data: flattenedFileMapIndexItem.data,
+    index: flattenedFileMapIndexItem.index,
     parent,
     children: undefined,
   }
 
-  fileMapPathIndex.set(fileMapItem.path, fileMapPathIndexItem)
-  if (fileMapItem.children) {
-    const children: FileMapPathIndexItem<T>[] = []
-    fileMapItem.children.forEach((child) => {
-      children.push(createFileMapIndexItemInternal(fileMapPathIndex, flattenedFilePathMap, child, fileMapPathIndexItem))
-    })
-    fileMapPathIndexItem.children = children
+  if (fileMapIndexItem.children) {
+    const children = fileMapIndexItem.children.map((child) => flattenedFileMapIndex[child.index]!)
+    fileMapIndexItem.children = children.map((child) => createFileMapIndexItemInternal(flattenedFileMapIndex, child))
   }
-  return fileMapPathIndexItem
+  return fileMapIndexItem
 }
 
 function compareFileMapItem<T>(a: FileMapItem<T>, b: FileMapItem<T>): number {

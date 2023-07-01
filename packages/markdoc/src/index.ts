@@ -17,8 +17,8 @@ import { CustomError, getErrorMessage } from '@gpahal/std/error'
 import {
   convertFsFileMapToFileMap,
   ConvertFsFileMapToFileMapOptions,
+  createFlattenedFileMapIndex,
   FileMap,
-  flattenFileMap,
   FsFileMapItem,
   FsModule,
   someFileMap,
@@ -326,8 +326,8 @@ export async function parseDirectory<TFrontmatterSchema extends FrontmatterSchem
 export function formatParseDirectoryResultErrors<TFrontmatterSchema extends FrontmatterSchema>(
   result: FileMap<ParseResult<TFrontmatterSchema>>,
 ): string {
-  const flattenedFileList = flattenFileMap(result)
-  return flattenedFileList
+  const flattenedFileMapIndex = createFlattenedFileMapIndex(result)
+  return flattenedFileMapIndex
     .map((item) => (item.data.isSuccessful ? '' : `${item.path}:\n${formatParseResultError(item.data)}`))
     .filter(Boolean)
     .join('\n\n')
