@@ -30,7 +30,7 @@ export function isAbsoluteUrl(url: Url): boolean {
   return !!ABSOLUTE_PATH_REGEX.exec(urlString) && isUrl(urlString)
 }
 
-export function getPathname(url: Url): string {
+function getPathname(url: Url): string {
   if (isString(url)) {
     if (isAbsoluteUrl(url)) {
       const urlObject = new URL(url)
@@ -43,19 +43,22 @@ export function getPathname(url: Url): string {
   }
 }
 
-export function isPathnameActive(url: Url, currentPathname: string): { isActive: boolean; isExactMatch: boolean } {
-  let pathname = ''
+export function isPathnameActive(
+  currentPathname: string,
+  targetUrl: Url,
+): { isActive: boolean; isExactMatch: boolean } {
+  let targetPathname = ''
   try {
-    pathname = getPathname(url)
+    targetPathname = getPathname(targetUrl)
   } catch {
     return { isActive: false, isExactMatch: false }
   }
 
-  pathname = trim(pathname, '/')
-  currentPathname = trim(pathname, '/')
-  const isExactMatch = pathname === currentPathname
+  targetPathname = trim(targetPathname, '/')
+  currentPathname = trim(currentPathname, '/')
+  const isExactMatch = targetPathname === currentPathname
   return {
-    isActive: isExactMatch || currentPathname.startsWith(pathname + '/'),
+    isActive: isExactMatch || currentPathname.startsWith(targetPathname + '/'),
     isExactMatch,
   }
 }
