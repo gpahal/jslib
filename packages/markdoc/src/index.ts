@@ -15,10 +15,11 @@ import {
 import { pushToArray } from '@gpahal/std/array'
 import { CustomError, getErrorMessage } from '@gpahal/std/error'
 import {
-  convertFsFileMapToFileMap,
-  ConvertFsFileMapToFileMapOptions,
+  createFileMap,
+  CreateFileMapOptions,
   createFlattenedFileMapIndex,
   FileMap,
+  FsFileMap,
   FsFileMapItem,
   FsModule,
   someFileMap,
@@ -271,8 +272,8 @@ function findNodeTextContents(node: Node): string[] | undefined {
 
 export type ParseDirectoryOptions<TFrontmatterSchema extends FrontmatterSchema> = Prettify<
   ParseOptions<TFrontmatterSchema> &
-    Omit<WalkOptions<Node>, 'getFileData'> &
-    ConvertFsFileMapToFileMapOptions<ParseResult<TFrontmatterSchema>>
+    Omit<WalkOptions<Node>, 'parseFileContents'> &
+    CreateFileMapOptions<ParseResult<TFrontmatterSchema>>
 >
 
 export type ParseDirectoryResultSuccess<TFrontmatterSchema extends FrontmatterSchema> = {
@@ -292,21 +293,23 @@ export type ParseDirectoryResult<TFrontmatterSchema extends FrontmatterSchema> =
 export async function parseDirectory<TFrontmatterSchema extends FrontmatterSchema>(
   fsModule: FsModule,
   directory: string,
-  options: ParseDirectoryOptions<TFrontmatterSchema>,
+  getIndexFileName: (
+    directoryName: string,
+    fsFileMap: FsFileMap<ParseResult<TFrontmatterSchema>>,
+  ) => string | undefined,
+  options?: ParseDirectoryOptions<TFrontmatterSchema>,
 ): Promise<ParseDirectoryResult<TFrontmatterSchema>> {
   const fileMap = await walkDirectory(fsModule, directory, {
-    ...options,
-    getFileData: async ({ absolutePath }) => {
-      const source = await fsModule.readFile(absolutePath)
-      return await parse(source, options)
+    ...(options || {}),
+    parseFileContents: async (contents) => {
+      return await parse(contents, options)
     },
     fileFilter: (fileOptions) => {
       return getExtension(fileOptions.name) !== 'mdoc' ? false : options?.fileFilter?.(fileOptions) ?? true
     },
   })
   const finalFileMap = fileMap ? fileMap : new Map<string, FsFileMapItem<ParseResult<TFrontmatterSchema>>>()
-  const intrusiveFileMap = convertFsFileMapToFileMap(finalFileMap, {
-    ...options,
+  const intrusiveFileMap = createFileMap(finalFileMap, getIndexFileName, {
     transformFileName: (fileName, fsFileMapFileItem) => {
       const fileNameWithoutExtension = stripMdocExtension(fileName)
       return options?.transformFileName

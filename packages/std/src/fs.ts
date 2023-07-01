@@ -3,7 +3,7 @@ import { trim } from '~/string'
 export type FsModule = {
   getBasename: (path: string) => string
   joinPath: (...paths: string[]) => string | Promise<string>
-  resolvePath: (...paths: string[]) => string | Promise<string>
+  getAbsolutePath: (path: string) => string | Promise<string>
   isDirectory: (path: string) => boolean | Promise<boolean>
   readDirectory: (path: string) => string[] | Promise<string[]>
   readFile: (path: string) => string | Promise<string>
@@ -18,7 +18,7 @@ export type FsFileOptions = {
 export type WalkOptions<T> = {
   directoryFilter?: (options: FsFileOptions) => boolean
   fileFilter?: (options: FsFileOptions) => boolean
-  getFileData: (options: FsFileOptions) => Promise<T>
+  parseFileContents: (data: string, options: FsFileOptions) => T | Promise<T>
 }
 
 export type FsFileMapDirectoryItem<T> = {
@@ -39,12 +39,12 @@ export function isFsFileMapFileValue<T>(item: FsFileMapItem<T>): item is FsFileM
 
 export type FsFileMap<T> = Map<string, FsFileMapItem<T>>
 
-export async function walkDirectory<T = undefined>(
+export async function walkDirectory<T>(
   fsModule: FsModule,
   directory: string,
   options: WalkOptions<T>,
 ): Promise<FsFileMap<T> | undefined> {
-  const absoluteDirPath = await fsModule.resolvePath(directory.trim())
+  const absoluteDirPath = await fsModule.getAbsolutePath(directory.trim())
   const isDirectory = await fsModule.isDirectory(absoluteDirPath)
   if (!isDirectory) {
     return
@@ -103,7 +103,8 @@ async function walkFileInternal<T>(
     fsFileMap.set(fileName, { children })
     await walkDirectoryInternal(fsModule, children, absoluteFilepath, relativeDirPath, fileName, options)
   } else if (!options || !options.fileFilter || options.fileFilter(fileOptions)) {
-    const data = await options.getFileData(fileOptions)
+    const contents = await fsModule.readFile(absoluteFilepath)
+    const data = await options.parseFileContents(contents, fileOptions)
     fsFileMap.set(fileName, { data })
   }
 }
@@ -121,21 +122,42 @@ export type FileMapItem<T> = {
 
 export type FileMap<T> = Map<string, FileMapItem<T>>
 
-export type ConvertFsFileMapToFileMapOptions<T> = {
-  getIndexFileName: (directoryName: string, fsFileMap: FsFileMap<T>) => string | undefined
-  transformFileName?: (fileName: string, fsFileMapFileItem: FsFileMapFileItem<T>) => string
+export type CreateFileMapOptions<T> = {
+  transformFileName?: (fileName: string, fileMapItem: FileMapItem<T>) => string
 }
 
-export function convertFsFileMapToFileMap<T>(
+export function createFileMap<T>(
   fsFileMap: FsFileMap<T>,
-  options: ConvertFsFileMapToFileMapOptions<T>,
+  getIndexFileName: (directoryName: string, fsFileMap: FsFileMap<T>) => string | undefined,
+  options?: CreateFileMapOptions<T>,
 ): FileMap<T> {
-  return convertFsFileMapToFileMapInternal(fsFileMap, options)
+  const fileMap = createFileMapInternal(fsFileMap, getIndexFileName)
+  if (options?.transformFileName) {
+    transformFileMapNames(fileMap, options.transformFileName)
+  }
+  return fileMap
 }
 
-export function convertFsFileMapToFileMapInternal<T>(
+export function transformFileMapNames<T>(
+  fileMap: FileMap<T>,
+  transformFileName: (fileName: string, fileMapItem: FileMapItem<T>) => string,
+): void {
+  const entries = Array.from(fileMap.entries())
+  fileMap.clear()
+  for (const [fileName, fileMapItem] of entries) {
+    const newFileName = transformFileName(fileName, fileMapItem)
+    fileMapItem.pathParts = fileMapItem.parent ? [...fileMapItem.parent.pathParts, newFileName] : [newFileName]
+    fileMapItem.path = fileMapItem.parent ? joinPathParts(fileMapItem.parent.path, newFileName) : newFileName
+    fileMap.set(newFileName, fileMapItem)
+    if (fileMapItem.children) {
+      transformFileMapNames(fileMapItem.children, transformFileName)
+    }
+  }
+}
+
+export function createFileMapInternal<T>(
   fsFileMap: FsFileMap<T>,
-  options: ConvertFsFileMapToFileMapOptions<T>,
+  getIndexFileName: (directoryName: string, fsFileMap: FsFileMap<T>) => string | undefined,
   parent?: FileMapItem<T>,
   indexFileName?: string,
 ): FileMap<T> {
@@ -145,45 +167,45 @@ export function convertFsFileMapToFileMapInternal<T>(
       continue
     }
 
-    const fileMapItem = convertFsFileMapItemToFileMapItemInternal(fileName, fsFileMapItem, options, parent)
-    fileMap.set(fileMapItem.pathParts[fileMapItem.pathParts.length - 1]!, fileMapItem)
+    const fileMapItem = createFileMapItemInternal(fileName, fsFileMapItem, getIndexFileName, parent)
+    fileMap.set(fileName, fileMapItem)
   }
   return fileMap
 }
 
-function convertFsFileMapItemToFileMapItemInternal<T>(
+function createFileMapItemInternal<T>(
   originalFileName: string,
   fsFileMapItem: FsFileMapItem<T>,
-  options: ConvertFsFileMapToFileMapOptions<T>,
+  getIndexFileName: (directoryName: string, fsFileMap: FsFileMap<T>) => string | undefined,
   parent?: FileMapItem<T>,
 ): FileMapItem<T> {
   return isFsFileMapDirectoryValue(fsFileMapItem)
-    ? convertFsFileMapDirectoryItemToFileMapItemInternal(originalFileName, fsFileMapItem, options, parent)
-    : convertFsFileMapFileItemToFileMapItemInternal(originalFileName, fsFileMapItem, options, parent)
+    ? convertFsFileMapDirectoryItemToFileMapItemInternal(originalFileName, fsFileMapItem, getIndexFileName, parent)
+    : convertFsFileMapFileItemToFileMapItemInternal(originalFileName, fsFileMapItem, parent)
 }
 
 function convertFsFileMapDirectoryItemToFileMapItemInternal<T>(
-  originalDirectoryName: string,
+  directoryName: string,
   fsFileMapDirectoryItem: FsFileMapDirectoryItem<T>,
-  options: ConvertFsFileMapToFileMapOptions<T>,
+  getIndexFileName: (directoryName: string, fsFileMap: FsFileMap<T>) => string | undefined,
   parent?: FileMapItem<T>,
 ): FileMapItem<T> {
-  const indexFileName = options.getIndexFileName(originalDirectoryName, fsFileMapDirectoryItem.children)
+  const indexFileName = getIndexFileName(directoryName, fsFileMapDirectoryItem.children)
   if (indexFileName == null) {
-    throw new Error(`Directory '${originalDirectoryName}' doesn't have an index file`)
+    throw new Error(`Directory '${directoryName}' doesn't have an index file`)
   }
 
   const fsFileMapFileItem = fsFileMapDirectoryItem.children.get(indexFileName)
   if (!fsFileMapFileItem) {
-    throw new Error(`Index file '${indexFileName}' not found in directory '${originalDirectoryName}'`)
+    throw new Error(`Index file '${indexFileName}' not found in directory '${directoryName}'`)
   } else if (isFsFileMapDirectoryValue(fsFileMapFileItem)) {
-    throw new Error(`Index file '${indexFileName}' in directory '${originalDirectoryName} is not a file`)
+    throw new Error(`Index file '${indexFileName}' in directory '${directoryName} is not a file`)
   }
 
-  const fileMapItem = convertFsFileMapFileItemToFileMapItemInternal(indexFileName, fsFileMapFileItem, options, parent)
-  fileMapItem.children = convertFsFileMapToFileMapInternal(
+  const fileMapItem = convertFsFileMapFileItemToFileMapItemInternal(directoryName, fsFileMapFileItem, parent)
+  fileMapItem.children = createFileMapInternal(
     fsFileMapDirectoryItem.children,
-    options,
+    getIndexFileName,
     fileMapItem,
     indexFileName,
   )
@@ -191,14 +213,10 @@ function convertFsFileMapDirectoryItemToFileMapItemInternal<T>(
 }
 
 function convertFsFileMapFileItemToFileMapItemInternal<T>(
-  originalFileName: string,
+  fileName: string,
   fsFileMapFileItem: FsFileMapFileItem<T>,
-  options: ConvertFsFileMapToFileMapOptions<T>,
   parent?: FileMapItem<T>,
 ): FileMapItem<T> {
-  const fileName = options.transformFileName
-    ? options.transformFileName(originalFileName, fsFileMapFileItem)
-    : originalFileName
   return {
     pathParts: parent ? [...parent.pathParts, fileName] : [fileName],
     path: parent ? joinPathParts(parent.path, fileName) : fileName,
@@ -272,18 +290,20 @@ export function createFlattenedFileMapIndex<T>(
   fileMap: FileMap<T>,
   compareFn?: (a: FileMapItem<T>, b: FileMapItem<T>) => number,
 ): FlattenedFileMapIndex<T> {
-  return createFlattenedFileMapIndexInternal(fileMap, compareFn)
+  const flattenedFileMapIndex: FlattenedFileMapIndex<T> = []
+  updateFlattenedFileMapIndexInternal(flattenedFileMapIndex, fileMap, compareFn)
+  return flattenedFileMapIndex
 }
 
-function createFlattenedFileMapIndexInternal<T>(
+function updateFlattenedFileMapIndexInternal<T>(
+  flattenedFileMapIndex: FlattenedFileMapIndex<T>,
   fileMap: FileMap<T>,
   compareFn?: (a: FileMapItem<T>, b: FileMapItem<T>) => number,
-  parentIndex?: number,
-): FlattenedFileMapIndex<T> {
-  const flattenedFileMapIndex: FlattenedFileMapIndex<T> = []
+  parent?: FlattenedFileMapIndexItem<T>,
+): void {
   const fileMapItems = Array.from(fileMap.values())
   if (fileMapItems.length === 0) {
-    return flattenedFileMapIndex
+    return
   }
 
   fileMapItems.sort(compareFn || compareFileMapItem)
@@ -293,24 +313,18 @@ function createFlattenedFileMapIndexInternal<T>(
       path: fileMapItem.path,
       data: fileMapItem.data,
       index: flattenedFileMapIndex.length,
-      parentIndex,
+      parentIndex: parent ? parent.index : undefined,
       childrenIndices: undefined,
     }
-    const currChildren = fileMapItem.children
-      ? createFlattenedFileMapIndexInternal(fileMapItem.children, compareFn, curr.index)
-      : undefined
     flattenedFileMapIndex.push(curr)
-    const startIndex = flattenedFileMapIndex.length
-    if (currChildren) {
-      flattenedFileMapIndex.push(...currChildren)
-      const childrenIndices: number[] = []
-      currChildren.forEach((_, index) => {
-        childrenIndices.push(startIndex + index)
-      })
-      curr.childrenIndices = childrenIndices
+    if (fileMapItem.children) {
+      updateFlattenedFileMapIndexInternal(flattenedFileMapIndex, fileMapItem.children, compareFn, curr)
+    }
+    if (parent) {
+      parent.childrenIndices = parent.childrenIndices || []
+      parent.childrenIndices.push(curr.index)
     }
   }
-  return flattenedFileMapIndex
 }
 
 export function unflattenFlattenedFileMapIndex<T>(flattenedFileMap: FlattenedFileMapIndex<T>): FileMap<T> {
@@ -336,7 +350,7 @@ function unflattenFlattenedFileMapIndexInternal<T>(
     if (curr.childrenIndices) {
       currItem.children = unflattenFlattenedFileMapIndexInternal(flattenedFileMap, curr.childrenIndices, currItem)
     }
-    fileMap.set(curr.path, currItem)
+    fileMap.set(curr.pathParts[curr.pathParts.length - 1]!, currItem)
   }
   return fileMap
 }
@@ -383,8 +397,8 @@ export function createFileMapIndexItemInternal<T>(
     children: undefined,
   }
 
-  if (fileMapIndexItem.children) {
-    const children = fileMapIndexItem.children.map((child) => flattenedFileMapIndex[child.index]!)
+  if (flattenedFileMapIndexItem.childrenIndices) {
+    const children = flattenedFileMapIndexItem.childrenIndices.map((childIndex) => flattenedFileMapIndex[childIndex]!)
     fileMapIndexItem.children = children.map((child) => createFileMapIndexItemInternal(flattenedFileMapIndex, child))
   }
   return fileMapIndexItem

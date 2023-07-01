@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/std",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -31,7 +31,8 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "test": "vitest run"
   },
   "dependencies": {
     "ts-custom-error": "^3.3.1"
