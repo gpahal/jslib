@@ -5,7 +5,7 @@ import Markdoc, {
   Tag,
   ValidateError,
 } from '@markdoc/markdoc'
-import Slugger from 'github-slugger'
+import { slug } from 'github-slugger'
 import yaml, { YAMLException } from 'js-yaml'
 import libCalculateReadTime, { ReadTimeResults } from 'reading-time'
 import {
@@ -430,4 +430,35 @@ function renderableNodesToString(nodes: RenderableTreeNode[]): string {
 
 function stripMdocExtension(fileName: string): string {
   return stripSuffix(fileName, '.mdoc')
+}
+
+class Slugger {
+  private occurrences: Map<string, number>
+
+  constructor() {
+    this.occurrences = new Map()
+  }
+
+  slug(value: string, maintainCase?: boolean): string {
+    let finalSlug = slug(value, !!maintainCase)
+    const originalSlug = finalSlug
+
+    while (true) {
+      const count = this.occurrences.get(finalSlug)
+      if (count == null) {
+        break
+      }
+
+      const newCount = count + 1
+      this.occurrences.set(originalSlug, newCount)
+      finalSlug = originalSlug + '-' + newCount
+    }
+
+    this.occurrences.set(finalSlug, 0)
+    return finalSlug
+  }
+
+  reset() {
+    this.occurrences.clear()
+  }
 }
