@@ -1,4 +1,5 @@
-import Markdoc, { Node, RenderableTreeNode, Config as TransformConfig, ValidateError } from '@markdoc/markdoc'
+import Markdoc, { Config as MarkdocTransformConfig, Node, RenderableTreeNode, ValidateError } from '@markdoc/markdoc'
+import Slugger from 'github-slugger'
 import yaml, { YAMLException } from 'js-yaml'
 import libCalculateReadTime, { ReadTimeResults } from 'reading-time'
 import {
@@ -30,8 +31,27 @@ import { Prettify } from '@gpahal/std/object'
 import { stripSuffix } from '@gpahal/std/string'
 import { getExtension } from '@gpahal/std/url'
 
-export type { Config as TransformConfig, Node, RenderableTreeNode, ValidateError } from '@markdoc/markdoc'
+import { generateHeadingSchema, generateImageSchema, TransformImageSrc } from './schema'
+import { renderableNodesToString } from './utils'
+
+export type { Node, RenderableTreeNode, ValidateError } from '@markdoc/markdoc'
 export type { ReadTimeResults } from 'reading-time'
+export type { TransformedImageSrc, TransformImageSrc } from './schema'
+
+export type TransformConfig = MarkdocTransformConfig & {
+  transformImageSrc?: TransformImageSrc
+}
+
+export function defineTransformConfig({ transformImageSrc, nodes, ...config }: TransformConfig = {}): TransformConfig {
+  return {
+    ...config,
+    nodes: {
+      heading: generateHeadingSchema(),
+      image: generateImageSchema(transformImageSrc),
+      ...(nodes || {}),
+    },
+  }
+}
 
 export type FrontmatterRaw = Record<string, unknown>
 
@@ -48,11 +68,19 @@ export type ParseOptions<TFrontmatterSchema extends FrontmatterSchema> = {
   transformConfig?: TransformConfig
 }
 
+export type HeadingNode = {
+  level: number
+  id: string
+  text: string
+  children: HeadingNode[]
+}
+
 export type ParseResultSuccess<TFrontmatterSchema extends FrontmatterSchema> = {
   isSuccessful: true
   content: RenderableTreeNode
   frontmatter: output<TFrontmatterSchema>
   readTimeResults: ReadTimeResults
+  headingNodes: HeadingNode[]
 }
 
 export type ParseResultMarkdocError = {
@@ -114,11 +142,13 @@ export async function parse<TFrontmatterSchema extends FrontmatterSchema>(
   }
 
   const readTimeResults = calculateReadTime(document)
+  const headingNodes = generateHeadingNodes(document)
   return {
     isSuccessful: true,
     content,
     frontmatter,
     readTimeResults,
+    headingNodes,
   }
 }
 
@@ -249,6 +279,61 @@ function parseFrontmatterRaw(
 function calculateReadTime(node: Node): ReadTimeResults {
   const textContents = findNodeTextContents(node)
   return libCalculateReadTime(textContents ? textContents.join(' ') : '')
+}
+
+function generateHeadingNodes(node: Node, transformConfig?: TransformConfig): HeadingNode[] {
+  const slugger = new Slugger()
+  const headingNodes = [] as HeadingNode[]
+  updateHeadingNodesInternal(headingNodes, node, slugger, transformConfig)
+  return headingNodes
+}
+
+function updateHeadingNodesInternal(
+  headingNodes: HeadingNode[],
+  node: Node,
+  slugger: Slugger,
+  transformConfig?: TransformConfig,
+): void {
+  if (node.type === 'heading') {
+    const level = node.attributes['level'] ?? 1
+    if (typeof level !== 'number' && level >= 2 && level <= 6) {
+      const text = renderableNodesToString(node.transformChildren(transformConfig || {}))
+      const headingNode = {
+        level: node.attributes['level'] ?? 1,
+        id: slugger.slug(text),
+        text,
+        children: [],
+      }
+
+      if (level === 2) {
+        headingNodes.push(headingNode)
+        return
+      }
+
+      let currHeadingNodes: HeadingNode[] = headingNodes
+      let currHeadingNode: HeadingNode | undefined
+      for (let currLevel = 2; currLevel < level; currLevel++) {
+        if (currHeadingNodes.length === 0) {
+          return
+        }
+
+        currHeadingNode = currHeadingNodes[currHeadingNodes.length - 1]
+        if (!currHeadingNode) {
+          break
+        }
+
+        currHeadingNodes = currHeadingNode.children
+      }
+
+      if (currHeadingNode) {
+        currHeadingNode.children.push(headingNode)
+      }
+    }
+  }
+
+  for (const child of node.children) {
+    updateHeadingNodesInternal(headingNodes, child, slugger, transformConfig)
+  }
 }
 
 function findNodeTextContents(node: Node): string[] | undefined {
