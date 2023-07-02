@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/markdoc",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -27,7 +27,8 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "test": "vitest run"
   },
   "dependencies": {
     "@gpahal/image": "workspace:*",

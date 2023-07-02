@@ -1,4 +1,10 @@
-import Markdoc, { Config as MarkdocTransformConfig, Node, RenderableTreeNode, ValidateError } from '@markdoc/markdoc'
+import Markdoc, {
+  Config as MarkdocTransformConfig,
+  Node,
+  RenderableTreeNode,
+  Tag,
+  ValidateError,
+} from '@markdoc/markdoc'
 import Slugger from 'github-slugger'
 import yaml, { YAMLException } from 'js-yaml'
 import libCalculateReadTime, { ReadTimeResults } from 'reading-time'
@@ -13,7 +19,6 @@ import {
   ZodUnion,
 } from 'zod'
 
-import { pushToArray } from '@gpahal/std/array'
 import { CustomError, getErrorMessage } from '@gpahal/std/error'
 import {
   createFileMap,
@@ -32,7 +37,6 @@ import { stripSuffix } from '@gpahal/std/string'
 import { getExtension } from '@gpahal/std/url'
 
 import { generateHeadingSchema, generateImageSchema, TransformImageSrc } from './schema'
-import { renderableNodesToString } from './utils'
 
 export type { Node, RenderableTreeNode, ValidateError } from '@markdoc/markdoc'
 export type { ReadTimeResults } from 'reading-time'
@@ -79,8 +83,8 @@ export type ParseResultSuccess<TFrontmatterSchema extends FrontmatterSchema> = {
   isSuccessful: true
   content: RenderableTreeNode
   frontmatter: output<TFrontmatterSchema>
-  readTimeResults: ReadTimeResults
   headingNodes: HeadingNode[]
+  readTimeResults: ReadTimeResults
 }
 
 export type ParseResultMarkdocError = {
@@ -126,6 +130,7 @@ export async function parse<TFrontmatterSchema extends FrontmatterSchema>(
     return { isSuccessful: false, type: 'markdoc', markdocErrors }
   }
 
+  const headingNodes = generateHeadingNodes(document, options?.transformConfig)
   const content = Markdoc.transform(document, options?.transformConfig)
   const frontmatterRawParseResults = parseFrontmatterRaw(document)
   if (!frontmatterRawParseResults.isSuccessful) {
@@ -141,14 +146,12 @@ export async function parse<TFrontmatterSchema extends FrontmatterSchema>(
     frontmatter = zodParseResults.data
   }
 
-  const readTimeResults = calculateReadTime(document)
-  const headingNodes = generateHeadingNodes(document)
   return {
     isSuccessful: true,
     content,
     frontmatter,
-    readTimeResults,
     headingNodes,
+    readTimeResults: libCalculateReadTime(renderableNodeToString(content)),
   }
 }
 
@@ -276,11 +279,6 @@ function parseFrontmatterRaw(
   return { isSuccessful: true, frontmatterRaw: parsedFrontmatter as Record<string, unknown> }
 }
 
-function calculateReadTime(node: Node): ReadTimeResults {
-  const textContents = findNodeTextContents(node)
-  return libCalculateReadTime(textContents ? textContents.join(' ') : '')
-}
-
 function generateHeadingNodes(node: Node, transformConfig?: TransformConfig): HeadingNode[] {
   const slugger = new Slugger()
   const headingNodes = [] as HeadingNode[]
@@ -296,37 +294,47 @@ function updateHeadingNodesInternal(
 ): void {
   if (node.type === 'heading') {
     const level = node.attributes['level'] ?? 1
-    if (typeof level !== 'number' && level >= 2 && level <= 6) {
-      const text = renderableNodesToString(node.transformChildren(transformConfig || {}))
+    if (typeof level === 'number' && level >= 1 && level <= 6) {
+      const renderableChildren = Markdoc.transform(node.children, transformConfig)
+      const text = renderableNodesToString(renderableChildren)
+      const id =
+        node.attributes['id'] && typeof node.attributes['id'] === 'string' ? node.attributes['id'] : slugger.slug(text)
+      node.attributes['id'] = id
+
       const headingNode = {
         level: node.attributes['level'] ?? 1,
-        id: slugger.slug(text),
+        id,
         text,
         children: [],
       }
 
-      if (level === 2) {
+      if (headingNodes.length === 0) {
         headingNodes.push(headingNode)
         return
-      }
+      } else {
+        const lowestLevel = headingNodes[0]!.level
+        if (level === lowestLevel) {
+          headingNodes.push(headingNode)
+        } else if (level > lowestLevel) {
+          let currHeadingNodes: HeadingNode[] = headingNodes
+          let currHeadingNode: HeadingNode | undefined
+          for (let currLevel = lowestLevel; currLevel < level; currLevel++) {
+            if (currHeadingNodes.length === 0) {
+              return
+            }
 
-      let currHeadingNodes: HeadingNode[] = headingNodes
-      let currHeadingNode: HeadingNode | undefined
-      for (let currLevel = 2; currLevel < level; currLevel++) {
-        if (currHeadingNodes.length === 0) {
-          return
+            currHeadingNode = currHeadingNodes[currHeadingNodes.length - 1]
+            if (!currHeadingNode) {
+              break
+            }
+
+            currHeadingNodes = currHeadingNode.children
+          }
+
+          if (currHeadingNode) {
+            currHeadingNode.children.push(headingNode)
+          }
         }
-
-        currHeadingNode = currHeadingNodes[currHeadingNodes.length - 1]
-        if (!currHeadingNode) {
-          break
-        }
-
-        currHeadingNodes = currHeadingNode.children
-      }
-
-      if (currHeadingNode) {
-        currHeadingNode.children.push(headingNode)
       }
     }
   }
@@ -334,25 +342,6 @@ function updateHeadingNodesInternal(
   for (const child of node.children) {
     updateHeadingNodesInternal(headingNodes, child, slugger, transformConfig)
   }
-}
-
-function findNodeTextContents(node: Node): string[] | undefined {
-  let textContents: string[] | undefined
-  if (node.type === 'text' || node.type === 'code') {
-    const content = node.attributes['content']
-    if (content && typeof content === 'string') {
-      textContents = pushToArray(textContents, content)
-    }
-  }
-  if (node.children && node.children.length > 0) {
-    for (const child of node.children) {
-      const childTextContents = findNodeTextContents(child)
-      if (childTextContents && childTextContents.length > 0) {
-        textContents = pushToArray(textContents, ...childTextContents)
-      }
-    }
-  }
-  return textContents
 }
 
 export type ParseDirectoryOptions<TFrontmatterSchema extends FrontmatterSchema> = Prettify<
@@ -419,6 +408,24 @@ export function formatParseDirectoryResultErrors<TFrontmatterSchema extends Fron
     .map((item) => (item.data.isSuccessful ? '' : `${item.path}:\n${formatParseResultError(item.data)}`))
     .filter(Boolean)
     .join('\n\n')
+}
+
+function renderableNodeToString(node: RenderableTreeNode): string {
+  if (Tag.isTag(node)) {
+    return renderableNodesToString(node.children || [])
+  } else if (node == null) {
+    return ''
+  } else if (Array.isArray(node)) {
+    return renderableNodesToString(node)
+  } else if (typeof node === 'object') {
+    return renderableNodesToString(Array.from(Object.values(node)))
+  } else {
+    return String(node)
+  }
+}
+
+function renderableNodesToString(nodes: RenderableTreeNode[]): string {
+  return nodes.map(renderableNodeToString).filter(Boolean).join(' ')
 }
 
 function stripMdocExtension(fileName: string): string {
