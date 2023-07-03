@@ -148,9 +148,6 @@ importers:
 
   packages/markdoc:
     dependencies:
-      '@gpahal/image':
-        specifier: workspace:*
-        version: link:../image
       '@gpahal/std':
         specifier: workspace:*
         version: link:../std

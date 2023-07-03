@@ -1,7 +1,5 @@
 import { Schema, Tag } from '@markdoc/markdoc'
 
-import { getNonTransformableImageProps, transformNonTransformableImageSourcePropsToHTMLProps } from '@gpahal/image'
-
 export function generateHeading(): Schema {
   return {
     children: ['inline'],
@@ -61,22 +59,12 @@ export function generateImage(transformImageSrcAndGetSize?: TransformImageSrcAnd
         return new Tag('img', { ...attributes, src: src || attributes.src })
       }
 
-      const props = transformNonTransformableImageSourcePropsToHTMLProps(
-        getNonTransformableImageProps({
-          src: src || attributes.src,
-          aspectRatio: width / height,
-          layout: { type: 'vw-ratio', vwRatio: 1, maxWidth: width },
-          alt: attributes.alt,
-        }),
-      )
-
       return new Tag(
         'img',
         {
-          ...attributes,
           width: `${width}px`,
           height: `${height}px`,
-          ...props,
+          ...attributes,
         },
         [],
       )
