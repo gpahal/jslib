@@ -43,6 +43,7 @@ export type { ReadTimeResults } from 'reading-time'
 export type { TransformedImageSrcWithSize, TransformImageSrcAndGetSize } from './schema'
 
 export { Tag } from '@markdoc/markdoc'
+export { generateHeadingSchema, generateImageSchema, linkSchema } from './schema'
 export { renderReact } from './react'
 
 export type TransformConfig = MarkdocTransformConfig & {
