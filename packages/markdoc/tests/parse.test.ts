@@ -1,4 +1,4 @@
-import { defineTransformConfig, parse } from '../src/index'
+import { linkSchema, parse } from '../src/index'
 
 const mdocContent = `\
 ---
@@ -10,7 +10,9 @@ label2: value2
 
 C1
 
-[![img-alt](img-link)](link)
+{% link href="link1" attr1="value1" %}label1{% /link %}
+
+[label2](link2)
 
 ## H2a
 
@@ -50,7 +52,19 @@ C9
 `
 
 test('parse', async () => {
-  const result = await parse(mdocContent, { transformConfig: defineTransformConfig() })
+  const result = await parse(mdocContent, {
+    transformConfig: {
+      tags: {
+        link: {
+          ...linkSchema,
+          attributes: {
+            ...linkSchema.attributes,
+            attr1: { type: String },
+          },
+        },
+      },
+    },
+  })
   expect(result).toBeTruthy()
   expect(result.isSuccessful).toBe(true)
 

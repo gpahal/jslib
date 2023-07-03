@@ -1,7 +1,9 @@
 import Markdoc, {
   Config as MarkdocTransformConfig,
   Node,
+  NodeType,
   RenderableTreeNode,
+  Schema,
   Tag,
   ValidateError,
 } from '@markdoc/markdoc'
@@ -32,13 +34,13 @@ import {
   walkDirectory,
   WalkOptions,
 } from '@gpahal/std/fs'
-import { Prettify } from '@gpahal/std/object'
+import { omitUndefinedValues, Prettify } from '@gpahal/std/object'
 import { stripSuffix } from '@gpahal/std/string'
 import { getExtension } from '@gpahal/std/url'
 
 import { generateHeadingSchema, generateImageSchema, linkSchema, TransformImageSrcAndGetSize } from './schema'
 
-export type { Node, RenderableTreeNode, RenderableTreeNodes, Scalar, ValidateError } from '@markdoc/markdoc'
+export type { Node, RenderableTreeNode, RenderableTreeNodes, Scalar, Schema, ValidateError } from '@markdoc/markdoc'
 export type { ReadTimeResults } from 'reading-time'
 export type { TransformedImageSrcWithSize, TransformImageSrcAndGetSize } from './schema'
 
@@ -46,23 +48,63 @@ export { Tag } from '@markdoc/markdoc'
 export { generateHeadingSchema, generateImageSchema, linkSchema } from './schema'
 export { renderReact } from './react'
 
-export type TransformConfig = MarkdocTransformConfig & {
+export type TransformConfig = Omit<MarkdocTransformConfig, 'nodes'> & {
   transformImageSrcAndGetSize?: TransformImageSrcAndGetSize
 }
 
-export function defineTransformConfig({
+const NODE_TYPES: Set<NodeType> = new Set([
+  'blockquote',
+  'code',
+  'comment',
+  'document',
+  'em',
+  'error',
+  'fence',
+  'hardbreak',
+  'heading',
+  'hr',
+  'image',
+  'inline',
+  'item',
+  'link',
+  'list',
+  'node',
+  'paragraph',
+  's',
+  'softbreak',
+  'strong',
+  'table',
+  'tag',
+  'tbody',
+  'td',
+  'text',
+  'th',
+  'thead',
+  'tr',
+])
+
+function getMarkdocTransformConfig({
   transformImageSrcAndGetSize,
-  nodes,
   ...config
-}: TransformConfig = {}): TransformConfig {
+}: TransformConfig = {}): MarkdocTransformConfig {
+  const tags = {
+    heading: generateHeadingSchema(),
+    image: generateImageSchema(transformImageSrcAndGetSize),
+    link: linkSchema,
+    ...(config.tags ? omitUndefinedValues(config.tags) : {}),
+  }
+
+  const nodes = {} as Partial<Record<NodeType, Schema>>
+  Object.entries(tags).forEach(([tagName, tag]) => {
+    if (NODE_TYPES.has(tagName as NodeType)) {
+      nodes[tagName as NodeType] = tag
+    }
+  })
+
   return {
     ...config,
-    nodes: {
-      heading: generateHeadingSchema(),
-      image: generateImageSchema(transformImageSrcAndGetSize),
-      link: linkSchema,
-      ...(nodes || {}),
-    },
+    nodes,
+    tags,
   }
 }
 
@@ -134,13 +176,15 @@ export async function parse<TFrontmatterSchema extends FrontmatterSchema>(
   options?: ParseOptions<TFrontmatterSchema>,
 ): Promise<ParseResult<TFrontmatterSchema>> {
   const document = Markdoc.parse(source)
-  const markdocErrors = Markdoc.validate(document, options?.transformConfig)
+
+  const transformConfig = getMarkdocTransformConfig(options?.transformConfig)
+  const markdocErrors = Markdoc.validate(document, transformConfig)
   if (markdocErrors && markdocErrors.length > 0) {
     return { isSuccessful: false, type: 'markdoc', markdocErrors }
   }
 
-  const headingNodes = generateHeadingNodes(document, options?.transformConfig)
-  const content = await Markdoc.transform(document, options?.transformConfig)
+  const headingNodes = generateHeadingNodes(document, transformConfig)
+  const content = await Markdoc.transform(document, transformConfig)
   const frontmatterRawParseResults = parseFrontmatterRaw(document)
   if (!frontmatterRawParseResults.isSuccessful) {
     return frontmatterRawParseResults
