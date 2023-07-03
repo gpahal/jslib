@@ -9,7 +9,7 @@ type ReactShape = Readonly<{
   Fragment: typeof React.Fragment
 }>
 
-type ComponentType = React.ComponentType<unknown>
+type ComponentType = React.ElementType
 export type Components = Record<string, ComponentType> | ((string: string) => ComponentType)
 
 function getComponent(tagName: Scalar, components?: Components): string | ComponentType {
@@ -25,7 +25,7 @@ function getComponent(tagName: Scalar, components?: Components): string | Compon
   return component || tagName
 }
 
-export function reactRender(React: ReactShape, node: RenderableTreeNodes, components?: Components) {
+export function renderReact(React: ReactShape, node: RenderableTreeNodes, components?: Components) {
   function renderInternal(node: RenderableTreeNodes): React.ReactNode {
     if (Array.isArray(node)) {
       return React.createElement(React.Fragment, null, ...node.map(renderInternal))

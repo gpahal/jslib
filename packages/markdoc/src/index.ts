@@ -43,7 +43,7 @@ export type { ReadTimeResults } from 'reading-time'
 export type { TransformedImageSrcWithSize, TransformImageSrcAndGetSize } from './schema'
 
 export { Tag } from '@markdoc/markdoc'
-export { reactRender } from './react'
+export { renderReact } from './react'
 
 export type TransformConfig = MarkdocTransformConfig & {
   transformImageSrcAndGetSize?: TransformImageSrcAndGetSize
