@@ -466,12 +466,12 @@ export function formatParseDirectoryResultErrors<TFrontmatterSchema extends Fron
 function renderableNodeToString(node: RenderableTreeNode): string {
   if (node == null) {
     return ''
-  } else if (typeof node === 'object') {
-    return renderableNodesToString(Array.from(Object.values(node)))
   } else if (Array.isArray(node)) {
     return renderableNodesToString(node)
   } else if (Tag.isTag(node)) {
     return renderableNodesToString(node.children || [])
+  } else if (typeof node === 'object') {
+    return renderableNodesToString(Array.from(Object.values(node)))
   } else {
     return String(node)
   }
