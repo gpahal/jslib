@@ -136,7 +136,7 @@ export async function parse<TFrontmatterSchema extends FrontmatterSchema>(
   }
 
   const headingNodes = generateHeadingNodes(document, options?.transformConfig)
-  const content = Markdoc.transform(document, options?.transformConfig)
+  const content = await Markdoc.transform(document, options?.transformConfig)
   const frontmatterRawParseResults = parseFrontmatterRaw(document)
   if (!frontmatterRawParseResults.isSuccessful) {
     return frontmatterRawParseResults

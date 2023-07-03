@@ -1,4 +1,4 @@
-import { parse } from '../src/index'
+import { defineTransformConfig, parse } from '../src/index'
 
 const mdocContent = `\
 ---
@@ -9,6 +9,8 @@ label2: value2
 # H1a
 
 C1
+
+[![img-alt](img-link)](link)
 
 ## H2a
 
@@ -48,7 +50,7 @@ C9
 `
 
 test('parse', async () => {
-  const result = await parse(mdocContent)
+  const result = await parse(mdocContent, { transformConfig: defineTransformConfig() })
   expect(result).toBeTruthy()
   expect(result.isSuccessful).toBe(true)
 
