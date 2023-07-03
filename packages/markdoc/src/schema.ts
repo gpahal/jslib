@@ -29,22 +29,24 @@ export function generateHeadingSchema(): Schema {
   }
 }
 
-export type TransformedImageSrc = {
+export type TransformedImageSrcWithSize = {
   src: string
   width?: number
   height?: number
 }
 
-export type TransformImageSrc = (src: string) => TransformedImageSrc | undefined
+export type TransformImageSrcAndGetSize = (
+  src: string,
+) => TransformedImageSrcWithSize | undefined | Promise<TransformedImageSrcWithSize | undefined>
 
-export function generateImageSchema(transformImageSrc?: TransformImageSrc): Schema {
+export function generateImageSchema(transformImageSrcAndGetSize?: TransformImageSrcAndGetSize): Schema {
   return {
     attributes: {
       src: { type: String, required: true },
       alt: { type: String, required: true },
       title: { type: String },
     },
-    transform(node, config) {
+    async transform(node, config) {
       const attributes = node.transformAttributes(config) as {
         src: string
         alt: string
@@ -54,7 +56,7 @@ export function generateImageSchema(transformImageSrc?: TransformImageSrc): Sche
         src = attributes.src,
         width = undefined,
         height = undefined,
-      } = transformImageSrc ? transformImageSrc(attributes.src) || {} : {}
+      } = transformImageSrcAndGetSize ? (await transformImageSrcAndGetSize(attributes.src)) || {} : {}
       if (width == null || height == null) {
         return new Tag('img', { ...attributes, src: src || attributes.src })
       }

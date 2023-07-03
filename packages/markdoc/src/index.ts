@@ -36,22 +36,26 @@ import { Prettify } from '@gpahal/std/object'
 import { stripSuffix } from '@gpahal/std/string'
 import { getExtension } from '@gpahal/std/url'
 
-import { generateHeadingSchema, generateImageSchema, TransformImageSrc } from './schema'
+import { generateHeadingSchema, generateImageSchema, TransformImageSrcAndGetSize } from './schema'
 
 export type { Node, RenderableTreeNode, ValidateError } from '@markdoc/markdoc'
 export type { ReadTimeResults } from 'reading-time'
-export type { TransformedImageSrc, TransformImageSrc } from './schema'
+export type { TransformedImageSrcWithSize, TransformImageSrcAndGetSize } from './schema'
 
 export type TransformConfig = MarkdocTransformConfig & {
-  transformImageSrc?: TransformImageSrc
+  transformImageSrcAndGetSize?: TransformImageSrcAndGetSize
 }
 
-export function defineTransformConfig({ transformImageSrc, nodes, ...config }: TransformConfig = {}): TransformConfig {
+export function defineTransformConfig({
+  transformImageSrcAndGetSize,
+  nodes,
+  ...config
+}: TransformConfig = {}): TransformConfig {
   return {
     ...config,
     nodes: {
       heading: generateHeadingSchema(),
-      image: generateImageSchema(transformImageSrc),
+      image: generateImageSchema(transformImageSrcAndGetSize),
       ...(nodes || {}),
     },
   }
