@@ -36,7 +36,7 @@ import { Prettify } from '@gpahal/std/object'
 import { stripSuffix } from '@gpahal/std/string'
 import { getExtension } from '@gpahal/std/url'
 
-import { generateHeadingSchema, generateImageSchema, TransformImageSrcAndGetSize } from './schema'
+import { generateHeading, generateImage, link, TransformImageSrcAndGetSize } from './schema'
 
 export type { Node, RenderableTreeNode, ValidateError } from '@markdoc/markdoc'
 export type { ReadTimeResults } from 'reading-time'
@@ -54,8 +54,9 @@ export function defineTransformConfig({
   return {
     ...config,
     nodes: {
-      heading: generateHeadingSchema(),
-      image: generateImageSchema(transformImageSrcAndGetSize),
+      heading: generateHeading(),
+      image: generateImage(transformImageSrcAndGetSize),
+      link,
       ...(nodes || {}),
     },
   }

@@ -2,7 +2,7 @@ import { Schema, Tag } from '@markdoc/markdoc'
 
 import { getNonTransformableImageProps, transformNonTransformableImageSourcePropsToHTMLProps } from '@gpahal/image'
 
-export function generateHeadingSchema(): Schema {
+export function generateHeading(): Schema {
   return {
     children: ['inline'],
     attributes: {
@@ -39,7 +39,7 @@ export type TransformImageSrcAndGetSize = (
   src: string,
 ) => TransformedImageSrcWithSize | undefined | Promise<TransformedImageSrcWithSize | undefined>
 
-export function generateImageSchema(transformImageSrcAndGetSize?: TransformImageSrcAndGetSize): Schema {
+export function generateImage(transformImageSrcAndGetSize?: TransformImageSrcAndGetSize): Schema {
   return {
     attributes: {
       src: { type: String, required: true },
@@ -82,4 +82,13 @@ export function generateImageSchema(transformImageSrcAndGetSize?: TransformImage
       )
     },
   }
+}
+
+export const link: Schema = {
+  render: 'a',
+  children: ['strong', 'em', 's', 'code', 'text', 'tag', 'image'],
+  attributes: {
+    href: { type: String, required: true },
+    title: { type: String },
+  },
 }
