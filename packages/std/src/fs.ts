@@ -399,7 +399,9 @@ export function createFileMapIndexItemInternal<T>(
 
   if (flattenedFileMapIndexItem.childrenIndices) {
     const children = flattenedFileMapIndexItem.childrenIndices.map((childIndex) => flattenedFileMapIndex[childIndex]!)
-    fileMapIndexItem.children = children.map((child) => createFileMapIndexItemInternal(flattenedFileMapIndex, child))
+    fileMapIndexItem.children = children.map((child) =>
+      createFileMapIndexItemInternal(flattenedFileMapIndex, child, fileMapIndexItem),
+    )
   }
   return fileMapIndexItem
 }
