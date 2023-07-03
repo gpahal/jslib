@@ -62,8 +62,8 @@ export function generateImageSchema(transformImageSrcAndGetSize?: TransformImage
       return new Tag(
         'img',
         {
-          width: `${width}px`,
-          height: `${height}px`,
+          width: String(width),
+          height: String(height),
           ...attributes,
         },
         [],
