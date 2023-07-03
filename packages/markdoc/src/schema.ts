@@ -1,6 +1,6 @@
 import { Schema, Tag } from '@markdoc/markdoc'
 
-export function generateHeading(): Schema {
+export function generateHeadingSchema(): Schema {
   return {
     children: ['inline'],
     attributes: {
@@ -37,7 +37,7 @@ export type TransformImageSrcAndGetSize = (
   src: string,
 ) => TransformedImageSrcWithSize | undefined | Promise<TransformedImageSrcWithSize | undefined>
 
-export function generateImage(transformImageSrcAndGetSize?: TransformImageSrcAndGetSize): Schema {
+export function generateImageSchema(transformImageSrcAndGetSize?: TransformImageSrcAndGetSize): Schema {
   return {
     attributes: {
       src: { type: String, required: true },
@@ -72,7 +72,7 @@ export function generateImage(transformImageSrcAndGetSize?: TransformImageSrcAnd
   }
 }
 
-export const link: Schema = {
+export const linkSchema: Schema = {
   render: 'a',
   children: ['strong', 'em', 's', 'code', 'text', 'tag', 'image'],
   attributes: {

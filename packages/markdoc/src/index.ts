@@ -36,11 +36,14 @@ import { Prettify } from '@gpahal/std/object'
 import { stripSuffix } from '@gpahal/std/string'
 import { getExtension } from '@gpahal/std/url'
 
-import { generateHeading, generateImage, link, TransformImageSrcAndGetSize } from './schema'
+import { generateHeadingSchema, generateImageSchema, linkSchema, TransformImageSrcAndGetSize } from './schema'
 
-export type { Node, RenderableTreeNode, ValidateError } from '@markdoc/markdoc'
+export type { Node, RenderableTreeNode, RenderableTreeNodes, Scalar, ValidateError } from '@markdoc/markdoc'
 export type { ReadTimeResults } from 'reading-time'
 export type { TransformedImageSrcWithSize, TransformImageSrcAndGetSize } from './schema'
+
+export { Tag } from '@markdoc/markdoc'
+export { reactRender } from './react'
 
 export type TransformConfig = MarkdocTransformConfig & {
   transformImageSrcAndGetSize?: TransformImageSrcAndGetSize
@@ -54,9 +57,9 @@ export function defineTransformConfig({
   return {
     ...config,
     nodes: {
-      heading: generateHeading(),
-      image: generateImage(transformImageSrcAndGetSize),
-      link,
+      heading: generateHeadingSchema(),
+      image: generateImageSchema(transformImageSrcAndGetSize),
+      link: linkSchema,
       ...(nodes || {}),
     },
   }
@@ -416,14 +419,14 @@ export function formatParseDirectoryResultErrors<TFrontmatterSchema extends Fron
 }
 
 function renderableNodeToString(node: RenderableTreeNode): string {
-  if (Tag.isTag(node)) {
-    return renderableNodesToString(node.children || [])
-  } else if (node == null) {
+  if (node == null) {
     return ''
-  } else if (Array.isArray(node)) {
-    return renderableNodesToString(node)
   } else if (typeof node === 'object') {
     return renderableNodesToString(Array.from(Object.values(node)))
+  } else if (Array.isArray(node)) {
+    return renderableNodesToString(node)
+  } else if (Tag.isTag(node)) {
+    return renderableNodesToString(node.children || [])
   } else {
     return String(node)
   }
