@@ -1,4 +1,6 @@
-import { linkSchema, parse } from '../src/index'
+import * as React from 'react'
+
+import { linkSchema, parse, renderReact } from '../src/index'
 
 const mdocContent = `\
 ---
@@ -13,6 +15,10 @@ C1
 {% link href="link1" attr1="value1" %}label1{% /link %}
 
 [label2](link2)
+
+\`\`\`ts
+const a = 5
+\`\`\`
 
 ## [H2a](H2alink)
 
@@ -78,4 +84,7 @@ test('parse', async () => {
   expect(result.headingNodes.length).toBe(1)
   expect(result.headingNodes[0]!.children.length).toBe(2)
   expect(result.readTimeResults).toBeTruthy()
+
+  const rendered = renderReact(React, result.content)
+  expect(rendered).toBeTruthy()
 })

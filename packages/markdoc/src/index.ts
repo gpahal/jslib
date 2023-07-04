@@ -39,7 +39,14 @@ import { omitUndefinedValues, Prettify } from '@gpahal/std/object'
 import { stripSuffix } from '@gpahal/std/string'
 import { getExtension } from '@gpahal/std/url'
 
-import { generateHeadingSchema, generateImageSchema, linkSchema, TransformImageSrcAndGetSize } from './schema'
+import {
+  CodeAndFenceSchemaConfig,
+  generateCodeAndFenceSchema,
+  generateHeadingSchema,
+  generateImageSchema,
+  ImageSchemaOptions,
+  linkSchema,
+} from './schema'
 
 export type { Node, RenderableTreeNode, RenderableTreeNodes, Scalar, Schema, ValidateError } from '@markdoc/markdoc'
 export type { ReadTimeResults } from 'reading-time'
@@ -50,7 +57,8 @@ export { generateHeadingSchema, generateImageSchema, linkSchema } from './schema
 export { renderReact } from './react'
 
 export type TransformConfig = Omit<MarkdocTransformConfig, 'nodes'> & {
-  transformImageSrcAndGetSize?: TransformImageSrcAndGetSize
+  image?: ImageSchemaOptions
+  codeAndFence?: CodeAndFenceSchemaConfig
 }
 
 const NODE_TYPES: Set<NodeType> = new Set([
@@ -84,14 +92,12 @@ const NODE_TYPES: Set<NodeType> = new Set([
   'tr',
 ])
 
-function getMarkdocTransformConfig({
-  transformImageSrcAndGetSize,
-  ...config
-}: TransformConfig = {}): MarkdocTransformConfig {
+function getMarkdocTransformConfig({ image, codeAndFence, ...config }: TransformConfig = {}): MarkdocTransformConfig {
   const tags = {
     heading: generateHeadingSchema(),
-    image: generateImageSchema(transformImageSrcAndGetSize),
+    image: generateImageSchema(image),
     link: linkSchema,
+    ...generateCodeAndFenceSchema(codeAndFence),
     ...(config.tags ? omitUndefinedValues(config.tags) : {}),
   }
 

@@ -3,6 +3,8 @@ import * as React from 'react'
 import { RenderableTreeNode, RenderableTreeNodes, Scalar, Tag } from '@markdoc/markdoc'
 
 import { isFunction } from '@gpahal/std/function'
+import { isObject } from '@gpahal/std/object'
+import { camelCase, isString } from '@gpahal/std/string'
 
 type ReactShape = Readonly<{
   createElement: typeof React.createElement
@@ -34,13 +36,33 @@ export function renderReact(React: ReactShape, node: RenderableTreeNodes, compon
     }
 
     const { name, attributes, children } = node
-    const { class: className, ...otherAttributes } = (attributes || {}) as {
+    const {
+      class: className,
+      style,
+      ...otherAttributes
+    } = (attributes || {}) as {
       class?: string
+      style?: string
       [key: string]: unknown
     }
 
     if (className) {
       otherAttributes['className'] = className
+    }
+    if (style) {
+      if (style && isObject('object')) {
+        otherAttributes['style'] = style
+      } else if (isString(style)) {
+        const properties = style.split(';')
+        const styleObj = {} as Record<string, unknown>
+        properties.forEach((property) => {
+          const parts = property.split(':').map((s) => s.trim())
+          if (parts[0] && parts[1]) {
+            styleObj[camelCase(parts[0].replaceAll(/-+/g, ' '))] = parts[1]
+          }
+        })
+        otherAttributes['style'] = styleObj
+      }
     }
 
     return React.createElement(

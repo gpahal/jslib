@@ -1,4 +1,9 @@
 import { Schema, Tag } from '@markdoc/markdoc'
+import hashObj from 'hash-obj'
+import { getHighlighter, Highlighter, IShikiTheme, IThemedToken } from 'shiki'
+
+import { isArray } from '@gpahal/std/array'
+import { isString } from '@gpahal/std/string'
 
 export function generateHeadingSchema(): Schema {
   return {
@@ -37,7 +42,11 @@ export type TransformImageSrcAndGetSize = (
   src: string,
 ) => TransformedImageSrcWithSize | undefined | Promise<TransformedImageSrcWithSize | undefined>
 
-export function generateImageSchema(transformImageSrcAndGetSize?: TransformImageSrcAndGetSize): Schema {
+export type ImageSchemaOptions = {
+  transformImageSrcAndGetSize?: TransformImageSrcAndGetSize
+}
+
+export function generateImageSchema({ transformImageSrcAndGetSize }: ImageSchemaOptions = {}): Schema {
   return {
     attributes: {
       src: { type: String, required: true },
@@ -79,4 +88,224 @@ export const linkSchema: Schema = {
     href: { type: String, required: true },
     title: { type: String },
   },
+}
+
+const GLOBAL_HIGHLIGHTERS_CACHE = new Map<string, Map<string, Promise<Highlighter>>>()
+
+export type FenceHighlightedLines = {
+  from: number
+  to?: number
+}
+
+export type CodeAndFenceSchemaConfig = {
+  theme?: string | Record<string, string>
+}
+
+export function generateCodeAndFenceSchema({
+  theme = {
+    light: 'github-light',
+    dark: 'github-dark',
+  },
+}: CodeAndFenceSchemaConfig = {}): { code: Schema; fence: Schema } {
+  const optionsHash = hashObj(
+    {
+      theme,
+    },
+    { algorithm: 'sha1' },
+  )
+
+  let highlightersCache = GLOBAL_HIGHLIGHTERS_CACHE.get(optionsHash)!
+  if (!highlightersCache) {
+    highlightersCache = new Map()
+    GLOBAL_HIGHLIGHTERS_CACHE.set(optionsHash, highlightersCache)
+  }
+
+  const highlighters = new Map<string, Highlighter>()
+
+  if (!theme || isString(theme) || isShikiTheme(theme)) {
+    if (!highlightersCache.has('default')) {
+      highlightersCache.set('default', getHighlighter({ theme }))
+    }
+  } else if (typeof theme === 'object') {
+    for (const [themeName, themeValue] of Object.entries(theme)) {
+      if (!highlightersCache.has(themeName)) {
+        highlightersCache.set(themeName, getHighlighter({ theme: themeValue }))
+      }
+    }
+  }
+
+  const initializeHighlighters = async () => {
+    for (const [themeName, highlighterPromise] of Array.from(highlightersCache.entries())) {
+      if (!highlighters.has(themeName)) {
+        highlighters.set(themeName, await highlighterPromise)
+      }
+    }
+  }
+
+  const code: Schema = {
+    attributes: {
+      content: { type: String, render: false, required: true },
+    },
+    async transform(node, _config) {
+      await initializeHighlighters()
+
+      const content = isString(node.attributes['content']) ? node.attributes['content'].trim() : ''
+      const strippedContent = content.replace(/^{:[a-zA-Z.-]+}/, '')
+      const meta = content.match(/^{:([a-zA-Z.-]+)}/)?.[1] || ''
+      const metaParts = meta.split('.', 2)
+
+      const language = metaParts[0]?.trim() || ''
+      const tokenType = metaParts[1]?.trim() || ''
+
+      const themeTags = [] as Tag[]
+      for (const [themeName, highlighter] of Array.from(highlighters.entries())) {
+        let lines = [] as IThemedToken[][]
+        try {
+          if (tokenType || (language === 'ansi' && !highlighter.ansiToThemedTokens)) {
+            const color =
+              (tokenType
+                ? highlighter.getTheme().settings.find(({ scope }: { scope?: string[] }) => scope?.includes(tokenType))
+                    ?.settings.foreground
+                : '') || 'inherit'
+            lines = [
+              [
+                {
+                  content: strippedContent,
+                  color,
+                },
+              ],
+            ]
+          } else {
+            lines =
+              language === 'ansi'
+                ? highlighter.ansiToThemedTokens(strippedContent)
+                : highlighter.codeToThemedTokens(strippedContent, language)
+          }
+        } catch (e) {
+          lines = highlighter.codeToThemedTokens(strippedContent, language)
+        }
+
+        const themeAttributes = {
+          'data-theme': themeName,
+        }
+
+        const children = lines.map(
+          (parts) =>
+            new Tag(
+              'span',
+              { 'data-line': '' },
+              parts.map(
+                (part) =>
+                  new Tag(
+                    'span',
+                    {
+                      style: `color:${part.color};`,
+                    },
+                    [part.content],
+                  ),
+              ),
+            ),
+        )
+
+        themeTags.push(new Tag('code', themeAttributes, children))
+      }
+
+      return new Tag('span', { 'data-code': '' }, themeTags)
+    },
+  }
+
+  const fence: Schema = {
+    attributes: {
+      content: { type: String, render: false, required: true },
+      language: { type: String, render: false },
+      showLineNumbers: { type: Boolean, render: false },
+      linesHighlighted: { type: Array, render: false },
+    },
+    async transform(node, config) {
+      await initializeHighlighters()
+
+      const language = isString(node.attributes['language']) ? node.attributes['language'].trim() : ''
+      const showLineNumbers = node.attributes['showLineNumbers'] === true
+      const attributes = { ...node.transformAttributes(config), 'data-language': language } as Record<string, unknown>
+      if (showLineNumbers) {
+        attributes['data-show-line-numbers'] = ''
+      }
+
+      const highlightedLines = isArray(node.attributes['linesHighlighted'])
+        ? [...((node.attributes['linesHighlighted'] as FenceHighlightedLines[]) || [])]
+            .filter(
+              (value) =>
+                typeof value === 'object' &&
+                value.from != null &&
+                typeof value.from === 'number' &&
+                value.from >= 0 &&
+                (value.to == null || (typeof value.to === 'number' && value.to >= value.from)),
+            )
+            .sort((a, b) => {
+              return a.from - b.from
+            })
+        : []
+      const isLineHighlighted = (lineIndex: number): boolean => {
+        for (const { from, to } of highlightedLines) {
+          if (lineIndex === from || (lineIndex > from && to != null && lineIndex <= to)) {
+            return true
+          }
+        }
+        return false
+      }
+
+      const content = isString(node.attributes['content']) ? node.attributes['content'].trim() : ''
+      const themeTags = [] as Tag[]
+      for (const [themeName, highlighter] of Array.from(highlighters.entries())) {
+        let lines = [] as IThemedToken[][]
+        try {
+          lines =
+            language === 'ansi' && highlighter.ansiToThemedTokens
+              ? highlighter.ansiToThemedTokens(content)
+              : highlighter.codeToThemedTokens(content, language)
+        } catch (e) {
+          lines = highlighter.codeToThemedTokens(content, language)
+        }
+
+        const themeAttributes = {
+          ...attributes,
+          'data-theme': themeName,
+        }
+
+        const children = lines.map(
+          (parts, lineIndex) =>
+            new Tag(
+              'div',
+              { 'data-line': '', ...(isLineHighlighted(lineIndex) ? { 'data-line-highlighted': '' } : {}) },
+              parts.map(
+                (part) =>
+                  new Tag(
+                    'span',
+                    {
+                      style: `color:${part.color};`,
+                    },
+                    [part.content],
+                  ),
+              ),
+            ),
+        )
+
+        themeTags.push(new Tag('pre', themeAttributes, [new Tag('code', themeAttributes, children)]))
+      }
+
+      return new Tag(
+        'div',
+        {
+          'data-fence': '',
+        },
+        themeTags,
+      )
+    },
+  }
+
+  return { code, fence }
+}
+
+export function isShikiTheme(value: unknown): value is IShikiTheme {
+  return value ? {}.hasOwnProperty.call(value, 'tokenColors') : false
 }

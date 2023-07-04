@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/markdoc",
-  "version": "0.0.34",
+  "version": "0.0.35",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -34,8 +34,10 @@
     "@gpahal/std": "workspace:*",
     "@markdoc/markdoc": "^0.3.0",
     "github-slugger": "^2.0.0",
+    "hash-obj": "^4.0.0",
     "js-yaml": "^4.1.0",
-    "reading-time": "^1.5.0"
+    "reading-time": "^1.5.0",
+    "shiki": "^0.14.3"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.5",
