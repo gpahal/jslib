@@ -1,5 +1,5 @@
 import { Schema, Tag } from '@markdoc/markdoc'
-import hashObj from 'hash-obj'
+import { sha1 } from 'object-hash'
 import { getHighlighter, Highlighter, IShikiTheme, IThemedToken } from 'shiki'
 
 import { isArray } from '@gpahal/std/array'
@@ -105,12 +105,9 @@ export function generateCodeAndFenceSchema({ theme = 'github-light' }: CodeAndFe
   code: Schema
   fence: Schema
 } {
-  const optionsHash = hashObj(
-    {
-      theme,
-    },
-    { algorithm: 'sha1' },
-  )
+  const optionsHash = sha1({
+    theme,
+  })
 
   let highlightersCache = GLOBAL_HIGHLIGHTERS_CACHE.get(optionsHash)!
   if (!highlightersCache) {
