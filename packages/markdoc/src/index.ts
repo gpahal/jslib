@@ -3,6 +3,7 @@ import Markdoc, {
   Node,
   NodeType,
   RenderableTreeNode,
+  Scalar,
   Schema,
   Tag,
   ValidateError,
@@ -184,7 +185,7 @@ export async function parse<TFrontmatterSchema extends FrontmatterSchema>(
   }
 
   const headingNodes = generateHeadingNodes(document, transformConfig)
-  const content = await Markdoc.transform(document, transformConfig)
+  const content = await awaitRenderableTreeNode(Markdoc.transform(document, transformConfig))
   const frontmatterRawParseResults = parseFrontmatterRaw(document)
   if (!frontmatterRawParseResults.isSuccessful) {
     return frontmatterRawParseResults
@@ -461,6 +462,33 @@ export function formatParseDirectoryResultErrors<TFrontmatterSchema extends Fron
     .map((item) => (item.data.isSuccessful ? '' : `${item.path}:\n${formatParseResultError(item.data)}`))
     .filter(Boolean)
     .join('\n\n')
+}
+
+async function awaitRenderableTreeNode(
+  node: RenderableTreeNode | Promise<RenderableTreeNode>,
+): Promise<RenderableTreeNode> {
+  const awaited = await node
+  if (awaited == null) {
+    return awaited
+  } else if (Array.isArray(awaited)) {
+    return (await awaitRenderableTreeNodes(awaited)) as RenderableTreeNode
+  } else if (Tag.isTag(awaited)) {
+    awaited.children = await awaitRenderableTreeNodes(awaited.children || [])
+    return awaited
+  } else if (typeof awaited === 'object') {
+    for (const [key, value] of Array.from(Object.entries(awaited))) {
+      awaited[key] = (await awaitRenderableTreeNode(value)) as Scalar
+    }
+    return awaited
+  } else {
+    return awaited
+  }
+}
+
+async function awaitRenderableTreeNodes(
+  nodes: (RenderableTreeNode | Promise<RenderableTreeNode>)[],
+): Promise<RenderableTreeNode[]> {
+  return await Promise.all(nodes.map(awaitRenderableTreeNode))
 }
 
 function renderableNodeToString(node: RenderableTreeNode): string {
