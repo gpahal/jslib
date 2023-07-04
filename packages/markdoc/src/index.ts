@@ -473,7 +473,7 @@ async function awaitRenderableTreeNode(
   } else if (Array.isArray(awaited)) {
     return (await awaitRenderableTreeNodes(awaited)) as RenderableTreeNode
   } else if (Tag.isTag(awaited)) {
-    awaited.children = await awaitRenderableTreeNodes(awaited.children || [])
+    awaited.children = await awaitRenderableTreeNodes((await awaited.children) || [])
     return awaited
   } else if (typeof awaited === 'object') {
     for (const [key, value] of Array.from(Object.entries(awaited))) {
