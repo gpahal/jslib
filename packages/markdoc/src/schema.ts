@@ -101,12 +101,10 @@ export type CodeAndFenceSchemaConfig = {
   theme?: string | Record<string, string>
 }
 
-export function generateCodeAndFenceSchema({
-  theme = {
-    light: 'github-light',
-    dark: 'github-dark',
-  },
-}: CodeAndFenceSchemaConfig = {}): { code: Schema; fence: Schema } {
+export function generateCodeAndFenceSchema({ theme = 'github-light' }: CodeAndFenceSchemaConfig = {}): {
+  code: Schema
+  fence: Schema
+} {
   const optionsHash = hashObj(
     {
       theme,
