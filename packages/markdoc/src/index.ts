@@ -511,8 +511,8 @@ export function renderableNodeToString(node: RenderableTreeNode): string {
   }
 }
 
-function renderableNodesToString(nodes: RenderableTreeNode[]): string {
-  return nodes.map(renderableNodeToString).filter(Boolean).join(' ')
+export function renderableNodesToString(nodes: RenderableTreeNode[], separator = ' '): string {
+  return nodes.map(renderableNodeToString).filter(Boolean).join(separator)
 }
 
 export function getRenderableTreeNodeIdsMap(node: RenderableTreeNode): Map<string, RenderableTreeNode> {
@@ -539,6 +539,59 @@ function updateRenderableTreeNodeIdsMap(map: Map<string, RenderableTreeNode>, no
 
 function updateRenderableTreeNodesIdsMap(map: Map<string, RenderableTreeNode>, nodes: RenderableTreeNode[]) {
   nodes.forEach((node) => updateRenderableTreeNodeIdsMap(map, node))
+}
+
+const HEADING_TAGS_SET = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
+
+export type RenderableTreeNodeTopLevelSections = {
+  nodes: RenderableTreeNode[]
+  sections: {
+    headingNode: RenderableTreeNode
+    nodes: RenderableTreeNode[]
+  }[]
+}
+
+export function getRenderableTreeNodeTopLevelSections(node: RenderableTreeNode): RenderableTreeNodeTopLevelSections {
+  if (!Tag.isTag(node)) {
+    return { nodes: [], sections: [] }
+  }
+
+  const children = node.children || []
+  let minLevel = 6
+  children.forEach((child) => {
+    if (!Tag.isTag(child) || !HEADING_TAGS_SET.has(child.name)) {
+      return
+    }
+
+    const level = parseInt(child.name.slice(1), 10)
+    if (level < minLevel) {
+      minLevel = level
+    }
+  })
+
+  const minLevelTagName = `h${minLevel}`
+  const index = children.findIndex((child) => Tag.isTag(child) && child.name === minLevelTagName)
+  if (index === -1) {
+    return { nodes: children, sections: [] }
+  }
+
+  const nodes = children.slice(0, index)
+
+  let currNodes = [] as RenderableTreeNode[]
+  const sections = [
+    { headingNode: children[index]!, nodes: currNodes },
+  ] as RenderableTreeNodeTopLevelSections['sections']
+  for (const child of children.slice(index + 1)) {
+    if (!Tag.isTag(child) || child.name === minLevelTagName) {
+      currNodes = []
+      sections.push({ headingNode: child, nodes: currNodes })
+      continue
+    } else {
+      currNodes.push(child)
+    }
+  }
+
+  return { nodes, sections }
 }
 
 function stripMdocExtension(fileName: string): string {

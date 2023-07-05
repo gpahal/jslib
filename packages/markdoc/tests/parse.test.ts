@@ -1,14 +1,18 @@
 import * as React from 'react'
 
-import { getRenderableTreeNodeIdsMap, linkSchema, parse, renderReact } from '../src/index'
+import {
+  getRenderableTreeNodeIdsMap,
+  getRenderableTreeNodeTopLevelSections,
+  linkSchema,
+  parse,
+  renderReact,
+} from '../src/index'
 
 const mdocContent = `\
 ---
 label1: value1
 label2: value2
 ---
-
-# H1a
 
 C1
 
@@ -81,7 +85,7 @@ test('parse', async () => {
   expect(result.frontmatter['label1']).toBe('value1')
   expect(result.frontmatter['label2']).toBe('value2')
   expect(result.headingNodes).toBeTruthy()
-  expect(result.headingNodes.length).toBe(1)
+  expect(result.headingNodes.length).toBe(2)
   expect(result.headingNodes[0]!.children.length).toBe(2)
   expect(result.readTimeResults).toBeTruthy()
 
@@ -90,5 +94,10 @@ test('parse', async () => {
 
   const idsMap = getRenderableTreeNodeIdsMap(result.content)
   expect(idsMap).toBeTruthy()
-  expect(idsMap.size).toBe(10)
+  expect(idsMap.size).toBe(9)
+
+  const topLevelSections = getRenderableTreeNodeTopLevelSections(result.content)
+  expect(topLevelSections).toBeTruthy()
+  expect(topLevelSections.nodes.length).toBe(4)
+  expect(topLevelSections.sections.length).toBe(2)
 })
