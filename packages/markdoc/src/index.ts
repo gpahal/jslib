@@ -546,7 +546,7 @@ const HEADING_TAGS_SET = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
 export type RenderableTreeNodeTopLevelSections = {
   nodes: RenderableTreeNode[]
   sections: {
-    headingNode: RenderableTreeNode
+    headingNode: Tag
     nodes: RenderableTreeNode[]
   }[]
 }
@@ -582,7 +582,7 @@ export function getRenderableTreeNodeTopLevelSections(node: RenderableTreeNode):
     { headingNode: children[index]!, nodes: currNodes },
   ] as RenderableTreeNodeTopLevelSections['sections']
   for (const child of children.slice(index + 1)) {
-    if (!Tag.isTag(child) || child.name === minLevelTagName) {
+    if (Tag.isTag(child) && child.name === minLevelTagName) {
       currNodes = []
       sections.push({ headingNode: child, nodes: currNodes })
       continue
