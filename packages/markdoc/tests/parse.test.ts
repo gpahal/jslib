@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { linkSchema, parse, renderReact } from '../src/index'
+import { getRenderableTreeNodeIdsMap, linkSchema, parse, renderReact } from '../src/index'
 
 const mdocContent = `\
 ---
@@ -87,4 +87,8 @@ test('parse', async () => {
 
   const rendered = renderReact(React, result.content)
   expect(rendered).toBeTruthy()
+
+  const idsMap = getRenderableTreeNodeIdsMap(result.content)
+  expect(idsMap).toBeTruthy()
+  expect(idsMap.size).toBe(10)
 })

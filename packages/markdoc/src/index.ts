@@ -36,7 +36,7 @@ import {
   WalkOptions,
 } from '@gpahal/std/fs'
 import { omitUndefinedValues, Prettify } from '@gpahal/std/object'
-import { stripSuffix } from '@gpahal/std/string'
+import { isString, stripSuffix } from '@gpahal/std/string'
 import { getExtension } from '@gpahal/std/url'
 
 import {
@@ -511,8 +511,34 @@ export function renderableNodeToString(node: RenderableTreeNode): string {
   }
 }
 
-export function renderableNodesToString(nodes: RenderableTreeNode[]): string {
+function renderableNodesToString(nodes: RenderableTreeNode[]): string {
   return nodes.map(renderableNodeToString).filter(Boolean).join(' ')
+}
+
+export function getRenderableTreeNodeIdsMap(node: RenderableTreeNode): Map<string, RenderableTreeNode> {
+  const map = new Map<string, RenderableTreeNode>()
+  updateRenderableTreeNodeIdsMap(map, node)
+  return map
+}
+
+function updateRenderableTreeNodeIdsMap(map: Map<string, RenderableTreeNode>, node: RenderableTreeNode) {
+  if (node == null) {
+    return
+  } else if (Array.isArray(node)) {
+    updateRenderableTreeNodesIdsMap(map, node)
+  } else if (Tag.isTag(node)) {
+    const id = node.attributes?.['id'] || ''
+    if (isString(id) && id.trim()) {
+      map.set(id.trim(), node)
+    }
+    updateRenderableTreeNodesIdsMap(map, node.children || [])
+  } else if (typeof node === 'object') {
+    updateRenderableTreeNodesIdsMap(map, Array.from(Object.values(node)))
+  }
+}
+
+function updateRenderableTreeNodesIdsMap(map: Map<string, RenderableTreeNode>, nodes: RenderableTreeNode[]) {
+  nodes.forEach((node) => updateRenderableTreeNodeIdsMap(map, node))
 }
 
 function stripMdocExtension(fileName: string): string {
