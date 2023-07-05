@@ -497,7 +497,7 @@ async function awaitRenderableTreeNodes(
   return await Promise.all(nodes.map(awaitRenderableTreeNode))
 }
 
-function renderableNodeToString(node: RenderableTreeNode): string {
+export function renderableNodeToString(node: RenderableTreeNode): string {
   if (node == null) {
     return ''
   } else if (Array.isArray(node)) {
@@ -511,7 +511,7 @@ function renderableNodeToString(node: RenderableTreeNode): string {
   }
 }
 
-function renderableNodesToString(nodes: RenderableTreeNode[]): string {
+export function renderableNodesToString(nodes: RenderableTreeNode[]): string {
   return nodes.map(renderableNodeToString).filter(Boolean).join(' ')
 }
 
