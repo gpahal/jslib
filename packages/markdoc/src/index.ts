@@ -511,8 +511,12 @@ export function renderableNodeToString(node: RenderableTreeNode): string {
   }
 }
 
-export function renderableNodesToString(nodes: RenderableTreeNode[], separator = ' '): string {
-  return nodes.map(renderableNodeToString).filter(Boolean).join(separator)
+export function renderableNodesToString(nodes: RenderableTreeNode[]): string {
+  return nodes
+    .map(renderableNodeToString)
+    .filter(Boolean)
+    .join(' ')
+    .replaceAll(/[ \t]+/g, ' ')
 }
 
 export function getRenderableTreeNodeIdsMap(node: RenderableTreeNode): Map<string, RenderableTreeNode> {
