@@ -189,12 +189,15 @@ function transformImageStyleToCSSProps({
     { name: 'object-fit', value: objectFit },
   ]
 
-  return styleArray.reduce((acc, { name, value }) => {
-    if (value) {
-      acc[name] = value
-    }
-    return acc
-  }, {} as Record<string, string>)
+  return styleArray.reduce(
+    (acc, { name, value }) => {
+      if (value) {
+        acc[name] = value
+      }
+      return acc
+    },
+    {} as Record<string, string>,
+  )
 }
 
 function getImageStyle({

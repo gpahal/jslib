@@ -152,7 +152,11 @@ export type ParseResultMarkdocError = {
 }
 
 export class YamlError extends CustomError {
-  public constructor(message: string, public readonly line: number, public readonly column: number) {
+  public constructor(
+    message: string,
+    public readonly line: number,
+    public readonly column: number,
+  ) {
     super(message)
   }
 }
