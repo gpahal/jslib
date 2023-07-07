@@ -1,3 +1,3 @@
 module.exports = {
-  '**/*.{js,mjs,cjs,ts,css,json}': ['prettier --write --ignore-path=.gitignore'],
+  '**/*.{js,mjs,cjs,jsx,ts,tsx,css,json}': ['prettier --check --ignore-path=.gitignore'],
 }
