@@ -46,20 +46,20 @@ function getPathname(url: Url): string {
 export function isPathnameActive(
   currentPathname: string,
   targetUrl: Url,
-): { isActive: boolean; isExactMatch: boolean } {
+): { isActive: boolean; isChildActive: boolean } {
   let targetPathname = ''
   try {
     targetPathname = getPathname(targetUrl)
   } catch {
-    return { isActive: false, isExactMatch: false }
+    return { isActive: false, isChildActive: false }
   }
 
   targetPathname = trim(targetPathname, '/')
   currentPathname = trim(currentPathname, '/')
-  const isExactMatch = targetPathname === currentPathname
+  const isActive = targetPathname === currentPathname
   return {
-    isActive: isExactMatch || currentPathname.startsWith(targetPathname + '/'),
-    isExactMatch,
+    isActive,
+    isChildActive: isActive || currentPathname.startsWith(targetPathname + '/'),
   }
 }
 
