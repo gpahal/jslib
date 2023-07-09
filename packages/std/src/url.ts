@@ -59,7 +59,7 @@ export function isPathnameActive(
   const isActive = targetPathname === currentPathname
   return {
     isActive,
-    isChildActive: isActive || currentPathname.startsWith(targetPathname + '/'),
+    isChildActive: !isActive && currentPathname.startsWith(targetPathname + '/'),
   }
 }
 
