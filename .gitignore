@@ -2,9 +2,10 @@
 .turbo
 
 # Build output
-target
-dist
 build
+dist
+target
+out
 out-tsc
 .output
 
@@ -26,13 +27,18 @@ pnpm-debug.log*
 
 # Environment variables
 .env
-.env.prod*
+.env.*
 
 # Editors
 
 ## VS Code
-.vscode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 .history
+*.code-workspace
 
 ## JetBrains
 .idea
