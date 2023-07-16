@@ -6,7 +6,7 @@ import {
   linkSchema,
   parse,
   renderReact,
-} from '../src/index'
+} from '@/index'
 
 const mdocContent = `\
 ---
@@ -82,8 +82,8 @@ test('parse', async () => {
 
   expect(result.content).toBeTruthy()
   expect(result.frontmatter).toBeTruthy()
-  expect(result.frontmatter['label1']).toBe('value1')
-  expect(result.frontmatter['label2']).toBe('value2')
+  expect(result.frontmatter.label1).toBe('value1')
+  expect(result.frontmatter.label2).toBe('value2')
   expect(result.headingNodes).toBeTruthy()
   expect(result.headingNodes.length).toBe(2)
   expect(result.headingNodes[0]!.children.length).toBe(2)

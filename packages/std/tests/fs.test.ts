@@ -6,7 +6,7 @@ import {
   transformFileMapNames,
   unflattenFlattenedFileMapIndex,
   walkDirectory,
-} from '../src/fs'
+} from '@/fs'
 
 const fs = {
   dir: {
@@ -46,7 +46,7 @@ test('file-map', async () => {
   })
   expect(fsFileMap).toBeTruthy()
 
-  const fileMap = createFileMap(fsFileMap!, () => 'index')
+  const fileMap = createFileMap(fsFileMap, () => 'index')
   expect(fileMap).toBeTruthy()
 
   const flattenedFileMapIndex = createFlattenedFileMapIndex(fileMap)

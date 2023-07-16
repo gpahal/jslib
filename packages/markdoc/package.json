@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/markdoc",
-  "version": "0.0.44",
+  "version": "0.0.45",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -8,18 +8,18 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./build/index.cjs",
+      "import": "./build/index.js",
+      "types": "./build/index.d.ts"
     }
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./build/index.cjs",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
   "files": [
-    "README.md",
     "package.json",
-    "dist"
+    "README.md",
+    "build"
   ],
   "publishConfig": {
     "access": "public"
@@ -42,7 +42,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.5",
     "@types/object-hash": "^3.0.2",
-    "@types/react": "^18.2.14",
+    "@types/react": "^18.2.15",
     "react": "^18.2.0",
     "zod": "^3.21.4"
   }

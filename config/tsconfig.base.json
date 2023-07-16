@@ -37,5 +37,5 @@
     "allowUnreachableCode": false,
     "allowUnusedLabels": false
   },
-  "exclude": ["node_modules", "dist", "build", "public", "tmp"]
+  "exclude": ["node_modules", "build", "dist", "public", "tmp"]
 }

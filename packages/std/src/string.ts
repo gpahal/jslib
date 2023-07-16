@@ -1,4 +1,4 @@
-import isSymbol from '~/symbol'
+import isSymbol from '@/symbol'
 
 const INFINITY = 1 / 0
 
@@ -9,18 +9,15 @@ export function isString(s: unknown): s is string {
 export function toString(value: unknown): string {
   if (value == null) {
     return ''
-  }
-  if (typeof value === 'string') {
+  } else if (typeof value === 'string') {
     return value
-  }
-  if (Array.isArray(value)) {
-    return `${value.map((other) => (other == null ? other : toString(other)))}`
-  }
-  if (isSymbol(value)) {
+  } else if (Array.isArray(value)) {
+    return `[${value.map((other) => (other == null ? (other as unknown) : toString(other))).join(',')}]`
+  } else if (isSymbol(value)) {
     return value.toString()
   }
 
-  const result = `${value}`
+  const result = String(value)
   return result == '0' && 1 / (value as number) == -INFINITY ? '-0' : result
 }
 

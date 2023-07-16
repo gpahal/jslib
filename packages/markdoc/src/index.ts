@@ -61,7 +61,7 @@ export type TransformConfig = Omit<MarkdocTransformConfig, 'nodes'> & {
   codeAndFence?: CodeAndFenceSchemaConfig
 }
 
-const NODE_TYPES: Set<NodeType> = new Set([
+const NODE_TYPES = new Set<NodeType>([
   'blockquote',
   'code',
   'comment',
@@ -617,6 +617,7 @@ class Slugger {
     let finalSlug = slug(value, !!maintainCase)
     const originalSlug = finalSlug
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const count = this.occurrences.get(finalSlug)
       if (count == null) {

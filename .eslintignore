@@ -1,3 +1,7 @@
+# Config files
+**/.*.cjs
+*.config.cjs
+
 # Turbo
 .turbo
 

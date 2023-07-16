@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/image",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -8,18 +8,18 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./build/index.cjs",
+      "import": "./build/index.js",
+      "types": "./build/index.d.ts"
     }
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./build/index.cjs",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
   "files": [
-    "README.md",
     "package.json",
-    "dist"
+    "README.md",
+    "build"
   ],
   "publishConfig": {
     "access": "public"

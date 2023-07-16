@@ -1,4 +1,4 @@
-import { trim } from '~/string'
+import { trim } from '@/string'
 
 export type FsModule = {
   getBasename: (path: string) => string
@@ -64,8 +64,7 @@ async function walkDirectoryInternal<T>(
   options: WalkOptions<T>,
 ): Promise<void> {
   if (
-    options &&
-    options.directoryFilter &&
+    options?.directoryFilter &&
     !options.directoryFilter({
       absolutePath: absoluteDirPath,
       relativePath: relativeDirPath,
@@ -102,7 +101,7 @@ async function walkFileInternal<T>(
     const children = new Map<string, FsFileMapItem<T>>()
     fsFileMap.set(fileName, { children })
     await walkDirectoryInternal(fsModule, children, absoluteFilepath, relativeDirPath, fileName, options)
-  } else if (!options || !options.fileFilter || options.fileFilter(fileOptions)) {
+  } else if (!options?.fileFilter || options.fileFilter(fileOptions)) {
     const contents = await fsModule.readFile(absoluteFilepath)
     const data = await options.parseFileContents(contents, fileOptions)
     fsFileMap.set(fileName, { data })

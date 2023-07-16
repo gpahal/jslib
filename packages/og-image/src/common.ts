@@ -35,8 +35,8 @@ export async function generateOgImageWithSatoriFn(
   node: Node,
   options?: OgImageOptions,
 ): Promise<string> {
-  const optionWidth = options && options.width && options.width > 0 ? options.width : undefined
-  const optionHeight = options && options.height && options.height > 0 ? options.height : undefined
+  const optionWidth = options?.width && options.width > 0 ? options.width : undefined
+  const optionHeight = options?.height && options.height > 0 ? options.height : undefined
   let width = 1200
   let height = 630
   if (optionWidth && optionHeight) {

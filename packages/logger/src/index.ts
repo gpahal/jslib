@@ -81,7 +81,7 @@ export class Logger {
       format: format.combine(...formats),
       transports: [TRANSPORT_CONSOLE],
     })
-    this.#logger.on('finish', this.#flushLoggerTransports.bind(this))
+    this.#logger.on('finish', this.#flushLoggerTransports.bind(this) as () => void)
   }
 
   async #flushLoggerTransports(): Promise<void> {

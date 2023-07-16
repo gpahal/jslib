@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -8,23 +8,23 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./build/index.cjs",
+      "import": "./build/index.js",
+      "types": "./build/index.d.ts"
     },
     "./wasm": {
-      "require": "./dist/wasm.cjs",
-      "import": "./dist/wasm.js",
-      "types": "./dist/wasm.d.ts"
+      "require": "./build/wasm.cjs",
+      "import": "./build/wasm.js",
+      "types": "./build/wasm.d.ts"
     }
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./build/index.cjs",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
   "files": [
-    "README.md",
     "package.json",
-    "dist",
+    "README.md",
+    "build",
     "wasm.js"
   ],
   "publishConfig": {
@@ -45,7 +45,7 @@
     "@gpahal/font": "workspace:*",
     "@gpahal/font-data-inter": "workspace:*",
     "@gpahal/font-data-source-code-pro": "workspace:*",
-    "@types/react": "^18.2.14",
+    "@types/react": "^18.2.15",
     "preact": "^10.16.0"
   }
 }

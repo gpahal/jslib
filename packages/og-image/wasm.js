@@ -1,1 +1,1 @@
-export * from './dist/wasm'
+export * from './build/wasm'

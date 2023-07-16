@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/std",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -8,22 +8,22 @@
   "exports": {
     "./package.json": "./package.json",
     "./*": {
-      "require": "./dist/*.cjs",
-      "import": "./dist/*.js",
-      "types": "./dist/*.d.ts"
+      "require": "./build/*.cjs",
+      "import": "./build/*.js",
+      "types": "./build/*.d.ts"
     }
   },
   "typesVersions": {
     "*": {
       "*": [
-        "dist/*.d.ts"
+        "build/*.d.ts"
       ]
     }
   },
   "files": [
-    "README.md",
     "package.json",
-    "dist"
+    "README.md",
+    "build"
   ],
   "publishConfig": {
     "access": "public"

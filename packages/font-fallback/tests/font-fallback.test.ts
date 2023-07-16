@@ -1,6 +1,4 @@
-import { Font } from '@capsizecss/unpack'
-
-import { getFontFallbackCssString, getFontFallbacksCssProperties, getFontFamilyMetrics } from '../src'
+import { getFontFallbackCssString, getFontFallbacksCssProperties, getFontFamilyMetrics } from '@/index'
 
 const FONT_FAMILY = 'Inter'
 const FALLBACK_FONT_FAMILIES = [
@@ -14,10 +12,10 @@ const FALLBACK_FONT_FAMILIES = [
 ]
 
 test('font-fallback', async () => {
-  const fontMetrics = (await getFontFamilyMetrics(FONT_FAMILY)) as Font
+  const fontMetrics = await getFontFamilyMetrics(FONT_FAMILY)!
   expect(fontMetrics).not.toBeNull()
 
-  const fallbacks = await getFontFallbacksCssProperties(fontMetrics, FALLBACK_FONT_FAMILIES)
+  const fallbacks = await getFontFallbacksCssProperties(fontMetrics!, FALLBACK_FONT_FAMILIES)
   expect(fallbacks).not.toBeNull()
 
   console.info(`Fallback fonts:\n\n${fallbacks.map(getFontFallbackCssString).join('\n\n')}`)

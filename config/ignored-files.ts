@@ -1,8 +1,10 @@
 export const IGNORED_FILES = [
   '**/.git/**',
-  '**/target/**',
-  '**/dist/**',
+  '**/.turbo/**',
   '**/build/**',
+  '**/dist/**',
+  '**/target/**',
+  '**/out/**',
   '**/out-tsc/**',
   '**/.output/**',
   '**/tmp/**',
