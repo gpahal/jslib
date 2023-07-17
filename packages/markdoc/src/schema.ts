@@ -216,6 +216,7 @@ export function generateCodeAndFenceSchema({
   const fence: Schema = {
     attributes: {
       content: { type: String, render: false, required: true },
+      fileName: { type: String, render: false },
       language: { type: String, render: false },
       showLineNumbers: { type: Boolean, render: false },
       linesHighlighted: { type: Array, render: false },
@@ -223,9 +224,14 @@ export function generateCodeAndFenceSchema({
     async transform(node, config) {
       await initializeHighlighters()
 
+      const fileName = isString(node.attributes['fileName']) ? node.attributes['fileName'].trim() : ''
       const language = isString(node.attributes['language']) ? node.attributes['language'].trim() : ''
       const showLineNumbers = node.attributes['showLineNumbers'] === true
-      const attributes = { ...node.transformAttributes(config), 'data-language': language } as Record<string, unknown>
+      const attributes = {
+        ...node.transformAttributes(config),
+        'data-file-name': fileName,
+        'data-language': language,
+      } as Record<string, unknown>
       if (showLineNumbers) {
         attributes['data-show-line-numbers'] = ''
       }
