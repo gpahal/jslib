@@ -32,7 +32,6 @@ export class Logger {
     const formats: Format[] = [
       format((info) => {
         info.message = normalizeMessage(String(info.message), prefix)
-        info['originalLevel'] = info.level
         return info
       })(),
     ]
@@ -48,7 +47,7 @@ export class Logger {
         format.align(),
         format.printf(
           ({ timestamp, level, message, ...rest }) =>
-            `${timestamp} [${level}] ${message}${Object.keys(rest).length > 0 ? ` ${JSON.stringify(2)}` : ''}`,
+            `${timestamp} [${level}] ${message}${Object.keys(rest).length > 0 ? ` ${JSON.stringify(rest)}` : ''}`,
         ),
       )
     } else {
