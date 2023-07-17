@@ -301,6 +301,7 @@ export function generateCodeAndFenceSchema({
       return new Tag(
         wrapperTagName,
         {
+          'data-content': content,
           ...attributes,
           'data-fence': '',
         },
