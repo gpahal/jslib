@@ -99,9 +99,13 @@ export type FenceHighlightedLines = {
 
 export type CodeAndFenceSchemaConfig = {
   theme?: string | Record<string, string>
+  wrapperTagName?: string
 }
 
-export function generateCodeAndFenceSchema({ theme = 'github-light' }: CodeAndFenceSchemaConfig = {}): {
+export function generateCodeAndFenceSchema({
+  theme = 'github-light',
+  wrapperTagName = 'div',
+}: CodeAndFenceSchemaConfig = {}): {
   code: Schema
   fence: Schema
 } {
@@ -289,8 +293,9 @@ export function generateCodeAndFenceSchema({ theme = 'github-light' }: CodeAndFe
       }
 
       return new Tag(
-        'div',
+        wrapperTagName,
         {
+          ...attributes,
           'data-fence': '',
         },
         themeTags,
