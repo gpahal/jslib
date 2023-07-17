@@ -10,6 +10,7 @@
     { "path": "packages/image-node" },
     { "path": "packages/logger" },
     { "path": "packages/markdoc" },
+    { "path": "packages/markdoc-react" },
     { "path": "packages/og-image" },
     { "path": "packages/std" },
     { "path": "packages/std-node" },

@@ -1,12 +1,4 @@
-import * as React from 'react'
-
-import {
-  getRenderableTreeNodeIdsMap,
-  getRenderableTreeNodeTopLevelSections,
-  linkSchema,
-  parse,
-  renderReact,
-} from '@/index'
+import { getRenderableTreeNodeIdsMap, getRenderableTreeNodeTopLevelSections, linkSchema, parse } from '@/index'
 
 const mdocContent = `\
 ---
@@ -88,9 +80,6 @@ test('parse', async () => {
   expect(result.headingNodes.length).toBe(2)
   expect(result.headingNodes[0]!.children.length).toBe(2)
   expect(result.readTimeResults).toBeTruthy()
-
-  const rendered = renderReact(React, result.content)
-  expect(rendered).toBeTruthy()
 
   const idsMap = getRenderableTreeNodeIdsMap(result.content)
   expect(idsMap).toBeTruthy()

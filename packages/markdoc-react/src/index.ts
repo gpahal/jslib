@@ -27,7 +27,7 @@ function getComponent(tagName: Scalar, components?: Components): string | Compon
   return component || tagName
 }
 
-export function renderReact(React: ReactShape, node: RenderableTreeNodes, components?: Components) {
+export function renderReact(React: ReactShape, node: RenderableTreeNodes, components?: Components): React.ReactNode {
   function renderInternal(node: RenderableTreeNodes): React.ReactNode {
     if (Array.isArray(node)) {
       return React.createElement(React.Fragment, null, ...node.map(renderInternal))

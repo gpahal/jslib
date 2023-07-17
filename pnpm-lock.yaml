@@ -168,15 +168,25 @@ importers:
       '@types/object-hash':
         specifier: ^3.0.2
         version: 3.0.2
+      zod:
+        specifier: ^3.21.4
+        version: 3.21.4
+
+  packages/markdoc-react:
+    dependencies:
+      '@gpahal/std':
+        specifier: workspace:*
+        version: link:../std
+    devDependencies:
+      '@markdoc/markdoc':
+        specifier: ^0.3.0
+        version: 0.3.0(@types/react@18.2.15)(react@18.2.0)
       '@types/react':
         specifier: ^18.2.15
         version: 18.2.15
       react:
         specifier: ^18.2.0
         version: 18.2.0
-      zod:
-        specifier: ^3.21.4
-        version: 3.21.4
 
   packages/og-image:
     dependencies:
@@ -1058,7 +1068,6 @@ packages:
       react: 18.2.0
     optionalDependencies:
       '@types/markdown-it': 12.2.3
-    dev: false
 
   /@nodelib/fs.scandir@2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -1143,7 +1152,6 @@ packages:
 
   /@types/linkify-it@3.0.2:
     resolution: {integrity: sha512-HZQYqbiFVWufzCwexrvh694SOim8z2d+xJl5UNamcvQFejLY/2YUtzXHYi3cHdI7PMlS8ejH2slRAOJQ32aNbA==}
-    dev: false
     optional: true
 
   /@types/markdown-it@12.2.3:
@@ -1152,12 +1160,10 @@ packages:
     dependencies:
       '@types/linkify-it': 3.0.2
       '@types/mdurl': 1.0.2
-    dev: false
     optional: true
 
   /@types/mdurl@1.0.2:
     resolution: {integrity: sha512-eC4U9MlIcu2q0KQmXszyn5Akca/0jrQmwDRgpAMJai7qBWq4amIQhZyNau4VYGtCeALvW1/NtjzJJ567aZxfKA==}
-    dev: false
     optional: true
 
   /@types/mime@3.0.1:

@@ -54,7 +54,6 @@ export type { TransformedImageSrcWithSize, TransformImageSrcAndGetSize } from '.
 
 export { Tag } from '@markdoc/markdoc'
 export { generateHeadingSchema, generateImageSchema, linkSchema } from './schema'
-export { renderReact } from './react'
 
 export type TransformConfig = Omit<MarkdocTransformConfig, 'nodes'> & {
   image?: ImageSchemaOptions
