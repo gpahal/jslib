@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/markdoc-react",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -30,10 +30,10 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "@gpahal/std": "workspace:*"
+    "@gpahal/std": "workspace:*",
+    "@markdoc/markdoc": "^0.3.0"
   },
   "devDependencies": {
-    "@markdoc/markdoc": "^0.3.0",
     "@types/react": "^18.2.15",
     "react": "^18.2.0"
   }

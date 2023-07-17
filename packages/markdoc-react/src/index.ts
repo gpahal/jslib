@@ -6,6 +6,10 @@ import { isFunction } from '@gpahal/std/function'
 import { isObject } from '@gpahal/std/object'
 import { camelCase, isString } from '@gpahal/std/string'
 
+export type { Node, RenderableTreeNode, RenderableTreeNodes, Scalar, Schema, ValidateError } from '@markdoc/markdoc'
+
+export { Tag } from '@markdoc/markdoc'
+
 type ReactShape = Readonly<{
   createElement: typeof React.createElement
   Fragment: typeof React.Fragment
