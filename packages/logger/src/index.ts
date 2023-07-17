@@ -33,12 +33,13 @@ export type LoggerOptions = {
   prefix?: string
   showOutputAsJSON?: boolean
   isVerbose?: boolean
+  onError?: (err: Error) => void
 }
 
 export class Logger {
   readonly #logger: LibLogger
 
-  constructor({ level, prefix, showOutputAsJSON, isVerbose }: LoggerOptions = {}) {
+  constructor({ level, prefix, showOutputAsJSON, isVerbose, onError }: LoggerOptions = {}) {
     const formats: Format[] = [
       format((info) => {
         info.message = normalizeMessage(String(info.message), prefix)
@@ -82,6 +83,10 @@ export class Logger {
       transports: [TRANSPORT_CONSOLE],
     })
     this.#logger.on('finish', this.#flushLoggerTransports.bind(this) as () => void)
+
+    if (onError) {
+      this.#logger.on('error', onError)
+    }
   }
 
   async #flushLoggerTransports(): Promise<void> {
@@ -126,6 +131,14 @@ export class Logger {
 
   critical(message: string): void {
     this.#logger.crit(message)
+  }
+
+  end(cb?: () => void): this
+  end(chunk: unknown, cb?: () => void): this
+  end(chunk: unknown, encoding?: BufferEncoding, cb?: () => void): this
+  end(...args: unknown[]): this {
+    this.#logger.end(...(args as Parameters<LibLogger['end']>))
+    return this
   }
 }
 
