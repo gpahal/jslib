@@ -50,10 +50,15 @@ import {
 
 export type { Node, RenderableTreeNode, RenderableTreeNodes, Scalar, Schema, ValidateError } from '@markdoc/markdoc'
 export type { ReadTimeResults } from 'reading-time'
-export type { TransformedImageSrcWithSize, TransformImageSrcAndGetSize } from './schema'
+export type {
+  CodeAndFenceSchemaConfig,
+  ImageSchemaOptions,
+  TransformedImageSrcWithSize,
+  TransformImageSrcAndGetSize,
+} from './schema'
 
 export { Tag } from '@markdoc/markdoc'
-export { generateHeadingSchema, generateImageSchema, linkSchema } from './schema'
+export { generateCodeAndFenceSchema, generateHeadingSchema, generateImageSchema, linkSchema } from './schema'
 
 export type TransformConfig = Omit<MarkdocTransformConfig, 'nodes'> & {
   image?: ImageSchemaOptions
