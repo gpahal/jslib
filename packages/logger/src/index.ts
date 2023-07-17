@@ -3,29 +3,18 @@ import { createLogger, format, Logger as LibLogger, transports } from 'winston'
 
 const TRANSPORT_CONSOLE = new transports.Console()
 
-export type LoggerLevel =
-  | 'silly'
-  | 'debug'
-  | 'verbose'
-  | 'http'
-  | 'info'
-  | 'help'
-  | 'warn'
-  | 'error'
-  | 'critical'
-  | 'silent'
+export type LoggerLevel = 'silly' | 'debug' | 'verbose' | 'http' | 'info' | 'help' | 'warn' | 'error' | 'critical'
 
 const levels: Record<LoggerLevel, number> = {
-  silly: 10,
-  debug: 20,
-  verbose: 30,
-  http: 40,
+  silly: 90,
+  debug: 80,
+  verbose: 70,
+  http: 60,
   info: 50,
-  help: 60,
-  warn: 70,
-  error: 80,
-  critical: 90,
-  silent: 100,
+  help: 40,
+  warn: 30,
+  error: 20,
+  critical: 10,
 }
 
 export type LoggerOptions = {
@@ -37,7 +26,7 @@ export type LoggerOptions = {
 }
 
 export class Logger {
-  readonly #logger: LibLogger
+  private readonly logger: LibLogger
 
   constructor({ level, prefix, showOutputAsJSON, isVerbose, onError }: LoggerOptions = {}) {
     const formats: Format[] = [
@@ -76,20 +65,20 @@ export class Logger {
       )
     }
 
-    this.#logger = createLogger({
+    this.logger = createLogger({
       levels,
-      level,
+      level: level,
       format: format.combine(...formats),
       transports: [TRANSPORT_CONSOLE],
     })
-    this.#logger.on('finish', this.#flushLoggerTransports.bind(this) as () => void)
+    this.logger.on('finish', this.flushLoggerTransports.bind(this) as () => void)
 
     if (onError) {
-      this.#logger.on('error', onError)
+      this.logger.on('error', onError)
     }
   }
 
-  async #flushLoggerTransports(): Promise<void> {
+  private async flushLoggerTransports(): Promise<void> {
     const p = new Promise((resolve) => {
       process.stdout.once('drain', () => resolve(undefined))
     })
@@ -98,46 +87,46 @@ export class Logger {
   }
 
   silly(message: string): void {
-    this.#logger.silly(message)
+    this.logger.silly(message)
   }
 
   debug(message: string): void {
-    this.#logger.debug(message)
+    this.logger.debug(message)
   }
 
   verbose(message: string): void {
-    this.#logger.verbose(message)
+    this.logger.verbose(message)
   }
 
   http(message: string): void {
-    this.#logger.http(message)
+    this.logger.http(message)
   }
 
   info(message: string): void {
-    this.#logger.info(message)
+    this.logger.info(message)
   }
 
   help(message: string): void {
-    this.#logger.help(message)
+    this.logger.help(message)
   }
 
   warn(message: string): void {
-    this.#logger.warn(message)
+    this.logger.warn(message)
   }
 
   error(message: string): void {
-    this.#logger.error(message)
+    this.logger.error(message)
   }
 
   critical(message: string): void {
-    this.#logger.crit(message)
+    this.logger.crit(message)
   }
 
   end(cb?: () => void): this
   end(chunk: unknown, cb?: () => void): this
   end(chunk: unknown, encoding?: BufferEncoding, cb?: () => void): this
   end(...args: unknown[]): this {
-    this.#logger.end(...(args as Parameters<LibLogger['end']>))
+    this.logger.end(...(args as Parameters<LibLogger['end']>))
     return this
   }
 }

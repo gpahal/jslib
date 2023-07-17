@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/logger",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
