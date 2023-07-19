@@ -1,9 +1,9 @@
 /** @typedef  {import("prettier").Config} PrettierConfigLib */
 /** @typedef  {import("@ianvs/prettier-plugin-sort-imports").PluginConfig} SortImportsConfig */
 /** @typedef  {{ tailwindConfig?: string }} TailwindConfig */
-/** @typedef  {PrettierConfigLib | SortImportsConfig | TailwindConfig} PrettierConfig */
+/** @typedef  {PrettierConfigLib | SortImportsConfig | TailwindConfig} PrettierBaseConfig */
 
-/** @type {PrettierConfig} */
+/** @type {PrettierBaseConfig} */
 const config = {
   $schema: 'http://json.schemastore.org/prettierrc',
   endOfLine: 'lf',
@@ -13,7 +13,7 @@ const config = {
   semi: false,
   singleQuote: true,
   jsxSingleQuote: false,
-  plugins: ['@ianvs/prettier-plugin-sort-imports', 'prettier-plugin-tailwindcss', 'prettier-plugin-astro'],
+  plugins: ['@ianvs/prettier-plugin-sort-imports'],
   importOrderTypeScriptVersion: '5.0.0',
   importOrder: [
     '<BUILTIN_MODULES>',
@@ -41,15 +41,6 @@ const config = {
     '^@/(.*)$',
     '',
     '^[./]',
-  ],
-  overrides: [
-    {
-      files: '*.astro',
-      options: {
-        parser: 'astro',
-        astroAllowShorthand: false,
-      },
-    },
   ],
 }
 

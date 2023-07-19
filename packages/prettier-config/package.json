@@ -1,13 +1,15 @@
 {
   "name": "@gpahal/prettier-config",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
   "files": [
     "package.json",
     "README.md",
-    "base.js"
+    "base.js",
+    "tailwindcss.js",
+    "astro.js"
   ],
   "dependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.1.0",

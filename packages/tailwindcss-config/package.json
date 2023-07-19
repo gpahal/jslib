@@ -1,5 +1,5 @@
 {
-  "name": "@gpahal/tailwind-config",
+  "name": "@gpahal/tailwindcss-config",
   "version": "0.0.1",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
@@ -12,8 +12,8 @@
     "postcss.js"
   ],
   "dependencies": {
-    "@gpahal/tailwind-color-themes": "workspace:^",
-    "@gpahal/tailwind-variants": "workspace:^",
+    "@gpahal/tailwindcss-color-themes": "workspace:^",
+    "@gpahal/tailwindcss-variants": "workspace:^",
     "@radix-ui/colors": "^1.0.0",
     "@tailwindcss/typography": "^0.5.9",
     "cssnano": "^6.0.1",

@@ -229,7 +229,7 @@ const config = {
   plugins: [
     require('@tailwindcss/typography'),
     require('tailwindcss-animate'),
-    require('@gpahal/tailwind-color-themes').default({
+    require('@gpahal/tailwindcss-color-themes').default({
       default: lightTheme,
       defaultDark: darkTheme,
       themes: [
@@ -243,7 +243,7 @@ const config = {
         },
       ],
     }),
-    require('@gpahal/tailwind-variants').default,
+    require('@gpahal/tailwindcss-variants').default,
   ],
 }
 

@@ -127,7 +127,7 @@ function addThemeColorsUtilities(addUtilities: PluginAPI['addUtilities'], select
 export default withOptions(
   (options: ColorThemeConfig) => {
     if (!options) {
-      throw new Error('No options provided to @gpahal/tailwind-color-themes plugin')
+      throw new Error('No options provided to @gpahal/tailwindcss-color-themes plugin')
     }
 
     return ({ addUtilities }) => {
@@ -148,7 +148,7 @@ export default withOptions(
   },
   (options: ColorThemeConfig) => {
     if (!options) {
-      throw new Error('No options provided to @gpahal/tailwind-color-themes plugin')
+      throw new Error('No options provided to @gpahal/tailwindcss-color-themes plugin')
     }
 
     return {

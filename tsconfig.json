@@ -14,7 +14,7 @@
     { "path": "packages/og-image" },
     { "path": "packages/std" },
     { "path": "packages/std-node" },
-    { "path": "packages/tailwind-color-themes" },
-    { "path": "packages/tailwind-variants" }
+    { "path": "packages/tailwindcss-color-themes" },
+    { "path": "packages/tailwindcss-variants" }
   ]
 }

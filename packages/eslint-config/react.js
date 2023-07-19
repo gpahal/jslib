@@ -1,7 +1,6 @@
 /** @type {import("eslint").Linter.Config} */
 const config = {
   extends: [
-    './base.js',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
     'plugin:jsx-a11y/recommended',
@@ -13,13 +12,10 @@ const config = {
   globals: {
     React: 'writable',
   },
-  plugins: ['react', 'jsx-a11y', 'compat', 'tailwindcss'],
+  plugins: ['react', 'jsx-a11y', 'compat'],
   settings: {
     react: {
       version: 'detect',
-    },
-    tailwindcss: {
-      config: './tailwind.config.cjs',
     },
   },
   rules: {
@@ -39,9 +35,6 @@ const config = {
     'jsx-a11y/role-has-required-aria-props': 'warn',
     'jsx-a11y/role-supports-aria-props': 'warn',
     'react/jsx-no-target-blank': 'off',
-    'tailwindcss/enforces-negative-arbitrary-values': 'error',
-    'tailwindcss/enforces-shorthand': 'error',
-    'tailwindcss/no-contradicting-classname': 'error',
   },
 }
 
