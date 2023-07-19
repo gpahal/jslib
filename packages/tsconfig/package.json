@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/tsconfig",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -10,6 +10,8 @@
     "vite.json",
     "vitest.json",
     "react.json",
-    "nextjs.json"
+    "react-app.json",
+    "nextjs.json",
+    "nextjs-app.json"
   ]
 }
