@@ -44,9 +44,6 @@ importers:
       eslint-plugin-import:
         specifier: ^2.27.5
         version: 2.27.5(@typescript-eslint/parser@6.1.0)(eslint@8.45.0)
-      husky:
-        specifier: ^8.0.3
-        version: 8.0.3
       npm-run-all:
         specifier: ^4.1.5
         version: 4.1.5
@@ -56,6 +53,9 @@ importers:
       prettier:
         specifier: ^3.0.0
         version: 3.0.0
+      simple-git-hooks:
+        specifier: ^2.8.1
+        version: 2.8.1
       stylelint:
         specifier: ^15.10.2
         version: 15.10.2
@@ -4048,12 +4048,6 @@ packages:
     engines: {node: '>=10.17.0'}
     dev: true
 
-  /husky@8.0.3:
-    resolution: {integrity: sha512-+dQSyqPh4x1hlO1swXBiNb2HzTDN1I2IGLQx1GrBuiqFJfoMrnZWwVmatvSiO+Iz8fBUnf+lekwNo4c2LlXItg==}
-    engines: {node: '>=14'}
-    hasBin: true
-    dev: true
-
   /iconv-lite@0.4.23:
     resolution: {integrity: sha512-neyTUVFtahjf0mB3dZT77u+8O0QB89jFdnBkd5P1JgYPbPaia3gXXOVL2fq8VyU2gMMD7SaN7QukTB/pmXYvDA==}
     engines: {node: '>=0.10.0'}
@@ -6596,6 +6590,12 @@ packages:
       decompress-response: 6.0.0
       once: 1.4.0
       simple-concat: 1.0.1
+    dev: true
+
+  /simple-git-hooks@2.8.1:
+    resolution: {integrity: sha512-DYpcVR1AGtSfFUNzlBdHrQGPsOhuuEJ/FkmPOOlFysP60AHd3nsEpkGq/QEOdtUyT1Qhk7w9oLmFoMG+75BDog==}
+    hasBin: true
+    requiresBuild: true
     dev: true
 
   /simple-swizzle@0.2.2:
