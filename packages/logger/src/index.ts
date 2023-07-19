@@ -1,5 +1,5 @@
 import { Format } from 'logform'
-import { createLogger, format, Logger as LibLogger, transports } from 'winston'
+import { createLogger, format, Logger as LoggerLib, transports } from 'winston'
 
 const TRANSPORT_CONSOLE = new transports.Console()
 
@@ -26,7 +26,7 @@ export type LoggerOptions = {
 }
 
 export class Logger {
-  private readonly logger: LibLogger
+  private readonly logger: LoggerLib
 
   constructor({ level, prefix, showOutputAsJSON, isVerbose, onError }: LoggerOptions = {}) {
     const formats: Format[] = [
@@ -125,7 +125,7 @@ export class Logger {
   end(chunk: unknown, cb?: () => void): this
   end(chunk: unknown, encoding?: BufferEncoding, cb?: () => void): this
   end(...args: unknown[]): this {
-    this.logger.end(...(args as Parameters<LibLogger['end']>))
+    this.logger.end(...(args as Parameters<LoggerLib['end']>))
     return this
   }
 }

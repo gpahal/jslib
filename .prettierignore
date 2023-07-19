@@ -1,9 +1,6 @@
 # Markdoc files
 *.mdoc
 
-# Node.js
-pnpm-*.yaml
-
 # Turbo
 .turbo
 

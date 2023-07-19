@@ -1,41 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": ["@gpahal/tsconfig/base.json", "@gpahal/tsconfig/vitest.json"],
   "compileOnSave": false,
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
-    "moduleResolution": "node",
-    "lib": ["esnext", "dom", "dom.iterable"],
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "skipDefaultLibCheck": true,
-    "composite": false,
-    "declaration": true,
-    "declarationMap": true,
-    "inlineSources": false,
-    "preserveWatchOutput": true,
-    "types": ["vite/client", "vitest/globals"],
-
-    // Strict Type-Checking Options
-    "alwaysStrict": true,
-    "strict": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictPropertyInitialization": true,
-    "noImplicitAny": true,
-    "noImplicitThis": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true,
-    "noUncheckedIndexedAccess": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowUnreachableCode": false,
-    "allowUnusedLabels": false
-  },
-  "exclude": ["node_modules", "build", "dist", "public", "tmp"]
+    "lib": ["esnext", "dom", "dom.iterable"]
+  }
 }

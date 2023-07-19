@@ -1,0 +1,13 @@
+{
+  "name": "@gpahal/tsconfig",
+  "version": "0.0.2",
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "package.json",
+    "base.json",
+    "react-library.js",
+    "nextjs-app.json"
+  ]
+}

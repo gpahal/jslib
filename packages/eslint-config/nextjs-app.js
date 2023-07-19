@@ -1,6 +1,6 @@
 /** @type {import("eslint").Linter.Config} */
 const config = {
-  extends: ['@gpahal/eslint-config/base', '@gpahal/eslint-config/vitest'],
+  extends: ['./react-library', 'plugin:@next/next/core-web-vitals'],
 }
 
 module.exports = config

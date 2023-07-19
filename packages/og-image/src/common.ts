@@ -2,7 +2,7 @@ import { ReactNode } from 'react'
 
 import { JSX } from 'preact'
 import { SatoriOptions } from 'satori'
-import { html as libHtml } from 'satori-html'
+import { html as htmlLib } from 'satori-html'
 
 import { FontInfo } from '@gpahal/font'
 
@@ -18,7 +18,7 @@ export type VNode = {
 export type Node = ReactNode | JSX.Element | VNode
 
 export function html(templates: string | TemplateStringsArray, ...expressions: unknown[]): Node {
-  return libHtml(templates, ...expressions) as VNode
+  return htmlLib(templates, ...expressions) as VNode
 }
 
 export type OgImageOptions = {

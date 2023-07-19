@@ -1,0 +1,15 @@
+{
+  "name": "@gpahal/stylelint-config",
+  "version": "0.0.1",
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "package.json",
+    "README.md",
+    "base.js"
+  ],
+  "dependencies": {
+    "stylelint-config-standard": "^34.0.0"
+  }
+}

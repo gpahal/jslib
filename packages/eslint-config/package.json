@@ -1,0 +1,34 @@
+{
+  "name": "@gpahal/eslint-config",
+  "version": "0.0.2",
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "package.json",
+    "README.md",
+    "base.js",
+    "vitest.js",
+    "react-library.js",
+    "nextjs-app.js"
+  ],
+  "dependencies": {
+    "@babel/eslint-parser": "^7.22.9",
+    "@babel/plugin-syntax-class-properties": "^7.12.13",
+    "@babel/plugin-syntax-jsx": "^7.22.5",
+    "@next/eslint-plugin-next": "^13.4.10",
+    "@types/eslint": "^8.44.0",
+    "@typescript-eslint/eslint-plugin": "^6.1.0",
+    "@typescript-eslint/parser": "^6.1.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-config-turbo": "^1.10.8",
+    "eslint-plugin-compat": "^4.1.4",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-tailwindcss": "^3.13.0",
+    "eslint-plugin-unicorn": "^48.0.0",
+    "eslint-plugin-vitest-globals": "^1.4.0"
+  }
+}
