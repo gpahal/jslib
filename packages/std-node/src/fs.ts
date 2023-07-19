@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { FsModule } from '@gpahal/std/fs'
+import type { FsModule } from '@gpahal/std/fs'
 
 export const FS_MODULE = {
   getBasename: path.basename,

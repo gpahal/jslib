@@ -2,10 +2,10 @@ import sharp from 'sharp'
 
 import {
   OUTPUT_IMAGE_FORMATS,
-  OutputImageFormat,
-  TransformImageBufferFn,
-  TransformImageBufferRequest,
-  TransformImageBufferResponse,
+  type OutputImageFormat,
+  type TransformImageBufferFn,
+  type TransformImageBufferRequest,
+  type TransformImageBufferResponse,
 } from '@gpahal/image'
 
 export const transformImageBuffer: TransformImageBufferFn = async (

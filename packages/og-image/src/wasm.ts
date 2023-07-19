@@ -1,7 +1,7 @@
 import satori, { init as satoriInit } from 'satori/wasm'
 import initYogaWeb from 'yoga-wasm-web'
 
-import { generateOgImageWithSatoriFn, Node, OgImageOptions } from '@/common'
+import { generateOgImageWithSatoriFn, type Node, type OgImageOptions } from '@/common'
 
 export { html } from '@/common'
 

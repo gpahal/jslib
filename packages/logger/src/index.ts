@@ -1,5 +1,5 @@
-import { Format } from 'logform'
-import { createLogger, format, Logger as LoggerLib, transports } from 'winston'
+import type { Format } from 'logform'
+import { createLogger, format, transports, type Logger as LoggerLib } from 'winston'
 
 const TRANSPORT_CONSOLE = new transports.Console()
 

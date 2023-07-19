@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/tsconfig",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -12,6 +12,7 @@
     "react.json",
     "react-app.json",
     "nextjs.json",
-    "nextjs-app.json"
+    "nextjs-app.json",
+    "astro.json"
   ]
 }

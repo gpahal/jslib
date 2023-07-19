@@ -1,4 +1,4 @@
-import { FontInfo, FontPropertiesWithLocation } from '@gpahal/font'
+import type { FontInfo, FontPropertiesWithLocation } from '@gpahal/font'
 
 export function getInterFontFamily(): string {
   return 'Inter'

@@ -1,6 +1,6 @@
 import Color from 'color'
 import { withOptions } from 'tailwindcss/plugin'
-import { PluginAPI } from 'tailwindcss/types/config'
+import type { PluginAPI } from 'tailwindcss/types/config'
 
 import { kebabCase } from '@gpahal/std/string'
 

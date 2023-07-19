@@ -1,10 +1,10 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-import { JSX } from 'preact'
-import { SatoriOptions } from 'satori'
+import type { JSX } from 'preact'
+import type { SatoriOptions } from 'satori'
 import { html as htmlLib } from 'satori-html'
 
-import { FontInfo } from '@gpahal/font'
+import type { FontInfo } from '@gpahal/font'
 
 export type VNode = {
   type: string

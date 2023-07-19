@@ -1,6 +1,6 @@
-import * as React from 'react'
+import type * as React from 'react'
 
-import { RenderableTreeNode, RenderableTreeNodes, Scalar, Tag } from '@markdoc/markdoc'
+import { Tag, type RenderableTreeNode, type RenderableTreeNodes, type Scalar } from '@markdoc/markdoc'
 
 import { isFunction } from '@gpahal/std/function'
 import { isObject } from '@gpahal/std/object'

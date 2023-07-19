@@ -1,6 +1,6 @@
 import satori from 'satori'
 
-import { generateOgImageWithSatoriFn, Node, OgImageOptions } from '@/common'
+import { generateOgImageWithSatoriFn, type Node, type OgImageOptions } from '@/common'
 
 export { html } from '@/common'
 

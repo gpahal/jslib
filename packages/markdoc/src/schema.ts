@@ -1,6 +1,6 @@
-import { Schema, Tag } from '@markdoc/markdoc'
+import { Tag, type Schema } from '@markdoc/markdoc'
 import { sha1 } from 'object-hash'
-import { getHighlighter, Highlighter, IShikiTheme, IThemedToken } from 'shiki'
+import { getHighlighter, type Highlighter, type IShikiTheme, type IThemedToken } from 'shiki'
 
 import { isArray } from '@gpahal/std/array'
 import { isString } from '@gpahal/std/string'

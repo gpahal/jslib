@@ -2,10 +2,10 @@ import {
   createFileMap,
   createFileMapIndex,
   createFlattenedFileMapIndex,
-  FsModule,
   transformFileMapNames,
   unflattenFlattenedFileMapIndex,
   walkDirectory,
+  type FsModule,
 } from '@/fs'
 
 const fs = {

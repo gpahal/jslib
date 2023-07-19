@@ -1,13 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "Next.js",
-  "extends": "./react.json",
+  "display": "Astro",
   "compilerOptions": {
-    "plugins": [{ "name": "next" }],
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "target": "esnext",
     "module": "esnext",
-    "jsx": "preserve",
     "incremental": true,
     "noEmit": true,
     "declaration": false,

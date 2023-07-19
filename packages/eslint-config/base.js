@@ -82,7 +82,7 @@ const config = {
           },
         ],
         '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
-        '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'no-type-imports' }],
+        '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
         '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
         '@typescript-eslint/no-floating-promises': ['error'],
         '@typescript-eslint/prefer-nullish-coalescing': ['off'],

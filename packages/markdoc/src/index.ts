@@ -1,17 +1,17 @@
 import Markdoc, {
-  Config as MarkdocTransformConfig,
-  Node,
-  NodeType,
-  RenderableTreeNode,
-  Scalar,
-  Schema,
   Tag,
-  ValidateError,
+  type Config as MarkdocTransformConfig,
+  type Node,
+  type NodeType,
+  type RenderableTreeNode,
+  type Scalar,
+  type Schema,
+  type ValidateError,
 } from '@markdoc/markdoc'
 import { slug } from 'github-slugger'
 import yaml, { YAMLException } from 'js-yaml'
-import libCalculateReadTime, { ReadTimeResults } from 'reading-time'
-import {
+import libCalculateReadTime, { type ReadTimeResults } from 'reading-time'
+import type {
   AnyZodObject,
   input,
   output,
@@ -25,27 +25,27 @@ import {
 import { CustomError, getErrorMessage } from '@gpahal/std/error'
 import {
   createFileMap,
-  CreateFileMapOptions,
   createFlattenedFileMapIndex,
-  FileMap,
-  FsFileMap,
-  FsFileMapItem,
-  FsModule,
   someFileMap,
   walkDirectory,
-  WalkOptions,
+  type CreateFileMapOptions,
+  type FileMap,
+  type FsFileMap,
+  type FsFileMapItem,
+  type FsModule,
+  type WalkOptions,
 } from '@gpahal/std/fs'
-import { omitUndefinedValues, Prettify } from '@gpahal/std/object'
+import { omitUndefinedValues, type Prettify } from '@gpahal/std/object'
 import { isString, stripSuffix } from '@gpahal/std/string'
 import { getExtension } from '@gpahal/std/url'
 
 import {
-  CodeAndFenceSchemaConfig,
   generateCodeAndFenceSchema,
   generateHeadingSchema,
   generateImageSchema,
-  ImageSchemaOptions,
   linkSchema,
+  type CodeAndFenceSchemaConfig,
+  type ImageSchemaOptions,
 } from './schema'
 
 export type { Node, RenderableTreeNode, RenderableTreeNodes, Scalar, Schema, ValidateError } from '@markdoc/markdoc'

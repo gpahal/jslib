@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 
-import { FONT_PROPERTIES, FontPropertiesWithLocation } from '@gpahal/font'
+import { FONT_PROPERTIES, type FontPropertiesWithLocation } from '@gpahal/font'
 import { getInterFontFamily, getInterFontInfoList } from '@gpahal/font-data-inter/font-info'
 import { getSourceCodeProFontFamily, getSourceCodeProFontInfoList } from '@gpahal/font-data-source-code-pro/font-info'
 

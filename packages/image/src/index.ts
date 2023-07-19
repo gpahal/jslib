@@ -1,6 +1,6 @@
 import mime from 'mime'
 
-import { Prettify } from '@gpahal/std/object'
+import type { Prettify } from '@gpahal/std/object'
 import { getExtension } from '@gpahal/std/url'
 
 export type OutputImageFormatSupportsAlpha = 'avif' | 'png' | 'tiff' | 'webp'

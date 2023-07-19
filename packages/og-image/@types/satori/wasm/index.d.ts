@@ -1,7 +1,7 @@
 declare module 'satori/wasm' {
-  import { ReactNode } from 'react'
+  import type { ReactNode } from 'react'
   import { SatoriOptions } from 'satori'
-  import * as yoga_layout from 'yoga-layout'
+  import type * as yoga_layout from 'yoga-layout'
 
   declare let Yoga: typeof yoga_layout
   declare function init(yoga: typeof Yoga): void

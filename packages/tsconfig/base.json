@@ -12,6 +12,7 @@
     "declarationMap": true,
     "inlineSources": false,
     "preserveWatchOutput": true,
+    "allowJs": false,
     "alwaysStrict": true,
     "strict": true,
     "strictNullChecks": true,
@@ -27,7 +28,7 @@
     "noUncheckedIndexedAccess": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
-    "importsNotUsedAsValues": "remove",
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true
   }
 }

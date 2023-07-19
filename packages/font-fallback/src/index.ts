@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url'
 
-import { Font, fromFile, fromUrl } from '@capsizecss/unpack'
+import { fromFile, fromUrl, type Font } from '@capsizecss/unpack'
 
 import { camelCase, trimEnd, trimStart } from '@gpahal/std/string'
 

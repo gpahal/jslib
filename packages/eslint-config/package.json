@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -23,7 +23,7 @@
     "@typescript-eslint/eslint-plugin": "^6.1.0",
     "@typescript-eslint/parser": "^6.1.0",
     "eslint-config-prettier": "^8.8.0",
-    "eslint-config-turbo": "^1.10.8",
+    "eslint-config-turbo": "^1.10.9",
     "eslint-plugin-astro": "^0.27.2",
     "eslint-plugin-compat": "^4.1.4",
     "eslint-plugin-import": "^2.27.5",
