@@ -75,7 +75,7 @@
   src: local('-apple-system');
   size-adjust: 115.309868%;
   ascent-override: 84.012757%;
-  descent-override: -20.941596%;
+  descent-override: 20.941596%;
   line-gap-override: 0%;
 }
 
@@ -85,7 +85,7 @@
   src: local('BlinkMacSystemFont');
   size-adjust: 115.309868%;
   ascent-override: 84.012757%;
-  descent-override: -20.941596%;
+  descent-override: 20.941596%;
   line-gap-override: 0%;
 }
 
@@ -95,7 +95,7 @@
   src: local('Segoe UI');
   size-adjust: 107.164359%;
   ascent-override: 90.398525%;
-  descent-override: -22.533357%;
+  descent-override: 22.533357%;
   line-gap-override: 0%;
 }
 
@@ -105,7 +105,7 @@
   src: local('Roboto');
   size-adjust: 107.282772%;
   ascent-override: 90.298748%;
-  descent-override: -22.508485%;
+  descent-override: 22.508485%;
   line-gap-override: 0%;
 }
 
@@ -115,7 +115,7 @@
   src: local('Helvetica Neue');
   size-adjust: 106.057428%;
   ascent-override: 91.342022%;
-  descent-override: -22.768539%;
+  descent-override: 22.768539%;
   line-gap-override: 0%;
 }
 
@@ -125,7 +125,7 @@
   src: local('Arial');
   size-adjust: 107.401448%;
   ascent-override: 90.19897%;
-  descent-override: -22.483614%;
+  descent-override: 22.483614%;
   line-gap-override: 0%;
 }
 
@@ -135,6 +135,6 @@
   src: local('Noto Sans');
   size-adjust: 100.653228%;
   ascent-override: 96.246292%;
-  descent-override: -23.991011%;
+  descent-override: 23.991011%;
   line-gap-override: 0%;
 }

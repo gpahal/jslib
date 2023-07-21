@@ -2,14 +2,14 @@ import { fileURLToPath } from 'node:url'
 
 import { fromFile, fromUrl, type Font } from '@capsizecss/unpack'
 
-import { camelCase, trimEnd, trimStart } from '@gpahal/std/string'
+import { camelCase, trim } from '@gpahal/std/string'
 
 const metricsCache = new Map<string, Font | null>()
 
-export async function getFontFamilyMetrics(fontFamily: string): Promise<Font | null> {
+export async function getFontFamilyMetrics(fontFamily: string): Promise<Font | undefined> {
   fontFamily = normalizeFontFamily(fontFamily)
   if (metricsCache.has(fontFamily)) {
-    return metricsCache.get(fontFamily) || null
+    return metricsCache.get(fontFamily) || undefined
   }
 
   try {
@@ -18,28 +18,28 @@ export async function getFontFamilyMetrics(fontFamily: string): Promise<Font | n
     return metrics
   } catch (e) {
     metricsCache.set(fontFamily, null)
-    return null
+    return undefined
   }
 }
 
 function normalizeFontFamily(fontFamily: string): string {
   return camelCase(
-    trimEnd(trimStart(fontFamily, '"'), '"')
+    trim(trim(fontFamily, '"'), "'")
       .split(/[\s|-]/)
       .filter(Boolean)
       .join(' '),
   )
 }
 
-export async function getFontUrlMetrics(url: URL): Promise<Font | null> {
+export async function getFontUrlMetrics(url: URL): Promise<Font | undefined> {
   const href = url.href
   if (href in metricsCache) {
-    return metricsCache.get(href) || null
+    return metricsCache.get(href) || undefined
   }
 
   if (!url.protocol) {
     metricsCache.set(href, null)
-    return null
+    return undefined
   }
 
   const metrics = url.protocol === 'file:' ? await fromFile(fileURLToPath(url)) : await fromUrl(href)
@@ -90,24 +90,33 @@ export async function getFontFallbacksCssProperties(
 async function getFontFallbackCssProperties(
   originalFontMetrics: Font,
   fallbackFontFamily: string,
-): Promise<FontFallbackCssProperties | null> {
+): Promise<FontFallbackCssProperties | undefined> {
   const fallbackFontMetrics = await getFontFamilyMetrics(fallbackFontFamily)
   if (!fallbackFontMetrics) {
-    return null
+    return undefined
   }
 
-  const sizeAdjust =
-    (originalFontMetrics.xWidthAvg * fallbackFontMetrics.unitsPerEm) /
-    (fallbackFontMetrics.xWidthAvg * originalFontMetrics.unitsPerEm)
-  const unitsPerEm = originalFontMetrics.unitsPerEm * sizeAdjust
+  // Credits to: https://github.com/seek-oss/capsize/blob/master/packages/core/src/createFontStack.ts
+
+  // Calculate size adjust
+  const preferredFontXAvgRatio = originalFontMetrics.xWidthAvg / originalFontMetrics.unitsPerEm
+  const fallbackFontXAvgRatio = fallbackFontMetrics.xWidthAvg / fallbackFontMetrics.unitsPerEm
+  const sizeAdjust = preferredFontXAvgRatio / fallbackFontXAvgRatio
+
+  // Calculate metric overrides for preferred font
+  const adjustedEmSquare = originalFontMetrics.unitsPerEm * sizeAdjust
+  const ascentOverride = originalFontMetrics.ascent / adjustedEmSquare
+  const descentOverride = Math.abs(originalFontMetrics.descent) / adjustedEmSquare
+  const lineGapOverride = originalFontMetrics.lineGap / adjustedEmSquare
+
   return {
     familyName: `${originalFontMetrics.familyName} fallback ${fallbackFontMetrics.familyName}`,
     originalFamilyName: originalFontMetrics.familyName,
     fallbackFamilyName: fallbackFontMetrics.familyName,
     sizeAdjust,
-    ascentOverride: originalFontMetrics.ascent / unitsPerEm,
-    descentOverride: originalFontMetrics.descent / unitsPerEm,
-    lineGapOverride: originalFontMetrics.lineGap / unitsPerEm,
+    ascentOverride,
+    descentOverride,
+    lineGapOverride,
   }
 }
 
@@ -126,7 +135,7 @@ const FAMILY_NAME_KEYWORDS = [
 ]
 
 function familyNameToString(familyName: string): string {
-  return FAMILY_NAME_KEYWORDS.includes(familyName) ? familyName : `"${familyName}"`
+  return FAMILY_NAME_KEYWORDS.includes(familyName) ? familyName : `'${familyName}'`
 }
 
 function toPercentage(value: number, fractionDigits = 6): string {
