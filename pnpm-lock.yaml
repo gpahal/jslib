@@ -137,17 +137,23 @@ importers:
 
   packages/font: {}
 
-  packages/font-data-inter:
+  packages/font-data/figtree:
     devDependencies:
       '@gpahal/font':
         specifier: workspace:*
-        version: link:../font
+        version: link:../../font
 
-  packages/font-data-source-code-pro:
+  packages/font-data/inter:
     devDependencies:
       '@gpahal/font':
         specifier: workspace:*
-        version: link:../font
+        version: link:../../font
+
+  packages/font-data/source-code-pro:
+    devDependencies:
+      '@gpahal/font':
+        specifier: workspace:*
+        version: link:../../font
 
   packages/font-fallback:
     dependencies:
@@ -261,10 +267,10 @@ importers:
         version: link:../font
       '@gpahal/font-data-inter':
         specifier: workspace:*
-        version: link:../font-data-inter
+        version: link:../font-data/inter
       '@gpahal/font-data-source-code-pro':
         specifier: workspace:*
-        version: link:../font-data-source-code-pro
+        version: link:../font-data/source-code-pro
       '@types/react':
         specifier: ^18.2.15
         version: 18.2.15

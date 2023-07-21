@@ -1,10 +1,10 @@
 import type { FontInfo, FontPropertiesWithLocation } from '@gpahal/font'
 
-export function getInterFontFamily(): string {
+export function getFontFamily(): string {
   return 'Inter'
 }
 
-export function getInterFallbackFontFamilies(): string[] {
+export function getFallbackFontFamilies(): string[] {
   return [
     '"Inter fallback -apple-system"',
     '"Inter fallback BlinkMacSystemFont"',
@@ -15,7 +15,7 @@ export function getInterFallbackFontFamilies(): string[] {
   ]
 }
 
-export async function getInterFontInfoList(
+export async function getFontInfoList(
   propertiesList: FontPropertiesWithLocation[],
   fetchFontData: (location: string) => FontInfo['data'],
 ): Promise<FontInfo[]> {

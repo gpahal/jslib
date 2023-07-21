@@ -1,14 +1,14 @@
 import type { FontInfo, FontPropertiesWithLocation } from '@gpahal/font'
 
-export function getSourceCodeProFontFamily(): string {
+export function getFontFamily(): string {
   return '"Source Code Pro"'
 }
 
-export function getSourceCodeProFallbackFontFamilies(): string[] {
+export function getFallbackFontFamilies(): string[] {
   return ['"Source Code Pro fallback Courier New"']
 }
 
-export async function getSourceCodeProFontInfoList(
+export async function getFontInfoList(
   propertiesList: FontPropertiesWithLocation[],
   fetchFontData: (location: string) => FontInfo['data'],
 ): Promise<FontInfo[]> {

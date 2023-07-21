@@ -16,6 +16,7 @@ const config = {
     ],
     'font-family-name-quotes': 'always-unless-keyword',
     'number-max-precision': 6,
+    'comment-empty-line-before': null,
   },
 }
 

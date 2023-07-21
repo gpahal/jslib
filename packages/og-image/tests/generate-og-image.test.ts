@@ -1,8 +1,14 @@
 import { readFile } from 'node:fs/promises'
 
 import { FONT_PROPERTIES, type FontPropertiesWithLocation } from '@gpahal/font'
-import { getInterFontFamily, getInterFontInfoList } from '@gpahal/font-data-inter/font-info'
-import { getSourceCodeProFontFamily, getSourceCodeProFontInfoList } from '@gpahal/font-data-source-code-pro/font-info'
+import {
+  getFontFamily as getInterFontFamily,
+  getFontInfoList as getInterFontInfoList,
+} from '@gpahal/font-data-inter/font-info'
+import {
+  getFontFamily as getSourceCodeProFontFamily,
+  getFontInfoList as getSourceCodeProFontInfoList,
+} from '@gpahal/font-data-source-code-pro/font-info'
 
 import { generateOgImage, html } from '@/index'
 

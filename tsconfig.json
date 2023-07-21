@@ -3,8 +3,9 @@
   "files": [],
   "references": [
     { "path": "packages/font" },
-    { "path": "packages/font-data-inter" },
-    { "path": "packages/font-data-source-code-pro" },
+    { "path": "packages/font-data/figtree" },
+    { "path": "packages/font-data/inter" },
+    { "path": "packages/font-data/source-code-pro" },
     { "path": "packages/font-fallback" },
     { "path": "packages/image" },
     { "path": "packages/image-node" },
