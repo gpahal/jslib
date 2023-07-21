@@ -1,7 +1,6 @@
 /** @typedef  {import("prettier").Config} PrettierConfigLib */
 /** @typedef  {import("@ianvs/prettier-plugin-sort-imports").PluginConfig} SortImportsConfig */
-/** @typedef  {{ tailwindConfig?: string }} TailwindConfig */
-/** @typedef  {PrettierConfigLib | SortImportsConfig | TailwindConfig} PrettierBaseConfig */
+/** @typedef  {PrettierConfigLib | SortImportsConfig} PrettierBaseConfig */
 
 /** @type {PrettierBaseConfig} */
 const config = {

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Astro App",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "incremental": true,
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false
+  }
+}

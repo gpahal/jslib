@@ -7,7 +7,7 @@
  * @param {T} config
  * @returns {T}
  */
-function addAstroTailwindConfig(config) {
+function addPrettierAstroConfig(config) {
   return {
     ...config,
     plugins: [...(config.plugins || []), 'prettier-plugin-astro'],
@@ -25,5 +25,5 @@ function addAstroTailwindConfig(config) {
 }
 
 module.exports = {
-  addAstroTailwindConfig,
+  addPrettierAstroConfig,
 }

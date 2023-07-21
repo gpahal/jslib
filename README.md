@@ -10,7 +10,6 @@ This is a collection of javascript/typescript libraries and configuration preset
 - [@gpahal/eslint-config](/packages/eslint-config)
 - [@gpahal/stylelint-config](/packages/stylelint-config)
 - [@gpahal/prettier-config](/packages/prettier-config)
-- [@gpahal/tailwindcss-config](/packages/tailwindcss-config)
 
 ### High level standard libraries with common utilities
 
