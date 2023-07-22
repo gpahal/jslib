@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -8,6 +8,7 @@
     "package.json",
     "README.md",
     "base.js",
+    "turbo.js",
     "vitest.js",
     "tailwindcss.js",
     "react.js",

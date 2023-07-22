@@ -2,7 +2,7 @@
 const config = {
   root: true,
   reportUnusedDisableDirectives: true,
-  extends: ['turbo', 'eslint:recommended', 'prettier'],
+  extends: ['eslint:recommended', 'prettier'],
   env: {
     es2022: true,
     node: true,
