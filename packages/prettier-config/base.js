@@ -33,6 +33,8 @@ const config = {
     '^@/actions/(.*)$',
     '^@/contexts/(.*)$',
     '^@/hooks/(.*)$',
+    '^@/layouts/(.*)$',
+    '^@/pages/(.*)$',
     '^@/components/lib/(.*)$',
     '^@/components/(.*)$',
     '^@/styles/(.*)$',
