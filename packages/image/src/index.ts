@@ -379,17 +379,7 @@ type ImageNonSourceProps = {
   role?: ImageRole
   loading: ImageLoading
   decoding: ImageDecoding
-  fetchPriority: ImageFetchPriority
-}
-
-function transformImageNoneSourcePropsToHTMLProps({
-  fetchPriority,
-  ...rest
-}: ImageNonSourceProps): Record<string, string> {
-  return {
-    ...rest,
-    fetchpriority: fetchPriority,
-  }
+  fetchpriority: ImageFetchPriority
 }
 
 function getImageNonSourceProps({ alt, role, isPriority }: ImageNonSourceOptions): ImageNonSourceProps {
@@ -400,11 +390,11 @@ function getImageNonSourceProps({ alt, role, isPriority }: ImageNonSourceOptions
 
   let loading: ImageLoading = 'lazy'
   let decoding: ImageDecoding = 'async'
-  let fetchPriority: ImageFetchPriority = 'low'
+  let fetchpriority: ImageFetchPriority = 'low'
   if (isPriority) {
     loading = 'eager'
     decoding = 'sync'
-    fetchPriority = 'high'
+    fetchpriority = 'high'
   }
 
   return {
@@ -412,7 +402,7 @@ function getImageNonSourceProps({ alt, role, isPriority }: ImageNonSourceOptions
     role,
     loading,
     decoding,
-    fetchPriority,
+    fetchpriority,
   }
 }
 
@@ -436,12 +426,16 @@ export function transformImagePropsToHTMLProps({
   role,
   loading,
   decoding,
-  fetchPriority,
+  fetchpriority,
   ...nonSourceProps
 }: ImageProps): Record<string, string> {
   return {
     ...transformImageSourcePropsToHTMLProps(nonSourceProps),
-    ...transformImageNoneSourcePropsToHTMLProps({ alt, role, loading, decoding, fetchPriority }),
+    alt,
+    role: role || 'presentation',
+    loading,
+    decoding,
+    fetchpriority,
   }
 }
 

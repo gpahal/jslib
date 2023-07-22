@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/image",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
