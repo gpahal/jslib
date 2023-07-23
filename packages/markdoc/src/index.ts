@@ -1,5 +1,4 @@
 import Markdoc, {
-  Tag,
   type Config as MarkdocTransformConfig,
   type Node,
   type NodeType,
@@ -57,8 +56,9 @@ export type {
   TransformImageSrcAndGetSize,
 } from './schema'
 
-export { Tag } from '@markdoc/markdoc'
 export { generateCodeAndFenceSchema, generateHeadingSchema, generateImageSchema, linkSchema } from './schema'
+
+export class Tag extends Markdoc.Tag {}
 
 export type TransformConfig = Omit<MarkdocTransformConfig, 'nodes'> & {
   image?: ImageSchemaOptions

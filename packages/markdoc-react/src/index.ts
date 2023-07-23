@@ -1,6 +1,6 @@
 import type * as React from 'react'
 
-import { Tag, type RenderableTreeNode, type RenderableTreeNodes, type Scalar } from '@markdoc/markdoc'
+import Markdoc, { type RenderableTreeNode, type RenderableTreeNodes, type Scalar } from '@markdoc/markdoc'
 
 import { isFunction } from '@gpahal/std/function'
 import { isObject } from '@gpahal/std/object'
@@ -8,7 +8,7 @@ import { camelCase, isString } from '@gpahal/std/string'
 
 export type { Node, RenderableTreeNode, RenderableTreeNodes, Scalar, Schema, ValidateError } from '@markdoc/markdoc'
 
-export { Tag } from '@markdoc/markdoc'
+export class Tag extends Markdoc.Tag {}
 
 type ReactShape = Readonly<{
   createElement: typeof React.createElement
