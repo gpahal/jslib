@@ -74,6 +74,7 @@ export function generateImageSchema({ transformImageSrcAndGetSize }: ImageSchema
           width: String(width),
           height: String(height),
           ...attributes,
+          src: src || attributes.src,
         },
         [],
       )
