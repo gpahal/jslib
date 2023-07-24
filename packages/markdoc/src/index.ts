@@ -143,9 +143,9 @@ export type HeadingNode = {
 
 export type ParseResultSuccess<TFrontmatterSchema extends FrontmatterSchema> = {
   isSuccessful: true
-  content: RenderableTreeNode
   frontmatter: output<TFrontmatterSchema>
   headingNodes: HeadingNode[]
+  content: RenderableTreeNode
   readTimeResults: ReadTimeResults
 }
 
@@ -191,15 +191,12 @@ export async function parse<TFrontmatterSchema extends FrontmatterSchema>(
   options?: ParseOptions<TFrontmatterSchema>,
 ): Promise<ParseResult<TFrontmatterSchema>> {
   const document = Markdoc.parse(source)
-
   const transformConfig = getMarkdocTransformConfig(options?.transformConfig)
   const markdocErrors = Markdoc.validate(document, transformConfig)
   if (markdocErrors && markdocErrors.length > 0) {
     return { isSuccessful: false, type: 'markdoc', markdocErrors }
   }
 
-  const headingNodes = generateHeadingNodes(document, transformConfig)
-  const content = await awaitRenderableTreeNode(Markdoc.transform(document, transformConfig))
   const frontmatterRawParseResults = parseFrontmatterRaw(document)
   if (!frontmatterRawParseResults.isSuccessful) {
     return frontmatterRawParseResults
@@ -214,13 +211,75 @@ export async function parse<TFrontmatterSchema extends FrontmatterSchema>(
     frontmatter = zodParseResults.data
   }
 
+  const headingNodes = generateHeadingNodes(document, transformConfig)
+  const content = await awaitRenderableTreeNode(Markdoc.transform(document, transformConfig))
+  combineRenderableNodeText(content)
+
+  const readTimeResults = libCalculateReadTime(renderableNodeToString(content))
+
   return {
     isSuccessful: true,
-    content,
     frontmatter,
     headingNodes,
-    readTimeResults: libCalculateReadTime(renderableNodeToString(content)),
+    content,
+    readTimeResults,
   }
+}
+
+export type ParseDirectoryOptions<TFrontmatterSchema extends FrontmatterSchema> = Prettify<
+  ParseOptions<TFrontmatterSchema> &
+    Omit<WalkOptions<Node>, 'parseFileContents'> &
+    CreateFileMapOptions<ParseResult<TFrontmatterSchema>>
+>
+
+export type ParseDirectoryResultSuccess<TFrontmatterSchema extends FrontmatterSchema> = {
+  isSuccessful: true
+  data: FileMap<ParseResultSuccess<TFrontmatterSchema>>
+}
+
+export type ParseDirectoryResultError<TFrontmatterSchema extends FrontmatterSchema> = {
+  isSuccessful: false
+  data: FileMap<ParseResult<TFrontmatterSchema>>
+}
+
+export type ParseDirectoryResult<TFrontmatterSchema extends FrontmatterSchema> =
+  | ParseDirectoryResultSuccess<TFrontmatterSchema>
+  | ParseDirectoryResultError<TFrontmatterSchema>
+
+export async function parseDirectory<TFrontmatterSchema extends FrontmatterSchema>(
+  fsModule: FsModule,
+  directory: string,
+  getIndexFileName: (
+    directoryName: string,
+    fsFileMap: FsFileMap<ParseResult<TFrontmatterSchema>>,
+  ) => string | undefined,
+  options?: ParseDirectoryOptions<TFrontmatterSchema>,
+): Promise<ParseDirectoryResult<TFrontmatterSchema>> {
+  const fileMap = await walkDirectory(fsModule, directory, {
+    ...(options || {}),
+    parseFileContents: async (contents) => {
+      return await parse(contents, options)
+    },
+    fileFilter: (fileOptions) => {
+      return getExtension(fileOptions.name) !== 'mdoc' ? false : options?.fileFilter?.(fileOptions) ?? true
+    },
+  })
+  const finalFileMap = fileMap ? fileMap : new Map<string, FsFileMapItem<ParseResult<TFrontmatterSchema>>>()
+  const intrusiveFileMap = createFileMap(finalFileMap, getIndexFileName, {
+    transformFileName: (fileName, fsFileMapFileItem) => {
+      const fileNameWithoutExtension = stripMdocExtension(fileName)
+      return options?.transformFileName
+        ? options.transformFileName(fileNameWithoutExtension, fsFileMapFileItem)
+        : fileNameWithoutExtension
+    },
+  })
+  const hasError = someFileMap(intrusiveFileMap, (item) => !item.isSuccessful)
+  return hasError
+    ? { isSuccessful: false, data: intrusiveFileMap }
+    : {
+        isSuccessful: true,
+        data: intrusiveFileMap as FileMap<ParseResultSuccess<TFrontmatterSchema>>,
+      }
 }
 
 export function formatParseResultError<TFrontmatterSchema extends FrontmatterSchema>(
@@ -412,62 +471,6 @@ function updateHeadingNodesInternal(
   }
 }
 
-export type ParseDirectoryOptions<TFrontmatterSchema extends FrontmatterSchema> = Prettify<
-  ParseOptions<TFrontmatterSchema> &
-    Omit<WalkOptions<Node>, 'parseFileContents'> &
-    CreateFileMapOptions<ParseResult<TFrontmatterSchema>>
->
-
-export type ParseDirectoryResultSuccess<TFrontmatterSchema extends FrontmatterSchema> = {
-  isSuccessful: true
-  data: FileMap<ParseResultSuccess<TFrontmatterSchema>>
-}
-
-export type ParseDirectoryResultError<TFrontmatterSchema extends FrontmatterSchema> = {
-  isSuccessful: false
-  data: FileMap<ParseResult<TFrontmatterSchema>>
-}
-
-export type ParseDirectoryResult<TFrontmatterSchema extends FrontmatterSchema> =
-  | ParseDirectoryResultSuccess<TFrontmatterSchema>
-  | ParseDirectoryResultError<TFrontmatterSchema>
-
-export async function parseDirectory<TFrontmatterSchema extends FrontmatterSchema>(
-  fsModule: FsModule,
-  directory: string,
-  getIndexFileName: (
-    directoryName: string,
-    fsFileMap: FsFileMap<ParseResult<TFrontmatterSchema>>,
-  ) => string | undefined,
-  options?: ParseDirectoryOptions<TFrontmatterSchema>,
-): Promise<ParseDirectoryResult<TFrontmatterSchema>> {
-  const fileMap = await walkDirectory(fsModule, directory, {
-    ...(options || {}),
-    parseFileContents: async (contents) => {
-      return await parse(contents, options)
-    },
-    fileFilter: (fileOptions) => {
-      return getExtension(fileOptions.name) !== 'mdoc' ? false : options?.fileFilter?.(fileOptions) ?? true
-    },
-  })
-  const finalFileMap = fileMap ? fileMap : new Map<string, FsFileMapItem<ParseResult<TFrontmatterSchema>>>()
-  const intrusiveFileMap = createFileMap(finalFileMap, getIndexFileName, {
-    transformFileName: (fileName, fsFileMapFileItem) => {
-      const fileNameWithoutExtension = stripMdocExtension(fileName)
-      return options?.transformFileName
-        ? options.transformFileName(fileNameWithoutExtension, fsFileMapFileItem)
-        : fileNameWithoutExtension
-    },
-  })
-  const hasError = someFileMap(intrusiveFileMap, (item) => !item.isSuccessful)
-  return hasError
-    ? { isSuccessful: false, data: intrusiveFileMap }
-    : {
-        isSuccessful: true,
-        data: intrusiveFileMap as FileMap<ParseResultSuccess<TFrontmatterSchema>>,
-      }
-}
-
 export function formatParseDirectoryResultErrors<TFrontmatterSchema extends FrontmatterSchema>(
   result: FileMap<ParseResult<TFrontmatterSchema>>,
 ): string {
@@ -503,6 +506,53 @@ async function awaitRenderableTreeNodes(
   nodes: (RenderableTreeNode | Promise<RenderableTreeNode>)[],
 ): Promise<RenderableTreeNode[]> {
   return await Promise.all(nodes.map(awaitRenderableTreeNode))
+}
+
+function combineRenderableNodeText(node: RenderableTreeNode): RenderableTreeNode {
+  if (node == null) {
+    return node
+  } else if (Array.isArray(node)) {
+    return combineRenderableNodesText(node) as Scalar[]
+  } else if (Tag.isTag(node)) {
+    if (node.children && node.children.length > 0) {
+      node.children = combineRenderableNodesText(node.children)
+    }
+    return node
+  } else if (typeof node === 'object') {
+    const newNode = {} as Record<string, Scalar>
+    Array.from(Object.entries(node)).map(([key, value]) => {
+      node[key] = combineRenderableNodeText(value) as Scalar
+    })
+    return newNode
+  } else {
+    return node
+  }
+}
+
+function combineRenderableNodesText(nodes: RenderableTreeNode[]): RenderableTreeNode[] {
+  if (nodes.length === 0) {
+    return []
+  }
+
+  const newNodes = [] as RenderableTreeNode[]
+  let currText = ''
+  for (const node of nodes) {
+    const newNode = combineRenderableNodeText(node)
+    if (typeof newNode === 'string') {
+      currText += newNode
+    } else {
+      if (currText) {
+        newNodes.push(currText)
+        currText = ''
+      }
+      newNodes.push(newNode)
+    }
+  }
+
+  if (currText) {
+    newNodes.push(currText)
+  }
+  return newNodes
 }
 
 export function renderableNodeToString(node: RenderableTreeNode): string {
