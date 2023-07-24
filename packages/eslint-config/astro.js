@@ -9,6 +9,10 @@ const config = {
         parser: '@typescript-eslint/parser',
         extraFileExtensions: ['.astro'],
       },
+      rules: {
+        'react/jsx-key': 'off',
+        'react/react-in-jsx-scope': 'off',
+      },
     },
   ],
 }
