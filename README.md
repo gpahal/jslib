@@ -23,13 +23,10 @@ This is a collection of javascript/typescript libraries and configuration preset
 - [@gpahal/image-node](/packages/image-node)
 - [@gpahal/og-image](/packages/og-image)
 
-### Font utilities and font files
+### Font utilities
 
 - [@gpahal/font](/packages/font)
 - [@gpahal/font-fallback](/packages/font-fallback)
-- [@gpahal/font-data/figtree](/packages/font-data/figtree)
-- [@gpahal/font-data/inter](/packages/font-data/inter)
-- [@gpahal/font-data/source-code-pro](/packages/font-data/source-code-pro)
 
 ### Markdoc utilities
 
