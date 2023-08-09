@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -16,13 +16,13 @@
     "astro.js"
   ],
   "dependencies": {
-    "@babel/eslint-parser": "^7.22.9",
+    "@babel/eslint-parser": "^7.22.10",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
     "@babel/plugin-syntax-jsx": "^7.22.5",
-    "@next/eslint-plugin-next": "^13.4.12",
+    "@next/eslint-plugin-next": "^13.4.13",
     "@types/eslint": "^8.44.2",
-    "@typescript-eslint/eslint-plugin": "^6.2.1",
-    "@typescript-eslint/parser": "^6.2.1",
+    "@typescript-eslint/eslint-plugin": "^6.3.0",
+    "@typescript-eslint/parser": "^6.3.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-config-turbo": "^1.10.12",
     "eslint-plugin-astro": "^0.28.0",
