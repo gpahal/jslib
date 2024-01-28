@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/stylelint-config",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -10,6 +10,6 @@
     "base.js"
   ],
   "dependencies": {
-    "stylelint-config-standard": "^34.0.0"
+    "stylelint-config-standard": "^36.0.0"
   }
 }

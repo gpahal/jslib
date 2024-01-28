@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/image",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -31,9 +31,9 @@
   },
   "dependencies": {
     "@gpahal/std": "workspace:*",
-    "mime": "^3.0.0"
+    "mime": "^4.0.1"
   },
   "devDependencies": {
-    "@types/mime": "^3.0.1"
+    "@types/mime": "^3.0.4"
   }
 }
