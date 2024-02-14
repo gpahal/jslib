@@ -261,8 +261,8 @@ function findFileMapItem<T>(fileMapItem: FileMapItem<T>, fn: (_: T) => boolean):
   return fn(fileMapItem.data)
     ? fileMapItem.data
     : fileMapItem.children != null
-    ? findFileMap(fileMapItem.children, fn)
-    : undefined
+      ? findFileMap(fileMapItem.children, fn)
+      : undefined
 }
 
 export function someFileMap<T>(fileMap: FileMap<T>, fn: (_: T) => boolean): boolean {

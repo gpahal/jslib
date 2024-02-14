@@ -3,15 +3,15 @@
   "private": true,
   "scripts": {
     "prepare": "simple-git-hooks",
-    "pre-push": "run-p lint fmt-check && pnpm build && ./scripts/verify-no-git-changes.sh",
+    "pre-push": "run-p lint fmt:check && pnpm build && ./scripts/verify-no-git-changes.sh",
     "cs": "changeset",
     "publish-packages": "turbo run build test && changeset version && changeset publish",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "eslint \"**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
-    "lint-fix": "eslint \"**/*.{js,mjs,cjs,ts,jsx,tsx}\" --fix",
+    "lint:fix": "eslint \"**/*.{js,mjs,cjs,ts,jsx,tsx}\" --fix",
     "fmt": "prettier \"**/*.{js,mjs,cjs,ts,jsx,tsx,css,json}\" --write",
-    "fmt-check": "prettier \"**/*.{js,mjs,cjs,ts,jsx,tsx,css,json}\" --check"
+    "fmt:check": "prettier \"**/*.{js,mjs,cjs,ts,jsx,tsx,css,json}\" --check"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.1",
