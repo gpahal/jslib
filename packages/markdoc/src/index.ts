@@ -305,13 +305,13 @@ export function formatMarkdocError(error: ValidateError): string {
   const startLocation = error.location?.start
     ? { line: error.location.start.line, column: error.location.start.character }
     : error.lines.length > 0
-    ? { line: error.lines[0]! }
-    : undefined
+      ? { line: error.lines[0]! }
+      : undefined
   const endLocation = error.location?.end
     ? { line: error.location.end.line, column: error.location.end.character }
     : error.lines.length > 1
-    ? { line: error.lines[error.lines.length - 1]! }
-    : undefined
+      ? { line: error.lines[error.lines.length - 1]! }
+      : undefined
   return `${startLocation ? `${formatErrorLocationRange(startLocation, endLocation)}: ` : ''}${error.error.message}`
 }
 

@@ -1,6 +1,14 @@
 import { Tag, type Schema } from '@markdoc/markdoc'
 import { sha1 } from 'object-hash'
-import { getHighlighter, type Highlighter, type IShikiTheme, type IThemedToken } from 'shiki'
+import {
+  bundledLanguages,
+  FontStyle,
+  getHighlighter,
+  type BundledLanguage,
+  type BundledTheme,
+  type Highlighter,
+  type ThemedToken,
+} from 'shiki'
 
 import { isArray } from '@gpahal/std/array'
 import { isString } from '@gpahal/std/string'
@@ -91,7 +99,10 @@ export const linkSchema: Schema = {
   },
 }
 
-const GLOBAL_HIGHLIGHTERS_CACHE = new Map<string, Map<string, Promise<Highlighter>>>()
+const GLOBAL_HIGHLIGHTERS_CACHE = new Map<
+  string,
+  Map<string, { themeName: BundledTheme; highlighter: Promise<Highlighter> }>
+>()
 
 export type FenceHighlightedLines = {
   from: number
@@ -99,17 +110,16 @@ export type FenceHighlightedLines = {
 }
 
 export type CodeAndFenceSchemaConfig = {
-  theme?: string | Record<string, string>
+  theme?: BundledTheme | Record<string, BundledTheme>
   wrapperTagName?: string
 }
 
-export function generateCodeAndFenceSchema({
-  theme = 'github-light',
-  wrapperTagName = 'div',
-}: CodeAndFenceSchemaConfig = {}): {
+export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFenceSchemaConfig = {}): {
   code: Schema
   fence: Schema
 } {
+  theme = theme || 'github-light'
+  wrapperTagName = wrapperTagName || 'div'
   const optionsHash = sha1({
     theme,
   })
@@ -120,24 +130,32 @@ export function generateCodeAndFenceSchema({
     GLOBAL_HIGHLIGHTERS_CACHE.set(optionsHash, highlightersCache)
   }
 
-  const highlighters = new Map<string, Highlighter>()
-
-  if (!theme || isString(theme) || isShikiTheme(theme)) {
+  if (!theme || isString(theme)) {
     if (!highlightersCache.has('default')) {
-      highlightersCache.set('default', getHighlighter({ theme }))
+      highlightersCache.set('default', {
+        themeName: theme,
+        highlighter: getHighlighter({ themes: [theme], langs: Object.keys(bundledLanguages) }),
+      })
     }
   } else if (typeof theme === 'object') {
-    for (const [themeName, themeValue] of Object.entries(theme)) {
-      if (!highlightersCache.has(themeName)) {
-        highlightersCache.set(themeName, getHighlighter({ theme: themeValue }))
+    for (const [themeAlias, themeName] of Object.entries(theme)) {
+      if (!highlightersCache.has(themeAlias)) {
+        highlightersCache.set(themeAlias, {
+          themeName,
+          highlighter: getHighlighter({ themes: [themeName], langs: Object.keys(bundledLanguages) }),
+        })
       }
     }
   }
 
+  const highlighters = new Map<string, { themeName: BundledTheme; highlighter: Highlighter }>()
+
   const initializeHighlighters = async () => {
-    for (const [themeName, highlighterPromise] of Array.from(highlightersCache.entries())) {
-      if (!highlighters.has(themeName)) {
-        highlighters.set(themeName, await highlighterPromise)
+    for (const [themeAlias, { themeName, highlighter: highlighterPromise }] of Array.from(
+      highlightersCache.entries(),
+    )) {
+      if (!highlighters.has(themeAlias)) {
+        highlighters.set(themeName, { themeName, highlighter: await highlighterPromise })
       }
     }
   }
@@ -154,39 +172,54 @@ export function generateCodeAndFenceSchema({
       const meta = content.match(/^{:([a-zA-Z.-]+)}/)?.[1] || ''
       const metaParts = meta.split('.', 2)
 
-      const language = metaParts[0]?.trim() || ''
+      const language = (metaParts[0]?.trim() || 'text') as BundledLanguage
       const tokenType = metaParts[1]?.trim() || ''
 
       const themeTags = [] as Tag[]
-      for (const [themeName, highlighter] of Array.from(highlighters.entries())) {
-        let lines = [] as IThemedToken[][]
+      for (const [themeAlias, { themeName, highlighter }] of Array.from(highlighters.entries())) {
+        let lines = [] as ThemedToken[][]
         try {
-          if (tokenType || (language === 'ansi' && !highlighter.ansiToThemedTokens)) {
-            const color =
-              (tokenType
-                ? highlighter.getTheme().settings.find(({ scope }: { scope?: string[] }) => scope?.includes(tokenType))
-                    ?.settings.foreground
-                : '') || 'inherit'
+          if (tokenType) {
+            const settings:
+              | {
+                  readonly fontStyle?: string
+                  readonly foreground?: string
+                  readonly background?: string
+                }
+              | undefined = tokenType
+              ? highlighter
+                  .getTheme(themeName)
+                  .settings.find(({ scope }: { scope?: string | string[] }) =>
+                    scope ? (isString(scope) ? scope === tokenType : scope.includes(tokenType)) : false,
+                  )?.settings
+              : undefined
             lines = [
               [
                 {
                   content: strippedContent,
-                  color,
+                  offset: 0,
+                  color: settings?.foreground || 'inherit',
+                  bgColor: settings?.background,
+                  fontStyle:
+                    settings?.fontStyle === 'italic'
+                      ? FontStyle.Italic
+                      : settings?.fontStyle === 'bold'
+                        ? FontStyle.Bold
+                        : settings?.fontStyle === 'underline'
+                          ? FontStyle.Underline
+                          : undefined,
                 },
               ],
             ]
           } else {
-            lines =
-              language === 'ansi'
-                ? highlighter.ansiToThemedTokens(strippedContent)
-                : highlighter.codeToThemedTokens(strippedContent, language)
+            lines = highlighter.codeToTokensBase(strippedContent, { theme: themeName, lang: language })
           }
         } catch (e) {
-          lines = highlighter.codeToThemedTokens(strippedContent, language)
+          lines = highlighter.codeToTokensBase(strippedContent, { theme: themeName, lang: language })
         }
 
         const themeAttributes = {
-          'data-theme': themeName,
+          'data-theme': themeAlias,
         }
 
         const children = lines.map(
@@ -199,7 +232,7 @@ export function generateCodeAndFenceSchema({
                   new Tag(
                     'span',
                     {
-                      style: `color:${part.color};`,
+                      style: `${part.htmlStyle ? `${part.htmlStyle};` : ''}${part.color ? `color: ${part.color};` : ''}${part.bgColor ? `background-color: ${part.bgColor};` : ''}${part.fontStyle === FontStyle.Italic ? 'font-style: italic;' : part.fontStyle === FontStyle.Bold ? 'font-weight: bold;' : ''}${part.fontStyle === FontStyle.Underline ? `text-decoration: underline;` : ''}`,
                     },
                     [part.content],
                   ),
@@ -227,7 +260,9 @@ export function generateCodeAndFenceSchema({
       await initializeHighlighters()
 
       const name = isString(node.attributes['name']) ? node.attributes['name'].trim() : ''
-      const language = isString(node.attributes['language']) ? node.attributes['language'].trim() : ''
+      const language = (
+        isString(node.attributes['language']) ? node.attributes['language'].trim() : 'text'
+      ) as BundledLanguage
       const variant = isString(node.attributes['variant']) ? node.attributes['variant'].trim() : ''
       const showLineNumbers = node.attributes['showLineNumbers'] === true
       const attributes = {
@@ -265,20 +300,17 @@ export function generateCodeAndFenceSchema({
 
       const content = isString(node.attributes['content']) ? node.attributes['content'].trim() : ''
       const themeTags = [] as Tag[]
-      for (const [themeName, highlighter] of Array.from(highlighters.entries())) {
-        let lines = [] as IThemedToken[][]
+      for (const [themeAlias, { themeName, highlighter }] of Array.from(highlighters.entries())) {
+        let lines = [] as ThemedToken[][]
         try {
-          lines =
-            language === 'ansi' && highlighter.ansiToThemedTokens
-              ? highlighter.ansiToThemedTokens(content)
-              : highlighter.codeToThemedTokens(content, language)
+          lines = highlighter.codeToTokensBase(content, { theme: themeName, lang: language })
         } catch (e) {
-          lines = highlighter.codeToThemedTokens(content, language)
+          lines = highlighter.codeToTokensBase(content, { theme: themeName, lang: language })
         }
 
         const themeAttributes = {
           ...attributes,
-          'data-theme': themeName,
+          'data-theme': themeAlias,
         }
 
         const children = lines.map(
@@ -315,8 +347,4 @@ export function generateCodeAndFenceSchema({
   }
 
   return { code, fence }
-}
-
-export function isShikiTheme(value: unknown): value is IShikiTheme {
-  return value ? {}.hasOwnProperty.call(value, 'tokenColors') : false
 }

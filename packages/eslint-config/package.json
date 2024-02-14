@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -16,23 +16,23 @@
     "astro.js"
   ],
   "dependencies": {
-    "@babel/eslint-parser": "^7.23.9",
+    "@babel/eslint-parser": "^7.23.10",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
     "@babel/plugin-syntax-jsx": "^7.23.3",
     "@next/eslint-plugin-next": "^14.1.0",
     "@types/eslint": "^8.56.2",
-    "@typescript-eslint/eslint-plugin": "^6.19.1",
-    "@typescript-eslint/parser": "^6.19.1",
+    "@typescript-eslint/eslint-plugin": "^7.0.1",
+    "@typescript-eslint/parser": "^7.0.1",
     "eslint-config-prettier": "^9.1.0",
-    "eslint-config-turbo": "^1.11.3",
-    "eslint-plugin-astro": "^0.31.3",
+    "eslint-config-turbo": "^1.12.3",
+    "eslint-plugin-astro": "^0.31.4",
     "eslint-plugin-compat": "^4.2.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-jsx-a11y": "^6.8.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-tailwindcss": "^3.14.1",
-    "eslint-plugin-unicorn": "^50.0.1",
+    "eslint-plugin-tailwindcss": "^3.14.2",
+    "eslint-plugin-unicorn": "^51.0.1",
     "eslint-plugin-vitest-globals": "^1.4.0"
   }
 }

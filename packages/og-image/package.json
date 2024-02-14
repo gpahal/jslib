@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -36,13 +36,13 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "satori": "^0.10.11",
+    "satori": "^0.10.13",
     "satori-html": "^0.3.2",
     "yoga-wasm-web": "^0.3.3"
   },
   "devDependencies": {
     "@gpahal/font": "workspace:*",
-    "@types/react": "^18.2.48",
-    "preact": "^10.19.3"
+    "@types/react": "^18.2.55",
+    "preact": "^10.19.4"
   }
 }
