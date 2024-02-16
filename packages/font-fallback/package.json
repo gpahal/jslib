@@ -31,8 +31,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@capsizecss/metrics": "^1.2.0",
-    "@capsizecss/unpack": "^1.0.0",
+    "@capsizecss/metrics": "^2.0.0",
+    "@capsizecss/unpack": "^2.0.0",
     "@gpahal/std": "workspace:*"
   }
 }

@@ -43,6 +43,6 @@
   "devDependencies": {
     "@gpahal/font": "workspace:*",
     "@types/react": "^18.2.55",
-    "preact": "^10.19.4"
+    "preact": "^10.19.5"
   }
 }

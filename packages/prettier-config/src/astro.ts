@@ -1,13 +1,6 @@
-/** @typedef  {import("prettier").Config} PrettierConfig */
+import { type Config } from 'prettier'
 
-/**
- * @function
- * @template {PrettierConfig} T
- *
- * @param {T} config
- * @returns {T}
- */
-function addPrettierAstroConfig(config) {
+export function addPrettierAstroConfig<T extends Config>(config: T): T {
   return {
     ...config,
     plugins: [...(config.plugins || []), 'prettier-plugin-astro'],
@@ -22,8 +15,4 @@ function addPrettierAstroConfig(config) {
       },
     ],
   }
-}
-
-module.exports = {
-  addPrettierAstroConfig,
 }

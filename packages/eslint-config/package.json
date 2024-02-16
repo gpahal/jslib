@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -15,7 +15,11 @@
     "nextjs.js",
     "astro.js"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
+    "@babel/core": "^7.23.9",
     "@babel/eslint-parser": "^7.23.10",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
     "@babel/plugin-syntax-jsx": "^7.23.3",
@@ -24,7 +28,7 @@
     "@typescript-eslint/eslint-plugin": "^7.0.1",
     "@typescript-eslint/parser": "^7.0.1",
     "eslint-config-prettier": "^9.1.0",
-    "eslint-config-turbo": "^1.12.3",
+    "eslint-config-turbo": "^1.12.4",
     "eslint-plugin-astro": "^0.31.4",
     "eslint-plugin-compat": "^4.2.0",
     "eslint-plugin-import": "^2.29.1",

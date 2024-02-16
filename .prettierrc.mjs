@@ -1,6 +1,6 @@
-const baseConfig = require('@gpahal/prettier-config/base')
+import baseConfig from '@gpahal/prettier-config/base'
 
 /** @type {import("@gpahal/prettier-config/base").PrettierConfig} */
 const config = baseConfig
 
-module.exports = config
+export default config

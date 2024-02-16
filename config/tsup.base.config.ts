@@ -39,5 +39,6 @@ export function getBaseConfig(options: Options): Options {
     dts: !isDevEnv,
     minify: !isDevEnv,
     ignoreWatch: IGNORE_PATTERNS,
+    external: ['espree'],
   }
 }

@@ -1,6 +1,7 @@
 {
-  "name": "jslib",
   "private": true,
+  "name": "jslib",
+  "type": "module",
   "scripts": {
     "prepare": "simple-git-hooks",
     "pre-push": "run-p lint fmt-check && pnpm build && ./scripts/verify-no-git-changes.sh",
@@ -19,7 +20,7 @@
     "@gpahal/prettier-config": "workspace:*",
     "@gpahal/tsconfig": "workspace:*",
     "@ianvs/prettier-plugin-sort-imports": "^4.1.1",
-    "@types/node": "^20.11.17",
+    "@types/node": "^20.11.19",
     "@vitest/ui": "^1.2.2",
     "eslint": "^8.56.0",
     "npm-run-all": "^4.1.5",
@@ -27,9 +28,9 @@
     "simple-git-hooks": "^2.9.0",
     "tsc-files": "^1.1.4",
     "tsup": "^8.0.2",
-    "turbo": "^1.12.3",
+    "turbo": "^1.12.4",
     "typescript": "^5.3.3",
-    "vite": "^5.1.2",
+    "vite": "^5.1.3",
     "vite-tsconfig-paths": "^4.3.1",
     "vitest": "^1.2.2"
   }

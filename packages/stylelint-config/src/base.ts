@@ -1,5 +1,6 @@
-/** @type {import("stylelint").Config} */
-const config = {
+import { type Config } from 'stylelint'
+
+const config: Config = {
   extends: ['stylelint-config-standard'],
   rules: {
     'at-rule-no-unknown': [
@@ -20,4 +21,4 @@ const config = {
   },
 }
 
-module.exports = config
+export default config

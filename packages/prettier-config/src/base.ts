@@ -1,9 +1,9 @@
-/** @typedef  {import("prettier").Config} PrettierConfigLib */
-/** @typedef  {import("@ianvs/prettier-plugin-sort-imports").PluginConfig} SortImportsConfig */
-/** @typedef  {PrettierConfigLib | SortImportsConfig} PrettierBaseConfig */
+import { type PluginConfig } from '@ianvs/prettier-plugin-sort-imports'
+import { type Config } from 'prettier'
 
-/** @type {PrettierBaseConfig} */
-const config = {
+export type PrettierBaseConfig = Config | PluginConfig
+
+const config: PrettierBaseConfig = {
   $schema: 'http://json.schemastore.org/prettierrc',
   endOfLine: 'lf',
   printWidth: 120,
@@ -45,4 +45,4 @@ const config = {
   ],
 }
 
-module.exports = config
+export default config

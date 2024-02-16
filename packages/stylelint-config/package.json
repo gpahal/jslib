@@ -1,15 +1,42 @@
 {
   "name": "@gpahal/stylelint-config",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    "./*": {
+      "require": "./build/*.cjs",
+      "import": "./build/*.js",
+      "types": "./build/*.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "build/*.d.ts"
+      ]
+    }
+  },
   "files": [
     "package.json",
     "README.md",
-    "base.js"
+    "build"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
   "dependencies": {
     "stylelint-config-standard": "^36.0.0"
+  },
+  "devDependencies": {
+    "stylelint": "^16.2.1"
   }
 }

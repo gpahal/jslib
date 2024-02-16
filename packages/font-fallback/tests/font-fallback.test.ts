@@ -13,10 +13,10 @@ const FALLBACK_FONT_FAMILIES = [
 
 test('font-fallback', async () => {
   const fontMetrics = await getFontFamilyMetrics(FONT_FAMILY)!
-  expect(fontMetrics).not.toBeNull()
+  expect(fontMetrics == null).toBe(false)
 
   const fallbacks = await getFontFallbacksCssProperties(fontMetrics!, FALLBACK_FONT_FAMILIES)
-  expect(fallbacks).not.toBeNull()
+  expect(fallbacks == null).toBe(false)
 
   console.info(`Fallback fonts:\n\n${fallbacks.map(getFontFallbackCssString).join('\n')}`)
 

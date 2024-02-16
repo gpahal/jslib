@@ -13,7 +13,7 @@ export async function getFontFamilyMetrics(fontFamily: string): Promise<Font | u
   }
 
   try {
-    const metrics: Font = await import(`@capsizecss/metrics/${fontFamily}.js`).then((r) => r.default || r)
+    const metrics: Font = await import(`@capsizecss/metrics/${fontFamily}`).then((r) => r.default || r)
     metricsCache.set(fontFamily, metrics)
     return metrics
   } catch (e) {
