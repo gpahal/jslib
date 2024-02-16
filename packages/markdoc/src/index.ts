@@ -43,6 +43,7 @@ import {
   generateHeadingSchema,
   generateImageSchema,
   linkSchema,
+  Tag,
   type CodeAndFenceSchemaConfig,
   type ImageSchemaOptions,
 } from './schema'
@@ -57,8 +58,6 @@ export type {
 } from './schema'
 
 export { generateCodeAndFenceSchema, generateHeadingSchema, generateImageSchema, linkSchema } from './schema'
-
-export class Tag extends Markdoc.Tag {}
 
 export type TransformConfig = Omit<MarkdocTransformConfig, 'nodes'> & {
   image?: ImageSchemaOptions

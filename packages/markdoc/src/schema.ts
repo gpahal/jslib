@@ -1,4 +1,4 @@
-import { Tag, type Schema } from '@markdoc/markdoc'
+import Markdoc, { type Schema } from '@markdoc/markdoc'
 import { sha1 } from 'object-hash'
 import {
   bundledLanguages,
@@ -12,6 +12,8 @@ import {
 
 import { isArray } from '@gpahal/std/array'
 import { isString } from '@gpahal/std/string'
+
+export class Tag extends Markdoc.Tag {}
 
 export function generateHeadingSchema(): Schema {
   return {
