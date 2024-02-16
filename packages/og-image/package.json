@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -24,6 +24,7 @@
   "files": [
     "package.json",
     "README.md",
+    "src",
     "build",
     "wasm.js"
   ],

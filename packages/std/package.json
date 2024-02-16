@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/std",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -23,6 +23,7 @@
   "files": [
     "package.json",
     "README.md",
+    "src",
     "build"
   ],
   "publishConfig": {

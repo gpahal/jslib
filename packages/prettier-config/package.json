@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/prettier-config",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -23,6 +23,7 @@
   "files": [
     "package.json",
     "README.md",
+    "src",
     "build"
   ],
   "publishConfig": {

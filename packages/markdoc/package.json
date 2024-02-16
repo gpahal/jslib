@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/markdoc",
-  "version": "0.0.62",
+  "version": "0.0.63",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -19,6 +19,7 @@
   "files": [
     "package.json",
     "README.md",
+    "src",
     "build"
   ],
   "publishConfig": {
