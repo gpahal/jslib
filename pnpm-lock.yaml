@@ -98,9 +98,6 @@ importers:
       eslint-plugin-astro:
         specifier: ^0.31.4
         version: 0.31.4(eslint@8.56.0)
-      eslint-plugin-compat:
-        specifier: ^4.2.0
-        version: 4.2.0(eslint@8.56.0)
       eslint-plugin-import:
         specifier: ^2.29.1
         version: 2.29.1(@typescript-eslint/parser@7.0.2)(eslint@8.56.0)
@@ -1344,10 +1341,6 @@ packages:
       '@types/markdown-it': 12.2.3
     dev: false
 
-  /@mdn/browser-compat-data@5.5.8:
-    resolution: {integrity: sha512-E4gRHp5Kko37r6z1dO2qQ7xUUWig6GltUteuzi5WUKqHEayGN9DdGJWlgrYGnvwFc2Omh33MTJ8IXsD3t7+Okw==}
-    dev: false
-
   /@next/eslint-plugin-next@14.1.0:
     resolution: {integrity: sha512-x4FavbNEeXx/baD/zC/SdrvkjSby8nBn8KcCREqk6UuwvwoAPZmaV8TFCAuo/cpovBRTIY67mHhe86MQQm/68Q==}
     dependencies:
@@ -2016,12 +2009,6 @@ packages:
   /assertion-error@1.1.0:
     resolution: {integrity: sha512-jgsaNduz+ndvGyFt3uSuWqvy4lCnIJiovtouQN5JZHOKCS2QuhEdbcQHFhVksz2N2U9hXJo8odG7ETyWlEeuDw==}
     dev: true
-
-  /ast-metadata-inferer@0.8.0:
-    resolution: {integrity: sha512-jOMKcHht9LxYIEQu+RVd22vtgrPaVCtDRQ/16IGmurdzxvYbDd5ynxjnyrzLnieG96eTcAyaoj/wN/4/1FyyeA==}
-    dependencies:
-      '@mdn/browser-compat-data': 5.5.8
-    dev: false
 
   /ast-types-flow@0.0.8:
     resolution: {integrity: sha512-OH/2E5Fg20h2aPrbe+QL8JZQFko0YZaF+j4mnQ7BGhfavO7OpSLa8a0y9sBwomHdSbkhTS8TQNayBfnW5DwbvQ==}
@@ -2901,22 +2888,6 @@ packages:
       postcss-selector-parser: 6.0.15
     transitivePeerDependencies:
       - supports-color
-    dev: false
-
-  /eslint-plugin-compat@4.2.0(eslint@8.56.0):
-    resolution: {integrity: sha512-RDKSYD0maWy5r7zb5cWQS+uSPc26mgOzdORJ8hxILmWM7S/Ncwky7BcAtXVY5iRbKjBdHsWU8Yg7hfoZjtkv7w==}
-    engines: {node: '>=14.x'}
-    peerDependencies:
-      eslint: ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
-    dependencies:
-      '@mdn/browser-compat-data': 5.5.8
-      ast-metadata-inferer: 0.8.0
-      browserslist: 4.22.3
-      caniuse-lite: 1.0.30001581
-      eslint: 8.56.0
-      find-up: 5.0.0
-      lodash.memoize: 4.1.2
-      semver: 7.5.4
     dev: false
 
   /eslint-plugin-import@2.29.1(@typescript-eslint/parser@7.0.2)(eslint@8.56.0):
@@ -4109,10 +4080,6 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       p-locate: 5.0.0
-
-  /lodash.memoize@4.1.2:
-    resolution: {integrity: sha512-t7j+NzmgnQzTAYXcsHYLgimltOV1MXHtlOWf6GjL9Kj8GK5FInw5JotxvbOs+IvV1/Dzo04/fCGfLVs7aXb4Ag==}
-    dev: false
 
   /lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}

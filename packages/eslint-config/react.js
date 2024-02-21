@@ -1,18 +1,13 @@
 /** @type {import("eslint").Linter.Config} */
 const config = {
-  extends: [
-    'plugin:react/recommended',
-    'plugin:react-hooks/recommended',
-    'plugin:jsx-a11y/recommended',
-    'plugin:compat/recommended',
-  ],
+  extends: ['plugin:react/recommended', 'plugin:react-hooks/recommended', 'plugin:jsx-a11y/recommended'],
   env: {
     browser: true,
   },
   globals: {
     React: 'writable',
   },
-  plugins: ['react', 'jsx-a11y', 'compat'],
+  plugins: ['react', 'jsx-a11y'],
   settings: {
     react: {
       version: 'detect',
