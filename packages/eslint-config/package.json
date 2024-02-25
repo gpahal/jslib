@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -24,7 +24,6 @@
     "@babel/plugin-syntax-class-properties": "^7.12.13",
     "@babel/plugin-syntax-jsx": "^7.23.3",
     "@next/eslint-plugin-next": "^14.1.0",
-    "@types/eslint": "^8.56.2",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
     "@typescript-eslint/parser": "^7.0.2",
     "eslint-config-prettier": "^9.1.0",
@@ -34,8 +33,11 @@
     "eslint-plugin-jsx-a11y": "^6.8.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-tailwindcss": "^3.14.2",
+    "eslint-plugin-tailwindcss": "^3.14.3",
     "eslint-plugin-unicorn": "^51.0.1",
     "eslint-plugin-vitest-globals": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/eslint": "^8.56.3"
   }
 }
