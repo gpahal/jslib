@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/logger",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -31,7 +31,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "winston": "^3.11.0"
+    "winston": "^3.13.0"
   },
   "devDependencies": {
     "logform": "^2.6.0"
