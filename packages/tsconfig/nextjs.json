@@ -4,9 +4,9 @@
   "extends": "./react.json",
   "compilerOptions": {
     "plugins": [{ "name": "next" }],
-    "target": "es5",
     "lib": ["dom", "dom.iterable", "esnext"],
     "module": "esnext",
+    "moduleResolution": "bundler",
     "jsx": "preserve",
     "incremental": true,
     "noEmit": true,
