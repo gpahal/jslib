@@ -260,7 +260,7 @@ export async function parseDirectory<TFrontmatterSchema extends FrontmatterSchem
       return await parse(contents, options)
     },
     fileFilter: (fileOptions) => {
-      return getExtension(fileOptions.name) !== 'mdoc' ? false : options?.fileFilter?.(fileOptions) ?? true
+      return getExtension(fileOptions.name) !== 'mdoc' ? false : (options?.fileFilter?.(fileOptions) ?? true)
     },
   })
   const finalFileMap = fileMap ? fileMap : new Map<string, FsFileMapItem<ParseResult<TFrontmatterSchema>>>()

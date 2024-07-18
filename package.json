@@ -2,6 +2,7 @@
   "private": true,
   "name": "jslib",
   "type": "module",
+  "packageManager": "pnpm@9.5.0",
   "scripts": {
     "prepare": "simple-git-hooks",
     "pre-push": "run-p lint fmt-check && pnpm build && ./scripts/verify-no-git-changes.sh",
@@ -16,23 +17,23 @@
     "fmt-check": "prettier \"**/*.{js,mjs,cjs,ts,jsx,tsx,css,json}\" --check"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.5",
+    "@changesets/cli": "^2.27.7",
     "@gpahal/eslint-config": "workspace:*",
     "@gpahal/prettier-config": "workspace:*",
     "@gpahal/tsconfig": "workspace:*",
-    "@ianvs/prettier-plugin-sort-imports": "^4.2.1",
-    "@types/node": "^20.12.13",
-    "@vitest/ui": "^1.6.0",
+    "@ianvs/prettier-plugin-sort-imports": "^4.3.1",
+    "@types/node": "^20.14.11",
+    "@vitest/ui": "^2.0.3",
     "eslint": "^8.57.0",
     "npm-run-all": "^4.1.5",
-    "prettier": "^3.2.5",
+    "prettier": "^3.3.3",
     "simple-git-hooks": "^2.11.1",
     "tsc-files": "^1.1.4",
-    "tsup": "^8.0.2",
-    "turbo": "^1.13.3",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.12",
+    "tsup": "^8.1.2",
+    "turbo": "^2.0.7",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.4",
     "vite-tsconfig-paths": "^4.3.2",
-    "vitest": "^1.6.0"
+    "vitest": "^2.0.3"
   }
 }

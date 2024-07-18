@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/tailwindcss-color-themes",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@types/color": "^3.0.6",
-    "tailwindcss": "^3.4.3"
+    "tailwindcss": "^3.4.6"
   },
   "peerDependencies": {
     "tailwindcss": "^3.4"
