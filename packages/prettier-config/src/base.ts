@@ -12,6 +12,7 @@ const config: PrettierBaseConfig = {
   semi: false,
   singleQuote: true,
   jsxSingleQuote: false,
+  proseWrap: 'always',
   plugins: ['@ianvs/prettier-plugin-sort-imports'],
   importOrderTypeScriptVersion: '5.0.0',
   importOrder: [
