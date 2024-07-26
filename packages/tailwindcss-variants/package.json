@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/tailwindcss-variants",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -31,7 +31,7 @@
     "prepublishOnly": "pnpm build"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.6"
+    "tailwindcss": "^3.4.7"
   },
   "peerDependencies": {
     "tailwindcss": "^3.4"
