@@ -287,13 +287,7 @@ importers:
       '@gpahal/std':
         specifier: workspace:*
         version: link:../std
-      color:
-        specifier: ^4.2.3
-        version: 4.2.3
     devDependencies:
-      '@types/color':
-        specifier: ^3.0.6
-        version: 3.0.6
       tailwindcss:
         specifier: ^3.4.7
         version: 3.4.7
@@ -1112,15 +1106,6 @@ packages:
 
   '@swc/helpers@0.4.36':
     resolution: {integrity: sha512-5lxnyLEYFskErRPenYItLRSge5DjrJngYKdVjRSrWfza9G6KkgHEXi0vUZiyUeMU5JfXH1YnvXZzSp8ul88o2Q==}
-
-  '@types/color-convert@2.0.3':
-    resolution: {integrity: sha512-2Q6wzrNiuEvYxVQqhh7sXM2mhIhvZR/Paq4FdsQkOMgWsCIkKvSGj8Le1/XalulrmgOzPMqNa0ix+ePY4hTrfg==}
-
-  '@types/color-name@1.1.4':
-    resolution: {integrity: sha512-hulKeREDdLFesGQjl96+4aoJSHY5b2GRjagzzcqCfIrWhe5vkCqIvrLbqzBaI1q94Vg8DNJZZqTR5ocdWmWclg==}
-
-  '@types/color@3.0.6':
-    resolution: {integrity: sha512-NMiNcZFRUAiUUCCf7zkAelY8eV3aKqfbzyFQlXpPIEeoNDbsEHGpb854V3gzTsGKYj830I5zPuOwU/TP5/cW6A==}
 
   '@types/eslint-config-prettier@6.11.3':
     resolution: {integrity: sha512-3wXCiM8croUnhg9LdtZUJQwNcQYGWxxdOWDjPe1ykCqJFPVpzAKfs/2dgSoCtAvdPeaponcWPI7mPcGGp9dkKQ==}
@@ -4473,16 +4458,6 @@ snapshots:
     dependencies:
       legacy-swc-helpers: '@swc/helpers@0.4.14'
       tslib: 2.6.2
-
-  '@types/color-convert@2.0.3':
-    dependencies:
-      '@types/color-name': 1.1.4
-
-  '@types/color-name@1.1.4': {}
-
-  '@types/color@3.0.6':
-    dependencies:
-      '@types/color-convert': 2.0.3
 
   '@types/eslint-config-prettier@6.11.3': {}
 

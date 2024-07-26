@@ -1,13 +1,11 @@
-import Color from 'color'
 import { withOptions } from 'tailwindcss/plugin'
-import type { PluginAPI } from 'tailwindcss/types/config'
+import type { CSSRuleObject, PluginAPI } from 'tailwindcss/types/config'
 
-import { kebabCase } from '@gpahal/std/string'
+import { isString, kebabCase } from '@gpahal/std/string'
 
-type TailwindColorFn = (_: { opacityVariable?: string; opacityValue?: string }) => string
-
-export type ColorTheme = { [key: string]: string | ColorTheme }
-export type TailwindColorTheme = { [key: string]: string | TailwindColorFn | TailwindColorTheme }
+type ColorTheme = {
+  [key: string | number]: string | ColorTheme
+}
 
 export type ColorThemeSelection = {
   mediaQuery?: string
@@ -18,22 +16,7 @@ export type ColorThemeSelection = {
 export type ColorThemeConfig = {
   default: ColorTheme
   defaultDark?: ColorTheme
-  themes?: Array<ColorThemeSelection>
-}
-
-function toColor(value: string): Color {
-  try {
-    return Color(value)
-  } catch {
-    throw new Error(`Invalid color value '${value}'`)
-  }
-}
-
-function validateNoAlpha(color: Color): void {
-  const alpha = color.alpha()
-  if (alpha != null && alpha < 1) {
-    throw new Error('Colors should be without alpha')
-  }
+  selections?: Array<ColorThemeSelection>
 }
 
 function transformKeyPathToVarName(keyPath: Array<string>): string {
@@ -47,54 +30,12 @@ function transformKeyPathToVarNameAccess(keyPath: Array<string>): string {
   return `--${transformKeyPathToVarName(keyPath)}`
 }
 
-function transformValueToVarValue(value: string) {
-  const color = toColor(value)
-  validateNoAlpha(color)
-
-  const rgb = color.rgb().array()
-  return rgb.map((v) => Math.round(v)).join(' ')
+function transformValueToVarUse(prefix: string, keyPath: Array<string>): string {
+  return `var(${transformKeyPathToVarNameAccess(prefix ? [prefix, ...keyPath] : keyPath)})`
 }
 
-function themeColorsToVarsHelper(keyPath: Array<string>, colorTheme: ColorTheme, acc: ColorTheme) {
-  for (const [key, value] of Object.entries(colorTheme)) {
-    const newKeyPath = [...keyPath, key]
-    if (typeof value === 'object') {
-      themeColorsToVarsHelper(newKeyPath, value, acc)
-    } else {
-      acc[transformKeyPathToVarNameAccess(newKeyPath)] = transformValueToVarValue(value)
-    }
-  }
-}
-
-function themeColorsToVars(prefix: string, colorTheme: ColorTheme): ColorTheme {
-  const acc = {}
-  themeColorsToVarsHelper(prefix ? [prefix] : [], colorTheme, acc)
-  return acc
-}
-
-function transformValueToVarUseHelper(varName: string): TailwindColorFn {
-  return ({ opacityVariable, opacityValue } = {}) => {
-    if (opacityValue != null) {
-      return `rgb(var(${varName}) / ${opacityValue})`
-    } else if (opacityVariable != null) {
-      return `rgb(var(${varName}) / var(${opacityVariable}, 1))`
-    } else {
-      return `rgb(var(${varName}))`
-    }
-  }
-}
-
-function transformValueToVarUse(prefix: string, keyPath: Array<string>): TailwindColorFn {
-  return transformValueToVarUseHelper(transformKeyPathToVarNameAccess(prefix ? [prefix, ...keyPath] : keyPath))
-}
-
-function themeColorsToVarThemeHelper(
-  prefix: string,
-  keyPath: Array<string>,
-  colorTheme: ColorTheme,
-  acc: TailwindColorTheme,
-) {
-  for (const [key, value] of Object.entries(colorTheme)) {
+function themeColorsToVarThemeHelper(prefix: string, keyPath: Array<string>, theme: ColorTheme, acc: ColorTheme) {
+  for (const [key, value] of Object.entries(theme)) {
     const newKeyPath = key ? [...keyPath, key] : keyPath
     if (typeof value === 'object') {
       themeColorsToVarThemeHelper(prefix, newKeyPath, value, acc)
@@ -104,45 +45,120 @@ function themeColorsToVarThemeHelper(
   }
 }
 
-function themeColorsToVarThemeColors(prefix: string, colorTheme: ColorTheme): ColorTheme {
+function themeColorsToVarThemeColors(prefix: string, theme: ColorTheme): ColorTheme {
   const acc = {}
-  themeColorsToVarThemeHelper(prefix, [], colorTheme, acc)
+  themeColorsToVarThemeHelper(prefix, [], theme, acc)
   return acc
 }
 
-function addThemeColorsUtilities(addUtilities: PluginAPI['addUtilities'], selection: ColorThemeSelection) {
-  const selectorValues = themeColorsToVars('colors', selection.theme)
-  const cssObject = {
-    [selection.selector]: selectorValues,
+function themeColorsToVarsHelper(keyPath: Array<string>, theme: ColorTheme, acc: ColorTheme) {
+  for (const [key, value] of Object.entries(theme)) {
+    const newKeyPath = [...keyPath, key]
+    if (typeof value === 'object') {
+      themeColorsToVarsHelper(newKeyPath, value, acc)
+    } else {
+      acc[transformKeyPathToVarNameAccess(newKeyPath)] = value
+    }
   }
-  if (selection.mediaQuery) {
-    addUtilities({
-      [selection.mediaQuery]: cssObject,
-    })
+}
+
+function themeColorsToVars(prefix: string, theme: ColorTheme): ColorTheme {
+  const acc = {}
+  themeColorsToVarsHelper(prefix ? [prefix] : [], theme, acc)
+  return acc
+}
+
+function addThemeColorsUtilitiesHelper(
+  addUtilities: PluginAPI['addUtilities'],
+  theme: ColorTheme,
+  selector: string,
+  mediaQueries?: Array<string>,
+) {
+  const selectorValues = themeColorsToVars('colors', theme)
+  const cssObject = {
+    [selector]: selectorValues,
+  }
+  if (mediaQueries && mediaQueries.length > 0) {
+    let finalCssObject = { [mediaQueries.at(-1)!]: cssObject } as CSSRuleObject
+    for (let i = mediaQueries.length - 2; i >= 0; i--) {
+      const mediaQuery = mediaQueries[i]!
+      finalCssObject = { [mediaQuery]: finalCssObject }
+    }
+
+    addUtilities(finalCssObject)
   } else {
     addUtilities(cssObject)
   }
 }
 
-export default withOptions(
+const P3_MEDIA_QUERIES = ['@supports (color: color(display-p3 1 1 1))', '@media (color-gamut: p3)']
+
+function getWithoutP3Theme(theme: ColorTheme): ColorTheme {
+  const newTheme: ColorTheme = {}
+  for (const [key, value] of Object.entries(theme)) {
+    if (key === 'p3') {
+      continue
+    }
+
+    newTheme[key] = isString(value) ? value : getWithoutP3Theme(value)
+  }
+  return newTheme
+}
+
+function getP3Theme(theme: ColorTheme): ColorTheme {
+  const newTheme: ColorTheme = {}
+  for (const [key, value] of Object.entries(theme)) {
+    if (key === 'p3') {
+      for (const [p3Key, p3Value] of Object.entries(value)) {
+        newTheme[p3Key] = p3Value
+      }
+    } else if (!isString(value)) {
+      const subTheme = getP3Theme(value)
+      if (Object.keys(subTheme).length > 0) {
+        newTheme[key] = subTheme
+      }
+    }
+  }
+  return newTheme
+}
+
+function addThemeColorsUtilities(
+  addUtilities: PluginAPI['addUtilities'],
+  theme: ColorTheme,
+  selector: string,
+  mediaQueries?: Array<string>,
+) {
+  const withoutP3Theme = getWithoutP3Theme(theme)
+  addThemeColorsUtilitiesHelper(addUtilities, withoutP3Theme, selector, mediaQueries)
+
+  const p3Theme = getP3Theme(theme)
+  addThemeColorsUtilitiesHelper(
+    addUtilities,
+    p3Theme,
+    selector,
+    mediaQueries ? [...mediaQueries, ...P3_MEDIA_QUERIES] : P3_MEDIA_QUERIES,
+  )
+}
+
+export const colorThemesPlugin = withOptions(
   (options: ColorThemeConfig) => {
     if (!options) {
       throw new Error('No options provided to @gpahal/tailwindcss-color-themes plugin')
     }
 
     return ({ addUtilities }) => {
-      addThemeColorsUtilities(addUtilities, { selector: ':root', theme: options.default })
+      addThemeColorsUtilities(addUtilities, options.default, ':root')
       if (options.defaultDark) {
-        addThemeColorsUtilities(addUtilities, {
-          mediaQuery: '@media (prefers-color-scheme: dark)',
-          selector: ':root',
-          theme: options.defaultDark,
-        })
+        addThemeColorsUtilities(addUtilities, options.defaultDark, ':root', ['@media (prefers-color-scheme: dark)'])
       }
-      if (options.themes) {
-        for (const selection of options.themes) {
-          addThemeColorsUtilities(addUtilities, selection)
-        }
+
+      for (const selection of options.selections || []) {
+        addThemeColorsUtilities(
+          addUtilities,
+          selection.theme,
+          selection.selector,
+          selection.mediaQuery ? [selection.mediaQuery] : undefined,
+        )
       }
     }
   },
