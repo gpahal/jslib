@@ -1,4 +1,4 @@
-import isSymbol from '@/symbol'
+import isSymbol from '@/symbols'
 
 const INFINITY = 1 / 0
 

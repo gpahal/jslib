@@ -16,7 +16,3 @@ export function pushToArray<T>(array?: Array<T>, ...items: Array<T>): Array<T> {
 export function dedupeArray<T>(array?: Array<T>): Array<T> {
   return [...new Set(array)]
 }
-
-export function flattenArray<T>(array: Array<Array<T>>): Array<T> {
-  return array.flat()
-}

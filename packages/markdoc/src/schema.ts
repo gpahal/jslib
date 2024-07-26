@@ -3,15 +3,15 @@ import { sha1 } from 'object-hash'
 import {
   bundledLanguages,
   FontStyle,
-  getHighlighter,
+  getSingletonHighlighter,
   type BundledLanguage,
   type BundledTheme,
   type Highlighter,
   type ThemedToken,
 } from 'shiki'
 
-import { isArray } from '@gpahal/std/array'
-import { isString } from '@gpahal/std/string'
+import { isArray } from '@gpahal/std/arrays'
+import { isString } from '@gpahal/std/strings'
 
 export class Tag extends Markdoc.Tag {}
 
@@ -136,7 +136,7 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
     if (!highlightersCache.has('default')) {
       highlightersCache.set('default', {
         themeName: theme,
-        highlighter: getHighlighter({ themes: [theme], langs: Object.keys(bundledLanguages) }),
+        highlighter: getSingletonHighlighter({ themes: [theme], langs: Object.keys(bundledLanguages) }),
       })
     }
   } else if (typeof theme === 'object') {
@@ -144,7 +144,7 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
       if (!highlightersCache.has(themeAlias)) {
         highlightersCache.set(themeAlias, {
           themeName,
-          highlighter: getHighlighter({ themes: [themeName], langs: Object.keys(bundledLanguages) }),
+          highlighter: getSingletonHighlighter({ themes: [themeName], langs: Object.keys(bundledLanguages) }),
         })
       }
     }

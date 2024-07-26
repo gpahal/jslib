@@ -1,4 +1,4 @@
-import { isString, trim } from '@/string'
+import { isString, trim } from '@/strings'
 
 export function isUrl(urlString: string): boolean {
   try {

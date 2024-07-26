@@ -1,7 +1,7 @@
 import { withOptions } from 'tailwindcss/plugin'
 import type { CSSRuleObject, PluginAPI } from 'tailwindcss/types/config'
 
-import { isString, kebabCase } from '@gpahal/std/string'
+import { isString, kebabCase } from '@gpahal/std/strings'
 
 type ColorTheme = {
   [key: string | number]: string | ColorTheme

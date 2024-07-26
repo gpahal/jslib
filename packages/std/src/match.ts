@@ -1,4 +1,4 @@
-import { isFunction } from '@/function'
+import { isFunction } from '@/functions'
 
 export function match<T extends string | number = string, R = unknown>(
   value: T,

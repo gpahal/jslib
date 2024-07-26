@@ -1,4 +1,4 @@
-import { trim } from '@/string'
+import { trim } from '@/strings'
 
 export type FsModule = {
   getBasename: (path: string) => string
@@ -29,11 +29,11 @@ export type FsFileMapFileItem<T> = {
 }
 export type FsFileMapItem<T> = FsFileMapDirectoryItem<T> | FsFileMapFileItem<T>
 
-export function isFsFileMapDirectoryValue<T>(item: FsFileMapItem<T>): item is FsFileMapDirectoryItem<T> {
+export function isFsFileMapDirectoryItem<T>(item: FsFileMapItem<T>): item is FsFileMapDirectoryItem<T> {
   return 'children' in item
 }
 
-export function isFsFileMapFileValue<T>(item: FsFileMapItem<T>): item is FsFileMapFileItem<T> {
+export function isFsFileMapFileItem<T>(item: FsFileMapItem<T>): item is FsFileMapFileItem<T> {
   return 'data' in item
 }
 
@@ -178,7 +178,7 @@ function createFileMapItemInternal<T>(
   getIndexFileName: (directoryName: string, fsFileMap: FsFileMap<T>) => string | undefined,
   parent?: FileMapItem<T>,
 ): FileMapItem<T> {
-  return isFsFileMapDirectoryValue(fsFileMapItem)
+  return isFsFileMapDirectoryItem(fsFileMapItem)
     ? convertFsFileMapDirectoryItemToFileMapItemInternal(originalFileName, fsFileMapItem, getIndexFileName, parent)
     : convertFsFileMapFileItemToFileMapItemInternal(originalFileName, fsFileMapItem, parent)
 }
@@ -197,7 +197,7 @@ function convertFsFileMapDirectoryItemToFileMapItemInternal<T>(
   const fsFileMapFileItem = fsFileMapDirectoryItem.children.get(indexFileName)
   if (!fsFileMapFileItem) {
     throw new Error(`Index file '${indexFileName}' not found in directory '${directoryName}'`)
-  } else if (isFsFileMapDirectoryValue(fsFileMapFileItem)) {
+  } else if (isFsFileMapDirectoryItem(fsFileMapFileItem)) {
     throw new Error(`Index file '${indexFileName}' in directory '${directoryName} is not a file`)
   }
 

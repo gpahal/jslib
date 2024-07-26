@@ -2,9 +2,9 @@ import type * as React from 'react'
 
 import Markdoc, { type RenderableTreeNode, type RenderableTreeNodes, type Scalar } from '@markdoc/markdoc'
 
-import { isFunction } from '@gpahal/std/function'
-import { isObject } from '@gpahal/std/object'
-import { camelCase, isString } from '@gpahal/std/string'
+import { isFunction } from '@gpahal/std/functions'
+import { isObject } from '@gpahal/std/objects'
+import { camelCase, isString } from '@gpahal/std/strings'
 
 export type { Node, RenderableTreeNode, RenderableTreeNodes, Scalar, Schema, ValidateError } from '@markdoc/markdoc'
 

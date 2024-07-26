@@ -21,7 +21,7 @@ import type {
   ZodUnion,
 } from 'zod'
 
-import { CustomError, getErrorMessage } from '@gpahal/std/error'
+import { CustomError, getErrorMessage } from '@gpahal/std/errors'
 import {
   createFileMap,
   createFlattenedFileMapIndex,
@@ -34,9 +34,9 @@ import {
   type FsModule,
   type WalkOptions,
 } from '@gpahal/std/fs'
-import { omitUndefinedValues, type Prettify } from '@gpahal/std/object'
-import { isString, stripSuffix } from '@gpahal/std/string'
-import { getExtension } from '@gpahal/std/url'
+import { omitUndefinedValues, type Prettify } from '@gpahal/std/objects'
+import { isString, stripSuffix } from '@gpahal/std/strings'
+import { getExtension } from '@gpahal/std/urls'
 
 import {
   generateCodeAndFenceSchema,

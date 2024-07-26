@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url'
 
 import { fromFile, fromUrl, type Font } from '@capsizecss/unpack'
 
-import { camelCase, trim } from '@gpahal/std/string'
+import { camelCase, trim } from '@gpahal/std/strings'
 
 const metricsCache = new Map<string, Font | null>()
 
