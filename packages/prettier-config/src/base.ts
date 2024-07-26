@@ -1,9 +1,9 @@
 import { type PluginConfig } from '@ianvs/prettier-plugin-sort-imports'
-import { type Config } from 'prettier'
+import { type Config as PrettierConfig } from 'prettier'
 
-export type PrettierBaseConfig = Config | PluginConfig
+export type Config = PrettierConfig & PluginConfig
 
-const config: PrettierBaseConfig = {
+const config: Config = {
   $schema: 'http://json.schemastore.org/prettierrc',
   endOfLine: 'lf',
   printWidth: 120,
