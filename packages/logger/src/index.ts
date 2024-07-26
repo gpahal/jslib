@@ -22,14 +22,14 @@ export type LoggerOptions = {
   prefix?: string
   showOutputAsJSON?: boolean
   isVerbose?: boolean
-  onError?: (err: Error) => void
+  onError?: (error: Error) => void
 }
 
 export class Logger {
   private readonly logger: LoggerLib
 
   constructor({ level, prefix, showOutputAsJSON, isVerbose, onError }: LoggerOptions = {}) {
-    const formats: Format[] = [
+    const formats: Array<Format> = [
       format((info) => {
         info.message = normalizeMessage(String(info.message), prefix)
         return info
@@ -53,7 +53,7 @@ export class Logger {
     } else {
       formats.push(
         format((info) => {
-          info['originalLevel'] = info.level
+          info.originalLevel = info.level
           return info
         })(),
         format.colorize(),
@@ -124,7 +124,7 @@ export class Logger {
   end(cb?: () => void): this
   end(chunk: unknown, cb?: () => void): this
   end(chunk: unknown, encoding?: BufferEncoding, cb?: () => void): this
-  end(...args: unknown[]): this {
+  end(...args: Array<unknown>): this {
     this.logger.end(...(args as Parameters<LoggerLib['end']>))
     return this
   }

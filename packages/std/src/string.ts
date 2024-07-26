@@ -57,7 +57,7 @@ export function trim(s: string, chars?: string): string {
 
 const WORD_REGEX = /\b(\w+)\b/g
 
-export function words(s: string, pattern?: string | RegExp): string[] {
+export function words(s: string, pattern?: string | RegExp): Array<string> {
   return s.match(pattern ?? WORD_REGEX) || []
 }
 
@@ -72,7 +72,7 @@ export function camelCase(s: string): string {
 }
 
 export function kebabCase(s: string) {
-  return words(toString(s).replace(/['\u2019]/g, '')).reduce(
+  return words(toString(s).replaceAll(/['\u2019]/g, '')).reduce(
     (result, word, index) => result + (index ? '-' : '') + word.toLowerCase(),
     '',
   )

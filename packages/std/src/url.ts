@@ -23,11 +23,11 @@ export function getUrlString(url: Url): string {
  * - ftp://
  * - ... and other possible protocols
  */
-const ABSOLUTE_PATH_REGEX = /^(?:[a-zA-Z]+:)?\/\//
+const ABSOLUTE_PATH_REGEX = /^(?:[A-Za-z]+:)?\/\//
 
 export function isAbsoluteUrl(url: Url): boolean {
   const urlString = getUrlString(url)
-  return !!ABSOLUTE_PATH_REGEX.exec(urlString) && isUrl(urlString)
+  return !!ABSOLUTE_PATH_REGEX.test(urlString) && isUrl(urlString)
 }
 
 function getPathname(url: Url): string {
@@ -65,7 +65,7 @@ export function isPathnameActive(
 
 export function getExtension(urlOrFilePath: Url): string {
   const urlStringOrFilePath = getUrlString(urlOrFilePath)
-  const basename = urlStringOrFilePath.split(/[\\/]/).pop()
+  const basename = urlStringOrFilePath.split(/[/\\]/).pop()
   if (!basename) {
     return ''
   }

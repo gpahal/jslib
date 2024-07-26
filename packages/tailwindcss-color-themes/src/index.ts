@@ -18,13 +18,13 @@ export type ColorThemeSelection = {
 export type ColorThemeConfig = {
   default: ColorTheme
   defaultDark?: ColorTheme
-  themes?: ColorThemeSelection[]
+  themes?: Array<ColorThemeSelection>
 }
 
 function toColor(value: string): Color {
   try {
     return Color(value)
-  } catch (e) {
+  } catch {
     throw new Error(`Invalid color value '${value}'`)
   }
 }
@@ -36,14 +36,14 @@ function validateNoAlpha(color: Color): void {
   }
 }
 
-function transformKeyPathToVarName(keyPath: string[]): string {
+function transformKeyPathToVarName(keyPath: Array<string>): string {
   return `${keyPath
     .filter((p) => p && p.length > 0)
     .map(kebabCase)
     .join('-')}`
 }
 
-function transformKeyPathToVarNameAccess(keyPath: string[]): string {
+function transformKeyPathToVarNameAccess(keyPath: Array<string>): string {
   return `--${transformKeyPathToVarName(keyPath)}`
 }
 
@@ -55,15 +55,15 @@ function transformValueToVarValue(value: string) {
   return rgb.map((v) => Math.round(v)).join(' ')
 }
 
-function themeColorsToVarsHelper(keyPath: string[], colorTheme: ColorTheme, acc: ColorTheme) {
-  Object.entries(colorTheme).forEach(([key, value]) => {
+function themeColorsToVarsHelper(keyPath: Array<string>, colorTheme: ColorTheme, acc: ColorTheme) {
+  for (const [key, value] of Object.entries(colorTheme)) {
     const newKeyPath = [...keyPath, key]
     if (typeof value === 'object') {
       themeColorsToVarsHelper(newKeyPath, value, acc)
     } else {
       acc[transformKeyPathToVarNameAccess(newKeyPath)] = transformValueToVarValue(value)
     }
-  })
+  }
 }
 
 function themeColorsToVars(prefix: string, colorTheme: ColorTheme): ColorTheme {
@@ -84,24 +84,24 @@ function transformValueToVarUseHelper(varName: string): TailwindColorFn {
   }
 }
 
-function transformValueToVarUse(prefix: string, keyPath: string[]): TailwindColorFn {
+function transformValueToVarUse(prefix: string, keyPath: Array<string>): TailwindColorFn {
   return transformValueToVarUseHelper(transformKeyPathToVarNameAccess(prefix ? [prefix, ...keyPath] : keyPath))
 }
 
 function themeColorsToVarThemeHelper(
   prefix: string,
-  keyPath: string[],
+  keyPath: Array<string>,
   colorTheme: ColorTheme,
   acc: TailwindColorTheme,
 ) {
-  Object.entries(colorTheme).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(colorTheme)) {
     const newKeyPath = key ? [...keyPath, key] : keyPath
     if (typeof value === 'object') {
       themeColorsToVarThemeHelper(prefix, newKeyPath, value, acc)
     } else {
       acc[transformKeyPathToVarName(newKeyPath)] = transformValueToVarUse(prefix, newKeyPath)
     }
-  })
+  }
 }
 
 function themeColorsToVarThemeColors(prefix: string, colorTheme: ColorTheme): ColorTheme {

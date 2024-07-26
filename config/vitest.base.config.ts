@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
 /// <reference types="vite/client" />
 
-import { UserConfig } from 'vite'
+import type { UserConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 const config = {

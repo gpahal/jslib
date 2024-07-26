@@ -12,15 +12,16 @@ export function fnv1a52Hash(s: string) {
   const len = s.length
   let i = 0,
     t0 = 0,
-    v0 = 0x2325,
+    v0 = 0x23_25,
     t1 = 0,
-    v1 = 0x8422,
+    v1 = 0x84_22,
     t2 = 0,
-    v2 = 0x9ce4,
+    v2 = 0x9c_e4,
     t3 = 0,
-    v3 = 0xcbf2
+    v3 = 0xcb_f2
 
   while (i < len) {
+    // eslint-disable-next-line unicorn/prefer-code-point
     v0 ^= s.charCodeAt(i++)
     t0 = v0 * 435
     t1 = v1 * 435
@@ -29,14 +30,14 @@ export function fnv1a52Hash(s: string) {
     t2 += v0 << 8
     t3 += v1 << 8
     t1 += t0 >>> 16
-    v0 = t0 & 65535
+    v0 = t0 & 65_535
     t2 += t1 >>> 16
-    v1 = t1 & 65535
-    v3 = (t3 + (t2 >>> 16)) & 65535
-    v2 = t2 & 65535
+    v1 = t1 & 65_535
+    v3 = (t3 + (t2 >>> 16)) & 65_535
+    v2 = t2 & 65_535
   }
 
-  return (v3 & 15) * 281474976710656 + v2 * 4294967296 + v1 * 65536 + (v0 ^ (v3 >> 4))
+  return (v3 & 15) * 281_474_976_710_656 + v2 * 4_294_967_296 + v1 * 65_536 + (v0 ^ (v3 >> 4))
 }
 
 /**
@@ -103,6 +104,7 @@ function stringHashCode(s: string): number {
   }
 
   for (let i = 0; i < s.length; i++) {
+    // eslint-disable-next-line unicorn/prefer-code-point
     const ch = s.charCodeAt(i)
     hash = (hash << 5) - hash + ch
     hash = hash & hash // Convert to 32bit integer

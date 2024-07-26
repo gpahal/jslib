@@ -12,7 +12,7 @@ const FALLBACK_FONT_FAMILIES = [
 ]
 
 test('font-fallback', async () => {
-  const fontMetrics = await getFontFamilyMetrics(FONT_FAMILY)!
+  const fontMetrics = await getFontFamilyMetrics(FONT_FAMILY)
   expect(fontMetrics == null).toBe(false)
 
   const fallbacks = await getFontFallbacksCssProperties(fontMetrics!, FALLBACK_FONT_FAMILIES)

@@ -1,10 +1,10 @@
-export function isArray(value: unknown): value is unknown[] {
+export function isArray(value: unknown): value is Array<unknown> {
   return Array.isArray(value)
 }
 
-export type NonEmptyArray<T> = [T, ...T[]]
+export type NonEmptyArray<T> = [T, ...Array<T>]
 
-export function pushToArray<T>(array?: T[], ...items: T[]): T[] {
+export function pushToArray<T>(array?: Array<T>, ...items: Array<T>): Array<T> {
   if (array) {
     array.push(...items)
     return array
@@ -13,10 +13,10 @@ export function pushToArray<T>(array?: T[], ...items: T[]): T[] {
   }
 }
 
-export function dedupeArray<T>(array?: T[]): T[] {
+export function dedupeArray<T>(array?: Array<T>): Array<T> {
   return [...new Set(array)]
 }
 
-export function flattenArray<T>(array: T[][]): T[] {
-  return array.reduce((a, b) => a.concat(b), [])
+export function flattenArray<T>(array: Array<Array<T>>): Array<T> {
+  return array.flat()
 }

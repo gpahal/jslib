@@ -2,8 +2,8 @@ import { isFunction } from '@/function'
 
 export function match<T extends string | number = string, R = unknown>(
   value: T,
-  lookup: Record<T, R | ((...args: unknown[]) => R)>,
-  ...args: unknown[]
+  lookup: Record<T, R | ((...args: Array<unknown>) => R)>,
+  ...args: Array<unknown>
 ): R {
   if (value in lookup) {
     const returnValue = lookup[value]

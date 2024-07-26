@@ -1,4 +1,4 @@
-import { Options } from 'tsup'
+import type { Options } from 'tsup'
 
 const IGNORE_PATTERNS = [
   '**/.git/**',
@@ -25,7 +25,7 @@ const IGNORE_PATTERNS = [
 ]
 
 export function getBaseConfig(options: Options): Options {
-  const isDevEnv = process.env['NODE_ENV'] === 'development' || !!options.watch
+  const isDevEnv = process.env.NODE_ENV === 'development' || !!options.watch
   return {
     entry: ['src/*'],
     outDir: 'build',

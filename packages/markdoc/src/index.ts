@@ -105,11 +105,11 @@ function getMarkdocTransformConfig({ image, codeAndFence, ...config }: Transform
   }
 
   const nodes = {} as Partial<Record<NodeType, Schema>>
-  Object.entries(tags).forEach(([tagName, tag]) => {
+  for (const [tagName, tag] of Object.entries(tags)) {
     if (NODE_TYPES.has(tagName as NodeType)) {
       nodes[tagName as NodeType] = tag
     }
-  })
+  }
 
   return {
     ...config,
@@ -122,8 +122,8 @@ export type FrontmatterRaw = Record<string, unknown>
 
 type FrontmatterSchemaWithoutEffects =
   | AnyZodObject
-  | ZodUnion<[AnyZodObject, ...AnyZodObject[]]>
-  | ZodDiscriminatedUnion<string, AnyZodObject[]>
+  | ZodUnion<[AnyZodObject, ...Array<AnyZodObject>]>
+  | ZodDiscriminatedUnion<string, Array<AnyZodObject>>
   | ZodIntersection<AnyZodObject, AnyZodObject>
 
 export type FrontmatterSchema = FrontmatterSchemaWithoutEffects | ZodEffects<FrontmatterSchemaWithoutEffects>
@@ -137,13 +137,13 @@ export type HeadingNode = {
   level: number
   id: string
   text: string
-  children: HeadingNode[]
+  children: Array<HeadingNode>
 }
 
 export type ParseResultSuccess<TFrontmatterSchema extends FrontmatterSchema> = {
   isSuccessful: true
   frontmatter: output<TFrontmatterSchema>
-  headingNodes: HeadingNode[]
+  headingNodes: Array<HeadingNode>
   content: RenderableTreeNode
   readTimeResults: ReadTimeResults
 }
@@ -151,7 +151,7 @@ export type ParseResultSuccess<TFrontmatterSchema extends FrontmatterSchema> = {
 export type ParseResultMarkdocError = {
   isSuccessful: false
   type: 'markdoc'
-  markdocErrors: ValidateError[]
+  markdocErrors: Array<ValidateError>
 }
 
 export class YamlError extends CustomError {
@@ -255,7 +255,7 @@ export async function parseDirectory<TFrontmatterSchema extends FrontmatterSchem
   options?: ParseDirectoryOptions<TFrontmatterSchema>,
 ): Promise<ParseDirectoryResult<TFrontmatterSchema>> {
   const fileMap = await walkDirectory(fsModule, directory, {
-    ...(options || {}),
+    ...options,
     parseFileContents: async (contents) => {
       return await parse(contents, options)
     },
@@ -263,7 +263,7 @@ export async function parseDirectory<TFrontmatterSchema extends FrontmatterSchem
       return getExtension(fileOptions.name) !== 'mdoc' ? false : (options?.fileFilter?.(fileOptions) ?? true)
     },
   })
-  const finalFileMap = fileMap ? fileMap : new Map<string, FsFileMapItem<ParseResult<TFrontmatterSchema>>>()
+  const finalFileMap = fileMap ?? new Map<string, FsFileMapItem<ParseResult<TFrontmatterSchema>>>()
   const intrusiveFileMap = createFileMap(finalFileMap, getIndexFileName, {
     transformFileName: (fileName, fsFileMapFileItem) => {
       const fileNameWithoutExtension = stripMdocExtension(fileName)
@@ -285,18 +285,22 @@ export function formatParseResultError<TFrontmatterSchema extends FrontmatterSch
   error: ParseResultError<TFrontmatterSchema>,
 ): string {
   switch (error.type) {
-    case 'markdoc':
+    case 'markdoc': {
       return formatMarkdocErrors(error.markdocErrors)
-    case 'yaml':
+    }
+    case 'yaml': {
       return formatYamlError(error.yamlError)
-    case 'zod':
+    }
+    case 'zod': {
       return formatZodError(error.zodError)
-    default:
+    }
+    default: {
       return ''
+    }
   }
 }
 
-export function formatMarkdocErrors(errors: ValidateError[]): string {
+export function formatMarkdocErrors(errors: Array<ValidateError>): string {
   return errors.map((error) => `- ${formatMarkdocError(error)}`).join('\n')
 }
 
@@ -309,7 +313,7 @@ export function formatMarkdocError(error: ValidateError): string {
   const endLocation = error.location?.end
     ? { line: error.location.end.line, column: error.location.end.character }
     : error.lines.length > 1
-      ? { line: error.lines[error.lines.length - 1]! }
+      ? { line: error.lines.at(-1)! }
       : undefined
   return `${startLocation ? `${formatErrorLocationRange(startLocation, endLocation)}: ` : ''}${error.error.message}`
 }
@@ -321,7 +325,7 @@ export function formatYamlError(error: YamlError): string {
 export function formatZodError<T>(error: ZodError<T>): string {
   const flattenedErrors = error.flatten()
   const allFieldErrors = flattenedErrors.fieldErrors
-  return Object.entries<string[] | undefined>(allFieldErrors)
+  return Object.entries<Array<string> | undefined>(allFieldErrors)
     .map(([fieldName, fieldErrors]) => {
       if (!fieldErrors || fieldErrors.length === 0) {
         return ''
@@ -352,7 +356,7 @@ function formatErrorLocation(location?: { line: number; column?: number }): stri
 function parseFrontmatterRaw(
   node: Node,
 ): { isSuccessful: true; frontmatterRaw: FrontmatterRaw } | ParseResultYamlError {
-  const s = node.attributes['frontmatter']
+  const s = node.attributes.frontmatter as string | undefined
   if (!s) {
     return { isSuccessful: true, frontmatterRaw: {} }
   }
@@ -368,27 +372,27 @@ function parseFrontmatterRaw(
   let parsedFrontmatter: unknown
   try {
     parsedFrontmatter = yaml.load(s)
-  } catch (e) {
+  } catch (error) {
     let line = 1
     let column = 1
-    if (e instanceof YAMLException) {
-      line = e.mark.line
-      column = e.mark.column
+    if (error instanceof YAMLException) {
+      line = error.mark.line
+      column = error.mark.column
     }
     if (
-      e instanceof Error &&
-      'line' in e &&
-      typeof e.line === 'number' &&
-      'column' in e &&
-      typeof e.column === 'number'
+      error instanceof Error &&
+      'line' in error &&
+      typeof error.line === 'number' &&
+      'column' in error &&
+      typeof error.column === 'number'
     ) {
-      line = e.line
-      column = e.column
+      line = error.line
+      column = error.column
     }
     return {
       isSuccessful: false,
       type: 'yaml',
-      yamlError: new YamlError(`Frontmatter must be a YAML object: ${getErrorMessage(e)}`, line, column),
+      yamlError: new YamlError(`Frontmatter must be a YAML object: ${getErrorMessage(error)}`, line, column),
     }
   }
 
@@ -405,30 +409,29 @@ function parseFrontmatterRaw(
   return { isSuccessful: true, frontmatterRaw: parsedFrontmatter as Record<string, unknown> }
 }
 
-function generateHeadingNodes(node: Node, transformConfig?: TransformConfig): HeadingNode[] {
+function generateHeadingNodes(node: Node, transformConfig?: TransformConfig): Array<HeadingNode> {
   const slugger = new Slugger()
-  const headingNodes = [] as HeadingNode[]
+  const headingNodes = [] as Array<HeadingNode>
   updateHeadingNodesInternal(headingNodes, node, slugger, transformConfig)
   return headingNodes
 }
 
 function updateHeadingNodesInternal(
-  headingNodes: HeadingNode[],
+  headingNodes: Array<HeadingNode>,
   node: Node,
   slugger: Slugger,
   transformConfig?: TransformConfig,
 ): void {
   if (node.type === 'heading') {
-    const level = node.attributes['level'] ?? 1
+    const level = (node.attributes.level ?? 1) as number | undefined
     if (typeof level === 'number' && level >= 1 && level <= 6) {
       const renderableChildren = Markdoc.transform(node.children, transformConfig)
       const text = renderableNodesToString(renderableChildren)
-      const id =
-        node.attributes['id'] && typeof node.attributes['id'] === 'string' ? node.attributes['id'] : slugger.slug(text)
-      node.attributes['id'] = id
+      const id = node.attributes.id && typeof node.attributes.id === 'string' ? node.attributes.id : slugger.slug(text)
+      node.attributes.id = id
 
       const headingNode = {
-        level: node.attributes['level'] ?? 1,
+        level,
         id,
         text,
         children: [],
@@ -442,14 +445,14 @@ function updateHeadingNodesInternal(
         if (level === lowestLevel) {
           headingNodes.push(headingNode)
         } else if (level > lowestLevel) {
-          let currHeadingNodes: HeadingNode[] = headingNodes
+          let currHeadingNodes: Array<HeadingNode> = headingNodes
           let currHeadingNode: HeadingNode | undefined
           for (let currLevel = lowestLevel; currLevel < level; currLevel++) {
             if (currHeadingNodes.length === 0) {
               return
             }
 
-            currHeadingNode = currHeadingNodes[currHeadingNodes.length - 1]
+            currHeadingNode = currHeadingNodes.at(-1)
             if (!currHeadingNode) {
               break
             }
@@ -489,10 +492,11 @@ async function awaitRenderableTreeNode(
   } else if (Array.isArray(awaited)) {
     return (await awaitRenderableTreeNodes(awaited)) as RenderableTreeNode
   } else if (Tag.isTag(awaited)) {
+    // eslint-disable-next-line @typescript-eslint/await-thenable
     awaited.children = await awaitRenderableTreeNodes((await awaited.children) || [])
     return awaited
   } else if (typeof awaited === 'object') {
-    for (const [key, value] of Array.from(Object.entries(awaited))) {
+    for (const [key, value] of Object.entries(awaited)) {
       awaited[key] = (await awaitRenderableTreeNode(value)) as Scalar
     }
     return awaited
@@ -502,8 +506,8 @@ async function awaitRenderableTreeNode(
 }
 
 async function awaitRenderableTreeNodes(
-  nodes: (RenderableTreeNode | Promise<RenderableTreeNode>)[],
-): Promise<RenderableTreeNode[]> {
+  nodes: Array<RenderableTreeNode | Promise<RenderableTreeNode>>,
+): Promise<Array<RenderableTreeNode>> {
   return await Promise.all(nodes.map(awaitRenderableTreeNode))
 }
 
@@ -511,7 +515,7 @@ function combineRenderableNodeText(node: RenderableTreeNode): RenderableTreeNode
   if (node == null) {
     return node
   } else if (Array.isArray(node)) {
-    return combineRenderableNodesText(node) as Scalar[]
+    return combineRenderableNodesText(node) as Array<Scalar>
   } else if (Tag.isTag(node)) {
     if (node.children && node.children.length > 0) {
       node.children = combineRenderableNodesText(node.children)
@@ -519,7 +523,7 @@ function combineRenderableNodeText(node: RenderableTreeNode): RenderableTreeNode
     return node
   } else if (typeof node === 'object') {
     const newNode = {} as Record<string, Scalar>
-    Array.from(Object.entries(node)).map(([key, value]) => {
+    ;[...Object.entries(node)].map(([key, value]) => {
       node[key] = combineRenderableNodeText(value) as Scalar
     })
     return newNode
@@ -528,12 +532,12 @@ function combineRenderableNodeText(node: RenderableTreeNode): RenderableTreeNode
   }
 }
 
-function combineRenderableNodesText(nodes: RenderableTreeNode[]): RenderableTreeNode[] {
+function combineRenderableNodesText(nodes: Array<RenderableTreeNode>): Array<RenderableTreeNode> {
   if (nodes.length === 0) {
     return []
   }
 
-  const newNodes = [] as RenderableTreeNode[]
+  const newNodes = [] as Array<RenderableTreeNode>
   let currText = ''
   for (const node of nodes) {
     const newNode = combineRenderableNodeText(node)
@@ -562,18 +566,18 @@ export function renderableNodeToString(node: RenderableTreeNode): string {
   } else if (Tag.isTag(node)) {
     return renderableNodesToString(node.children || [])
   } else if (typeof node === 'object') {
-    return renderableNodesToString(Array.from(Object.values(node)))
+    return renderableNodesToString(Object.values(node))
   } else {
     return String(node)
   }
 }
 
-export function renderableNodesToString(nodes: RenderableTreeNode[]): string {
+export function renderableNodesToString(nodes: Array<RenderableTreeNode>): string {
   return nodes
     .map(renderableNodeToString)
     .filter(Boolean)
     .join(' ')
-    .replaceAll(/[ \t]+/g, ' ')
+    .replaceAll(/[\t ]+/g, ' ')
 }
 
 export function getRenderableTreeNodeIdsMap(node: RenderableTreeNode): Map<string, RenderableTreeNode> {
@@ -588,28 +592,28 @@ function updateRenderableTreeNodeIdsMap(map: Map<string, RenderableTreeNode>, no
   } else if (Array.isArray(node)) {
     updateRenderableTreeNodesIdsMap(map, node)
   } else if (Tag.isTag(node)) {
-    const id = node.attributes?.['id'] || ''
+    const id = node.attributes.id as string | undefined
     if (isString(id) && id.trim()) {
       map.set(id.trim(), node)
     }
     updateRenderableTreeNodesIdsMap(map, node.children || [])
   } else if (typeof node === 'object') {
-    updateRenderableTreeNodesIdsMap(map, Array.from(Object.values(node)))
+    updateRenderableTreeNodesIdsMap(map, Object.values(node))
   }
 }
 
-function updateRenderableTreeNodesIdsMap(map: Map<string, RenderableTreeNode>, nodes: RenderableTreeNode[]) {
-  nodes.forEach((node) => updateRenderableTreeNodeIdsMap(map, node))
+function updateRenderableTreeNodesIdsMap(map: Map<string, RenderableTreeNode>, nodes: Array<RenderableTreeNode>) {
+  for (const node of nodes) updateRenderableTreeNodeIdsMap(map, node)
 }
 
 const HEADING_TAGS_SET = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
 
 export type RenderableTreeNodeTopLevelSections = {
-  nodes: RenderableTreeNode[]
-  sections: {
+  nodes: Array<RenderableTreeNode>
+  sections: Array<{
     headingNode: Tag
-    nodes: RenderableTreeNode[]
-  }[]
+    nodes: Array<RenderableTreeNode>
+  }>
 }
 
 export function getRenderableTreeNodeTopLevelSections(node: RenderableTreeNode): RenderableTreeNodeTopLevelSections {
@@ -619,16 +623,16 @@ export function getRenderableTreeNodeTopLevelSections(node: RenderableTreeNode):
 
   const children = node.children || []
   let minLevel = 6
-  children.forEach((child) => {
+  for (const child of children) {
     if (!Tag.isTag(child) || !HEADING_TAGS_SET.has(child.name)) {
-      return
+      continue
     }
 
-    const level = parseInt(child.name.slice(1), 10)
+    const level = Number.parseInt(child.name.slice(1), 10)
     if (level < minLevel) {
       minLevel = level
     }
-  })
+  }
 
   const minLevelTagName = `h${minLevel}`
   const index = children.findIndex((child) => Tag.isTag(child) && child.name === minLevelTagName)
@@ -638,7 +642,7 @@ export function getRenderableTreeNodeTopLevelSections(node: RenderableTreeNode):
 
   const nodes = children.slice(0, index)
 
-  let currNodes = [] as RenderableTreeNode[]
+  let currNodes = [] as Array<RenderableTreeNode>
   const sections = [
     { headingNode: children[index]!, nodes: currNodes },
   ] as RenderableTreeNodeTopLevelSections['sections']
@@ -670,7 +674,6 @@ class Slugger {
     let finalSlug = slug(value, !!maintainCase)
     const originalSlug = finalSlug
 
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       const count = this.occurrences.get(finalSlug)
       if (count == null) {

@@ -18,6 +18,7 @@ type ReactShape = Readonly<{
 type ComponentType = React.ElementType
 export type Components = Record<string, ComponentType> | ((string: string) => ComponentType)
 
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 function getComponent(tagName: Scalar, components?: Components): string | ComponentType {
   if (typeof tagName !== 'string' || !tagName) {
     return String(tagName)
@@ -51,21 +52,21 @@ export function renderReact(React: ReactShape, node: RenderableTreeNodes, compon
     }
 
     if (className) {
-      otherAttributes['className'] = className
+      otherAttributes.className = className
     }
     if (style) {
       if (style && isObject('object')) {
-        otherAttributes['style'] = style
+        otherAttributes.style = style
       } else if (isString(style)) {
         const properties = style.split(';')
         const styleObj = {} as Record<string, unknown>
-        properties.forEach((property) => {
+        for (const property of properties) {
           const parts = property.split(':').map((s) => s.trim())
           if (parts[0] && parts[1]) {
             styleObj[camelCase(parts[0].replaceAll(/-+/g, ' '))] = parts[1]
           }
-        })
-        otherAttributes['style'] = styleObj
+        }
+        otherAttributes.style = styleObj
       }
     }
 

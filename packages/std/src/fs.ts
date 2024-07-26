@@ -2,10 +2,10 @@ import { trim } from '@/string'
 
 export type FsModule = {
   getBasename: (path: string) => string
-  joinPath: (...paths: string[]) => string | Promise<string>
+  joinPath: (...paths: Array<string>) => string | Promise<string>
   getAbsolutePath: (path: string) => string | Promise<string>
   isDirectory: (path: string) => boolean | Promise<boolean>
-  readDirectory: (path: string) => string[] | Promise<string[]>
+  readDirectory: (path: string) => Array<string> | Promise<Array<string>>
   readFile: (path: string) => string | Promise<string>
 }
 
@@ -111,7 +111,7 @@ async function walkFileInternal<T>(
 export type WithOriginalFileName<T> = T & { originalFileName: string }
 
 export type FileMapItem<T> = {
-  pathParts: string[]
+  pathParts: Array<string>
   path: string
   data: T
 
@@ -141,7 +141,7 @@ export function transformFileMapNames<T>(
   fileMap: FileMap<T>,
   transformFileName: (fileName: string, fileMapItem: FileMapItem<T>) => string,
 ): void {
-  const entries = Array.from(fileMap.entries())
+  const entries = [...fileMap.entries()]
   fileMap.clear()
   for (const [fileName, fileMapItem] of entries) {
     const newFileName = transformFileName(fileName, fileMapItem)
@@ -269,21 +269,21 @@ export function someFileMap<T>(fileMap: FileMap<T>, fn: (_: T) => boolean): bool
   return findFileMap(fileMap, fn) != null
 }
 
-function joinPathParts(...parts: string[]): string {
+function joinPathParts(...parts: Array<string>): string {
   return parts.join('/')
 }
 
 export type FlattenedFileMapIndexItem<T> = {
-  pathParts: string[]
+  pathParts: Array<string>
   path: string
   data: T
 
   index: number
   parentIndex?: number
-  childrenIndices?: number[]
+  childrenIndices?: Array<number>
 }
 
-export type FlattenedFileMapIndex<T> = FlattenedFileMapIndexItem<T>[]
+export type FlattenedFileMapIndex<T> = Array<FlattenedFileMapIndexItem<T>>
 
 export function createFlattenedFileMapIndex<T>(
   fileMap: FileMap<T>,
@@ -300,7 +300,7 @@ function updateFlattenedFileMapIndexInternal<T>(
   compareFn?: (a: FileMapItem<T>, b: FileMapItem<T>) => number,
   parent?: FlattenedFileMapIndexItem<T>,
 ): void {
-  const fileMapItems = Array.from(fileMap.values())
+  const fileMapItems = [...fileMap.values()]
   if (fileMapItems.length === 0) {
     return
   }
@@ -335,7 +335,7 @@ export function unflattenFlattenedFileMapIndex<T>(flattenedFileMap: FlattenedFil
 
 function unflattenFlattenedFileMapIndexInternal<T>(
   flattenedFileMap: FlattenedFileMapIndex<T>,
-  indices: number[],
+  indices: Array<number>,
   parent?: FileMapItem<T>,
 ): FileMap<T> {
   const fileMap = new Map<string, FileMapItem<T>>()
@@ -349,7 +349,7 @@ function unflattenFlattenedFileMapIndexInternal<T>(
     if (curr.childrenIndices) {
       currItem.children = unflattenFlattenedFileMapIndexInternal(flattenedFileMap, curr.childrenIndices, currItem)
     }
-    fileMap.set(curr.pathParts[curr.pathParts.length - 1]!, currItem)
+    fileMap.set(curr.pathParts.at(-1)!, currItem)
   }
   return fileMap
 }
@@ -363,7 +363,7 @@ export function sortFlattenedFileMapIndex<T>(
 }
 
 export type FileMapIndexItem<T> = {
-  pathParts: string[]
+  pathParts: Array<string>
   path: string
   data: T
 
@@ -372,7 +372,7 @@ export type FileMapIndexItem<T> = {
   children?: FileMapIndex<T>
 }
 
-export type FileMapIndex<T> = FileMapIndexItem<T>[]
+export type FileMapIndex<T> = Array<FileMapIndexItem<T>>
 
 export function createFileMapIndex<T>(flattenedFileMapIndex: FlattenedFileMapIndex<T>): FileMapIndex<T> {
   return flattenedFileMapIndex
@@ -415,20 +415,20 @@ function compareFileMapItem<T>(a: FileMapItem<T>, b: FileMapItem<T>): number {
   }
 }
 
-export function pathPartsToPath(parts: string[]): string {
+export function pathPartsToPath(parts: Array<string>): string {
   return parts
     .map((s) => trim(s))
     .filter((s) => s !== '')
     .join('/')
 }
 
-export function pathToPathParts(path: string): string[] {
+export function pathToPathParts(path: string): Array<string> {
   return trim(trim(path), '/')
     .split('/')
     .map((s) => trim(s))
     .filter((s) => s !== '')
 }
 
-export function sanitizePathParts(parts: string[]): string[] {
+export function sanitizePathParts(parts: Array<string>): Array<string> {
   return parts.map((s) => trim(s)).filter((s) => s !== '')
 }

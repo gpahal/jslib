@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/namespace, import/default, import/no-named-as-default, import/no-named-as-default-member
 import mime from 'mime'
 
 import type { Prettify } from '@gpahal/std/object'
@@ -7,9 +8,9 @@ export type OutputImageFormatSupportsAlpha = 'avif' | 'png' | 'tiff' | 'webp'
 export type OutputImageFormatNotSupportsAlpha = 'gif' | 'jpeg' | 'jpg'
 export type OutputImageFormat = OutputImageFormatSupportsAlpha | OutputImageFormatNotSupportsAlpha
 
-export const OUTPUT_IMAGE_FORMATS_WITH_ALPHA: OutputImageFormatSupportsAlpha[] = ['avif', 'png', 'tiff', 'webp']
-export const OUTPUT_IMAGE_FORMATS_WITHOUT_ALPHA: OutputImageFormatNotSupportsAlpha[] = ['gif', 'jpeg', 'jpg']
-export const OUTPUT_IMAGE_FORMATS: OutputImageFormat[] = [
+export const OUTPUT_IMAGE_FORMATS_WITH_ALPHA: Array<OutputImageFormatSupportsAlpha> = ['avif', 'png', 'tiff', 'webp']
+export const OUTPUT_IMAGE_FORMATS_WITHOUT_ALPHA: Array<OutputImageFormatNotSupportsAlpha> = ['gif', 'jpeg', 'jpg']
+export const OUTPUT_IMAGE_FORMATS: Array<OutputImageFormat> = [
   ...OUTPUT_IMAGE_FORMATS_WITH_ALPHA,
   ...OUTPUT_IMAGE_FORMATS_WITHOUT_ALPHA,
 ]
@@ -73,29 +74,31 @@ type ImageLayout = MaxWidthImageLayout | VwRatioImageLayout
 
 const DEVICE_WIDTHS = [640, 750, 828, 960, 1080, 1280, 1920, 2048, 3840] as const
 
-const DEFAULT_DEVICE_WIDTH = DEVICE_WIDTHS[6]!
-const SMALLEST_DEVICE_WIDTH = DEVICE_WIDTHS[0]!
-const LARGEST_DEVICE_WIDTH = DEVICE_WIDTHS[DEVICE_WIDTHS.length - 1]!
+const DEFAULT_DEVICE_WIDTH = DEVICE_WIDTHS[6]
+const SMALLEST_DEVICE_WIDTH = DEVICE_WIDTHS[0]
+const LARGEST_DEVICE_WIDTH = DEVICE_WIDTHS.at(-1)!
 
 const IMAGE_WIDTHS = [16, 32, 48, 64, 96, 128, 256, 384] as const
 
-const LOW_RESOLUTION_WIDTH = 32 as const
-const LOW_RESOLUTION_OUTPUT_FORMAT = 'png' as const
+const LOW_RESOLUTION_WIDTH = 32
+const LOW_RESOLUTION_OUTPUT_FORMAT = 'png'
 
-function getImageLayoutBreakpoints(layout: ImageLayout): number[] {
+function getImageLayoutBreakpoints(layout: ImageLayout): Array<number> {
   switch (layout.type) {
-    case 'max-width':
+    case 'max-width': {
       return getMaxWidthImageLayoutBreakpoints(layout)
-    case 'vw-ratio':
+    }
+    case 'vw-ratio': {
       return getVwRatioImageLayoutBreakpoints(layout)
+    }
   }
 }
 
-function getMaxWidthImageLayoutBreakpoints({ maxWidth }: MaxWidthImageLayout): number[] {
+function getMaxWidthImageLayoutBreakpoints({ maxWidth }: MaxWidthImageLayout): Array<number> {
   return [maxWidth, ...DEVICE_WIDTHS.filter((w) => w < maxWidth)]
 }
 
-function getVwRatioImageLayoutBreakpoints({ vwRatio, maxWidth: layoutMaxWidth }: VwRatioImageLayout): number[] {
+function getVwRatioImageLayoutBreakpoints({ vwRatio, maxWidth: layoutMaxWidth }: VwRatioImageLayout): Array<number> {
   const minWidth = SMALLEST_DEVICE_WIDTH * vwRatio
   let maxWidth = LARGEST_DEVICE_WIDTH * vwRatio
   if (layoutMaxWidth != null && layoutMaxWidth > 0) {
@@ -106,12 +109,14 @@ function getVwRatioImageLayoutBreakpoints({ vwRatio, maxWidth: layoutMaxWidth }:
 
 function getImageLayoutSizesAttribute(layout: ImageLayout): string {
   switch (layout.type) {
-    case 'max-width':
+    case 'max-width': {
       return `(min-width: ${layout.maxWidth}px) ${layout.maxWidth}px, 100vw`
-    case 'vw-ratio':
+    }
+    case 'vw-ratio': {
       return `${
         layout.maxWidth != null && layout.maxWidth > 0 ? `(min-width: ${layout.maxWidth}px) ${layout.maxWidth}px, ` : ''
       }${layout.vwRatio}vw`
+    }
   }
 }
 
@@ -189,15 +194,13 @@ function transformImageStyleToCSSProps({
     { name: 'object-fit', value: objectFit },
   ]
 
-  return styleArray.reduce(
-    (acc, { name, value }) => {
-      if (value) {
-        acc[name] = value
-      }
-      return acc
-    },
-    {} as Record<string, string>,
-  )
+  const cssProps: Record<string, string> = {}
+  for (const { name, value } of styleArray) {
+    if (value) {
+      cssProps[name] = value
+    }
+  }
+  return cssProps
 }
 
 function getImageStyle({
@@ -263,7 +266,7 @@ export function transformNonTransformableImageSourcePropsToHTMLProps({
 }: NonTransformableImageSourceProps): Record<string, string> {
   return {
     src,
-    style: Array.from(Object.entries(transformImageStyleToCSSProps(style)))
+    style: [...Object.entries(transformImageStyleToCSSProps(style))]
       .map(([name, value]) => `${name}:${value};`)
       .join(''),
   }
@@ -448,14 +451,14 @@ export function getImageProps(options: ImageOptions): ImageProps {
 
 export type PictureSourceOptions = Prettify<
   Omit<ImageSourceOptions, 'transformer' | 'cropOptions' | 'format'> & {
-    formats?: OutputImageFormat[]
+    formats?: Array<OutputImageFormat>
     minWidth?: number
     maxWidth?: number
   }
 >
 
-function normalizeOutputImageFormats({ src, formats }: PictureSourceOptions): OutputImageFormat[] {
-  const finalFormats: OutputImageFormat[] = formats && formats.length > 0 ? formats : ['avif', 'webp']
+function normalizeOutputImageFormats({ src, formats }: PictureSourceOptions): Array<OutputImageFormat> {
+  const finalFormats: Array<OutputImageFormat> = formats && formats.length > 0 ? formats : ['avif', 'webp']
   const extname = getExtension(src)
   const fallbackFormat: OutputImageFormat = OUTPUT_IMAGE_FORMATS.includes(extname as OutputImageFormat)
     ? (extname as OutputImageFormat)
@@ -464,7 +467,7 @@ function normalizeOutputImageFormats({ src, formats }: PictureSourceOptions): Ou
 }
 
 function getPictureSourceOptionsMediaAttribute({ minWidth, maxWidth }: PictureSourceOptions): string {
-  const queries: string[] = []
+  const queries: Array<string> = []
   if (minWidth) {
     queries.push(`(min-width: ${minWidth}px)`)
   }
@@ -476,7 +479,7 @@ function getPictureSourceOptionsMediaAttribute({ minWidth, maxWidth }: PictureSo
 
 export type PictureOptions = Prettify<
   ImageNonSourceOptions & {
-    sources: PictureSourceOptions[]
+    sources: Array<PictureSourceOptions>
     transformer: TransformImageSrcFn
     cropOptions?: CropOptions
   }
@@ -496,16 +499,16 @@ export function transformPictureSourcePropsToHTMLProps({
 }: PictureSourceProps): Record<string, string> {
   const props = transformImageSourcePropsToHTMLProps(nonSourceProps)
   if (media) {
-    props['media'] = media
+    props.media = media
   }
   if (type) {
-    props['type'] = type
+    props.type = type
   }
   return props
 }
 
 export type PictureProps = {
-  sources: PictureSourceProps[]
+  sources: Array<PictureSourceProps>
   image: ImageProps
 }
 

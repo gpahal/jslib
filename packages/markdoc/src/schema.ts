@@ -153,9 +153,7 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
   const highlighters = new Map<string, { themeName: BundledTheme; highlighter: Highlighter }>()
 
   const initializeHighlighters = async () => {
-    for (const [themeAlias, { themeName, highlighter: highlighterPromise }] of Array.from(
-      highlightersCache.entries(),
-    )) {
+    for (const [themeAlias, { themeName, highlighter: highlighterPromise }] of highlightersCache.entries()) {
       if (!highlighters.has(themeAlias)) {
         highlighters.set(themeName, { themeName, highlighter: await highlighterPromise })
       }
@@ -169,17 +167,17 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
     async transform(node, _config) {
       await initializeHighlighters()
 
-      const content = isString(node.attributes['content']) ? node.attributes['content'].trim() : ''
-      const strippedContent = content.replace(/^{:[a-zA-Z.-]+}/, '')
-      const meta = content.match(/^{:([a-zA-Z.-]+)}/)?.[1] || ''
+      const content = isString(node.attributes.content) ? node.attributes.content.trim() : ''
+      const strippedContent = content.replace(/^{:[.A-Za-z-]+}/, '')
+      const meta = content.match(/^{:([.A-Za-z-]+)}/)?.[1] || ''
       const metaParts = meta.split('.', 2)
 
       const language = (metaParts[0]?.trim() || 'text') as BundledLanguage
       const tokenType = metaParts[1]?.trim() || ''
 
-      const themeTags = [] as Tag[]
-      for (const [themeAlias, { themeName, highlighter }] of Array.from(highlighters.entries())) {
-        let lines = [] as ThemedToken[][]
+      const themeTags = [] as Array<Tag>
+      for (const [themeAlias, { themeName, highlighter }] of highlighters.entries()) {
+        let lines = [] as Array<Array<ThemedToken>>
         try {
           if (tokenType) {
             const settings:
@@ -191,7 +189,7 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
               | undefined = tokenType
               ? highlighter
                   .getTheme(themeName)
-                  .settings.find(({ scope }: { scope?: string | string[] }) =>
+                  .settings.find(({ scope }: { scope?: string | Array<string> }) =>
                     scope ? (isString(scope) ? scope === tokenType : scope.includes(tokenType)) : false,
                   )?.settings
               : undefined
@@ -216,7 +214,7 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
           } else {
             lines = highlighter.codeToTokensBase(strippedContent, { theme: themeName, lang: language })
           }
-        } catch (e) {
+        } catch {
           lines = highlighter.codeToTokensBase(strippedContent, { theme: themeName, lang: language })
         }
 
@@ -261,12 +259,12 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
     async transform(node, config) {
       await initializeHighlighters()
 
-      const name = isString(node.attributes['name']) ? node.attributes['name'].trim() : ''
+      const name = isString(node.attributes.name) ? node.attributes.name.trim() : ''
       const language = (
-        isString(node.attributes['language']) ? node.attributes['language'].trim() : 'text'
+        isString(node.attributes.language) ? node.attributes.language.trim() : 'text'
       ) as BundledLanguage
-      const variant = isString(node.attributes['variant']) ? node.attributes['variant'].trim() : ''
-      const showLineNumbers = node.attributes['showLineNumbers'] === true
+      const variant = isString(node.attributes.variant) ? node.attributes.variant.trim() : ''
+      const showLineNumbers = node.attributes.showLineNumbers === true
       const attributes = {
         ...node.transformAttributes(config),
         'data-name': name,
@@ -277,8 +275,8 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
         attributes['data-show-line-numbers'] = ''
       }
 
-      const highlightedLines = isArray(node.attributes['linesHighlighted'])
-        ? [...((node.attributes['linesHighlighted'] as FenceHighlightedLines[]) || [])]
+      const highlightedLines = isArray(node.attributes.linesHighlighted)
+        ? [...((node.attributes.linesHighlighted as Array<FenceHighlightedLines>) || [])]
             .filter(
               (value) =>
                 typeof value === 'object' &&
@@ -300,13 +298,13 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
         return false
       }
 
-      const content = isString(node.attributes['content']) ? node.attributes['content'].trim() : ''
-      const themeTags = [] as Tag[]
-      for (const [themeAlias, { themeName, highlighter }] of Array.from(highlighters.entries())) {
-        let lines = [] as ThemedToken[][]
+      const content = isString(node.attributes.content) ? node.attributes.content.trim() : ''
+      const themeTags = [] as Array<Tag>
+      for (const [themeAlias, { themeName, highlighter }] of highlighters.entries()) {
+        let lines = [] as Array<Array<ThemedToken>>
         try {
           lines = highlighter.codeToTokensBase(content, { theme: themeName, lang: language })
-        } catch (e) {
+        } catch {
           lines = highlighter.codeToTokensBase(content, { theme: themeName, lang: language })
         }
 

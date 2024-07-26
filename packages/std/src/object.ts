@@ -23,7 +23,7 @@ export function omitUndefinedValues<T extends Record<string | number | symbol, u
 
 export function omitUndefinedValuesAndKeys<T extends Record<string | number | symbol, unknown>>(
   o: T,
-  keys: string[],
+  keys: Array<string>,
 ): T {
   if (!o) {
     return o

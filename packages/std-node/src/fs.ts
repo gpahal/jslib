@@ -9,7 +9,7 @@ export const FS_MODULE = {
   getAbsolutePath: (p) => path.resolve(p),
   isDirectory: async (path: string) => {
     const stat = await fs.stat(path)
-    return stat && stat.isDirectory()
+    return stat?.isDirectory()
   },
   readDirectory: fs.readdir,
   readFile: async (path: string) => {

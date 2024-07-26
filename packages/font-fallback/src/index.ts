@@ -13,10 +13,12 @@ export async function getFontFamilyMetrics(fontFamily: string): Promise<Font | u
   }
 
   try {
-    const metrics: Font = await import(`@capsizecss/metrics/${fontFamily}`).then((r) => r.default || r)
+    const metrics: Font = await import(`@capsizecss/metrics/${fontFamily}`).then(
+      (r) => (r as { default: Font }).default || (r as Font),
+    )
     metricsCache.set(fontFamily, metrics)
     return metrics
-  } catch (e) {
+  } catch {
     metricsCache.set(fontFamily, null)
     return undefined
   }
@@ -71,14 +73,14 @@ export function getFontFallbackCssString(fallbackCssProperties: FontFallbackCssP
 
 export async function getFontFallbacksCssProperties(
   originalMetrics: Font,
-  fallbackFontFamilies: string[],
-): Promise<FontFallbackCssProperties[]> {
+  fallbackFontFamilies: Array<string>,
+): Promise<Array<FontFallbackCssProperties>> {
   const fallbacksProperties = await Promise.all(
     fallbackFontFamilies.map(async (fallbackFontFamily) =>
       getFontFallbackCssProperties(originalMetrics, fallbackFontFamily),
     ),
   )
-  const array: FontFallbackCssProperties[] = []
+  const array: Array<FontFallbackCssProperties> = []
   for (const fallbackProperties of fallbacksProperties) {
     if (fallbackProperties) {
       array.push(fallbackProperties)
@@ -120,7 +122,7 @@ async function getFontFallbackCssProperties(
   }
 }
 
-const FAMILY_NAME_KEYWORDS = [
+const FAMILY_NAME_KEYWORDS = new Set([
   'inherit',
   'serif',
   'sans-serif',
@@ -132,10 +134,10 @@ const FAMILY_NAME_KEYWORDS = [
   'ui-sans-serif',
   'ui-monospace',
   'ui-rounded',
-]
+])
 
 function familyNameToString(familyName: string): string {
-  return FAMILY_NAME_KEYWORDS.includes(familyName) ? familyName : `'${familyName}'`
+  return FAMILY_NAME_KEYWORDS.has(familyName) ? familyName : `'${familyName}'`
 }
 
 function toPercentage(value: number, fractionDigits = 6): string {

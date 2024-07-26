@@ -66,7 +66,7 @@ test('file-map', async () => {
 function createMemoryFsModule(fs: Record<string, unknown>): FsModule {
   return {
     getBasename: (p) => p.split('/').pop() || '',
-    joinPath: (...ps) => ps.join('/').replace(/\/+/g, '/'),
+    joinPath: (...ps) => ps.join('/').replaceAll(/\/+/g, '/'),
     getAbsolutePath: (p) => p,
     isDirectory: (path: string) => {
       const o = getObjectPath(fs, path)
@@ -87,7 +87,7 @@ function getObjectPath(o: Record<string, unknown>, path: string): unknown {
   return getObjectPathParts(o, path.split('/'))
 }
 
-function getObjectPathParts(o: Record<string, unknown>, pathParts: string[]): unknown {
+function getObjectPathParts(o: Record<string, unknown>, pathParts: Array<string>): unknown {
   if (!o) {
     return ''
   } else if (pathParts.length === 0) {

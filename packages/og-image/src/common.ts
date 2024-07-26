@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 
 import type { JSX } from 'preact'
+// eslint-disable-next-line import/namespace
 import type { SatoriOptions } from 'satori'
+// eslint-disable-next-line import/namespace
 import { html as htmlLib } from 'satori-html'
 
 import type { FontInfo } from '@gpahal/font'
@@ -9,7 +11,7 @@ import type { FontInfo } from '@gpahal/font'
 export type VNode = {
   type: string
   props: {
-    children?: string | string[] | VNode | VNode[]
+    children?: string | Array<string> | VNode | Array<VNode>
     style?: Record<string, unknown>
     [prop: string]: unknown
   }
@@ -17,14 +19,14 @@ export type VNode = {
 
 export type Node = ReactNode | JSX.Element | VNode
 
-export function html(templates: string | TemplateStringsArray, ...expressions: unknown[]): Node {
+export function html(templates: string | TemplateStringsArray, ...expressions: Array<unknown>): Node {
   return htmlLib(templates, ...expressions) as VNode
 }
 
 export type OgImageOptions = {
   width?: number
   height?: number
-  fonts?: FontInfo[]
+  fonts?: Array<FontInfo>
   debug?: boolean
 }
 
