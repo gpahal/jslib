@@ -1,4 +1,7 @@
-import Markdoc, {
+import {
+  parse as markdocParse,
+  transform as markdocTransform,
+  validate as markdocValidate,
   type Config as MarkdocTransformConfig,
   type Node,
   type NodeType,
@@ -189,9 +192,9 @@ export async function parse<TFrontmatterSchema extends FrontmatterSchema>(
   source: string,
   options?: ParseOptions<TFrontmatterSchema>,
 ): Promise<ParseResult<TFrontmatterSchema>> {
-  const document = Markdoc.parse(source)
+  const document = markdocParse(source)
   const transformConfig = getMarkdocTransformConfig(options?.transformConfig)
-  const markdocErrors = Markdoc.validate(document, transformConfig)
+  const markdocErrors = markdocValidate(document, transformConfig)
   if (markdocErrors && markdocErrors.length > 0) {
     return { isSuccessful: false, type: 'markdoc', markdocErrors }
   }
@@ -211,7 +214,7 @@ export async function parse<TFrontmatterSchema extends FrontmatterSchema>(
   }
 
   const headingNodes = generateHeadingNodes(document, transformConfig)
-  const content = await awaitRenderableTreeNode(Markdoc.transform(document, transformConfig))
+  const content = await awaitRenderableTreeNode(markdocTransform(document, transformConfig))
   combineRenderableNodeText(content)
 
   const readTimeResults = libCalculateReadTime(renderableNodeToString(content))
@@ -425,7 +428,7 @@ function updateHeadingNodesInternal(
   if (node.type === 'heading') {
     const level = (node.attributes.level ?? 1) as number | undefined
     if (typeof level === 'number' && level >= 1 && level <= 6) {
-      const renderableChildren = Markdoc.transform(node.children, transformConfig)
+      const renderableChildren = markdocTransform(node.children, transformConfig)
       const text = renderableNodesToString(renderableChildren)
       const id = node.attributes.id && typeof node.attributes.id === 'string' ? node.attributes.id : slugger.slug(text)
       node.attributes.id = id

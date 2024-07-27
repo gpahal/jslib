@@ -1,4 +1,4 @@
-import { withOptions } from 'tailwindcss/plugin'
+import tailwindcssPlugin from 'tailwindcss/plugin'
 import type { CSSRuleObject, PluginAPI } from 'tailwindcss/types/config'
 
 import { isString, kebabCase } from '@gpahal/std/strings'
@@ -140,7 +140,7 @@ function addThemeColorsUtilities(
   )
 }
 
-export const colorThemesPlugin = withOptions(
+const colorThemesPlugin = tailwindcssPlugin.withOptions(
   (options: ColorThemeConfig) => {
     if (!options) {
       throw new Error('No options provided to @gpahal/tailwindcss-color-themes plugin')
@@ -176,3 +176,5 @@ export const colorThemesPlugin = withOptions(
     }
   },
 )
+
+export default colorThemesPlugin

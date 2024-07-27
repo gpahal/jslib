@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/font-fallback",
-  "version": "0.0.28",
+  "version": "0.0.31",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@capsizecss/metrics": "^3.2.0",
-    "@capsizecss/unpack": "^2.2.0",
+    "@capsizecss/unpack": "^2.3.0",
     "@gpahal/std": "workspace:*"
   }
 }

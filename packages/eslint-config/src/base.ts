@@ -1,45 +1,26 @@
-import path from 'node:path'
-import url from 'node:url'
-
-import { fixupPluginRules } from '@eslint/compat'
-import { FlatCompat } from '@eslint/eslintrc'
 import eslint from '@eslint/js'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import eslintConfigPrettier from 'eslint-config-prettier'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import { configs as eslintPluginImportConfigs } from 'eslint-plugin-import'
+import eslintPluginImportX from 'eslint-plugin-import-x'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import globals from 'globals'
-import tsEslint, { type ConfigWithExtends } from 'typescript-eslint'
+import { config, configs as tsEslintConfigs, type ConfigWithExtends } from 'typescript-eslint'
 
 import { isFunction } from '@gpahal/std/functions'
 
-export type Config = typeof tsEslint.configs.all
-export const createConfig = tsEslint.config
+export { config as createConfig } from 'typescript-eslint'
 
-const __filename = url.fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: eslint.configs.recommended,
-  allConfig: eslint.configs.all,
-})
-
-function legacyPlugin(name: string, alias: string = name) {
-  const plugin = compat.plugins(name)[0]?.plugins?.[alias]
-  if (!plugin) {
-    throw new Error(`Unable to resolve plugin ${name} and/or alias ${alias}`)
-  }
-
-  return fixupPluginRules(plugin)
-}
+export type Config = typeof tsEslintConfigs.all
 
 export default function defineConfig(
   project: string | Array<string>,
   tsconfigRootDir: string,
   ...configs: Array<Config | ((project: string, tsconfigRootDir: string) => Config)>
 ): Config {
-  return tsEslint.config(
+  return config(
     {
       files: ['**/*.{js,mjs,cjs,ts,jsx,tsx,astro}'],
     },
@@ -58,31 +39,37 @@ export default function defineConfig(
       },
     },
     eslint.configs.recommended,
-    ...tsEslint.configs.recommendedTypeChecked,
-    ...tsEslint.configs.stylisticTypeChecked,
+    ...tsEslintConfigs.recommendedTypeChecked,
+    ...tsEslintConfigs.stylisticTypeChecked,
     eslintConfigPrettier as ConfigWithExtends,
     {
       plugins: {
-        import: legacyPlugin('eslint-plugin-import', 'import'),
+        'import-x': eslintPluginImportX,
       },
       settings: {
-        'import/resolver': {
+        'import-x/extensions': ['.js', '.mjs', '.cjs', '.ts', '.jsx', '.tsx'],
+        'import-x/external-module-folders': ['node_modules', 'node_modules/@types'],
+        'import-x/parsers': {
+          '@typescript-eslint/parser': ['.ts', '.tsx'],
+        },
+        'import-x/resolver': {
           typescript: {
             alwaysTryTypes: true,
             project,
           },
+          node: {
+            extensions: ['.js', '.mjs', '.cjs', '.ts', '.jsx', '.tsx'],
+          },
         },
       },
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      rules: eslintPluginImportConfigs.recommended.rules,
+      rules: eslintPluginImportX.configs.recommended.rules,
     },
     eslintPluginUnicorn.configs['flat/recommended'] as ConfigWithExtends,
     {
       files: ['**/*.{js,mjs,cjs,jsx}'],
-      ...tsEslint.configs.disableTypeChecked,
+      ...tsEslintConfigs.disableTypeChecked,
     },
     {
-      files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'],
       rules: {
         'no-unused-vars': [
           'error',
@@ -93,16 +80,16 @@ export default function defineConfig(
             destructuredArrayIgnorePattern: '^_',
           },
         ],
-        'import/first': 'error',
-        'import/newline-after-import': 'error',
-        'import/no-absolute-path': 'error',
-        'import/no-mutable-exports': 'error',
-        'import/no-named-default': 'error',
-        'import/no-self-import': 'error',
-        'import/no-duplicates': 'error',
-        'import/no-amd': 'error',
-        'import/no-webpack-loader-syntax': 'error',
-        'import/no-anonymous-default-export': 'error',
+        'import-x/first': 'error',
+        'import-x/newline-after-import': 'error',
+        'import-x/no-absolute-path': 'error',
+        'import-x/no-mutable-exports': 'error',
+        'import-x/no-named-default': 'error',
+        'import-x/no-self-import': 'error',
+        'import-x/no-duplicates': 'error',
+        'import-x/no-amd': 'error',
+        'import-x/no-webpack-loader-syntax': 'error',
+        'import-x/no-anonymous-default-export': 'error',
         'unicorn/filename-case': [
           'error',
           {
@@ -123,9 +110,14 @@ export default function defineConfig(
       },
     },
     {
-      files: ['**/*.{ts,tsx}'],
+      files: ['**/*.{ts,tsx,astro}'],
       rules: {
         'no-unused-vars': 'off',
+        'import-x/default': 'off',
+        'import-x/named': 'off',
+        'import-x/namespace': 'off',
+        'import-x/no-named-as-default-member': 'off',
+        'import-x/no-unresolved': 'off',
         'unicorn/prefer-module': 'error',
         '@typescript-eslint/array-type': ['error', { default: 'generic' }],
         '@typescript-eslint/no-unused-vars': [

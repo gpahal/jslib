@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react'
 
 import type { JSX } from 'preact'
-// eslint-disable-next-line import/namespace
 import type { SatoriOptions } from 'satori'
-// eslint-disable-next-line import/namespace
 import { html as htmlLib } from 'satori-html'
 
 import type { FontInfo } from '@gpahal/font'

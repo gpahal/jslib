@@ -1,4 +1,4 @@
-import { getRenderableTreeNodeIdsMap, getRenderableTreeNodeTopLevelSections, linkSchema, parse } from '@/index'
+import { getRenderableTreeNodeIdsMap, getRenderableTreeNodeTopLevelSections, linkSchema, parse } from '../src'
 
 const mdocContent = `\
 ---

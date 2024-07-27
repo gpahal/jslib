@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/namespace, import/default, import/no-named-as-default, import/no-named-as-default-member
 import satori from 'satori'
 
 import { generateOgImageWithSatoriFn, type Node, type OgImageOptions } from '@/common'

@@ -1,4 +1,4 @@
-import Markdoc, { type Schema } from '@markdoc/markdoc'
+import { Tag as MarkdocTag, type Schema } from '@markdoc/markdoc'
 import { sha1 } from 'object-hash'
 import {
   bundledLanguages,
@@ -13,7 +13,7 @@ import {
 import { isArray } from '@gpahal/std/arrays'
 import { isString } from '@gpahal/std/strings'
 
-export class Tag extends Markdoc.Tag {}
+export class Tag extends MarkdocTag {}
 
 export function generateHeadingSchema(): Schema {
   return {
@@ -169,7 +169,7 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
 
       const content = isString(node.attributes.content) ? node.attributes.content.trim() : ''
       const strippedContent = content.replace(/^{:[.A-Za-z-]+}/, '')
-      const meta = content.match(/^{:([.A-Za-z-]+)}/)?.[1] || ''
+      const meta = /^{:([.A-Za-z-]+)}/.exec(content)?.[1] || ''
       const metaParts = meta.split('.', 2)
 
       const language = (metaParts[0]?.trim() || 'text') as BundledLanguage
