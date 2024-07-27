@@ -12,8 +12,10 @@ import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import globals from 'globals'
 import tsEslint, { type ConfigWithExtends } from 'typescript-eslint'
 
+import { isFunction } from '@gpahal/std/functions'
+
 export type Config = typeof tsEslint.configs.all
-export const defineConfig = tsEslint.config
+export const createConfig = tsEslint.config
 
 const __filename = url.fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -32,10 +34,16 @@ function legacyPlugin(name: string, alias: string = name) {
   return fixupPluginRules(plugin)
 }
 
-export default function baseConfig(project: string | Array<string>, tsconfigRootDir: string): Config {
+export default function defineConfig(
+  project: string | Array<string>,
+  tsconfigRootDir: string,
+  ...configs: Array<Config | ((project: string, tsconfigRootDir: string) => Config)>
+): Config {
   return tsEslint.config(
     {
-      files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'],
+      files: ['**/*.{js,mjs,cjs,ts,jsx,tsx,astro}'],
+    },
+    {
       languageOptions: {
         globals: { ...globals.builtin, ...globals.es2022, ...globals.node, ...globals.worker },
         parserOptions: {
@@ -137,6 +145,9 @@ export default function baseConfig(project: string | Array<string>, tsconfigRoot
         '@typescript-eslint/unbound-method': ['off'],
       },
     },
+    ...configs.flatMap((subConfig) =>
+      isFunction(subConfig) ? (subConfig(project, tsconfigRootDir) as Config) : (subConfig as Config),
+    ),
     {
       ignores: [
         '**/build',
@@ -146,7 +157,10 @@ export default function baseConfig(project: string | Array<string>, tsconfigRoot
         '**/out-tsc',
         '**/.output',
         '**/coverage',
+        '**/.turbo',
+        '**/.next',
         '**/.vercel',
+        '**/.astro',
         '**/tmp',
         '**/.tmp',
         '**/.cache',

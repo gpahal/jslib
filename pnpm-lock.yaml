@@ -71,6 +71,9 @@ importers:
       '@eslint/eslintrc':
         specifier: ^3.1.0
         version: 3.1.0
+      '@gpahal/std':
+        specifier: workspace:*
+        version: link:../std
       '@next/eslint-plugin-next':
         specifier: ^14.2.5
         version: 14.2.5

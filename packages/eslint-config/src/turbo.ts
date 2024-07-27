@@ -16,5 +16,4 @@ export default config({
   settings: eslintPluginTurbo.configs.recommended.settings,
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
   rules: eslintPluginTurbo.configs.recommended.rules,
-  ignores: ['**/.turbo'],
 }) as Config

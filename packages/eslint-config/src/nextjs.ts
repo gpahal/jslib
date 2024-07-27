@@ -20,5 +20,4 @@ export default config(...reactConfig, {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     ...eslintPluginNext.configs['core-web-vitals'].rules,
   },
-  ignores: ['**/.next'],
 } as ConfigWithExtends) as Config
