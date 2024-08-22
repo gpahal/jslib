@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 
+import eslintPluginReact from '@eslint-react/eslint-plugin'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import eslintPluginJsxA11y from 'eslint-plugin-jsx-a11y'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import eslintPluginReact from 'eslint-plugin-react'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import eslintPluginReactHooks from 'eslint-plugin-react-hooks'
@@ -16,18 +14,26 @@ import type { Config } from './base'
 
 export default config(
   {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     languageOptions: {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      ...eslintPluginReact.configs.flat.recommended.languageOptions,
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
       globals: {
         ...globals.serviceworker,
         ...globals.browser,
       },
     },
   },
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-  eslintPluginReact.configs.flat.recommended,
+  {
+    files: ['**/*.{js,mjs,cjs,jsx}'],
+    ...eslintPluginReact.configs.recommended,
+  },
+  {
+    files: ['**/*.{ts,tsx,astro}'],
+    ...eslintPluginReact.configs['recommended-type-checked'],
+  },
   {
     plugins: {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

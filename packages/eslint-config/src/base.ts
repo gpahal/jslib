@@ -2,6 +2,7 @@ import eslint from '@eslint/js'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import eslintConfigPrettier from 'eslint-config-prettier'
+import { configs as eslintDependConfigs } from 'eslint-plugin-depend'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import eslintPluginImportX from 'eslint-plugin-import-x'
@@ -65,6 +66,7 @@ export default function defineConfig(
       rules: eslintPluginImportX.configs.recommended.rules,
     },
     eslintPluginUnicorn.configs['flat/recommended'] as ConfigWithExtends,
+    eslintDependConfigs['flat/recommended'],
     {
       files: ['**/*.{js,mjs,cjs,jsx}'],
       ...tsEslintConfigs.disableTypeChecked,
