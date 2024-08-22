@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 
-import type { JSX } from 'preact'
 import type { SatoriOptions } from 'satori'
 import { html as htmlLib } from 'satori-html'
 
@@ -15,7 +14,7 @@ export type VNode = {
   }
 }
 
-export type Node = ReactNode | JSX.Element | VNode
+export type Node = ReactNode | VNode
 
 export function html(templates: string | TemplateStringsArray, ...expressions: Array<unknown>): Node {
   return htmlLib(templates, ...expressions) as VNode
