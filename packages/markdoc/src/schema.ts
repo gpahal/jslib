@@ -2,10 +2,10 @@ import { Tag as MarkdocTag, type Schema } from '@markdoc/markdoc'
 import { sha1 } from 'object-hash'
 import {
   bundledLanguages,
-  FontStyle,
   getSingletonHighlighter,
   type BundledLanguage,
   type BundledTheme,
+  type FontStyle,
   type Highlighter,
   type ThemedToken,
 } from 'shiki'
@@ -202,11 +202,11 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
                   bgColor: settings?.background,
                   fontStyle:
                     settings?.fontStyle === 'italic'
-                      ? FontStyle.Italic
+                      ? 1
                       : settings?.fontStyle === 'bold'
-                        ? FontStyle.Bold
+                        ? 2
                         : settings?.fontStyle === 'underline'
-                          ? FontStyle.Underline
+                          ? 4
                           : undefined,
                 },
               ],
@@ -232,7 +232,17 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
                   new Tag(
                     'span',
                     {
-                      style: `${part.htmlStyle ? `${part.htmlStyle};` : ''}${part.color ? `color: ${part.color};` : ''}${part.bgColor ? `background-color: ${part.bgColor};` : ''}${part.fontStyle === FontStyle.Italic ? 'font-style: italic;' : part.fontStyle === FontStyle.Bold ? 'font-weight: bold;' : ''}${part.fontStyle === FontStyle.Underline ? `text-decoration: underline;` : ''}`,
+                      style: `${
+                        part.htmlStyle
+                          ? `${
+                              isString(part.htmlStyle)
+                                ? `${part.htmlStyle};`
+                                : Object.entries(part.htmlStyle)
+                                    .map(([key, value]) => `${key}:${value};`)
+                                    .join('')
+                            }`
+                          : ''
+                      }${part.color ? `color: ${part.color};` : ''}${part.bgColor ? `background-color: ${part.bgColor};` : ''}${part.fontStyle === (1 as FontStyle) ? 'font-style: italic;' : part.fontStyle === (2 as FontStyle) ? 'font-weight: bold;' : ''}${part.fontStyle === (4 as FontStyle) ? `text-decoration: underline;` : ''}`,
                     },
                     [part.content],
                   ),

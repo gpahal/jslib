@@ -5,10 +5,8 @@ import type { Config } from './base'
 
 export default function astroConfig(project: string | Array<string>, tsconfigRootDir: string): Config {
   return config(
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    ...eslintPluginAstro.configs.recommended,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    ...eslintPluginAstro.configs['jsx-a11y-recommended'],
+    ...eslintPluginAstro.configs['flat/recommended'],
+    ...eslintPluginAstro.configs['flat/jsx-a11y-recommended'],
     {
       files: ['*.astro'],
       languageOptions: {
