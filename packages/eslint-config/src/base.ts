@@ -8,7 +8,7 @@ import { configs as eslintDependConfigs } from 'eslint-plugin-depend'
 import eslintPluginImportX from 'eslint-plugin-import-x'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import globals from 'globals'
-import { config, configs as tsEslintConfigs, type ConfigWithExtends } from 'typescript-eslint'
+import { config, configs as tsEslintConfigs, parser as tsEslintParser, type ConfigWithExtends } from 'typescript-eslint'
 
 import { isFunction } from '@gpahal/std/functions'
 
@@ -68,7 +68,7 @@ export default function defineConfig(
     eslintPluginUnicorn.configs['flat/recommended'] as ConfigWithExtends,
     eslintDependConfigs['flat/recommended'],
     {
-      files: ['**/*.{js,mjs,cjs,jsx}'],
+      files: ['**/*.{js,mjs,cjs,jsx,astro}'],
       ...tsEslintConfigs.disableTypeChecked,
     },
     {
@@ -113,6 +113,16 @@ export default function defineConfig(
     },
     {
       files: ['**/*.{ts,tsx,astro}'],
+      languageOptions: {
+        parserOptions: {
+          sourceType: 'module',
+          ecmaVersion: 'latest',
+          parser: tsEslintParser,
+          extraFileExtensions: ['.astro'],
+          project,
+          tsconfigRootDir,
+        },
+      },
       rules: {
         'no-unused-vars': 'off',
         'import-x/default': 'off',

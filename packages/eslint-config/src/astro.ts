@@ -11,6 +11,8 @@ export default function astroConfig(project: string | Array<string>, tsconfigRoo
       files: ['*.astro'],
       languageOptions: {
         parserOptions: {
+          sourceType: 'module',
+          ecmaVersion: 'latest',
           parser: tsEslintParser,
           extraFileExtensions: ['.astro'],
           project,
