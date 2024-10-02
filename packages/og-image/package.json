@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.31",
+  "version": "0.0.32",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -43,6 +43,6 @@
   },
   "devDependencies": {
     "@gpahal/font": "workspace:*",
-    "@types/react": "^18.3.10"
+    "@types/react": "^18.3.11"
   }
 }
