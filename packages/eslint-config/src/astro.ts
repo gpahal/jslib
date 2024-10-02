@@ -8,7 +8,7 @@ export default function astroConfig(project: string | Array<string>, tsconfigRoo
     ...eslintPluginAstro.configs['flat/recommended'],
     ...eslintPluginAstro.configs['flat/jsx-a11y-recommended'],
     {
-      files: ['*.astro'],
+      files: ['**/*.astro'],
       languageOptions: {
         parserOptions: {
           sourceType: 'module',
@@ -23,6 +23,20 @@ export default function astroConfig(project: string | Array<string>, tsconfigRoo
         'react/jsx-key': 'off',
         'react/react-in-jsx-scope': 'off',
       },
+    } as ConfigWithExtends,
+    {
+      files: ['**/*.astro/*.ts'],
+      languageOptions: {
+        parserOptions: {
+          sourceType: 'module',
+          ecmaVersion: 'latest',
+          parser: tsEslintParser,
+          extraFileExtensions: ['.astro'],
+          project,
+          tsconfigRootDir,
+        },
+      },
+      processor: 'astro/client-side-ts',
     } as ConfigWithExtends,
   )
 }
