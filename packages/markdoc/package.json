@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/markdoc",
-  "version": "0.0.82",
+  "version": "0.0.83",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -38,7 +38,7 @@
     "js-yaml": "^4.1.0",
     "object-hash": "^3.0.0",
     "reading-time": "^1.5.0",
-    "shiki": "^1.21.0"
+    "shiki": "^1.22.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
