@@ -21,6 +21,7 @@ export type Components = Record<string, ComponentType> | ((string: string) => Co
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 function getComponent(tagName: Scalar, components?: Components): string | ComponentType {
   if (typeof tagName !== 'string' || !tagName) {
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string
     return String(tagName)
   }
 

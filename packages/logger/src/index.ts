@@ -47,6 +47,7 @@ export class Logger {
         format.align(),
         format.printf(
           ({ timestamp, level, message, ...rest }) =>
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
             `${timestamp} [${level}] ${message}${Object.keys(rest).length > 0 ? ` ${JSON.stringify(rest)}` : ''}`,
         ),
       )
@@ -59,6 +60,7 @@ export class Logger {
         format.colorize(),
         format.printf(
           ({ originalLevel, level, message }) =>
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
             `${originalLevel === 'error' || originalLevel === 'warn' ? `[${level}] ` : ''}${message}`,
         ),
       )

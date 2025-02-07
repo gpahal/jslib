@@ -17,6 +17,7 @@ export function toString(value: unknown): string {
     return value.toString()
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
   const result = String(value)
   return result == '0' && 1 / (value as number) == -INFINITY ? '-0' : result
 }

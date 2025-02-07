@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.33",
+  "version": "0.0.34",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -37,12 +37,12 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "satori": "^0.11.2",
+    "satori": "^0.12.1",
     "satori-html": "^0.3.2",
     "yoga-wasm-web": "^0.3.3"
   },
   "devDependencies": {
     "@gpahal/font": "workspace:*",
-    "@types/react": "^18.3.11"
+    "@types/react": "^19.0.8"
   }
 }
