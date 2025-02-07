@@ -5,7 +5,39 @@ const config = {
     'at-rule-no-unknown': [
       true,
       {
-        ignoreAtRules: ['tailwind', 'apply', 'layer', 'config'],
+        ignoreAtRules: [
+          'tailwind',
+          'layer',
+          'config',
+          'plugin',
+          'import',
+          'theme',
+          'source',
+          'utility',
+          'variant',
+          'custom-variant',
+          'apply',
+          'reference',
+        ],
+      },
+    ],
+    'at-rule-no-deprecated': [
+      true,
+      {
+        ignoreAtRules: [
+          'tailwind',
+          'layer',
+          'config',
+          'plugin',
+          'import',
+          'theme',
+          'source',
+          'utility',
+          'variant',
+          'custom-variant',
+          'apply',
+          'reference',
+        ],
       },
     ],
     'function-no-unknown': [
