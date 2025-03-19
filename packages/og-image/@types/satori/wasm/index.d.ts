@@ -9,5 +9,6 @@ declare module 'satori/wasm' {
   declare function satori(element: ReactNode, options: SatoriOptions): Promise<string>
 
   export type { SatoriOptions } from 'satori'
-  export { satori as default, init }
+  export default satori
+  export { init }
 }

@@ -5,7 +5,6 @@ import {
   getSingletonHighlighter,
   type BundledLanguage,
   type BundledTheme,
-  type FontStyle,
   type Highlighter,
   type ThemedToken,
 } from 'shiki'
@@ -242,7 +241,7 @@ export function generateCodeAndFenceSchema({ theme, wrapperTagName }: CodeAndFen
                                     .join('')
                             }`
                           : ''
-                      }${part.color ? `color: ${part.color};` : ''}${part.bgColor ? `background-color: ${part.bgColor};` : ''}${part.fontStyle === (1 as FontStyle) ? 'font-style: italic;' : part.fontStyle === (2 as FontStyle) ? 'font-weight: bold;' : ''}${part.fontStyle === (4 as FontStyle) ? `text-decoration: underline;` : ''}`,
+                      }${part.color ? `color: ${part.color};` : ''}${part.bgColor ? `background-color: ${part.bgColor};` : ''}${part.fontStyle === (1 as typeof part.fontStyle) ? 'font-style: italic;' : part.fontStyle === (2 as typeof part.fontStyle) ? 'font-weight: bold;' : ''}${part.fontStyle === (4 as typeof part.fontStyle) ? `text-decoration: underline;` : ''}`,
                     },
                     [part.content],
                   ),

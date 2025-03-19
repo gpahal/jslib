@@ -36,10 +36,9 @@ export default config(
   },
   {
     plugins: {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       'react-hooks': eslintPluginReactHooks,
     },
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
     rules: eslintPluginReactHooks.configs.recommended.rules,
   } as ConfigWithExtends,
   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access

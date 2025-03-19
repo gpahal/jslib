@@ -3,7 +3,7 @@ import isSymbol from '@/symbols'
 const INFINITY = 1 / 0
 
 export function isString(s: unknown): s is string {
-  return typeof s === 'string' || s instanceof String
+  return typeof s === 'string'
 }
 
 export function toString(value: unknown): string {

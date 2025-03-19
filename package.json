@@ -17,23 +17,23 @@
     "fmt-check": "prettier \"**/*.{js,mjs,cjs,ts,jsx,tsx,css,json}\" --check"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.12",
+    "@changesets/cli": "^2.28.1",
     "@gpahal/eslint-config": "workspace:*",
     "@gpahal/prettier-config": "workspace:*",
     "@gpahal/tsconfig": "workspace:*",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
-    "@types/node": "^22.13.1",
-    "@vitest/ui": "^3.0.5",
-    "eslint": "^9.19.0",
+    "@types/node": "^22.13.10",
+    "@vitest/ui": "^3.0.9",
+    "eslint": "^9.22.0",
     "npm-run-all2": "^7.0.2",
-    "prettier": "^3.4.2",
+    "prettier": "^3.5.3",
     "simple-git-hooks": "^2.11.1",
     "tsc-files": "^1.1.4",
-    "tsup": "^8.3.6",
-    "turbo": "^2.4.0",
-    "typescript": "^5.7.3",
-    "vite": "^6.1.0",
+    "tsup": "^8.4.0",
+    "turbo": "^2.4.4",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.0.5"
+    "vitest": "^3.0.9"
   }
 }
