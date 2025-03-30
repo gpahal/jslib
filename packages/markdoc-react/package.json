@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/markdoc-react",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -36,6 +36,6 @@
   },
   "devDependencies": {
     "@types/react": "^19.0.12",
-    "react": "^19.0.0"
+    "react": "^19.1.0"
   }
 }

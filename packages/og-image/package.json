@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.35",
+  "version": "0.0.36",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -37,7 +37,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "satori": "^0.12.1",
+    "satori": "^0.12.2",
     "satori-html": "^0.3.2",
     "yoga-wasm-web": "^0.3.3"
   },
