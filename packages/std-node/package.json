@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/std-node",
-  "version": "0.0.24",
+  "version": "0.0.25",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -9,8 +9,7 @@
     "./package.json": "./package.json",
     "./*": {
       "require": "./build/*.cjs",
-      "import": "./build/*.js",
-      "types": "./build/*.d.ts"
+      "import": "./build/*.js"
     }
   },
   "typesVersions": {

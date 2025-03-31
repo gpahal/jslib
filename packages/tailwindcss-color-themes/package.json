@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/tailwindcss-color-themes",
-  "version": "0.0.20",
+  "version": "0.0.26",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -9,8 +9,7 @@
     "./package.json": "./package.json",
     ".": {
       "require": "./build/index.cjs",
-      "import": "./build/index.js",
-      "types": "./build/index.d.ts"
+      "import": "./build/index.js"
     }
   },
   "main": "./build/index.cjs",
@@ -28,15 +27,13 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "test": "vitest run"
   },
   "dependencies": {
     "@gpahal/std": "workspace:*"
   },
-  "devDependencies": {
-    "tailwindcss": "^3.4.17"
-  },
   "peerDependencies": {
-    "tailwindcss": "^3.4 || ^4.0"
+    "tailwindcss": "^4"
   }
 }

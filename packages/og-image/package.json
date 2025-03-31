@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.36",
+  "version": "0.0.37",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -9,13 +9,11 @@
     "./package.json": "./package.json",
     ".": {
       "require": "./build/index.cjs",
-      "import": "./build/index.js",
-      "types": "./build/index.d.ts"
+      "import": "./build/index.js"
     },
     "./wasm": {
       "require": "./build/wasm.cjs",
-      "import": "./build/wasm.js",
-      "types": "./build/wasm.d.ts"
+      "import": "./build/wasm.js"
     }
   },
   "main": "./build/index.cjs",

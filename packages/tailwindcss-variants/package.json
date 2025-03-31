@@ -1,39 +1,27 @@
 {
   "name": "@gpahal/tailwindcss-variants",
-  "version": "0.0.16",
+  "version": "0.0.19",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
   "type": "module",
   "exports": {
     "./package.json": "./package.json",
-    ".": {
-      "require": "./build/index.cjs",
-      "import": "./build/index.js",
-      "types": "./build/index.d.ts"
-    }
+    ".": "./index.css",
+    "./index.css": "./index.css"
   },
-  "main": "./build/index.cjs",
-  "module": "./build/index.js",
-  "types": "./build/index.d.ts",
   "files": [
     "package.json",
     "README.md",
-    "src",
-    "build"
+    "index.css"
   ],
   "publishConfig": {
     "access": "public"
   },
-  "scripts": {
-    "dev": "tsup --watch",
-    "build": "tsup",
-    "prepublishOnly": "pnpm build"
-  },
   "devDependencies": {
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^4.0.17"
   },
   "peerDependencies": {
-    "tailwindcss": "^3.4 || ^4.0"
+    "tailwindcss": "^4"
   }
 }

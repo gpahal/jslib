@@ -96,7 +96,6 @@ export function shortHash(s: string): string {
   return sign + result
 }
 
-// refer to: http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
 function stringHashCode(s: string): number {
   let hash = 0
   if (s.length === 0) {

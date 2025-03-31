@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/markdoc-react",
-  "version": "0.0.30",
+  "version": "0.0.31",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -9,8 +9,7 @@
     "./package.json": "./package.json",
     ".": {
       "require": "./build/index.cjs",
-      "import": "./build/index.js",
-      "types": "./build/index.d.ts"
+      "import": "./build/index.js"
     }
   },
   "main": "./build/index.cjs",
