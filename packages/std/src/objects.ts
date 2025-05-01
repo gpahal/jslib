@@ -2,11 +2,11 @@ export type Prettify<T> = {
   [K in keyof T]: T[K]
 } & {}
 
-export function isObject(value: unknown): value is Record<string | number | symbol, unknown> {
-  return value != null && typeof value === 'object' && Object.prototype.toString.call(value) === '[object Object]'
+export function isObject(value: unknown): value is object {
+  return value != null && typeof value === 'object'
 }
 
-export function omitUndefinedValues<T extends Record<string | number | symbol, unknown>>(o: T): T {
+export function omitUndefinedValues<T extends object>(o: T): T {
   if (!o) {
     return o
   }
@@ -20,10 +20,7 @@ export function omitUndefinedValues<T extends Record<string | number | symbol, u
   return clone
 }
 
-export function omitUndefinedValuesAndKeys<T extends Record<string | number | symbol, unknown>>(
-  o: T,
-  keys: Array<string>,
-): T {
+export function omitUndefinedValuesAndKeys<T extends object>(o: T, keys: Array<PropertyKey>): T {
   if (!o) {
     return o
   }
