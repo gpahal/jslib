@@ -1,4 +1,7 @@
 import eslint from '@eslint/js'
+import eslintPluginJson from '@eslint/json'
+import eslintPluginMarkdown from '@eslint/markdown'
+import gitignore from 'eslint-config-flat-gitignore'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import eslintConfigPrettier from 'eslint-config-prettier'
@@ -6,44 +9,67 @@ import { configs as eslintDependConfigs } from 'eslint-plugin-depend'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import eslintPluginImportX from 'eslint-plugin-import-x'
+import { configs as eslintPluginRegexpConfigs } from 'eslint-plugin-regexp'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import globals from 'globals'
-import { config, configs as tsEslintConfigs, parser as tsEslintParser, type ConfigWithExtends } from 'typescript-eslint'
+import { config, configs as tsEslintConfigs, parser as tsEslintParser } from 'typescript-eslint'
 
 import { isFunction } from '@gpahal/std/functions'
 
 export { config as createConfig } from 'typescript-eslint'
 
+const FILES_WITHOUT_TYPES = ['**/*.{js,mjs,cjs,jsx}']
+const FILES_WITH_TYPES = ['**/*.{ts,tsx,astro}']
+const FILES = [...FILES_WITHOUT_TYPES, ...FILES_WITH_TYPES]
+
 export type Config = typeof tsEslintConfigs.all
 
-export default function defineConfig(
-  project: string | Array<string>,
-  tsconfigRootDir: string,
-  ...configs: Array<Config | ((project: string, tsconfigRootDir: string) => Config)>
-): Config {
+export type ConfigFn = (project: string | Array<string>, tsconfigRootDir: string) => Config
+
+export type BaseConfigOptions = {
+  tsconfigRootDir: string
+  tsconfigPaths: string | Array<string>
+  configs: Array<Config | ConfigFn>
+}
+
+export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }: BaseConfigOptions): Config {
   return config(
+    gitignore({
+      strict: false,
+    }),
     {
-      files: ['**/*.{js,mjs,cjs,ts,jsx,tsx,astro}'],
-    },
-    {
+      files: FILES,
       languageOptions: {
         globals: { ...globals.builtin, ...globals.es2022, ...globals.node, ...globals.worker },
         parserOptions: {
           sourceType: 'module',
           ecmaVersion: 'latest',
-          project,
           tsconfigRootDir,
+          project: tsconfigPaths,
         },
       },
       linterOptions: {
         reportUnusedDisableDirectives: true,
       },
     },
-    eslint.configs.recommended,
-    ...tsEslintConfigs.recommendedTypeChecked,
-    ...tsEslintConfigs.stylisticTypeChecked,
-    eslintConfigPrettier as ConfigWithExtends,
+    config(
+      eslint.configs.recommended,
+      ...tsEslintConfigs.recommendedTypeChecked,
+      ...tsEslintConfigs.stylisticTypeChecked,
+      eslintPluginRegexpConfigs['flat/recommended'],
+      eslintPluginUnicorn.configs.recommended,
+      eslintConfigPrettier,
+      eslintDependConfigs['flat/recommended'],
+    ).map((config) => ({
+      ...config,
+      files: FILES,
+    })),
     {
+      ...tsEslintConfigs.disableTypeChecked,
+      files: FILES_WITHOUT_TYPES,
+    },
+    {
+      files: FILES,
       plugins: {
         'import-x': eslintPluginImportX,
       },
@@ -56,7 +82,8 @@ export default function defineConfig(
         'import-x/resolver': {
           typescript: {
             alwaysTryTypes: true,
-            project,
+            tsconfigRootDir,
+            project: tsconfigPaths,
           },
           node: {
             extensions: ['.js', '.mjs', '.cjs', '.ts', '.jsx', '.tsx'],
@@ -65,13 +92,11 @@ export default function defineConfig(
       },
       rules: eslintPluginImportX.configs.recommended.rules,
     },
-    eslintPluginUnicorn.configs['flat/recommended'] as ConfigWithExtends,
-    eslintDependConfigs['flat/recommended'],
     {
-      files: ['**/*.{js,mjs,cjs,jsx,astro}'],
-      ...tsEslintConfigs.disableTypeChecked,
-    },
-    {
+      files: FILES,
+      plugins: {
+        'import-x': eslintPluginImportX,
+      },
       rules: {
         'no-unused-vars': [
           'error',
@@ -112,15 +137,15 @@ export default function defineConfig(
       },
     },
     {
-      files: ['**/*.{ts,tsx,astro}'],
+      files: FILES_WITH_TYPES,
       languageOptions: {
         parserOptions: {
           sourceType: 'module',
           ecmaVersion: 'latest',
           parser: tsEslintParser,
           extraFileExtensions: ['.astro'],
-          project,
           tsconfigRootDir,
+          project: tsconfigPaths,
         },
       },
       rules: {
@@ -149,8 +174,38 @@ export default function defineConfig(
         '@typescript-eslint/unbound-method': ['off'],
       },
     },
+    {
+      files: ['**/*.json'],
+      ignores: ['package-lock.json'],
+      plugins: {
+        json: eslintPluginJson,
+      },
+      language: 'json/json',
+      rules: eslintPluginJson.configs.recommended.rules,
+    },
+    {
+      files: ['**/*.jsonc'],
+      plugins: {
+        json: eslintPluginJson,
+      },
+      language: 'json/jsonc',
+      rules: eslintPluginJson.configs.recommended.rules,
+    },
+    {
+      files: ['**/*.json5'],
+      plugins: {
+        json: eslintPluginJson,
+      },
+      language: 'json/json5',
+      rules: eslintPluginJson.configs.recommended.rules,
+    },
+    eslintPluginMarkdown.configs.recommended.map((config) => ({
+      ...config,
+      files: ['**/*.md', '**/*.mdx', '**/*.mdoc'],
+      language: 'markdown/gfm',
+    })),
     ...configs.flatMap((subConfig) =>
-      isFunction(subConfig) ? (subConfig(project, tsconfigRootDir) as Config) : (subConfig as Config),
+      isFunction(subConfig) ? (subConfig(tsconfigRootDir, tsconfigPaths) as Config) : (subConfig as Config),
     ),
     {
       ignores: [

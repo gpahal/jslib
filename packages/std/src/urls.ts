@@ -23,7 +23,7 @@ export function getUrlString(url: Url): string {
  * - ftp://
  * - ... and other possible protocols
  */
-const ABSOLUTE_PATH_REGEX = /^(?:[A-Za-z]+:)?\/\//
+const ABSOLUTE_PATH_REGEX = /^(?:[a-z]+:)?\/\//i
 
 export function isAbsoluteUrl(url: Url): boolean {
   const urlString = getUrlString(url)

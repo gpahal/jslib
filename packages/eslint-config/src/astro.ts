@@ -3,7 +3,7 @@ import { config, parser as tsEslintParser, type ConfigWithExtends } from 'typesc
 
 import type { Config } from './base'
 
-export default function astroConfig(project: string | Array<string>, tsconfigRootDir: string): Config {
+export default function astroConfig(tsconfigRootDir: string, tsconfigPaths: string | Array<string>): Config {
   return config(
     ...eslintPluginAstro.configs['flat/recommended'],
     ...eslintPluginAstro.configs['flat/jsx-a11y-recommended'],
@@ -15,8 +15,8 @@ export default function astroConfig(project: string | Array<string>, tsconfigRoo
           ecmaVersion: 'latest',
           parser: tsEslintParser,
           extraFileExtensions: ['.astro'],
-          project,
           tsconfigRootDir,
+          project: tsconfigPaths,
         },
       },
       rules: {
@@ -32,8 +32,8 @@ export default function astroConfig(project: string | Array<string>, tsconfigRoo
           ecmaVersion: 'latest',
           parser: tsEslintParser,
           extraFileExtensions: ['.astro'],
-          project,
           tsconfigRootDir,
+          project: tsconfigPaths,
         },
       },
       processor: 'astro/client-side-ts',
