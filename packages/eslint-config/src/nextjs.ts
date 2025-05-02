@@ -6,9 +6,10 @@ import eslintPluginNext from '@next/eslint-plugin-next'
 import { config, type ConfigWithExtends } from 'typescript-eslint'
 
 import type { Config } from './base'
-import reactConfig from './react'
+import reactConfig, { FILES } from './react'
 
 export default config(...reactConfig, {
+  files: FILES,
   plugins: {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     '@next/next': eslintPluginNext,

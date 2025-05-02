@@ -8,6 +8,7 @@ import { config, type ConfigWithExtends } from 'typescript-eslint'
 import type { Config } from './base'
 
 export default config({
+  files: ['**/*.{js,mjs,cjs,jsx,ts,tsx,astro}'],
   plugins: {
     turbo: eslintPluginTurbo,
   },

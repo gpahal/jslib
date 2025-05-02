@@ -3,12 +3,20 @@ import { config, parser as tsEslintParser, type ConfigWithExtends } from 'typesc
 
 import type { Config } from './base'
 
+const FILES = ['*.astro', '**/*.astro']
+
 export default function astroConfig(tsconfigRootDir: string, tsconfigPaths: string | Array<string>): Config {
   return config(
-    ...eslintPluginAstro.configs['flat/recommended'],
-    ...eslintPluginAstro.configs['flat/jsx-a11y-recommended'],
+    ...eslintPluginAstro.configs['flat/recommended'].map((config) => ({
+      files: FILES,
+      ...config,
+    })),
+    ...eslintPluginAstro.configs['flat/jsx-a11y-recommended'].map((config) => ({
+      files: FILES,
+      ...config,
+    })),
     {
-      files: ['**/*.astro'],
+      files: FILES,
       languageOptions: {
         parserOptions: {
           sourceType: 'module',
@@ -25,7 +33,7 @@ export default function astroConfig(tsconfigRootDir: string, tsconfigPaths: stri
       },
     } as ConfigWithExtends,
     {
-      files: ['**/*.astro/*.ts'],
+      files: FILES.map((file) => `${file}/*.ts`),
       languageOptions: {
         parserOptions: {
           sourceType: 'module',

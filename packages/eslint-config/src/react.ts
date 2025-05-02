@@ -12,6 +12,10 @@ import { config, type ConfigWithExtends } from 'typescript-eslint'
 
 import type { Config } from './base'
 
+export const FILES_WITHOUT_TYPES = ['**/*.{js,mjs,cjs,jsx}']
+export const FILES_WITH_TYPES = ['**/*.{ts,tsx}']
+export const FILES = [...FILES_WITHOUT_TYPES, ...FILES_WITH_TYPES]
+
 export default config(
   {
     languageOptions: {
@@ -27,24 +31,22 @@ export default config(
     },
   },
   {
-    files: ['**/*.{js,mjs,cjs,jsx}'],
+    files: FILES_WITHOUT_TYPES,
     ...eslintPluginReact.configs.recommended,
   },
   {
-    files: ['**/*.{ts,tsx,astro}'],
+    files: FILES_WITH_TYPES,
     ...eslintPluginReact.configs['recommended-type-checked'],
   },
   {
+    files: FILES,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    extends: [eslintPluginJsxA11y.flatConfigs.recommended],
     plugins: {
       'react-hooks': eslintPluginReactHooks,
     },
-
-    rules: eslintPluginReactHooks.configs.recommended.rules,
-  } as ConfigWithExtends,
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-  eslintPluginJsxA11y.flatConfigs.recommended,
-  {
     rules: {
+      ...eslintPluginReactHooks.configs.recommended.rules,
       'react/no-unknown-property': 'off',
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
@@ -62,5 +64,5 @@ export default config(
       'jsx-a11y/role-has-required-aria-props': 'warn',
       'jsx-a11y/role-supports-aria-props': 'warn',
     },
-  },
+  } as ConfigWithExtends,
 ) as Config
