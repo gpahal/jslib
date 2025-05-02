@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.65",
+  "version": "0.0.66",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -35,7 +35,6 @@
   },
   "dependencies": {
     "@eslint/json": "^0.12.0",
-    "@eslint/markdown": "^6.4.0",
     "@gpahal/std": "workspace:*",
     "@typescript-eslint/parser": "^8.31.1",
     "eslint-config-flat-gitignore": "^2.1.0",

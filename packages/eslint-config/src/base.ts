@@ -1,6 +1,5 @@
 import eslint from '@eslint/js'
 import eslintPluginJson from '@eslint/json'
-import eslintPluginMarkdown from '@eslint/markdown'
 import gitignore from 'eslint-config-flat-gitignore'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -231,11 +230,6 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
       language: 'json/json5',
       rules: eslintPluginJson.configs.recommended.rules,
     },
-    eslintPluginMarkdown.configs.recommended.map((config) => ({
-      ...config,
-      files: ['**/*.md', '**/*.mdx', '**/*.mdoc'],
-      language: 'markdown/gfm',
-    })),
     ...configs.flatMap((subConfig) =>
       isFunction(subConfig) ? (subConfig(tsconfigRootDir, tsconfigPaths) as Config) : (subConfig as Config),
     ),
