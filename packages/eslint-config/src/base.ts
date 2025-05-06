@@ -8,6 +8,7 @@ import { configs as eslintDependConfigs } from 'eslint-plugin-depend'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import eslintPluginImportX from 'eslint-plugin-import-x'
+import * as eslintPluginMdx from 'eslint-plugin-mdx'
 import { configs as eslintPluginRegexpConfigs } from 'eslint-plugin-regexp'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import globals from 'globals'
@@ -100,10 +101,6 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
         eslintConfigPrettier,
         eslintDependConfigs['flat/recommended'],
       ],
-    },
-    {
-      files: FILES_WITHOUT_TYPES,
-      extends: [tsEslintConfigs.disableTypeChecked],
     },
     {
       files: FILES,
@@ -230,8 +227,27 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
       language: 'json/json5',
       rules: eslintPluginJson.configs.recommended.rules,
     },
+    {
+      ...eslintPluginMdx.flat,
+      processor: eslintPluginMdx.createRemarkProcessor({
+        lintCodeBlocks: true,
+        languageMapper: {},
+      }),
+    },
+    {
+      ...eslintPluginMdx.flatCodeBlocks,
+      rules: {
+        ...eslintPluginMdx.flatCodeBlocks.rules,
+        'no-var': 'error',
+        'prefer-const': 'error',
+      },
+    },
     ...configs.flatMap((subConfig) =>
       isFunction(subConfig) ? (subConfig(tsconfigRootDir, tsconfigPaths) as Config) : (subConfig as Config),
     ),
+    {
+      files: [...FILES_WITHOUT_TYPES, '**/*.{md,mdx}/**', '**/*.astro/*.ts'],
+      extends: [tsEslintConfigs.disableTypeChecked],
+    },
   )
 }

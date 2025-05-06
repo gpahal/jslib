@@ -1,0 +1,52 @@
+{
+  "name": "@gpahal/remark-preset-lint",
+  "version": "0.0.1",
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "require": "./build/index.cjs",
+      "import": "./build/index.js"
+    }
+  },
+  "main": "./build/index.cjs",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "files": [
+    "package.json",
+    "README.md",
+    "src",
+    "build"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-lint-checkbox-character-style": "^5.0.1",
+    "remark-lint-file-extension": "^3.0.1",
+    "remark-lint-list-item-indent": "^4.0.1",
+    "remark-lint-maximum-heading-length": "^4.1.1",
+    "remark-lint-maximum-line-length": "^4.1.1",
+    "remark-lint-mdx-jsx-no-void-children": "^1.0.1",
+    "remark-lint-mdx-jsx-quote-style": "^1.0.1",
+    "remark-lint-mdx-jsx-self-close": "^1.0.1",
+    "remark-lint-mdx-jsx-unique-attribute-name": "^1.0.1",
+    "remark-lint-no-heading-punctuation": "^4.0.1",
+    "remark-lint-no-undefined-references": "^5.0.2",
+    "remark-math": "^6.0.0",
+    "remark-mdx": "^3.1.0",
+    "remark-preset-lint-consistent": "^6.0.1",
+    "remark-preset-lint-markdown-style-guide": "^6.0.1",
+    "remark-preset-lint-recommended": "^7.0.1"
+  }
+}

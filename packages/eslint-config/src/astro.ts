@@ -3,7 +3,7 @@ import { config, parser as tsEslintParser, type ConfigWithExtends } from 'typesc
 
 import type { Config } from './base'
 
-const FILES = ['*.astro', '**/*.astro']
+const FILES = ['**/*.astro']
 
 export default function astroConfig(tsconfigRootDir: string, tsconfigPaths: string | Array<string>): Config {
   return config(
@@ -18,23 +18,7 @@ export default function astroConfig(tsconfigRootDir: string, tsconfigPaths: stri
     {
       files: FILES,
       languageOptions: {
-        parserOptions: {
-          sourceType: 'module',
-          ecmaVersion: 'latest',
-          parser: tsEslintParser,
-          extraFileExtensions: ['.astro'],
-          tsconfigRootDir,
-          project: tsconfigPaths,
-        },
-      },
-      rules: {
-        'react/jsx-key': 'off',
-        'react/react-in-jsx-scope': 'off',
-      },
-    } as ConfigWithExtends,
-    {
-      files: FILES.map((file) => `${file}/*.ts`),
-      languageOptions: {
+        sourceType: 'module',
         parserOptions: {
           sourceType: 'module',
           ecmaVersion: 'latest',
@@ -45,6 +29,22 @@ export default function astroConfig(tsconfigRootDir: string, tsconfigPaths: stri
         },
       },
       processor: 'astro/client-side-ts',
+      rules: {
+        'react/jsx-key': 'off',
+        'react/react-in-jsx-scope': 'off',
+      },
+    } as ConfigWithExtends,
+    {
+      files: FILES.map((file) => `${file}/*.ts`),
+      languageOptions: {
+        sourceType: 'module',
+        parser: tsEslintParser,
+        parserOptions: {
+          sourceType: 'module',
+          ecmaVersion: 'latest',
+          parser: tsEslintParser,
+        },
+      },
     } as ConfigWithExtends,
   )
 }
