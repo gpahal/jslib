@@ -124,7 +124,7 @@ const remarkPresetLintMd: {
     remarkLintMaximumHeadingLength,
 
     // https://cirosantilli.com/markdown-style-guide/#punctuation-at-the-end-of-headers
-    [remarkLintNoHeadingPunctuation, ':.'],
+    [remarkLintNoHeadingPunctuation, ':'],
 
     // https://cirosantilli.com/markdown-style-guide/#blockquotes
     [remarkLintBlockquoteIndentation, 2],
