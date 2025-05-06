@@ -28,6 +28,10 @@ This is a collection of javascript/typescript libraries and configuration preset
 - [@gpahal/font](/packages/font)
 - [@gpahal/font-fallback](/packages/font-fallback)
 
+### Markdown utilities
+
+- [@gpahal/remark-preset-lint-md](/packages/remark-preset-lint-md)
+
 ### Tailwind CSS plugins
 
 - [@gpahal/tailwindcss-color-themes](/packages/tailwindcss-color-themes)
