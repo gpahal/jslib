@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 
-import eslintPluginVitest from 'eslint-plugin-vitest'
+import eslintPluginVitest from '@vitest/eslint-plugin'
 import { config } from 'typescript-eslint'
 
 import type { Config } from './base'
