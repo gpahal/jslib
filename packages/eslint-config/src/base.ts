@@ -270,7 +270,7 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
       },
     },
     {
-      files: ['**/*.config.{' + FILES.join(',') + '}'],
+      files: ['**/*.config.{' + FILES_EXTNS.join(',') + '}'],
       rules: {
         'import-x/no-anonymous-default-export': 'off',
         'unicorn/filename-case': 'off',
