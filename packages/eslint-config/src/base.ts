@@ -18,9 +18,13 @@ import { isFunction } from '@gpahal/std/functions'
 
 export { config as createConfig } from 'typescript-eslint'
 
-const FILES_WITHOUT_TYPES = ['**/*.{js,mjs,cjs,jsx}']
-const FILES_WITH_TYPES = ['**/*.{ts,tsx,astro}']
-const FILES = [...FILES_WITHOUT_TYPES, ...FILES_WITH_TYPES]
+const FILES_WITHOUT_TYPES_EXTNS = ['js', 'mjs', 'cjs', 'jsx']
+const FILES_WITH_TYPES_EXTNS = ['ts', 'tsx', 'astro']
+const FILES_EXTNS = [...FILES_WITHOUT_TYPES_EXTNS, ...FILES_WITH_TYPES_EXTNS]
+
+const FILES_WITHOUT_TYPES = ['**/*.{' + FILES_WITHOUT_TYPES_EXTNS.join(',') + '}']
+const FILES_WITH_TYPES = ['**/*.{' + FILES_WITH_TYPES_EXTNS.join(',') + '}']
+const FILES = ['**/*.{' + FILES_EXTNS.join(',') + '}']
 
 export type Config = typeof tsEslintConfigs.all
 
@@ -240,6 +244,9 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
         ...eslintPluginMdx.flatCodeBlocks.rules,
         'no-var': 'error',
         'prefer-const': 'error',
+        'import-x/no-anonymous-default-export': 'off',
+        'unicorn/filename-case': 'off',
+        'react-hooks/rules-of-hooks': 'off',
       },
     },
     ...configs.flatMap((subConfig) =>
@@ -248,6 +255,29 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
     {
       files: [...FILES_WITHOUT_TYPES, '**/*.{md,mdx}/**', '**/*.astro/*.ts'],
       extends: [tsEslintConfigs.disableTypeChecked],
+    },
+    {
+      files: ['**/*.md/**'],
+      rules: {
+        'import-x/no-anonymous-default-export': 'off',
+        'unicorn/filename-case': 'off',
+      },
+    },
+    {
+      files: ['**/*.config.{' + FILES_WITHOUT_TYPES_EXTNS.join(',') + '}'],
+      rules: {
+        'import-x/no-anonymous-default-export': 'off',
+        'unicorn/filename-case': 'off',
+        'unicorn/no-abusive-eslint-disable': 'off',
+      },
+    },
+    {
+      files: ['**/*.{gen,generated}.{' + FILES_WITHOUT_TYPES_EXTNS.join(',') + '}'],
+      rules: {
+        'import-x/no-anonymous-default-export': 'off',
+        'unicorn/filename-case': 'off',
+        'unicorn/no-abusive-eslint-disable': 'off',
+      },
     },
   )
 }
