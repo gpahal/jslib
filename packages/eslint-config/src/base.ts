@@ -43,6 +43,12 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
     }),
     {
       ignores: [
+        '**/_gen',
+        '**/_generated',
+        '**/*.gen',
+        '**/*.generated',
+        '**/*.gen.*',
+        '**/*.generated.*',
         '**/build',
         '**/dist',
         '**/target',
@@ -264,15 +270,7 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
       },
     },
     {
-      files: ['**/*.config.{' + FILES_WITHOUT_TYPES_EXTNS.join(',') + '}'],
-      rules: {
-        'import-x/no-anonymous-default-export': 'off',
-        'unicorn/filename-case': 'off',
-        'unicorn/no-abusive-eslint-disable': 'off',
-      },
-    },
-    {
-      files: ['**/*.{gen,generated}.{' + FILES_WITHOUT_TYPES_EXTNS.join(',') + '}'],
+      files: ['**/*.config.{' + FILES.join(',') + '}'],
       rules: {
         'import-x/no-anonymous-default-export': 'off',
         'unicorn/filename-case': 'off',
