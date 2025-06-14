@@ -7,8 +7,17 @@ export type OutputImageFormatSupportsAlpha = 'avif' | 'png' | 'tiff' | 'webp'
 export type OutputImageFormatNotSupportsAlpha = 'gif' | 'jpeg' | 'jpg'
 export type OutputImageFormat = OutputImageFormatSupportsAlpha | OutputImageFormatNotSupportsAlpha
 
-export const OUTPUT_IMAGE_FORMATS_WITH_ALPHA: Array<OutputImageFormatSupportsAlpha> = ['avif', 'png', 'tiff', 'webp']
-export const OUTPUT_IMAGE_FORMATS_WITHOUT_ALPHA: Array<OutputImageFormatNotSupportsAlpha> = ['gif', 'jpeg', 'jpg']
+export const OUTPUT_IMAGE_FORMATS_WITH_ALPHA: Array<OutputImageFormatSupportsAlpha> = [
+  'avif',
+  'png',
+  'tiff',
+  'webp',
+]
+export const OUTPUT_IMAGE_FORMATS_WITHOUT_ALPHA: Array<OutputImageFormatNotSupportsAlpha> = [
+  'gif',
+  'jpeg',
+  'jpg',
+]
 export const OUTPUT_IMAGE_FORMATS: Array<OutputImageFormat> = [
   ...OUTPUT_IMAGE_FORMATS_WITH_ALPHA,
   ...OUTPUT_IMAGE_FORMATS_WITHOUT_ALPHA,
@@ -50,7 +59,9 @@ export type TransformImageBufferResponse = {
   height: number
 }
 
-export type TransformImageBufferFn = (request: TransformImageBufferRequest) => Promise<TransformImageBufferResponse>
+export type TransformImageBufferFn = (
+  request: TransformImageBufferRequest,
+) => Promise<TransformImageBufferResponse>
 
 export type TransformImageSrcRequest = BaseTransformImageRequest & {
   src: string
@@ -97,7 +108,10 @@ function getMaxWidthImageLayoutBreakpoints({ maxWidth }: MaxWidthImageLayout): A
   return [maxWidth, ...DEVICE_WIDTHS.filter((w) => w < maxWidth)]
 }
 
-function getVwRatioImageLayoutBreakpoints({ vwRatio, maxWidth: layoutMaxWidth }: VwRatioImageLayout): Array<number> {
+function getVwRatioImageLayoutBreakpoints({
+  vwRatio,
+  maxWidth: layoutMaxWidth,
+}: VwRatioImageLayout): Array<number> {
   const minWidth = SMALLEST_DEVICE_WIDTH * vwRatio
   let maxWidth = LARGEST_DEVICE_WIDTH * vwRatio
   if (layoutMaxWidth != null && layoutMaxWidth > 0) {
@@ -113,7 +127,9 @@ function getImageLayoutSizesAttribute(layout: ImageLayout): string {
     }
     case 'vw-ratio': {
       return `${
-        layout.maxWidth != null && layout.maxWidth > 0 ? `(min-width: ${layout.maxWidth}px) ${layout.maxWidth}px, ` : ''
+        layout.maxWidth != null && layout.maxWidth > 0
+          ? `(min-width: ${layout.maxWidth}px) ${layout.maxWidth}px, `
+          : ''
       }${layout.vwRatio}vw`
     }
   }
@@ -151,7 +167,14 @@ function getImageSrcSetAttribute({
     .join(',\n')
 }
 
-export type ImageObjectFit = 'contain' | 'cover' | 'fill' | 'none' | 'scale-down' | 'inherit' | 'initial'
+export type ImageObjectFit =
+  | 'contain'
+  | 'cover'
+  | 'fill'
+  | 'none'
+  | 'scale-down'
+  | 'inherit'
+  | 'initial'
 
 export type ImageStyle = {
   width?: string
@@ -332,11 +355,13 @@ function getImageSourceProps({
     }
   }
 
-  const nonTransformableImageSourceProps = getNonTransformableImageSourceProps(nonTransformableOptions)
+  const nonTransformableImageSourceProps =
+    getNonTransformableImageSourceProps(nonTransformableOptions)
   const style = nonTransformableImageSourceProps.style
 
   const { aspectRatio, layout = { type: 'vw-ratio', vwRatio: 1 } } = nonTransformableOptions
-  const finalWidth = layout.maxWidth != null ? Math.min(layout.maxWidth, DEFAULT_DEVICE_WIDTH) : DEFAULT_DEVICE_WIDTH
+  const finalWidth =
+    layout.maxWidth != null ? Math.min(layout.maxWidth, DEFAULT_DEVICE_WIDTH) : DEFAULT_DEVICE_WIDTH
   let src = nonTransformableImageSourceProps.src
   src = transformer({
     src,
@@ -384,7 +409,11 @@ type ImageNonSourceProps = {
   fetchpriority: ImageFetchPriority
 }
 
-function getImageNonSourceProps({ alt, role, isPriority }: ImageNonSourceOptions): ImageNonSourceProps {
+function getImageNonSourceProps({
+  alt,
+  role,
+  isPriority,
+}: ImageNonSourceOptions): ImageNonSourceProps {
   if (!alt) {
     alt = ''
     role ||= 'presentation'
@@ -408,11 +437,17 @@ function getImageNonSourceProps({ alt, role, isPriority }: ImageNonSourceOptions
   }
 }
 
-export type NonTransformableImageOptions = Prettify<NonTransformableImageSourceOptions & ImageNonSourceOptions>
+export type NonTransformableImageOptions = Prettify<
+  NonTransformableImageSourceOptions & ImageNonSourceOptions
+>
 
-export type NonTransformableImageProps = Prettify<NonTransformableImageSourceProps & ImageNonSourceProps>
+export type NonTransformableImageProps = Prettify<
+  NonTransformableImageSourceProps & ImageNonSourceProps
+>
 
-export function getNonTransformableImageProps(options: NonTransformableImageOptions): NonTransformableImageProps {
+export function getNonTransformableImageProps(
+  options: NonTransformableImageOptions,
+): NonTransformableImageProps {
   return {
     ...getNonTransformableImageSourceProps(options),
     ...getImageNonSourceProps(options),
@@ -456,16 +491,25 @@ export type PictureSourceOptions = Prettify<
   }
 >
 
-function normalizeOutputImageFormats({ src, formats }: PictureSourceOptions): Array<OutputImageFormat> {
-  const finalFormats: Array<OutputImageFormat> = formats && formats.length > 0 ? formats : ['avif', 'webp']
+function normalizeOutputImageFormats({
+  src,
+  formats,
+}: PictureSourceOptions): Array<OutputImageFormat> {
+  const finalFormats: Array<OutputImageFormat> =
+    formats && formats.length > 0 ? formats : ['avif', 'webp']
   const extname = getExtension(src)
-  const fallbackFormat: OutputImageFormat = OUTPUT_IMAGE_FORMATS.includes(extname as OutputImageFormat)
+  const fallbackFormat: OutputImageFormat = OUTPUT_IMAGE_FORMATS.includes(
+    extname as OutputImageFormat,
+  )
     ? (extname as OutputImageFormat)
     : 'png'
   return finalFormats.includes(fallbackFormat) ? finalFormats : [...finalFormats, fallbackFormat]
 }
 
-function getPictureSourceOptionsMediaAttribute({ minWidth, maxWidth }: PictureSourceOptions): string {
+function getPictureSourceOptionsMediaAttribute({
+  minWidth,
+  maxWidth,
+}: PictureSourceOptions): string {
   const queries: Array<string> = []
   if (minWidth) {
     queries.push(`(min-width: ${minWidth}px)`)

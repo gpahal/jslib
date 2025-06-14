@@ -4,7 +4,10 @@ import { config, tsEslintParser, type ConfigArray, type ConfigWithExtends } from
 
 const FILES = ['**/*.astro']
 
-export default function astroConfig(tsconfigRootDir: string, tsconfigPaths: string | Array<string>): ConfigArray {
+export default function astroConfig(
+  tsconfigRootDir: string,
+  tsconfigPaths: string | Array<string>,
+): ConfigArray {
   return config(
     ...eslintPluginAstro.configs['flat/recommended'].map((config) => ({
       files: FILES,

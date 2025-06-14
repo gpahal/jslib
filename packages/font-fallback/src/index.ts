@@ -44,7 +44,8 @@ export async function getFontUrlMetrics(url: URL): Promise<Font | undefined> {
     return undefined
   }
 
-  const metrics = url.protocol === 'file:' ? await fromFile(fileURLToPath(url)) : await fromUrl(href)
+  const metrics =
+    url.protocol === 'file:' ? await fromFile(fileURLToPath(url)) : await fromUrl(href)
   metricsCache.set(href, metrics)
   return metrics
 }

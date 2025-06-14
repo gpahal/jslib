@@ -3,7 +3,16 @@ import { createLogger, format, transports, type Logger as LoggerLib } from 'wins
 
 const TRANSPORT_CONSOLE = new transports.Console()
 
-export type LoggerLevel = 'silly' | 'debug' | 'verbose' | 'http' | 'info' | 'help' | 'warn' | 'error' | 'critical'
+export type LoggerLevel =
+  | 'silly'
+  | 'debug'
+  | 'verbose'
+  | 'http'
+  | 'info'
+  | 'help'
+  | 'warn'
+  | 'error'
+  | 'critical'
 
 const levels: Record<LoggerLevel, number> = {
   silly: 90,

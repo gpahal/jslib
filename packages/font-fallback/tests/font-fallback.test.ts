@@ -1,4 +1,8 @@
-import { getFontFallbackCssString, getFontFallbacksCssProperties, getFontFamilyMetrics } from '../src'
+import {
+  getFontFallbackCssString,
+  getFontFallbacksCssProperties,
+  getFontFamilyMetrics,
+} from '../src'
 
 const FONT_FAMILY = 'Figtree'
 const FALLBACK_FONT_FAMILIES = [

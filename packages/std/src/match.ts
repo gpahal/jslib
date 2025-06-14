@@ -11,7 +11,9 @@ export function match<T extends string | number = string, R = unknown>(
   }
 
   const error = new Error(
-    `Tried to match "${value}" but there is no handler defined. Valid values are: ${Object.keys(lookup)
+    `Tried to match "${value}" but there is no handler defined. Valid values are: ${Object.keys(
+      lookup,
+    )
       .map((key) => `"${key}"`)
       .join(', ')}.`,
   )

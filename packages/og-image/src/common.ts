@@ -16,7 +16,10 @@ export type VNode = {
 
 export type Node = ReactNode | VNode
 
-export function html(templates: string | TemplateStringsArray, ...expressions: Array<unknown>): Node {
+export function html(
+  templates: string | TemplateStringsArray,
+  ...expressions: Array<unknown>
+): Node {
   return htmlLib(templates, ...expressions) as VNode
 }
 

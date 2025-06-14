@@ -6,7 +6,7 @@ export type Config = PrettierConfig & PluginConfig
 const config: Config = {
   $schema: 'http://json.schemastore.org/prettierrc',
   endOfLine: 'lf',
-  printWidth: 120,
+  printWidth: 100,
   tabWidth: 2,
   trailingComma: 'all',
   semi: false,

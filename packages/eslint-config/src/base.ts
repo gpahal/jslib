@@ -33,7 +33,11 @@ export type BaseConfigOptions = {
   configs: Array<ConfigArray | ConfigFn>
 }
 
-export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }: BaseConfigOptions): ConfigArray {
+export default function defineConfig({
+  tsconfigRootDir,
+  tsconfigPaths,
+  configs,
+}: BaseConfigOptions): ConfigArray {
   return config(
     gitignore({
       strict: false,
@@ -203,7 +207,10 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
         ],
         '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
         '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
-        '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
+        '@typescript-eslint/no-misused-promises': [
+          'error',
+          { checksVoidReturn: { attributes: false } },
+        ],
         '@typescript-eslint/no-floating-promises': ['error'],
         '@typescript-eslint/prefer-nullish-coalescing': ['off'],
         '@typescript-eslint/unbound-method': ['off'],
@@ -253,7 +260,9 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
       },
     },
     ...configs.flatMap((subConfig) =>
-      isFunction(subConfig) ? (subConfig(tsconfigRootDir, tsconfigPaths) as ConfigArray) : (subConfig as ConfigArray),
+      isFunction(subConfig)
+        ? (subConfig(tsconfigRootDir, tsconfigPaths) as ConfigArray)
+        : (subConfig as ConfigArray),
     ),
     {
       files: [...FILES_WITHOUT_TYPES, '**/*.{md,mdx}/**', '**/*.astro/*.ts'],
