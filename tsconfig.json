@@ -9,7 +9,7 @@
     { "path": "packages/image-node" },
     { "path": "packages/logger" },
     { "path": "packages/og-image" },
-    { "path": "packages/remark-preset-lint-md" },
+    { "path": "packages/remark-preset-lint" },
     { "path": "packages/std" },
     { "path": "packages/std-node" },
     { "path": "packages/tailwindcss-color-themes" }

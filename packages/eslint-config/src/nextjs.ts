@@ -1,14 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import eslintPluginNext from '@next/eslint-plugin-next'
-import { config, type ConfigWithExtends } from 'typescript-eslint'
 
-import type { Config } from './base'
+import { config, type ConfigArray, type ConfigWithExtends } from './common'
 import reactConfig, { FILES } from './react'
 
-export default config(...reactConfig, {
+const nextjsConfig: ConfigArray = config(...reactConfig, {
   files: FILES,
   plugins: {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -21,4 +18,6 @@ export default config(...reactConfig, {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     ...eslintPluginNext.configs['core-web-vitals'].rules,
   },
-} as ConfigWithExtends) as Config
+} as ConfigWithExtends)
+
+export default nextjsConfig

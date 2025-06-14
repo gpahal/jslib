@@ -1,11 +1,10 @@
 import eslintPluginAstro from 'eslint-plugin-astro'
-import { config, parser as tsEslintParser, type ConfigWithExtends } from 'typescript-eslint'
 
-import type { Config } from './base'
+import { config, tsEslintParser, type ConfigArray, type ConfigWithExtends } from './common'
 
 const FILES = ['**/*.astro']
 
-export default function astroConfig(tsconfigRootDir: string, tsconfigPaths: string | Array<string>): Config {
+export default function astroConfig(tsconfigRootDir: string, tsconfigPaths: string | Array<string>): ConfigArray {
   return config(
     ...eslintPluginAstro.configs['flat/recommended'].map((config) => ({
       files: FILES,

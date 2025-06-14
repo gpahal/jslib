@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-
 import eslintPluginReact from '@eslint-react/eslint-plugin'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -8,15 +6,14 @@ import eslintPluginJsxA11y from 'eslint-plugin-jsx-a11y'
 // @ts-ignore
 import eslintPluginReactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
-import { config, type ConfigWithExtends } from 'typescript-eslint'
 
-import type { Config } from './base'
+import { config, type ConfigArray, type ConfigWithExtends } from './common'
 
 export const FILES_WITHOUT_TYPES = ['**/*.{js,mjs,cjs,jsx}']
 export const FILES_WITH_TYPES = ['**/*.{ts,tsx}']
 export const FILES = [...FILES_WITHOUT_TYPES, ...FILES_WITH_TYPES]
 
-export default config(
+const reactConfig: ConfigArray = config(
   {
     languageOptions: {
       parserOptions: {
@@ -65,4 +62,6 @@ export default config(
       'jsx-a11y/role-supports-aria-props': 'warn',
     },
   } as ConfigWithExtends,
-) as Config
+)
+
+export default reactConfig

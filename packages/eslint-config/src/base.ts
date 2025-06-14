@@ -12,11 +12,12 @@ import * as eslintPluginMdx from 'eslint-plugin-mdx'
 import { configs as eslintPluginRegexpConfigs } from 'eslint-plugin-regexp'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import globals from 'globals'
-import { config, configs as tsEslintConfigs, parser as tsEslintParser } from 'typescript-eslint'
 
 import { isFunction } from '@gpahal/std/functions'
 
-export { config as createConfig } from 'typescript-eslint'
+import { config, tsEslintConfigs, tsEslintParser, type ConfigArray, type ConfigFn } from './common'
+
+export { config as createConfig } from './common'
 
 const FILES_WITHOUT_TYPES_EXTNS = ['js', 'mjs', 'cjs', 'jsx']
 const FILES_WITH_TYPES_EXTNS = ['ts', 'tsx', 'astro']
@@ -26,17 +27,13 @@ const FILES_WITHOUT_TYPES = ['**/*.{' + FILES_WITHOUT_TYPES_EXTNS.join(',') + '}
 const FILES_WITH_TYPES = ['**/*.{' + FILES_WITH_TYPES_EXTNS.join(',') + '}']
 const FILES = ['**/*.{' + FILES_EXTNS.join(',') + '}']
 
-export type Config = typeof tsEslintConfigs.all
-
-export type ConfigFn = (project: string | Array<string>, tsconfigRootDir: string) => Config
-
 export type BaseConfigOptions = {
   tsconfigRootDir: string
   tsconfigPaths: string | Array<string>
-  configs: Array<Config | ConfigFn>
+  configs: Array<ConfigArray | ConfigFn>
 }
 
-export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }: BaseConfigOptions): Config {
+export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }: BaseConfigOptions): ConfigArray {
   return config(
     gitignore({
       strict: false,
@@ -256,7 +253,7 @@ export default function defineConfig({ tsconfigRootDir, tsconfigPaths, configs }
       },
     },
     ...configs.flatMap((subConfig) =>
-      isFunction(subConfig) ? (subConfig(tsconfigRootDir, tsconfigPaths) as Config) : (subConfig as Config),
+      isFunction(subConfig) ? (subConfig(tsconfigRootDir, tsconfigPaths) as ConfigArray) : (subConfig as ConfigArray),
     ),
     {
       files: [...FILES_WITHOUT_TYPES, '**/*.{md,mdx}/**', '**/*.astro/*.ts'],

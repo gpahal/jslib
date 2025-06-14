@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.84",
+  "version": "0.0.85",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -34,7 +34,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "@eslint/js": "^9.28.0",
+    "@eslint/js": "^9.29.0",
     "@eslint/json": "^0.12.0",
     "@gpahal/std": "workspace:*",
     "@typescript-eslint/parser": "^8.34.0",
@@ -42,30 +42,31 @@
     "eslint-config-prettier": "^10.1.5",
     "eslint-import-resolver-typescript": "^4.4.3",
     "eslint-plugin-depend": "^1.2.0",
-    "eslint-plugin-import-x": "^4.15.1",
+    "eslint-plugin-import-x": "^4.15.2",
     "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-mdx": "^3.4.2",
-    "eslint-plugin-n": "^17.19.0",
+    "eslint-plugin-mdx": "^3.5.0",
+    "eslint-plugin-n": "^17.20.0",
     "eslint-plugin-regexp": "^2.9.0",
     "eslint-plugin-unicorn": "^59.0.1",
     "globals": "^16.2.0",
     "typescript-eslint": "^8.34.0"
   },
   "devDependencies": {
-    "@eslint-react/eslint-plugin": "^1.52.1",
+    "@eslint-react/eslint-plugin": "^1.52.2",
     "@next/eslint-plugin-next": "^15.3.3",
-    "@vitest/eslint-plugin": "^1.2.2",
+    "@typescript-eslint/utils": "^8.34.0",
+    "@vitest/eslint-plugin": "^1.2.5",
     "eslint-plugin-astro": "^1.3.1",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-turbo": "^2.5.4"
   },
   "peerDependencies": {
-    "@eslint-react/eslint-plugin": "^1.52.1",
-    "@next/eslint-plugin-next": "^15.3.3",
-    "@vitest/eslint-plugin": "^1.2.2",
-    "eslint-plugin-astro": "^1.3.1",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-turbo": "^2.5.4"
+    "@eslint-react/eslint-plugin": "^1.52",
+    "@next/eslint-plugin-next": "^15.3",
+    "@vitest/eslint-plugin": "^1.2",
+    "eslint-plugin-astro": "^1.3",
+    "eslint-plugin-react-hooks": "^5.2",
+    "eslint-plugin-turbo": "^2.5"
   },
   "peerDependenciesMeta": {
     "@eslint-react/eslint-plugin": {

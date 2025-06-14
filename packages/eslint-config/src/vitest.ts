@@ -1,11 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-
 import eslintPluginVitest from '@vitest/eslint-plugin'
-import { config } from 'typescript-eslint'
 
-import type { Config } from './base'
+import { config, type ConfigArray } from './common'
 
-export default config({
+const vitestConfig: ConfigArray = config({
   files: ['**/*.test.{js,mjs,cjs,ts,jsx,tsx}'],
   languageOptions: {
     globals: {
@@ -21,4 +18,6 @@ export default config({
     },
   },
   rules: eslintPluginVitest.configs.recommended.rules,
-}) as Config
+})
+
+export default vitestConfig
