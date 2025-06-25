@@ -28,4 +28,4 @@ export function config(...configs: Array<ConfigWithExtends>): ConfigArray {
   return tsEslintConfig(...(configs as Array<InfiniteDepthConfigWithExtends>))
 }
 
-export type ConfigFn = (project: string | Array<string>, tsconfigRootDir: string) => ConfigArray
+export type ConfigFn = (project: string | Array<string>) => ConfigArray

@@ -3,5 +3,19 @@
   "compilerOptions": {
     "baseUrl": "."
   },
-  "include": ["config", "*.config.ts"]
+  "include": ["config", "*.config.ts"],
+  "references": [
+    { "path": "packages/eslint-config" },
+    { "path": "packages/font" },
+    { "path": "packages/font-fallback" },
+    { "path": "packages/image" },
+    { "path": "packages/image-node" },
+    { "path": "packages/logger" },
+    { "path": "packages/og-image" },
+    { "path": "packages/prettier-config" },
+    { "path": "packages/remark-preset-lint" },
+    { "path": "packages/std" },
+    { "path": "packages/std-node" },
+    { "path": "packages/tailwindcss-color-themes" }
+  ]
 }

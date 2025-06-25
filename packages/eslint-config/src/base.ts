@@ -29,15 +29,10 @@ const FILES = ['**/*.{' + FILES_EXTNS.join(',') + '}']
 
 export type BaseConfigOptions = {
   tsconfigRootDir: string
-  tsconfigPaths: string | Array<string>
   configs: Array<ConfigArray | ConfigFn>
 }
 
-export default function defineConfig({
-  tsconfigRootDir,
-  tsconfigPaths,
-  configs,
-}: BaseConfigOptions): ConfigArray {
+export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOptions): ConfigArray {
   return config(
     gitignore({
       strict: false,
@@ -94,7 +89,7 @@ export default function defineConfig({
           sourceType: 'module',
           ecmaVersion: 'latest',
           tsconfigRootDir,
-          project: tsconfigPaths,
+          projectService: true,
         },
       },
       linterOptions: {
@@ -128,7 +123,7 @@ export default function defineConfig({
           typescript: {
             alwaysTryTypes: true,
             tsconfigRootDir,
-            project: tsconfigPaths,
+            projectService: true,
           },
           node: {
             extensions: ['.js', '.mjs', '.cjs', '.ts', '.jsx', '.tsx'],
@@ -184,7 +179,7 @@ export default function defineConfig({
           parser: tsEslintParser,
           extraFileExtensions: ['.astro'],
           tsconfigRootDir,
-          project: tsconfigPaths,
+          projectService: true,
         },
       },
       rules: {
@@ -261,7 +256,7 @@ export default function defineConfig({
     },
     ...configs.flatMap((subConfig) =>
       isFunction(subConfig)
-        ? (subConfig(tsconfigRootDir, tsconfigPaths) as ConfigArray)
+        ? (subConfig(tsconfigRootDir) as ConfigArray)
         : (subConfig as ConfigArray),
     ),
     {
