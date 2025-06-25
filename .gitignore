@@ -15,6 +15,7 @@ tmp
 .cache
 .eslintcache
 tsconfig.tsbuildinfo
+tsconfig.*.tsbuildinfo
 
 # Node
 node_modules

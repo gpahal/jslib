@@ -28,17 +28,19 @@ export function getBaseConfig(options: Options): Options {
   const isDevEnv = process.env.NODE_ENV === 'development' || !!options.watch
   return {
     entry: ['src/*'],
+    tsconfig: 'tsconfig.build.json',
     outDir: 'build',
-    format: ['esm', 'cjs'],
+    format: ['esm'],
     env: {
       NODE_ENV: isDevEnv ? 'development' : 'production',
     },
-    clean: true,
     splitting: false,
+    clean: true,
     sourcemap: true,
-    dts: !isDevEnv,
+    dts: false,
     minify: !isDevEnv,
     ignoreWatch: IGNORE_PATTERNS,
     external: ['espree'],
+    onSuccess: 'tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json',
   }
 }

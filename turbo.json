@@ -8,7 +8,7 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["build/**"]
+      "outputs": ["build/**", "!*.tsbuildinfo"]
     },
     "start": {
       "cache": false

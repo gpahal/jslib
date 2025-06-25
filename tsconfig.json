@@ -9,6 +9,7 @@
     { "path": "packages/image-node" },
     { "path": "packages/logger" },
     { "path": "packages/og-image" },
+    { "path": "packages/prettier-config" },
     { "path": "packages/remark-preset-lint" },
     { "path": "packages/std" },
     { "path": "packages/std-node" },

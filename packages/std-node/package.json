@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/std-node",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -8,8 +8,8 @@
   "exports": {
     "./package.json": "./package.json",
     "./*": {
-      "require": "./build/*.cjs",
-      "import": "./build/*.js"
+      "import": "./build/*.js",
+      "types": "./build/*.d.ts"
     }
   },
   "typesVersions": {
@@ -31,7 +31,7 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "prepublishOnly": "pnpm build"
+    "clean": "premove build .turbo *.tsbuildinfo"
   },
   "dependencies": {
     "@gpahal/std": "workspace:*"

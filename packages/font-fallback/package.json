@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/font-fallback",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -8,11 +8,10 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "require": "./build/index.cjs",
-      "import": "./build/index.js"
+      "import": "./build/index.js",
+      "types": "./build/index.d.ts"
     }
   },
-  "main": "./build/index.cjs",
   "module": "./build/index.js",
   "types": "./build/index.d.ts",
   "files": [
@@ -27,8 +26,8 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "prepublishOnly": "pnpm build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "clean": "premove build .turbo *.tsbuildinfo"
   },
   "dependencies": {
     "@capsizecss/metrics": "^3.5.0",
