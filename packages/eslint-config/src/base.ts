@@ -29,7 +29,7 @@ const FILES = ['**/*.{' + FILES_EXTNS.join(',') + '}']
 
 export type BaseConfigOptions = {
   tsconfigRootDir: string
-  configs: Array<ConfigArray | ConfigFn>
+  configs?: Array<ConfigArray | ConfigFn>
 }
 
 export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOptions): ConfigArray {
@@ -51,12 +51,13 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
         '**/out',
         '**/out-tsc',
         '**/.output',
-        '**/coverage',
         '**/.turbo',
         '**/.next',
         '**/.vercel',
         '**/.astro',
         '**/.nitro',
+        '**/.tanstack',
+        '**/coverage',
         '**/tmp',
         '**/.tmp',
         '**/.cache',
@@ -255,7 +256,7 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
         'react-hooks/rules-of-hooks': 'off',
       },
     },
-    ...configs.flatMap((subConfig) =>
+    ...(configs ?? []).flatMap((subConfig) =>
       isFunction(subConfig)
         ? (subConfig(tsconfigRootDir) as ConfigArray)
         : (subConfig as ConfigArray),
