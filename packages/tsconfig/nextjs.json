@@ -3,14 +3,11 @@
   "display": "Next.js",
   "extends": "./react.json",
   "compilerOptions": {
-    "plugins": [{ "name": "next" }],
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "module": "esnext",
-    "moduleResolution": "bundler",
     "jsx": "preserve",
     "incremental": true,
     "noEmit": true,
     "declaration": false,
-    "declarationMap": false
+    "declarationMap": false,
+    "plugins": [{ "name": "next" }]
   }
 }
