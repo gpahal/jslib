@@ -56,6 +56,7 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
         '**/.next',
         '**/.vercel',
         '**/.astro',
+        '**/.nitro',
         '**/tmp',
         '**/.tmp',
         '**/.cache',
