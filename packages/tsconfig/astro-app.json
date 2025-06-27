@@ -3,9 +3,6 @@
   "display": "Astro App",
   "extends": "./base.json",
   "compilerOptions": {
-    "moduleResolution": "bundler",
-    "target": "esnext",
-    "module": "esnext",
     "jsx": "preserve",
     "incremental": true,
     "noEmit": true,

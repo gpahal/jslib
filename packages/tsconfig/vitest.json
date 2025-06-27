@@ -3,6 +3,6 @@
   "display": "Vitest",
   "extends": "./vite.json",
   "compilerOptions": {
-    "types": ["vitest/globals"]
+    "types": ["vite/client", "vitest/globals"]
   }
 }
