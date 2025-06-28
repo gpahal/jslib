@@ -1,8 +1,9 @@
 {
-  "private": true,
   "name": "jslib",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
-  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39",
+  "sideEffects": false,
   "scripts": {
     "prepare": "simple-git-hooks",
     "pre-push": "run-p lint fmt-check && pnpm build && ./scripts/verify-no-git-changes.sh",
@@ -28,9 +29,9 @@
     "@gpahal/stylelint-config": "workspace:*",
     "@gpahal/tsconfig": "workspace:*",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.2",
-    "@types/node": "^24.0.5",
+    "@types/node": "^24.0.7",
     "@vitest/ui": "^3.2.4",
-    "eslint": "^9.29.0",
+    "eslint": "^9.30.0",
     "npm-run-all2": "^8.0.4",
     "premove": "^4.0.0",
     "prettier": "^3.6.2",
@@ -44,5 +45,9 @@
     "vite": "^7.0.0",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"
+  },
+  "packageManager": "pnpm@10.12.4",
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
