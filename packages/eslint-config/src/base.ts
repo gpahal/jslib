@@ -170,6 +170,7 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
         'unicorn/prefer-module': 'off',
         'unicorn/prefer-node-protocol': 'error',
         'unicorn/prevent-abbreviations': 'off',
+        'unicorn/no-await-expression-member': 'off',
       },
     },
     {

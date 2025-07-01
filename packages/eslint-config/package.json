@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.93",
+  "version": "0.0.94",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -48,7 +48,7 @@
     "eslint-plugin-n": "^17.20.0",
     "eslint-plugin-regexp": "^2.9.0",
     "eslint-plugin-unicorn": "^59.0.1",
-    "globals": "^16.2.0",
+    "globals": "^16.3.0",
     "typescript-eslint": "^8.35.1"
   },
   "devDependencies": {
