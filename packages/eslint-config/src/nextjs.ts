@@ -8,14 +8,12 @@ import reactConfig, { FILES } from './react'
 const nextjsConfig: ConfigArray = config(...reactConfig, {
   files: FILES,
   plugins: {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     '@next/next': eslintPluginNext,
   },
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
   rules: {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     ...eslintPluginNext.configs.recommended.rules,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
     ...eslintPluginNext.configs['core-web-vitals'].rules,
   },
 } as ConfigWithExtends)
