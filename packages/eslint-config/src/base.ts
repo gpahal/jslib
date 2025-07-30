@@ -20,12 +20,13 @@ import { config, tsEslintConfigs, tsEslintParser, type ConfigArray, type ConfigF
 export { config as createConfig } from './common'
 
 const FILES_WITHOUT_TYPES_EXTNS = ['js', 'mjs', 'cjs', 'jsx']
-const FILES_WITH_TYPES_EXTNS = ['ts', 'tsx', 'astro']
+const FILES_WITH_TYPES_EXTNS = ['ts', 'tsx']
 const FILES_EXTNS = [...FILES_WITHOUT_TYPES_EXTNS, ...FILES_WITH_TYPES_EXTNS]
 
 const FILES_WITHOUT_TYPES = ['**/*.{' + FILES_WITHOUT_TYPES_EXTNS.join(',') + '}']
 const FILES_WITH_TYPES = ['**/*.{' + FILES_WITH_TYPES_EXTNS.join(',') + '}']
 const FILES = ['**/*.{' + FILES_EXTNS.join(',') + '}']
+const ASTRO_FILES = ['*.astro', '**/*.astro']
 
 export type BaseConfigOptions = {
   tsconfigRootDir: string
@@ -99,7 +100,7 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
       },
     },
     {
-      files: FILES,
+      files: [...FILES, ...ASTRO_FILES],
       extends: [
         eslint.configs.recommended,
         ...tsEslintConfigs.recommendedTypeChecked,
@@ -111,7 +112,20 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
       ],
     },
     {
-      files: FILES,
+      files: FILES_WITH_TYPES,
+      languageOptions: {
+        parserOptions: {
+          sourceType: 'module',
+          ecmaVersion: 'latest',
+          parser: tsEslintParser,
+          extraFileExtensions: ['.astro'],
+          tsconfigRootDir,
+          projectService: true,
+        },
+      },
+    },
+    {
+      files: [...FILES, ...ASTRO_FILES],
       plugins: {
         'import-x': eslintPluginImportX,
       },
@@ -174,17 +188,7 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
       },
     },
     {
-      files: FILES_WITH_TYPES,
-      languageOptions: {
-        parserOptions: {
-          sourceType: 'module',
-          ecmaVersion: 'latest',
-          parser: tsEslintParser,
-          extraFileExtensions: ['.astro'],
-          tsconfigRootDir,
-          projectService: true,
-        },
-      },
+      files: [...FILES_WITH_TYPES, ...ASTRO_FILES],
       rules: {
         'no-unused-vars': 'off',
         'import-x/default': 'off',
@@ -263,7 +267,13 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
         : (subConfig as ConfigArray),
     ),
     {
-      files: [...FILES_WITHOUT_TYPES, '**/*.{md,mdx}/**', '**/*.astro/*.ts'],
+      files: [
+        ...FILES_WITHOUT_TYPES,
+        '**/*.{md,mdx}/**',
+        ...ASTRO_FILES,
+        '*.astro/*.ts',
+        '**/*.astro/*.ts',
+      ],
       extends: [tsEslintConfigs.disableTypeChecked],
     },
     {

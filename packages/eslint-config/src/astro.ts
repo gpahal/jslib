@@ -1,8 +1,9 @@
 import eslintPluginAstro from 'eslint-plugin-astro'
+import globals from 'globals'
 
 import { config, tsEslintParser, type ConfigArray, type ConfigWithExtends } from './common'
 
-const FILES = ['**/*.astro']
+const FILES = ['*.astro', '**/*.astro']
 
 export default function astroConfig(tsconfigRootDir: string): ConfigArray {
   return config(
@@ -16,17 +17,6 @@ export default function astroConfig(tsconfigRootDir: string): ConfigArray {
     })),
     {
       files: FILES,
-      languageOptions: {
-        sourceType: 'module',
-        parserOptions: {
-          sourceType: 'module',
-          ecmaVersion: 'latest',
-          parser: tsEslintParser,
-          extraFileExtensions: ['.astro'],
-          tsconfigRootDir,
-          projectService: true,
-        },
-      },
       processor: 'astro/client-side-ts',
       rules: {
         'react/jsx-key': 'off',
@@ -36,12 +26,19 @@ export default function astroConfig(tsconfigRootDir: string): ConfigArray {
     {
       files: FILES.map((file) => `${file}/*.ts`),
       languageOptions: {
+        globals: {
+          ...globals.builtin,
+          ...globals.es2022,
+          ...globals.node,
+        },
         sourceType: 'module',
         parser: tsEslintParser,
         parserOptions: {
           sourceType: 'module',
           ecmaVersion: 'latest',
           parser: tsEslintParser,
+          tsconfigRootDir,
+          projectService: true,
         },
       },
     } as ConfigWithExtends,
