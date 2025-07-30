@@ -6,8 +6,6 @@
     "jsx": "preserve",
     "incremental": true,
     "noEmit": true,
-    "declaration": false,
-    "declarationMap": false,
     "plugins": [{ "name": "next" }]
   }
 }

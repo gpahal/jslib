@@ -7,8 +7,6 @@
     "incremental": true,
     "noEmit": true,
     "allowJs": false,
-    "declaration": false,
-    "declarationMap": false,
     "plugins": [{ "name": "next" }]
   }
 }

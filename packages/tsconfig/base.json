@@ -11,10 +11,6 @@
     "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "composite": true,
-    "incremental": true,
-    "declaration": true,
-    "declarationMap": true,
     "inlineSources": false,
     "preserveWatchOutput": true,
     "allowJs": false,
@@ -35,7 +31,6 @@
     "allowUnusedLabels": false,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
-    "emitDeclarationOnly": true,
     "noEmitOnError": true
   }
 }
