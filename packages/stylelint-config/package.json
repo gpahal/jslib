@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/stylelint-config",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -14,6 +14,6 @@
     "access": "public"
   },
   "dependencies": {
-    "stylelint-config-standard": "^38.0.0"
+    "stylelint-config-standard": "^39.0.0"
   }
 }

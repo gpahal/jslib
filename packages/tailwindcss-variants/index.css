@@ -1,3 +1,4 @@
+/* stylelint-disable nesting-selector-no-missing-scoping-root */
 @import url('tailwindcss');
 
 @utility hocus {
