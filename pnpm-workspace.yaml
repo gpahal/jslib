@@ -2,3 +2,4 @@ packages:
   - packages/*
 onlyBuiltDependencies:
   - sharp
+  - simple-git-hooks
