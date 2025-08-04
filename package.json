@@ -7,9 +7,8 @@
   "scripts": {
     "prepare": "simple-git-hooks",
     "pre-push": "run-p lint fmt-check && pnpm build && ./scripts/verify-no-git-changes.sh",
-    "cs": "changeset",
-    "cs-version": "changeset version",
-    "cs-publish-packages": "run-p lint fmt-check && turbo run test && changeset publish && git tag | xargs -n 1 -I% git tag -d %",
+    "cs": "changeset && changeset version",
+    "cs-publish": "run-p lint fmt-check && turbo run test && changeset publish && git tag | xargs -n 1 -I% git tag -d %",
     "build": "turbo run build",
     "test": "turbo run test",
     "clean": "turbo run clean && premove .turbo",
@@ -29,7 +28,7 @@
     "@gpahal/stylelint-config": "workspace:*",
     "@gpahal/tsconfig": "workspace:*",
     "@ianvs/prettier-plugin-sort-imports": "^4.5.1",
-    "@types/node": "^24.1.0",
+    "@types/node": "^24.2.0",
     "@vitest/ui": "^3.2.4",
     "eslint": "^9.32.0",
     "npm-run-all2": "^8.0.4",
@@ -46,7 +45,7 @@
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"
   },
-  "packageManager": "pnpm@10.13.1",
+  "packageManager": "pnpm@10.14.0",
   "engines": {
     "node": ">=20.0.0"
   }
