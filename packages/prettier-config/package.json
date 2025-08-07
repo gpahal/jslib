@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/prettier-config",
-  "version": "0.0.27",
+  "version": "0.0.28",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -34,12 +34,12 @@
     "clean": "premove build .turbo *.tsbuildinfo"
   },
   "devDependencies": {
-    "@ianvs/prettier-plugin-sort-imports": "^4.5.1",
+    "@ianvs/prettier-plugin-sort-imports": "^4.6.0",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.6.14"
   },
   "peerDependencies": {
-    "@ianvs/prettier-plugin-sort-imports": "^4.4",
+    "@ianvs/prettier-plugin-sort-imports": "^4.6",
     "prettier-plugin-astro": "^0.14",
     "prettier-plugin-tailwindcss": "^0.6"
   },
