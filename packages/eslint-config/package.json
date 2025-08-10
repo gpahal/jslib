@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.103",
+  "version": "0.0.104",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -34,7 +34,7 @@
     "clean": "premove build .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@eslint/js": "^9.32.0",
+    "@eslint/js": "^9.33.0",
     "@eslint/json": "^0.13.1",
     "@gpahal/std": "workspace:*",
     "@typescript-eslint/parser": "^8.39.0",
