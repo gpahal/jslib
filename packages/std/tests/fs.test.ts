@@ -40,27 +40,29 @@ const fs = {
 
 const fsModule = createMemoryFsModule(fs)
 
-test('file-map', async () => {
-  const fsFileMap = await walkDirectory(fsModule, 'dir', {
-    parseFileContents: (c) => c,
+describe('file-map', () => {
+  it('should create a file map', async () => {
+    const fsFileMap = await walkDirectory(fsModule, 'dir', {
+      parseFileContents: (c) => c,
+    })
+    expect(fsFileMap).toBeTruthy()
+
+    const fileMap = createFileMap(fsFileMap!, () => 'index')
+    expect(fileMap).toBeTruthy()
+
+    const flattenedFileMapIndex = createFlattenedFileMapIndex(fileMap)
+    expect(flattenedFileMapIndex).toBeTruthy()
+    expect(flattenedFileMapIndex.length).toBe(13)
+
+    const fileMapIndex = createFileMapIndex(flattenedFileMapIndex)
+    expect(fileMapIndex).toBeTruthy()
+
+    const fileMap2 = unflattenFlattenedFileMapIndex(flattenedFileMapIndex)
+    expect(fileMap2).toBeTruthy()
+
+    transformFileMapNames(fileMap2, (n) => n + 'New')
+    expect(fileMap2).toBeTruthy()
   })
-  expect(fsFileMap).toBeTruthy()
-
-  const fileMap = createFileMap(fsFileMap!, () => 'index')
-  expect(fileMap).toBeTruthy()
-
-  const flattenedFileMapIndex = createFlattenedFileMapIndex(fileMap)
-  expect(flattenedFileMapIndex).toBeTruthy()
-  expect(flattenedFileMapIndex.length).toBe(13)
-
-  const fileMapIndex = createFileMapIndex(flattenedFileMapIndex)
-  expect(fileMapIndex).toBeTruthy()
-
-  const fileMap2 = unflattenFlattenedFileMapIndex(flattenedFileMapIndex)
-  expect(fileMap2).toBeTruthy()
-
-  transformFileMapNames(fileMap2, (n) => n + 'New')
-  expect(fileMap2).toBeTruthy()
 })
 
 function createMemoryFsModule(fs: Record<string, unknown>): FsModule {
