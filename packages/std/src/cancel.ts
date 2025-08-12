@@ -103,7 +103,6 @@ export function createCancelSignal({
  * Create a cancel signal that will be cancelled after a timeout.
  *
  * @param timeoutMs - The timeout in milliseconds.
- * @param options - The options for the cancel signal.
  * @returns A cancel signal.
  */
 export function createTimeoutCancelSignal(timeoutMs: number): CancelSignal {
