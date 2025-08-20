@@ -1,13 +1,9 @@
 import type { TSESLint } from '@typescript-eslint/utils'
-import {
-  config as tsEslintConfig,
-  type InfiniteDepthConfigWithExtends,
-  type configs as tsEslintConfigs,
-} from 'typescript-eslint'
+import { config as tsEslintConfig, type InfiniteDepthConfigWithExtends } from 'typescript-eslint'
 
 export { parser as tsEslintParser, configs as tsEslintConfigs } from 'typescript-eslint'
 
-type TsEslintConfig = typeof tsEslintConfigs.base
+type TsEslintConfig = TSESLint.FlatConfig.Config
 
 export type Config = Omit<TsEslintConfig, 'languageOptions'> & {
   languageOptions?: Omit<TSESLint.FlatConfig.LanguageOptions, 'ecmaVersion' | 'parserOptions'> & {

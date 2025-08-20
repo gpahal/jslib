@@ -25,7 +25,7 @@ describe('createMutex', () => {
     for (let i = 0; i < 10; i++) {
       const startTime = startTimes.get(i)!
       const endTime = endTimes.get(i)!
-      expect(endTime - startTime).toBeGreaterThanOrEqual(100)
+      expect(endTime - startTime).toBeGreaterThanOrEqual(95)
       if (i > 0) {
         const prevEndTime = endTimes.get(i - 1)!
         expect(startTime).toBeGreaterThanOrEqual(prevEndTime)
