@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/std-node",
-  "version": "0.0.30",
+  "version": "0.0.31",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,

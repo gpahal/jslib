@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest'
 
-import { createMutex, sleep } from '@/promises'
+import { checkIfPromiseIsSettled, createMutex, createTrackedPromise, sleep } from '@/promises'
 
 describe('createMutex', () => {
   it('should create a mutex', async () => {
@@ -31,5 +31,27 @@ describe('createMutex', () => {
         expect(startTime).toBeGreaterThanOrEqual(prevEndTime)
       }
     }
+  })
+})
+
+describe('createTrackedPromise', () => {
+  it('should create a tracked promise', async () => {
+    const promise = createTrackedPromise(new Promise((resolve) => setTimeout(resolve, 1000)))
+    expect(promise.getStatus()).toBe('pending')
+    expect(promise.checkIfSettled()).toBe(false)
+    await promise
+    expect(promise.getStatus()).toBe('resolved')
+    expect(promise.checkIfSettled()).toBe(true)
+  })
+})
+
+describe('checkIfPromiseIsSettled', () => {
+  it('should return true if the promise is settled', async () => {
+    expect(await checkIfPromiseIsSettled(Promise.resolve())).toBe(true)
+    expect(await checkIfPromiseIsSettled(Promise.reject(new Error('test')))).toBe(true)
+  })
+
+  it('should return false if the promise is not settled', async () => {
+    expect(await checkIfPromiseIsSettled(sleep(100))).toBe(false)
   })
 })
