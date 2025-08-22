@@ -15,6 +15,10 @@ export async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+export async function sleepWithJitter(ms: number, ratio = 0.25): Promise<void> {
+  return await sleep(ms * (1 + ratio * (Math.random() * 2 - 1)))
+}
+
 /**
  * A mutex returned by {@link createMutex}.
  */
