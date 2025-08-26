@@ -26,7 +26,7 @@ describe('createCancelSignal', () => {
   })
 
   it('should create a cancel signal with a timeout', async () => {
-    const cancelSignal = createTimeoutCancelSignal(10)
+    const [cancelSignal, _] = createTimeoutCancelSignal(10)
     let executed = 0
     cancelSignal.onCancelled(() => {
       executed++

@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/std",
-  "version": "0.0.35",
+  "version": "0.0.37",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,

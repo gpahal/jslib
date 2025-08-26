@@ -103,12 +103,23 @@ export function createCancelSignal({
  * Create a cancel signal that will be cancelled after a timeout.
  *
  * @param timeoutMs - The timeout in milliseconds.
- * @returns A cancel signal.
+ * @returns A tuple containing the cancel signal and a function to clear the timeout.
  */
-export function createTimeoutCancelSignal(timeoutMs: number): CancelSignal {
+export function createTimeoutCancelSignal(timeoutMs: number): [CancelSignal, () => void] {
   const [cancelSignal, cancel] = createCancelSignal()
-  setTimeout(() => cancel(), timeoutMs)
-  return cancelSignal
+  let timeout: NodeJS.Timeout | undefined
+  const clear = () => {
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = undefined
+    }
+  }
+  cancelSignal.onCancelled(clear)
+  timeout = setTimeout(() => {
+    cancel()
+    timeout = undefined
+  }, timeoutMs)
+  return [cancelSignal, clear]
 }
 
 /**
