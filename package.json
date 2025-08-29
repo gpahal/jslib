@@ -27,7 +27,7 @@
     "@gpahal/prettier-config": "workspace:*",
     "@gpahal/stylelint-config": "workspace:*",
     "@gpahal/tsconfig": "workspace:*",
-    "@ianvs/prettier-plugin-sort-imports": "^4.6.3",
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
     "@types/node": "^24.3.0",
     "@vitest/ui": "^3.2.4",
     "eslint": "^9.34.0",
