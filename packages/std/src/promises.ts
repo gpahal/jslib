@@ -11,12 +11,82 @@ export function isPromiseLike<T = unknown>(value: unknown): value is PromiseLike
   )
 }
 
-export async function sleep(ms: number): Promise<void> {
+/**
+ * Sleep for a given number of milliseconds.
+ *
+ * @example
+ * ```ts
+ * await sleep(1000)
+ * ```
+ *
+ * @param ms - The number of milliseconds to sleep.
+ * @param jitterRatio - The ratio of jitter to add to the sleep time. Default is 0 or no jitter.
+ * @returns A promise that resolves after the sleep time.
+ */
+export function sleep(ms: number, jitterRatio = 0): Promise<void> {
+  if (jitterRatio > 0) {
+    ms = ms * (1 + jitterRatio * (Math.random() * 2 - 1))
+  }
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export async function sleepWithJitter(ms: number, ratio = 0.25): Promise<void> {
-  return await sleep(ms * (1 + ratio * (Math.random() * 2 - 1)))
+/**
+ * Sleep for a given number of milliseconds with a wakeup function.
+ *
+ * @example
+ * ```ts
+ * const [promise, wakeup] = sleepWithWakeup(1000)
+ * await promise
+ *
+ * // Somewhere else
+ * wakeup()
+ *
+ * // Or to reject with a reason
+ * wakeup({ reject: true, rejectReason: new Error('Cancelled') })
+ * ```
+ *
+ * @param ms - The number of milliseconds to sleep.
+ * @param jitterRatio - The ratio of jitter to add to the sleep time. Default is 0 or no jitter.
+ * @returns A promise that resolves after the sleep time and a wakeup function.
+ */
+export function sleepWithWakeup(
+  ms: number,
+  jitterRatio = 0,
+): [Promise<void>, (options?: { reject?: boolean; rejectReason?: unknown }) => void] {
+  let timeout: NodeJS.Timeout | undefined
+  let resolve: ((value: void) => void) | undefined
+  let reject: ((error: unknown) => void) | undefined
+
+  const wakeup = (options: { reject?: boolean; rejectReason?: unknown } = {}) => {
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = undefined
+    }
+    if (options.reject) {
+      resolve = undefined
+      if (reject) {
+        reject(options.rejectReason)
+        reject = undefined
+      }
+    } else if (resolve) {
+      resolve()
+      resolve = undefined
+      reject = undefined
+    } else {
+      reject = undefined
+    }
+  }
+
+  if (jitterRatio > 0) {
+    ms = ms * (1 + jitterRatio * (Math.random() * 2 - 1))
+  }
+  const promise = new Promise<void>((resolveLocal, rejectLocal) => {
+    resolve = resolveLocal
+    reject = rejectLocal
+    timeout = setTimeout(wakeup, ms)
+  })
+
+  return [promise, wakeup]
 }
 
 /**
