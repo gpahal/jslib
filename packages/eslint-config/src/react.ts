@@ -2,8 +2,6 @@ import eslintPluginReact from '@eslint-react/eslint-plugin'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import eslintPluginJsxA11y from 'eslint-plugin-jsx-a11y'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import eslintPluginReactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 

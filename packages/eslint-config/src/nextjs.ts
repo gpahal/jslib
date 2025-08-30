@@ -1,5 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import eslintPluginNext from '@next/eslint-plugin-next'
 
 import { config, type ConfigArray, type ConfigWithExtends } from './common'

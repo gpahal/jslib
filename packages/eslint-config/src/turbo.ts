@@ -1,5 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import eslintPluginTurbo from 'eslint-plugin-turbo'
 
 import { config, type ConfigArray, type ConfigWithExtends } from './common'

@@ -1,12 +1,8 @@
 import eslint from '@eslint/js'
 import eslintPluginJson from '@eslint/json'
 import gitignore from 'eslint-config-flat-gitignore'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import eslintConfigPrettier from 'eslint-config-prettier'
 import { configs as eslintDependConfigs } from 'eslint-plugin-depend'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import eslintPluginImportX from 'eslint-plugin-import-x'
 import * as eslintPluginMdx from 'eslint-plugin-mdx'
 import { configs as eslintPluginRegexpConfigs } from 'eslint-plugin-regexp'
