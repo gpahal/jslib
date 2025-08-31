@@ -181,6 +181,7 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
         'unicorn/prefer-node-protocol': 'error',
         'unicorn/prevent-abbreviations': 'off',
         'unicorn/no-await-expression-member': 'off',
+        'unicorn/no-array-for-each': 'off',
       },
     },
     {
