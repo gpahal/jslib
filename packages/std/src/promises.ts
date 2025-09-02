@@ -1,3 +1,5 @@
+import type { CancelSignal } from './cancel'
+
 export function isPromise<T = unknown>(value: unknown): value is Promise<T> {
   return value instanceof Promise
 }
@@ -20,14 +22,46 @@ export function isPromiseLike<T = unknown>(value: unknown): value is PromiseLike
  * ```
  *
  * @param ms - The number of milliseconds to sleep.
- * @param jitterRatio - The ratio of jitter to add to the sleep time. Default is 0 or no jitter.
+ * @param options - The options for the sleep.
+ * @param options.jitterRatio - The ratio of jitter to add to the sleep time. Default is 0 or no
+ *   jitter.
+ * @param options.stopOnCancelSignal - A cancel signal to stop the sleep.
  * @returns A promise that resolves after the sleep time.
  */
-export function sleep(ms: number, jitterRatio = 0): Promise<void> {
+export function sleep(
+  ms: number,
+  {
+    jitterRatio = 0,
+    stopOnCancelSignal,
+  }: { jitterRatio?: number; stopOnCancelSignal?: CancelSignal } = {},
+): Promise<void> {
   if (jitterRatio > 0) {
     ms = ms * (1 + jitterRatio * (Math.random() * 2 - 1))
   }
-  return new Promise((resolve) => setTimeout(resolve, ms))
+
+  if (!stopOnCancelSignal) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms)
+    })
+  }
+
+  return new Promise((resolve) => {
+    let timeout: NodeJS.Timeout | undefined
+    const clear = () => {
+      if (timeout) {
+        clearTimeout(timeout)
+        timeout = undefined
+      }
+    }
+
+    stopOnCancelSignal.onCancelled(clear)
+
+    timeout = setTimeout(() => {
+      resolve()
+      stopOnCancelSignal.clearOnCancelled(clear)
+      timeout = undefined
+    }, ms)
+  })
 }
 
 /**
