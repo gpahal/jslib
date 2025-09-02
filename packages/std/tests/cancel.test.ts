@@ -1,39 +1,65 @@
 import { describe, it } from 'vitest'
 
-import { createCancellablePromise, createCancelSignal, createTimeoutCancelSignal } from '@/cancel'
+import {
+  combineCancelSignals,
+  createCancellablePromise,
+  createCancelSignal,
+  createTimeoutCancelSignal,
+} from '@/cancel'
 import { sleep } from '@/promises'
 
 describe('createCancelSignal', () => {
   it('should create a cancel signal', () => {
     const [cancelSignal, cancel] = createCancelSignal()
-    let executed = 0
+    let executionCount = 0
     cancelSignal.onCancelled(() => {
-      executed++
+      executionCount++
     })
     cancel()
-    expect(executed).toBe(1)
+    expect(executionCount).toBe(1)
   })
 
   it('should create a cancel signal with an abort signal', () => {
     const abortController = new AbortController()
     const [cancelSignal, _] = createCancelSignal({ abortSignal: abortController.signal })
-    let executed = 0
+    let executionCount = 0
     cancelSignal.onCancelled(() => {
-      executed++
+      executionCount++
     })
     abortController.abort()
-    expect(executed).toBe(1)
+    expect(executionCount).toBe(1)
   })
 
   it('should create a cancel signal with a timeout', async () => {
     const [cancelSignal, _] = createTimeoutCancelSignal(10)
-    let executed = 0
+    let executionCount = 0
     cancelSignal.onCancelled(() => {
-      executed++
+      executionCount++
     })
-    expect(executed).toBe(0)
+    expect(executionCount).toBe(0)
     await sleep(100)
-    expect(executed).toBe(1)
+    expect(executionCount).toBe(1)
+  })
+})
+
+describe('combineCancelSignals', () => {
+  it('should combine cancel signals', () => {
+    const [cancelSignal1, cancel1] = createCancelSignal()
+    const [cancelSignal2, cancel2] = createCancelSignal()
+    const combinedCancelSignal = combineCancelSignals([cancelSignal1, cancelSignal2])
+    let executionCount = 0
+    combinedCancelSignal.onCancelled(() => {
+      executionCount++
+    })
+
+    expect(combinedCancelSignal.isCancelled()).toBe(false)
+    expect(executionCount).toBe(0)
+    cancel1()
+    expect(combinedCancelSignal.isCancelled()).toBe(true)
+    expect(executionCount).toBe(1)
+    cancel2()
+    expect(combinedCancelSignal.isCancelled()).toBe(true)
+    expect(executionCount).toBe(1)
   })
 })
 

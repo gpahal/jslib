@@ -123,7 +123,47 @@ export function createTimeoutCancelSignal(timeoutMs: number): [CancelSignal, () 
 }
 
 /**
- * Create a cancellable promise. If a signal is provided, the promise will be rejected with a
+ * Combine multiple cancel signals into a single cancel signal.
+ *
+ * @example
+ * ```ts
+ * const [cancelSignal1, _] = createCancelSignal()
+ * const [cancelSignal2, _] = createCancelSignal()
+ * const combinedCancelSignal = combineCancelSignals([cancelSignal1, cancelSignal2])
+ * ```
+ *
+ * @param signals - The signals to combine.
+ * @returns A single cancel signal that is cancelled when any of the signals are cancelled.
+ */
+export function combineCancelSignals(signals: Array<CancelSignal>): CancelSignal {
+  return {
+    onCancelled: (fn) => {
+      let hasBeenCalled = false
+      const fnOnce = () => {
+        if (hasBeenCalled) {
+          return
+        }
+        hasBeenCalled = true
+        fn()
+      }
+
+      for (const signal of signals) {
+        signal.onCancelled(fnOnce)
+      }
+    },
+    clearOnCancelled: (fn) => {
+      for (const signal of signals) {
+        signal.clearOnCancelled(fn)
+      }
+    },
+    isCancelled: () => {
+      return signals.some((signal) => signal.isCancelled())
+    },
+  }
+}
+
+/**
+ * Create a cancellable promise. If a signal is provided, the promise will be rejected with an
  * `Error` if the signal is cancelled.
  *
  * @example
