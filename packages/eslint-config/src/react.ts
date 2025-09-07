@@ -3,15 +3,14 @@ import eslintPluginReact from '@eslint-react/eslint-plugin'
 // @ts-ignore
 import eslintPluginJsxA11y from 'eslint-plugin-jsx-a11y'
 import eslintPluginReactHooks from 'eslint-plugin-react-hooks'
+import { defineConfig } from 'eslint/config'
 import globals from 'globals'
-
-import { config, type ConfigArray, type ConfigWithExtends } from './common'
 
 export const FILES_WITHOUT_TYPES = ['**/*.{js,mjs,cjs,jsx}']
 export const FILES_WITH_TYPES = ['**/*.{ts,tsx}']
 export const FILES = [...FILES_WITHOUT_TYPES, ...FILES_WITH_TYPES]
 
-const reactConfig: ConfigArray = config(
+const reactConfig = defineConfig(
   {
     languageOptions: {
       parserOptions: {
@@ -59,7 +58,7 @@ const reactConfig: ConfigArray = config(
       'jsx-a11y/role-has-required-aria-props': 'warn',
       'jsx-a11y/role-supports-aria-props': 'warn',
     },
-  } as ConfigWithExtends,
+  },
 )
 
 export default reactConfig

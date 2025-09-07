@@ -1,8 +1,7 @@
 import { configs as eslintPluginNodeConfigs } from 'eslint-plugin-n'
+import { defineConfig } from 'eslint/config'
 
-import { config, type ConfigArray } from './common'
-
-const nodeConfig: ConfigArray = config({
+const nodeConfig = defineConfig({
   files: ['**/*.{js,mjs,cjs,jsx,ts,tsx}'],
   extends: [eslintPluginNodeConfigs['flat/recommended']],
 })

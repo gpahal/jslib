@@ -1,8 +1,8 @@
 import eslintPluginVitest from '@vitest/eslint-plugin'
+import type { ESLint } from 'eslint'
+import { defineConfig } from 'eslint/config'
 
-import { config, type ConfigArray } from './common'
-
-const vitestConfig: ConfigArray = config({
+const vitestConfig = defineConfig({
   files: ['**/*.test.{js,mjs,cjs,ts,jsx,tsx}'],
   languageOptions: {
     globals: {
@@ -10,7 +10,7 @@ const vitestConfig: ConfigArray = config({
     },
   },
   plugins: {
-    vitest: eslintPluginVitest,
+    vitest: eslintPluginVitest as unknown as ESLint.Plugin,
   },
   settings: {
     vitest: {

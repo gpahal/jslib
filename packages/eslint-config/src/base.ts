@@ -1,5 +1,6 @@
 import eslint from '@eslint/js'
 import eslintPluginJson from '@eslint/json'
+import type { ESLint } from 'eslint'
 import gitignore from 'eslint-config-flat-gitignore'
 import eslintConfigPrettier from 'eslint-config-prettier'
 import { configs as eslintDependConfigs } from 'eslint-plugin-depend'
@@ -7,13 +8,18 @@ import eslintPluginImportX from 'eslint-plugin-import-x'
 import * as eslintPluginMdx from 'eslint-plugin-mdx'
 import { configs as eslintPluginRegexpConfigs } from 'eslint-plugin-regexp'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
+import { defineConfig } from 'eslint/config'
 import globals from 'globals'
 
 import { isFunction } from '@gpahal/std/functions'
 
-import { config, tsEslintConfigs, tsEslintParser, type ConfigArray, type ConfigFn } from './common'
-
-export { config as createConfig } from './common'
+import {
+  tsEslintConfigs,
+  tsEslintParser,
+  type Config,
+  type ConfigFn,
+  type ConfigWithExtends,
+} from './common'
 
 const FILES_WITHOUT_TYPES_EXTNS = ['js', 'mjs', 'cjs', 'jsx']
 const FILES_WITH_TYPES_EXTNS = ['ts', 'tsx']
@@ -26,11 +32,14 @@ const ASTRO_FILES = ['*.astro', '**/*.astro']
 
 export type BaseConfigOptions = {
   tsconfigRootDir: string
-  configs?: Array<ConfigArray | ConfigFn>
+  configs?: Array<ConfigWithExtends | ConfigFn>
 }
 
-export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOptions): ConfigArray {
-  return config(
+export default function defineBaseConfig({
+  tsconfigRootDir,
+  configs,
+}: BaseConfigOptions): Array<Config> {
+  return defineConfig(
     gitignore({
       strict: false,
     }),
@@ -123,7 +132,7 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
     {
       files: [...FILES, ...ASTRO_FILES],
       plugins: {
-        'import-x': eslintPluginImportX,
+        'import-x': eslintPluginImportX as unknown as ESLint.Plugin,
       },
       settings: {
         'import-x/extensions': ['.js', '.mjs', '.cjs', '.ts', '.jsx', '.tsx'],
@@ -261,8 +270,8 @@ export default function defineConfig({ tsconfigRootDir, configs }: BaseConfigOpt
     },
     ...(configs ?? []).flatMap((subConfig) =>
       isFunction(subConfig)
-        ? (subConfig(tsconfigRootDir) as ConfigArray)
-        : (subConfig as ConfigArray),
+        ? (subConfig(tsconfigRootDir) as ConfigWithExtends)
+        : (subConfig as ConfigWithExtends),
     ),
     {
       files: [

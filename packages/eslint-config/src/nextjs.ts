@@ -1,9 +1,10 @@
 import eslintPluginNext from '@next/eslint-plugin-next'
+import { defineConfig } from 'eslint/config'
 
-import { config, type ConfigArray, type ConfigWithExtends } from './common'
+import { type ConfigWithExtends } from './common'
 import reactConfig, { FILES } from './react'
 
-const nextjsConfig: ConfigArray = config(...reactConfig, {
+const nextjsConfig = defineConfig(reactConfig, {
   files: FILES,
   plugins: {
     '@next/next': eslintPluginNext,
