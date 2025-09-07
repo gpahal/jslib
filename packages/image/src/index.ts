@@ -151,23 +151,20 @@ function getImageSrcSetAttribute({
   format?: OutputImageFormat
 }): string {
   const breakpoints = getImageLayoutBreakpoints(layout)
-  return (
-    breakpoints
-      // eslint-disable-next-line unicorn/no-array-sort
-      .sort()
-      .map((width) => {
-        const height = Math.round(width / aspectRatio)
-        const transformedSrc = transformer({
-          src,
-          cropOptions,
-          format,
-          width,
-          height,
-        })
-        return `${transformedSrc.toString()} ${width}w`
+  return breakpoints
+    .sort()
+    .map((width) => {
+      const height = Math.round(width / aspectRatio)
+      const transformedSrc = transformer({
+        src,
+        cropOptions,
+        format,
+        width,
+        height,
       })
-      .join(',\n')
-  )
+      return `${transformedSrc.toString()} ${width}w`
+    })
+    .join(',\n')
 }
 
 export type ImageObjectFit =
