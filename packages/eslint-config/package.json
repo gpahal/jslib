@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.121",
+  "version": "0.0.122",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -34,7 +34,7 @@
     "clean": "premove build .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@eslint/js": "^9.34.0",
+    "@eslint/js": "^9.35.0",
     "@eslint/json": "^0.13.2",
     "@gpahal/std": "workspace:*",
     "@typescript-eslint/parser": "^8.42.0",
@@ -47,21 +47,21 @@
     "eslint-plugin-mdx": "^3.6.2",
     "eslint-plugin-n": "^17.21.3",
     "eslint-plugin-regexp": "^2.10.0",
-    "eslint-plugin-unicorn": "^60.0.0",
+    "eslint-plugin-unicorn": "^61.0.1",
     "globals": "^16.3.0",
     "typescript-eslint": "^8.42.0"
   },
   "devDependencies": {
-    "@eslint-react/eslint-plugin": "^1.52.9",
+    "@eslint-react/eslint-plugin": "^1.53.0",
     "@next/eslint-plugin-next": "^15.5.2",
     "@typescript-eslint/utils": "^8.42.0",
-    "@vitest/eslint-plugin": "^1.3.6",
+    "@vitest/eslint-plugin": "^1.3.9",
     "eslint-plugin-astro": "^1.3.1",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-turbo": "^2.5.6"
   },
   "peerDependencies": {
-    "@eslint-react/eslint-plugin": "^1.52",
+    "@eslint-react/eslint-plugin": "^1.53",
     "@next/eslint-plugin-next": "^15.5",
     "@vitest/eslint-plugin": "^1.3",
     "eslint-plugin-astro": "^1.3",

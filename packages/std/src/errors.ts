@@ -1,3 +1,6 @@
+import { isFunction } from './functions'
+import { isObject } from './objects'
+
 export { CustomError } from 'ts-custom-error'
 
 function hasMessage(error: unknown): error is { message: unknown } {
@@ -9,5 +12,12 @@ function hasMessageString(error: unknown): error is { message: string } {
 }
 
 export function getErrorMessage(error: unknown): string {
-  return error instanceof Error || hasMessageString(error) ? error.message : 'Unknown error'
+  return error instanceof Error || hasMessageString(error)
+    ? error.message
+    : error == null
+      ? String(error)
+      : !isObject(error) && !isFunction(error)
+        ? // eslint-disable-next-line @typescript-eslint/no-base-to-string
+          String(error)
+        : 'Unknown error'
 }
