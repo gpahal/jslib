@@ -35,17 +35,17 @@
     "premove": "^4.0.0",
     "prettier": "^3.6.2",
     "simple-git-hooks": "^2.13.1",
-    "stylelint": "^16.23.1",
+    "stylelint": "^16.24.0",
     "tsc-alias": "^1.8.16",
     "tsc-files": "^1.1.4",
     "tsup": "^8.5.0",
     "turbo": "^2.5.6",
     "typescript": "^5.9.2",
-    "vite": "^7.1.4",
+    "vite": "^7.1.5",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"
   },
-  "packageManager": "pnpm@10.15.0",
+  "packageManager": "pnpm@10.15.1",
   "engines": {
     "node": ">=20.0.0"
   }
