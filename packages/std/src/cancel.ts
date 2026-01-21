@@ -107,7 +107,7 @@ export function createCancelSignal({
  */
 export function createTimeoutCancelSignal(timeoutMs: number): [CancelSignal, () => void] {
   const [cancelSignal, cancel] = createCancelSignal()
-  let timeout: NodeJS.Timeout | undefined
+  let timeout: ReturnType<typeof setTimeout> | undefined
   const clear = () => {
     if (timeout) {
       clearTimeout(timeout)

@@ -17,6 +17,13 @@ export function match<T extends string | number = string, R = unknown>(
       .map((key) => `"${key}"`)
       .join(', ')}.`,
   )
-  if (Error.captureStackTrace) Error.captureStackTrace(error, match)
+  if (
+    'captureStackTrace' in Error &&
+    typeof (Error as { captureStackTrace?: unknown }).captureStackTrace === 'function'
+  ) {
+    ;(
+      Error as { captureStackTrace: (target: Error, constructor: unknown) => void }
+    ).captureStackTrace(error, match)
+  }
   throw error
 }

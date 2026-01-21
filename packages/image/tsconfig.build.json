@@ -6,7 +6,8 @@
     "rootDir": "./src",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "types": ["node"]
   },
   "include": ["src", "@types"]
 }

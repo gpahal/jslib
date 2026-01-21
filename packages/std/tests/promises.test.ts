@@ -32,10 +32,12 @@ describe('createMutex', () => {
       const startTime = startTimes.get(i)!
       const endTime = endTimes.get(i)!
       expect(endTime - startTime).toBeGreaterThanOrEqual(95)
-      if (i > 0) {
-        const prevEndTime = endTimes.get(i - 1)!
-        expect(startTime).toBeGreaterThanOrEqual(prevEndTime)
-      }
+    }
+
+    for (let i = 1; i < 10; i++) {
+      const startTime = startTimes.get(i)!
+      const prevEndTime = endTimes.get(i - 1)!
+      expect(startTime).toBeGreaterThanOrEqual(prevEndTime)
     }
   })
 })
@@ -72,7 +74,7 @@ describe('sleep', () => {
 
   it('should sleep for the given number of milliseconds with jitter', async () => {
     const start = Date.now()
-    await sleep(100, 0.1)
+    await sleep(100, { jitterRatio: 0.1 })
     const end = Date.now()
     expect(end - start).toBeGreaterThanOrEqual(85)
     expect(end - start).toBeLessThanOrEqual(125)

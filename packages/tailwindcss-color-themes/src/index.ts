@@ -78,8 +78,7 @@ export function generateCSS(config: ColorThemeConfig): CSS {
     }
   }
 
-  const themeCSS = new Map<string, string | CSS>()
-  themeCSS.set('--color-*', 'initial')
+  const themeCSS = new Map<string, string | CSS>([['--color-*', 'initial']])
   for (const [key, value] of themeColorsToWithoutP3CSS(config.default).entries()) {
     themeCSS.set(key, value)
   }

@@ -46,7 +46,7 @@ export function sleep(
   }
 
   return new Promise((resolve) => {
-    let timeout: NodeJS.Timeout | undefined
+    let timeout: ReturnType<typeof setTimeout> | undefined
     const clear = () => {
       if (timeout) {
         clearTimeout(timeout)
@@ -87,7 +87,7 @@ export function sleepWithWakeup(
   ms: number,
   jitterRatio = 0,
 ): [Promise<void>, (options?: { reject?: boolean; rejectReason?: unknown }) => void] {
-  let timeout: NodeJS.Timeout | undefined
+  let timeout: ReturnType<typeof setTimeout> | undefined
   let resolve: ((value: void) => void) | undefined
   let reject: ((error: unknown) => void) | undefined
 

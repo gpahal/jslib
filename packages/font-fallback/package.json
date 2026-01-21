@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/font-fallback",
-  "version": "0.0.50",
+  "version": "0.0.51",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -30,8 +30,11 @@
     "clean": "premove build .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@capsizecss/metrics": "^3.5.0",
-    "@capsizecss/unpack": "^3.0.0",
+    "@capsizecss/metrics": "^3.6.2",
+    "@capsizecss/unpack": "^4.0.0",
     "@gpahal/std": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.9"
   }
 }

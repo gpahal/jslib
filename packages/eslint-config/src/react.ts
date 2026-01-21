@@ -34,13 +34,12 @@ const reactConfig = defineConfig(
   },
   {
     files: FILES,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    extends: [eslintPluginJsxA11y.flatConfigs.recommended],
-    plugins: {
-      'react-hooks': eslintPluginReactHooks,
-    },
+    extends: [
+      eslintPluginReactHooks.configs.flat.recommended,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      eslintPluginJsxA11y.flatConfigs.recommended,
+    ],
     rules: {
-      ...eslintPluginReactHooks.configs.recommended.rules,
       'react/no-unknown-property': 'off',
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',

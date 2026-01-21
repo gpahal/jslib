@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/font",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -27,5 +27,8 @@
     "dev": "tsup --watch",
     "build": "tsup",
     "clean": "premove build .turbo *.tsbuildinfo"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.9"
   }
 }

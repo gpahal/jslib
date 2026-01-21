@@ -28,6 +28,9 @@ pnpm-debug.log*
 .env
 .env.*
 
+# Claude Code
+.claude/settings.local.json
+
 # Editors
 
 ## VS Code
