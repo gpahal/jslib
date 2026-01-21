@@ -7,6 +7,6 @@ export function addPrettierTailwindConfig<T extends Config>(
   return {
     ...config,
     plugins: [...(config.plugins || []), 'prettier-plugin-tailwindcss'],
-    tailwindConfig: tailwindConfig || './tailwind.config.js',
+    tailwindConfig: tailwindConfig,
   }
 }
