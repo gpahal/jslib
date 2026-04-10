@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/std",
-  "version": "0.0.42",
+  "version": "0.0.43",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -31,6 +31,7 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "vitest run",
     "clean": "premove build .turbo *.tsbuildinfo"
   },

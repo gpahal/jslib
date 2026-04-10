@@ -11,13 +11,13 @@
 export function fnv1a52Hash(s: string) {
   const len = s.length
   let i = 0,
-    t0 = 0,
+    t0: number,
     v0 = 0x23_25,
-    t1 = 0,
+    t1: number,
     v1 = 0x84_22,
-    t2 = 0,
+    t2: number,
     v2 = 0x9c_e4,
-    t3 = 0,
+    t3: number,
     v3 = 0xcb_f2
 
   while (i < len) {

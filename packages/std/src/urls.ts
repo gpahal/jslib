@@ -47,7 +47,7 @@ export function isPathnameActive(
   currentPathname: string,
   targetUrl: Url,
 ): { isActive: boolean; isChildActive: boolean } {
-  let targetPathname = ''
+  let targetPathname: string
   try {
     targetPathname = getPathname(targetUrl)
   } catch {

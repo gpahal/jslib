@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.51",
+  "version": "0.0.53",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -31,16 +31,17 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "clean": "premove build .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "satori": "^0.19.1",
+    "satori": "^0.26.0",
     "satori-html": "^0.3.2",
     "yoga-wasm-web": "^0.3.3"
   },
   "devDependencies": {
     "@gpahal/font": "workspace:*",
-    "@types/react": "^19.2.9",
-    "@types/node": "^25.0.9"
+    "@types/react": "^19.2.14",
+    "@types/node": "^25.6.0"
   }
 }

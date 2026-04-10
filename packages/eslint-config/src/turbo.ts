@@ -1,5 +1,8 @@
+import type { Linter } from 'eslint'
 import eslintPluginTurbo from 'eslint-plugin-turbo'
 import { defineConfig } from 'eslint/config'
+
+const recommended = eslintPluginTurbo.configs!.recommended as Linter.Config
 
 const turboConfig = defineConfig([
   {
@@ -7,8 +10,8 @@ const turboConfig = defineConfig([
     plugins: {
       turbo: eslintPluginTurbo,
     },
-    settings: eslintPluginTurbo.configs.recommended.settings,
-    rules: eslintPluginTurbo.configs.recommended.rules,
+    settings: recommended.settings,
+    rules: recommended.rules,
   },
   {
     files: ['**/*.md', '**/*.md/**'],

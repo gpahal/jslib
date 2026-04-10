@@ -25,6 +25,7 @@ const IGNORE_PATTERNS = [
 ]
 
 export function getBaseConfig(options: Options): Options {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   const isDevEnv = process.env.NODE_ENV === 'development' || !!options.watch
   return {
     entry: ['src/*'],

@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/remark-preset-lint",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -26,6 +26,7 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "clean": "premove build .turbo *.tsbuildinfo"
   },
   "dependencies": {

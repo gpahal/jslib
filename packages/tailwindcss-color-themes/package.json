@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/tailwindcss-color-themes",
-  "version": "0.0.41",
+  "version": "0.0.43",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -26,6 +26,7 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "vitest run",
     "clean": "premove build .turbo *.tsbuildinfo"
   },
@@ -33,9 +34,9 @@
     "@gpahal/std": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.0.9"
+    "@types/node": "^25.6.0"
   },
   "peerDependencies": {
-    "tailwindcss": "^4.1"
+    "tailwindcss": "^4.2"
   }
 }
