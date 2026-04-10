@@ -57,6 +57,7 @@
       "Bash(pnpm help:*)",
       "Bash(pnpm env:*)",
       "Bash(pnpm build:*)",
+      "Bash(pnpm typecheck:*)",
       "Bash(pnpm test:*)",
       "Bash(pnpm clean:*)",
       "Bash(pnpm lint:*)",
