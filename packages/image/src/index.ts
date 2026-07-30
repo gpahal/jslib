@@ -4,7 +4,7 @@ import type { Prettify } from '@gpahal/std/objects'
 import { getExtension } from '@gpahal/std/urls'
 
 export type OutputImageFormatSupportsAlpha = 'avif' | 'png' | 'tiff' | 'webp'
-export type OutputImageFormatNotSupportsAlpha = 'gif' | 'jpeg' | 'jpg'
+export type OutputImageFormatNotSupportsAlpha = 'gif' | 'jpeg'
 export type OutputImageFormat = OutputImageFormatSupportsAlpha | OutputImageFormatNotSupportsAlpha
 
 export const OUTPUT_IMAGE_FORMATS_WITH_ALPHA: Array<OutputImageFormatSupportsAlpha> = [
@@ -16,7 +16,6 @@ export const OUTPUT_IMAGE_FORMATS_WITH_ALPHA: Array<OutputImageFormatSupportsAlp
 export const OUTPUT_IMAGE_FORMATS_WITHOUT_ALPHA: Array<OutputImageFormatNotSupportsAlpha> = [
   'gif',
   'jpeg',
-  'jpg',
 ]
 export const OUTPUT_IMAGE_FORMATS: Array<OutputImageFormat> = [
   ...OUTPUT_IMAGE_FORMATS_WITH_ALPHA,
@@ -152,7 +151,7 @@ function getImageSrcSetAttribute({
 }): string {
   const breakpoints = getImageLayoutBreakpoints(layout)
   return breakpoints
-    .sort()
+    .sort((a, b) => a - b)
     .map((width) => {
       const height = Math.round(width / aspectRatio)
       const transformedSrc = transformer({
@@ -162,19 +161,13 @@ function getImageSrcSetAttribute({
         width,
         height,
       })
-      return `${transformedSrc.toString()} ${width}w`
+      return `${transformedSrc} ${width}w`
     })
     .join(',\n')
 }
 
 export type ImageObjectFit =
-  | 'contain'
-  | 'cover'
-  | 'fill'
-  | 'none'
-  | 'scale-down'
-  | 'inherit'
-  | 'initial'
+  'contain' | 'cover' | 'fill' | 'none' | 'scale-down' | 'inherit' | 'initial'
 
 export type ImageStyle = {
   width?: string
@@ -254,7 +247,7 @@ function getImageStyle({
   }
 
   style.width = '100%'
-  style.aspectRatio = `${aspectRatio}`
+  style.aspectRatio = String(aspectRatio)
   if (layout.maxWidth != null) {
     style.maxWidth = pixelate(layout.maxWidth)
     style.maxHeight = pixelate(layout.maxWidth / aspectRatio)
@@ -498,10 +491,12 @@ function normalizeOutputImageFormats({
   const finalFormats: Array<OutputImageFormat> =
     formats && formats.length > 0 ? formats : ['avif', 'webp']
   const extname = getExtension(src)
+  // The output formats mirror sharp, which only knows 'jpeg' - map the '.jpg' extension onto it
+  const extnameFormat = extname === 'jpg' ? 'jpeg' : extname
   const fallbackFormat: OutputImageFormat = OUTPUT_IMAGE_FORMATS.includes(
-    extname as OutputImageFormat,
+    extnameFormat as OutputImageFormat,
   )
-    ? (extname as OutputImageFormat)
+    ? (extnameFormat as OutputImageFormat)
     : 'png'
   return finalFormats.includes(fallbackFormat) ? finalFormats : [...finalFormats, fallbackFormat]
 }

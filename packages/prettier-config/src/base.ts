@@ -4,7 +4,7 @@ import { type Config as PrettierConfig } from 'prettier'
 export type Config = PrettierConfig & PluginConfig
 
 const config: Config = {
-  $schema: 'http://json.schemastore.org/prettierrc',
+  $schema: 'https://json.schemastore.org/prettierrc',
   endOfLine: 'lf',
   printWidth: 100,
   tabWidth: 2,

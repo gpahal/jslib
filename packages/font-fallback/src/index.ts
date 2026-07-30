@@ -14,9 +14,8 @@ export async function getFontFamilyMetrics(fontFamily: string): Promise<Font | u
   }
 
   try {
-    const metrics: Font = await import(`@capsizecss/metrics/${fontFamily}`).then(
-      (r) => (r as { default: Font }).default || (r as Font),
-    )
+    const imported: unknown = await import(`@capsizecss/metrics/${fontFamily}`)
+    const metrics: Font = (imported as { default: Font }).default || (imported as Font)
     metricsCache.set(fontFamily, metrics)
     return metrics
   } catch {
@@ -36,7 +35,7 @@ function normalizeFontFamily(fontFamily: string): string {
 
 export async function getFontUrlMetrics(url: URL): Promise<Font | undefined> {
   const href = url.href
-  if (href in metricsCache) {
+  if (metricsCache.has(href)) {
     return metricsCache.get(href) || undefined
   }
 

@@ -8,9 +8,8 @@ export function pushToArray<T>(array?: Array<T>, ...items: Array<T>): Array<T> {
   if (array) {
     array.push(...items)
     return array
-  } else {
-    return [...items]
   }
+  return [...items]
 }
 
 export function dedupeArray<T>(array?: Array<T>): Array<T> {

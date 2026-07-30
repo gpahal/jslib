@@ -36,7 +36,7 @@ export function sleep(
   }: { jitterRatio?: number; stopOnCancelSignal?: CancelSignal } = {},
 ): Promise<void> {
   if (jitterRatio > 0) {
-    ms = ms * (1 + jitterRatio * (Math.random() * 2 - 1))
+    ms *= 1 + jitterRatio * (Math.random() * 2 - 1)
   }
 
   if (!stopOnCancelSignal) {
@@ -48,10 +48,12 @@ export function sleep(
   return new Promise((resolve) => {
     let timeout: ReturnType<typeof setTimeout> | undefined
     const clear = () => {
-      if (timeout) {
-        clearTimeout(timeout)
-        timeout = undefined
+      if (!timeout) {
+        return
       }
+
+      clearTimeout(timeout)
+      timeout = undefined
     }
 
     stopOnCancelSignal.onCancelled(clear)
@@ -112,7 +114,7 @@ export function sleepWithWakeup(
   }
 
   if (jitterRatio > 0) {
-    ms = ms * (1 + jitterRatio * (Math.random() * 2 - 1))
+    ms *= 1 + jitterRatio * (Math.random() * 2 - 1)
   }
   const promise = new Promise<void>((resolveLocal, rejectLocal) => {
     resolve = resolveLocal
@@ -149,13 +151,13 @@ export type Mutex = {
  * ```
  */
 export function createMutex(): Mutex {
-  let locked = false
+  let isLocked = false
   const waiting: Array<() => void> = []
 
   const acquire = (): Promise<void> => {
     return new Promise<void>((resolve) => {
-      if (!locked) {
-        locked = true
+      if (!isLocked) {
+        isLocked = true
         resolve()
       } else {
         waiting.push(resolve)
@@ -168,7 +170,7 @@ export function createMutex(): Mutex {
       const next = waiting.shift()!
       next()
     } else {
-      locked = false
+      isLocked = false
     }
   }
 
@@ -197,6 +199,9 @@ export type TrackedPromise<T> = Promise<T> & {
 export function createTrackedPromise<T>(promise: Promise<T>): TrackedPromise<T> {
   let status = 'pending'
 
+  // The derived promise has to be built synchronously so the properties below can be attached to it
+  // before returning, so `await` is not an option here
+  /* eslint-disable unicorn/prefer-await */
   const trackedPromise = promise
     .then((value) => {
       status = 'resolved'
@@ -206,6 +211,7 @@ export function createTrackedPromise<T>(promise: Promise<T>): TrackedPromise<T> 
       status = 'rejected'
       throw error
     })
+  /* eslint-enable unicorn/prefer-await */
 
   // @ts-expect-error - This is intentional
   trackedPromise.getStatus = () => status

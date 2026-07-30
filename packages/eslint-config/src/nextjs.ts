@@ -1,7 +1,6 @@
 import eslintPluginNext from '@next/eslint-plugin-next'
 import { defineConfig } from 'eslint/config'
 
-import { type ConfigWithExtends } from './common'
 import reactConfig, { FILES } from './react'
 
 const nextjsConfig = defineConfig(reactConfig, {
@@ -15,6 +14,6 @@ const nextjsConfig = defineConfig(reactConfig, {
 
     ...eslintPluginNext.configs['core-web-vitals'].rules,
   },
-} as ConfigWithExtends)
+})
 
 export default nextjsConfig

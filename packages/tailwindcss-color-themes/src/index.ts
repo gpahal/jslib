@@ -40,7 +40,7 @@ function cssToStringArrayInternal(css: CSS, indent: number, currentIndent: numbe
   const indentString = ' '.repeat(currentIndent)
   const results: Array<string> = []
   let isFirst = true
-  for (const [key, value] of css.entries()) {
+  for (const [key, value] of css) {
     if (isString(value)) {
       results.push(`${indentString}${key}: ${value};`)
     } else {
@@ -79,7 +79,7 @@ export function generateCSS(config: ColorThemeConfig): CSS {
   }
 
   const themeCSS = new Map<string, string | CSS>([['--color-*', 'initial']])
-  for (const [key, value] of themeColorsToWithoutP3CSS(config.default).entries()) {
+  for (const [key, value] of themeColorsToWithoutP3CSS(config.default)) {
     themeCSS.set(key, value)
   }
   return new Map<string, string | CSS>([
@@ -176,14 +176,14 @@ function transformKeyPathToVarNameAccess(keyPath: Array<string>): string {
 }
 
 function transformKeyPathToVarName(keyPath: Array<string>): string {
-  return `${keyPath
+  return keyPath
     .filter((p) => p && p.length > 0)
     .map(kebabCase)
-    .join('-')}`
+    .join('-')
 }
 
 function mergeCSSInPlace(css1: CSS, css2: CSS) {
-  for (const [key, value] of css2.entries()) {
+  for (const [key, value] of css2) {
     const existingValue = css1.get(key)
     if (existingValue) {
       if (isString(existingValue)) {

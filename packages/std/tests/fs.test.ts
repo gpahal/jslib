@@ -92,11 +92,17 @@ function getObjectPath(o: Record<string, unknown>, path: string): unknown {
 function getObjectPathParts(o: Record<string, unknown>, pathParts: Array<string>): unknown {
   if (!o) {
     return ''
-  } else if (pathParts.length === 0) {
+  }
+  if (pathParts.length === 0) {
     return o
   }
 
-  const [part, ...rest] = pathParts
-  const newO = o[part!] as Record<string, unknown>
-  return getObjectPathParts(newO, rest)
+  let curr: Record<string, unknown> = o
+  for (const part of pathParts) {
+    if (!curr) {
+      return ''
+    }
+    curr = curr[part] as Record<string, unknown>
+  }
+  return curr || ''
 }

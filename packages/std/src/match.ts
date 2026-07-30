@@ -5,7 +5,7 @@ export function match<T extends string | number = string, R = unknown>(
   lookup: Record<T, R | ((...args: Array<unknown>) => R)>,
   ...args: Array<unknown>
 ): R {
-  if (value in lookup) {
+  if (Object.hasOwn(lookup, value)) {
     const returnValue = lookup[value]
     return (isFunction(returnValue) ? returnValue(...args) : returnValue) as R
   }
@@ -17,13 +17,12 @@ export function match<T extends string | number = string, R = unknown>(
       .map((key) => `"${key}"`)
       .join(', ')}.`,
   )
-  if (
-    'captureStackTrace' in Error &&
-    typeof (Error as { captureStackTrace?: unknown }).captureStackTrace === 'function'
-  ) {
-    ;(
-      Error as { captureStackTrace: (target: Error, constructor: unknown) => void }
-    ).captureStackTrace(error, match)
+  // captureStackTrace is a V8-only API, so it is feature-detected before use
+  const errorWithCaptureStackTrace = Error as {
+    captureStackTrace?: (target: Error, constructor: unknown) => void
+  }
+  if (typeof errorWithCaptureStackTrace.captureStackTrace === 'function') {
+    errorWithCaptureStackTrace.captureStackTrace(error, match)
   }
   throw error
 }

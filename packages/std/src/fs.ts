@@ -159,7 +159,7 @@ export function transformFileMapNames<T>(
   fileMap: FileMap<T>,
   transformFileName: (fileName: string, fileMapItem: FileMapItem<T>) => string,
 ): void {
-  const entries = [...fileMap.entries()]
+  const entries = [...fileMap]
   fileMap.clear()
   for (const [fileName, fileMapItem] of entries) {
     const newFileName = transformFileName(fileName, fileMapItem)
@@ -183,7 +183,7 @@ export function createFileMapInternal<T>(
   indexFileName?: string,
 ): FileMap<T> {
   const fileMap = new Map<string, FileMapItem<T>>()
-  for (const [fileName, fsFileMapItem] of fsFileMap.entries()) {
+  for (const [fileName, fsFileMapItem] of fsFileMap) {
     if (fileName === indexFileName) {
       continue
     }
@@ -224,7 +224,8 @@ function convertFsFileMapDirectoryItemToFileMapItemInternal<T>(
   const fsFileMapFileItem = fsFileMapDirectoryItem.children.get(indexFileName)
   if (!fsFileMapFileItem) {
     throw new Error(`Index file '${indexFileName}' not found in directory '${directoryName}'`)
-  } else if (isFsFileMapDirectoryItem(fsFileMapFileItem)) {
+  }
+  if (isFsFileMapDirectoryItem(fsFileMapFileItem)) {
     throw new Error(`Index file '${indexFileName}' in directory '${directoryName} is not a file`)
   }
 
@@ -288,9 +289,9 @@ function mapFileMapItem<T, U>(
   return curr
 }
 
-export function findFileMap<T>(fileMap: FileMap<T>, fn: (_: T) => boolean): T | undefined {
+export function findFileMap<T>(fileMap: FileMap<T>, isMatch: (_: T) => boolean): T | undefined {
   for (const fileMapItem of fileMap.values()) {
-    const result = findFileMapItem(fileMapItem, fn)
+    const result = findFileMapItem(fileMapItem, isMatch)
     if (result != null) {
       return result
     }
@@ -298,16 +299,22 @@ export function findFileMap<T>(fileMap: FileMap<T>, fn: (_: T) => boolean): T | 
   return undefined
 }
 
-function findFileMapItem<T>(fileMapItem: FileMapItem<T>, fn: (_: T) => boolean): T | undefined {
-  return fn(fileMapItem.data)
+function findFileMapItem<T>(
+  fileMapItem: FileMapItem<T>,
+  isMatch: (_: T) => boolean,
+): T | undefined {
+  return isMatch(fileMapItem.data)
     ? fileMapItem.data
     : fileMapItem.children != null
-      ? findFileMap(fileMapItem.children, fn)
+      ? findFileMap(fileMapItem.children, isMatch)
       : undefined
 }
 
-export function someFileMap<T>(fileMap: FileMap<T>, fn: (_: T) => boolean): boolean {
-  return findFileMap(fileMap, fn) != null
+export function hasMatchingFileMapItem<T>(
+  fileMap: FileMap<T>,
+  isMatch: (_: T) => boolean,
+): boolean {
+  return findFileMap(fileMap, isMatch) != null
 }
 
 function joinPathParts(...parts: Array<string>): string {
@@ -341,7 +348,7 @@ function updateFlattenedFileMapIndexInternal<T>(
   compareFn?: (a: FileMapItem<T>, b: FileMapItem<T>) => number,
   parent?: FlattenedFileMapIndexItem<T>,
 ): void {
-  const fileMapItems = [...fileMap.values()]
+  const fileMapItems = fileMap.values().toArray()
   if (fileMapItems.length === 0) {
     return
   }
@@ -366,7 +373,7 @@ function updateFlattenedFileMapIndexInternal<T>(
       )
     }
     if (parent) {
-      parent.childrenIndices = parent.childrenIndices || []
+      parent.childrenIndices ||= []
       parent.childrenIndices.push(curr.index)
     }
   }
@@ -464,11 +471,8 @@ export function createFileMapIndexItemInternal<T>(
 function compareFileMapItem<T>(a: FileMapItem<T>, b: FileMapItem<T>): number {
   if (a.path < b.path) {
     return -1
-  } else if (a.path > b.path) {
-    return 1
-  } else {
-    return 0
   }
+  return a.path > b.path ? 1 : 0
 }
 
 export function pathPartsToPath(parts: Array<string>): string {

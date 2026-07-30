@@ -12,12 +12,11 @@ function hasMessageString(error: unknown): error is { message: string } {
 }
 
 export function getErrorMessage(error: unknown): string {
-  return error instanceof Error || hasMessageString(error)
-    ? error.message
-    : error == null
-      ? String(error)
-      : !isObject(error) && !isFunction(error)
-        ? // eslint-disable-next-line @typescript-eslint/no-base-to-string
-          String(error)
-        : 'Unknown error'
+  if (error instanceof Error || hasMessageString(error)) {
+    return error.message
+  }
+  if (error == null || (!isObject(error) && !isFunction(error))) {
+    return String(error)
+  }
+  return 'Unknown error'
 }

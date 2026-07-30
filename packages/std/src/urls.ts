@@ -1,12 +1,7 @@
 import { isString, trim } from '@/strings'
 
 export function isUrl(urlString: string): boolean {
-  try {
-    new URL(urlString)
-    return true
-  } catch {
-    return false
-  }
+  return URL.canParse(urlString)
 }
 
 export type Url = string | URL
@@ -35,15 +30,13 @@ function getPathname(url: Url): string {
     if (isAbsoluteUrl(url)) {
       const urlObject = new URL(url)
       return urlObject.pathname
-    } else {
-      return new URL(url, 'http://test.com').pathname
     }
-  } else {
-    return url.pathname
+    return new URL(url, 'https://test.com').pathname
   }
+  return url.pathname
 }
 
-export function isPathnameActive(
+export function getPathnameActiveState(
   currentPathname: string,
   targetUrl: Url,
 ): { isActive: boolean; isChildActive: boolean } {

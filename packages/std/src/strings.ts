@@ -9,11 +9,14 @@ export function isString(s: unknown): s is string {
 export function toString(value: unknown): string {
   if (value == null) {
     return ''
-  } else if (typeof value === 'string') {
+  }
+  if (typeof value === 'string') {
     return value
-  } else if (Array.isArray(value)) {
+  }
+  if (Array.isArray(value)) {
     return `[${value.map((other) => (other == null ? (other as unknown) : toString(other))).join(',')}]`
-  } else if (isSymbol(value)) {
+  }
+  if (isSymbol(value)) {
     return value.toString()
   }
 
@@ -73,7 +76,7 @@ export function camelCase(s: string): string {
 }
 
 export function kebabCase(s: string) {
-  return words(toString(s).replaceAll(/['\u2019]/g, '')).reduce(
+  return words(toString(s).replaceAll(/['\u{2019}]/gu, '')).reduce(
     (result, word, index) => result + (index ? '-' : '') + word.toLowerCase(),
     '',
   )

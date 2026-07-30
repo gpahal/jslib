@@ -1,217 +1,82 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Monorepo of TypeScript libraries and config presets published under the `@gpahal` scope. pnpm
+workspaces + Turborepo. Package list: see `README.md`.
 
-## Repository Overview
-
-This is a monorepo containing TypeScript/JavaScript libraries and configuration presets published under the `@gpahal` scope. It uses pnpm workspaces, Turborepo for build orchestration, and follows a consistent structure across all packages.
-
-## Build System
-
-### Package Manager
-
-- Uses **pnpm** (v10.28.1+) with workspaces
-- All packages are in `packages/` directory
-- Use `pnpm` for all package management operations
-
-### Build & Development Commands
+## Commands
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Build all packages (uses Turborepo)
-pnpm build
-
-# Build with turbo directly for more control
-turbo run build
-
-# Run tests across all packages
-pnpm test
-turbo run test
-
-# Lint entire codebase
-pnpm lint                # Run all linters (eslint + stylelint)
-pnpm lint:eslint         # ESLint only
-pnpm lint:stylelint      # Stylelint only
-pnpm lint-fix            # Auto-fix all linting issues
-
-# Format code
-pnpm fmt                 # Format all code
-pnpm fmt-check           # Check formatting without writing
-
-# Clean build artifacts
-pnpm clean               # Clean all packages + turbo cache
-turbo run clean          # Clean individual packages only
+pnpm build          # turbo run build
+pnpm typecheck      # turbo run typecheck (tsc --noEmit per package)
+pnpm test           # turbo run test (depends on build)
+pnpm lint           # eslint + stylelint
+pnpm lint-fix
+pnpm fmt            # prettier --write (pnpm fmt-check to verify)
+pnpm clean          # per-package clean + remove .turbo
 ```
 
-### Running Tests
+Single package: `cd packages/<name> && pnpm test` (or `vitest` for watch, `pnpm dev` for tsup watch).
 
-```bash
-# Run all tests
-pnpm test
+Pre-push hook (`simple-git-hooks`) runs `typecheck`/`lint`/`fmt-check` in parallel, then `build`,
+then `scripts/verify-no-git-changes.sh` — so committed build output must be up to date.
 
-# Run tests for a specific package
-cd packages/<package-name>
-pnpm test
+## Conventions
 
-# Watch mode for development
-cd packages/<package-name>
-vitest
-```
+- **ESM only**, `sideEffects: false`, Node `>=24`.
+- TypeScript is pinned to the TS 6 preview via npm aliases in the root `package.json`
+  (`typescript` → `@typescript/typescript6`, plus `@typescript/native`). Don't "fix" these back to
+  plain `typescript`.
+- Internal deps use `workspace:*`. Config presets declare framework plugins as **optional** peer
+  deps.
+- Native build allowlist lives under `allowBuilds` in `pnpm-workspace.yaml` (not
+  `onlyBuiltDependencies`).
 
-### Git Hooks
-
-- Pre-push hook runs: lint, format check, build, and verifies no git changes
-- Configured via `simple-git-hooks` in `.simple-git-hooks.json`
-
-## Architecture
-
-### Monorepo Structure
-
-```txt
-jslib/
-├── packages/              # All publishable packages
-│   ├── tsconfig/         # TypeScript configuration presets
-│   ├── eslint-config/    # ESLint configuration presets
-│   ├── prettier-config/  # Prettier configuration presets
-│   ├── stylelint-config/ # Stylelint configuration presets
-│   ├── std/              # Standard library utilities
-│   ├── std-node/         # Node.js-specific utilities
-│   ├── logger/           # Winston-based logger
-│   ├── image/            # Image utilities
-│   ├── image-node/       # Node.js-specific image utilities
-│   ├── og-image/         # OG image generation (Satori-based)
-│   ├── font/             # Font utilities
-│   ├── font-fallback/    # Font fallback generation
-│   ├── remark-preset-lint/ # Markdown linting preset
-│   ├── tailwindcss-color-themes/ # Tailwind CSS color theme plugin
-│   └── tailwindcss-variants/      # Tailwind CSS variants plugin
-├── config/               # Shared configuration files
-│   ├── tsconfig.base.json
-│   ├── tsconfig.build.base.json
-│   ├── tsup.base.config.ts
-│   └── vitest.base.config.ts
-└── turbo.json           # Turborepo configuration
-```
-
-### Package Categories
-
-1. **Config Presets**: Shareable configurations for TypeScript, ESLint, Prettier, Stylelint
-2. **Standard Libraries**: `std` (browser-safe utilities), `std-node` (Node.js-specific), `logger`
-3. **Image Utilities**: `image`, `image-node`, `og-image` (with Satori for React-based OG images)
-4. **Font Utilities**: `font`, `font-fallback`
-5. **Tailwind Plugins**: `tailwindcss-color-themes`, `tailwindcss-variants`
-6. **Markdown Tools**: `remark-preset-lint`
-
-### Package Structure
-
-Each package follows a consistent structure:
+## Package layout
 
 ```txt
 packages/<name>/
-├── src/                 # Source TypeScript files
-├── build/               # Compiled output (generated)
-├── tests/               # Test files (*.test.ts)
-├── package.json
-├── tsconfig.json        # Development config (extends base)
-├── tsconfig.build.json  # Build config (stricter)
-└── README.md
+├── src/                 # source; path alias @/* → ./src/*
+├── tests/               # *.test.ts (only std, font-fallback, tailwindcss-color-themes have tests)
+├── build/               # generated
+├── tsconfig.json        # extends config/tsconfig.base.json; includes src, tests, scripts, @types
+└── tsconfig.build.json  # extends config/tsconfig.build.base.json; src only, emitDeclarationOnly
 ```
 
-### Build Configuration
+There are **no per-package `tsup.config.ts` / `vitest.config.ts` files** — tsup and vitest walk up to
+the root `tsup.config.ts` / `vitest.config.ts`, which re-export `config/tsup.base.config.ts` and
+`config/vitest.base.config.ts`. Add package-local configs only if a package genuinely needs to
+diverge.
 
-**TypeScript**:
+tsup builds `src/*` → `build/` as ESM with sourcemaps and `dts: false`; declarations come from the
+`onSuccess` hook running `tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json`.
 
-- Base config: `config/tsconfig.base.json`
-- Build config: `config/tsconfig.build.base.json`
-- Each package has:
-  - `tsconfig.json` - for development/IDE (extends base + vitest)
-  - `tsconfig.build.json` - for production builds (stricter)
+## Exports
 
-**Build Tool (tsup)**:
-
-- Shared config: `config/tsup.base.config.ts`
-- Compiles `src/*` to `build/` as ESM modules
-- Generates source maps and type declarations
-- Uses `tsc-alias` to resolve path aliases after build
-- Minifies in production, skips in dev/watch mode
-
-**Testing (Vitest)**:
-
-- Shared config: `config/vitest.base.config.ts`
-- Tests in `tests/` directory with `*.test.ts` pattern
-- Uses `vite-tsconfig-paths` for path resolution
-- Globals enabled, Node environment
-
-### Package Exports Pattern
-
-Most packages use **wildcard exports** for granular imports:
+Utility/preset packages with many entry points use wildcard exports plus `typesVersions`, enabling
+`import { ... } from '@gpahal/std/arrays'`:
 
 ```json
 {
   "exports": {
-    "./*": {
-      "import": "./build/*.js",
-      "types": "./build/*.d.ts"
-    }
+    "./package.json": "./package.json",
+    "./*": { "import": "./build/*.js", "types": "./build/*.d.ts" }
   }
 }
 ```
 
-This allows: `import { ... } from '@gpahal/std/arrays'`
+Single-entry packages (`logger`, `image`, `image-node`, `font`, `font-fallback`,
+`remark-preset-lint`, `tailwindcss-color-themes`) export `.` only; `og-image` also exports `./wasm`.
+`tsconfig`, `stylelint-config` and `tailwindcss-variants` ship static files (JSON, CJS config,
+`index.css`) with no build step.
 
-Exceptions (single entry point):
+## Adding a package
 
-- `@gpahal/logger` - exports `./build/index.js` only
-- `@gpahal/og-image` - exports both `./build/index.js` and `./build/wasm.js`
-
-### Dependency Management
-
-- **Workspace Dependencies**: Use `workspace:*` for internal package dependencies
-- **Peer Dependencies**: Config packages use optional peer dependencies for framework-specific plugins
-- **Build Dependencies**: `pnpm-workspace.yaml` lists `onlyBuiltDependencies` (esbuild, sharp, etc.)
+Checklist in `packages/ADDING_A_PACKAGE.md`. Copy `package.json` and both tsconfigs from the closest
+existing package, add a `README.md`, and add a `references` entry in the root `tsconfig.json` (only
+packages that emit types need one).
 
 ## Publishing
 
-```bash
-# Create changeset (version bump + changelog)
-pnpm cs
-
-# Publish all changed packages
-pnpm cs-publish
-```
-
-Changesets workflow:
-
-1. Run `pnpm cs` to create a changeset
-2. Run `changeset version` to bump versions
-3. Run `pnpm cs-publish` to publish (includes lint, format check, tests, and cleanup of git tags)
-
-## Adding a New Package
-
-See `packages/ADDING_A_PACKAGE.md` for checklist:
-
-1. Create directory in `packages/`
-2. Add `package.json` with unique name under `@gpahal/` scope
-3. Copy `tsconfig.json`, `tsconfig.build.json`, and `tsup.config.ts` from similar package
-4. Add `README.md` with package description
-5. Add entry in root `tsconfig.json` references
-6. Follow the standard `src/` structure
-
-## Key Technologies
-
-- **TypeScript 5.x** - All packages are TypeScript
-- **tsup** - Fast build tool using esbuild
-- **Vitest** - Test runner
-- **Turborepo** - Monorepo build system with caching
-- **pnpm** - Fast, disk-efficient package manager
-- **Changesets** - Version management and publishing
-
-## Important Notes
-
-- All packages use **ESM** format (no CommonJS)
-- All packages are marked `sideEffects: false` for tree-shaking
-- Node.js version: >=20.0.0
-- Builds depend on each other (turbo `dependsOn: ["^build"]`)
-- Tests run after build (`dependsOn: ["build"]`)
+`pnpm cs` runs `changeset && changeset version` (changeset creation and version bump in one step).
+`pnpm cs-publish` then runs typecheck/lint/fmt-check, tests, `changeset publish`, and deletes local
+git tags.

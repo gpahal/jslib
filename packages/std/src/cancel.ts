@@ -109,10 +109,12 @@ export function createTimeoutCancelSignal(timeoutMs: number): [CancelSignal, () 
   const [cancelSignal, cancel] = createCancelSignal()
   let timeout: ReturnType<typeof setTimeout> | undefined
   const clear = () => {
-    if (timeout) {
-      clearTimeout(timeout)
-      timeout = undefined
+    if (!timeout) {
+      return
     }
+
+    clearTimeout(timeout)
+    timeout = undefined
   }
   cancelSignal.onCancelled(clear)
   timeout = setTimeout(() => {
@@ -208,6 +210,9 @@ export function createCancellablePromise<T>(
 
     signal.onCancelled(onCancelled)
 
+    // Inside a promise executor, so `await` is not available. `.then(resolve, reject)` forwards both
+    // outcomes without also catching errors thrown by `resolve` itself
+    // eslint-disable-next-line unicorn/prefer-await, unicorn/prefer-then-catch
     promise.then(resolve, reject).finally(() => {
       signal.clearOnCancelled(onCancelled)
     })

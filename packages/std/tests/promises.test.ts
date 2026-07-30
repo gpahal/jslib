@@ -56,7 +56,8 @@ describe('createTrackedPromise', () => {
 describe('checkIfPromiseIsSettled', () => {
   it('should return true if the promise is settled', async () => {
     expect(await checkIfPromiseIsSettled(Promise.resolve())).toBe(true)
-    expect(await checkIfPromiseIsSettled(Promise.reject(new Error('test')))).toBe(true)
+    const rejectedPromise = Promise.reject(new Error('test'))
+    expect(await checkIfPromiseIsSettled(rejectedPromise)).toBe(true)
   })
 
   it('should return false if the promise is not settled', async () => {

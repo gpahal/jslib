@@ -4,15 +4,7 @@ import { createLogger, format, transports, type Logger as LoggerLib } from 'wins
 const TRANSPORT_CONSOLE = new transports.Console()
 
 export type LoggerLevel =
-  | 'silly'
-  | 'debug'
-  | 'verbose'
-  | 'http'
-  | 'info'
-  | 'help'
-  | 'warn'
-  | 'error'
-  | 'critical'
+  'silly' | 'debug' | 'verbose' | 'http' | 'info' | 'help' | 'warn' | 'error' | 'critical'
 
 const levels: Record<LoggerLevel, number> = {
   silly: 90,
@@ -81,7 +73,7 @@ export class Logger {
       format: format.combine(...formats),
       transports: [TRANSPORT_CONSOLE],
     })
-    this.logger.on('finish', this.flushLoggerTransports.bind(this) as () => void)
+    this.logger.on('finish', () => void this.flushLoggerTransports())
 
     if (onError) {
       this.logger.on('error', onError)

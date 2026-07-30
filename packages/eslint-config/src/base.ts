@@ -189,6 +189,7 @@ export default function defineBaseConfig({
         'unicorn/prefer-module': 'off',
         'unicorn/prefer-node-protocol': 'error',
         'unicorn/prevent-abbreviations': 'off',
+        'unicorn/name-replacements': 'off',
         'unicorn/no-await-expression-member': 'off',
         'unicorn/no-array-for-each': 'off',
         'unicorn/no-array-sort': 'off',

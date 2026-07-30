@@ -5,7 +5,7 @@
     "moduleResolution": "bundler",
     "module": "esnext",
     "target": "es2022",
-    "lib": ["dom", "dom.iterable", "es2022"],
+    "lib": ["dom", "dom.iterable", "es2025"],
     "moduleDetection": "force",
     "resolveJsonModule": true,
     "isolatedModules": true,

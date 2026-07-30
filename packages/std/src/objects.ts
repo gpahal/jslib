@@ -27,7 +27,7 @@ export function omitUndefinedValuesAndKeys<T extends object>(o: T, keys: Array<P
 
   const clone = Object.assign({}, o)
   for (const key in clone) {
-    if (clone[key] === undefined || key in keys) {
+    if (clone[key] === undefined || keys.includes(key)) {
       delete clone[key]
     }
   }

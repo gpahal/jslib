@@ -75,7 +75,6 @@ const dictionary = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX
 const binary = dictionary.length
 
 export function shortHash(s: string): string {
-  let num: number | undefined
   let result = ''
 
   let integer = stringHashCode(s)
@@ -84,7 +83,7 @@ export function shortHash(s: string): string {
   integer = Math.abs(integer)
 
   while (integer >= binary) {
-    num = integer % binary
+    const num = integer % binary
     integer = Math.floor(integer / binary)
     result = dictionary[num] + result
   }
@@ -106,7 +105,7 @@ function stringHashCode(s: string): number {
     // eslint-disable-next-line unicorn/prefer-code-point
     const ch = s.charCodeAt(i)
     hash = (hash << 5) - hash + ch
-    hash = hash & hash // Convert to 32bit integer
+    hash &= hash // Convert to 32bit integer
   }
   return hash
 }
