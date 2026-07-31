@@ -1,0 +1,31 @@
+import eslintPluginBetterTailwindcss from 'eslint-plugin-better-tailwindcss'
+import { defineConfig } from 'eslint/config'
+
+import { omitUndefinedValues } from '@gpahal/std/objects'
+
+import type { Config } from './common'
+
+const FILES = ['**/*.{js,mjs,cjs,jsx,ts,tsx}']
+const ASTRO_FILES = ['*.astro', '**/*.astro']
+const HTML_FILES = ['**/*.html']
+
+export type TailwindcssConfigOptions = {
+  /** Path to the css entry file, eg. `src/styles/index.css` */
+  entryPoint?: string
+  /** Path to the `tsconfig.json` file, used to resolve path aliases */
+  tsconfig?: string
+  /** Working directory used to resolve tailwindcss and its config files. Useful in monorepos */
+  cwd?: string
+  /** Detect tailwind v4 custom component classes to avoid false `no-unknown-classes` reports */
+  detectComponentClasses?: boolean
+}
+
+export default function tailwindcssConfig(options: TailwindcssConfigOptions = {}): Array<Config> {
+  return defineConfig({
+    files: [...FILES, ...ASTRO_FILES, ...HTML_FILES],
+    extends: [eslintPluginBetterTailwindcss.configs.recommended],
+    settings: {
+      'better-tailwindcss': omitUndefinedValues(options),
+    },
+  })
+}
