@@ -50,6 +50,7 @@ const config = {
     'number-max-precision': 6,
     'comment-empty-line-before': null,
     'nesting-selector-no-missing-scoping-root': null,
+    'import-notation': 'string',
   },
 }
 
