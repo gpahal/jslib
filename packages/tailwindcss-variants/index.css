@@ -1,32 +1,32 @@
 @import 'tailwindcss';
 
-@utility hocus {
+@custom-variant hocus {
   &:hover,
   &:focus {
     @slot;
   }
 }
 
-@utility hocus-visible {
+@custom-variant hocus-visible {
   &:hover,
   &:focus-visible {
     @slot;
   }
 }
 
-@utility required {
+@custom-variant required {
   &:required {
     @slot;
   }
 }
 
-@utility optional {
+@custom-variant optional {
   &:optional {
     @slot;
   }
 }
 
-@utility inverted-colors {
+@custom-variant inverted-colors {
   @media (inverted-colors: inverted) {
     @slot;
   }
