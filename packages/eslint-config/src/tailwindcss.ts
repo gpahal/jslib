@@ -8,6 +8,7 @@ import type { Config } from './common'
 const FILES = ['**/*.{js,mjs,cjs,jsx,ts,tsx}']
 const ASTRO_FILES = ['*.astro', '**/*.astro']
 const HTML_FILES = ['**/*.html']
+const CSS_FILES = ['**/*.css']
 
 export type TailwindcssConfigOptions = {
   /** Path to the css entry file, eg. `src/styles/index.css` */
@@ -22,10 +23,15 @@ export type TailwindcssConfigOptions = {
 
 export default function tailwindcssConfig(options: TailwindcssConfigOptions = {}): Array<Config> {
   return defineConfig({
-    files: [...FILES, ...ASTRO_FILES, ...HTML_FILES],
+    files: [...FILES, ...ASTRO_FILES, ...HTML_FILES, ...CSS_FILES],
     extends: [eslintPluginBetterTailwindcss.configs.recommended],
     settings: {
       'better-tailwindcss': omitUndefinedValues(options),
+    },
+    rules: {
+      // Handled by prettier via `prettier-plugin-tailwindcss`
+      'better-tailwindcss/enforce-consistent-class-order': 'off',
+      'better-tailwindcss/enforce-consistent-line-wrapping': 'off',
     },
   })
 }

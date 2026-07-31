@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.130",
+  "version": "0.0.131",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^5.18.0",
+    "@eslint/css": "^1.4.0",
     "@html-eslint/parser": "^0.64.0",
     "@next/eslint-plugin-next": "^16.2.12",
     "@typescript-eslint/utils": "^8.65.0",
@@ -63,10 +64,12 @@
     "eslint-plugin-better-tailwindcss": "^4.7.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-turbo": "^2.10.7",
+    "tailwind-csstree": "^0.3.3",
     "tailwindcss": "^4.3.3"
   },
   "peerDependencies": {
     "@eslint-react/eslint-plugin": "^5.18",
+    "@eslint/css": "^1.4",
     "@html-eslint/parser": "^0.64",
     "@next/eslint-plugin-next": "^16.2",
     "@vitest/eslint-plugin": "^1.6",
@@ -75,10 +78,14 @@
     "eslint-plugin-better-tailwindcss": "^4.7",
     "eslint-plugin-react-hooks": "^7.1",
     "eslint-plugin-turbo": "^2.10",
+    "tailwind-csstree": "^0.3",
     "tailwindcss": "^4.3"
   },
   "peerDependenciesMeta": {
     "@eslint-react/eslint-plugin": {
+      "optional": true
+    },
+    "@eslint/css": {
       "optional": true
     },
     "@html-eslint/parser": {
@@ -100,6 +107,9 @@
       "optional": true
     },
     "eslint-plugin-turbo": {
+      "optional": true
+    },
+    "tailwind-csstree": {
       "optional": true
     },
     "tailwindcss": {
