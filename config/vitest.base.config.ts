@@ -2,10 +2,11 @@
 /// <reference types="vite/client" />
 
 import type { UserConfig } from 'vite'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 const config = {
-  plugins: [tsconfigPaths()],
+  resolve: {
+    tsconfigPaths: true,
+  },
   test: {
     globals: true,
     environment: 'node',
