@@ -229,12 +229,12 @@ const PROMISE_FINISHED_SYMBOL = Symbol('PROMISE_FINISHED')
  * @example
  * ```ts
  * const promise = new Promise((resolve) => setTimeout(resolve, 1000))
- * console.log(await checkIfPromiseIsSettled(promise)) // false
+ * console.log(await isPromiseSettled(promise)) // false
  * await promise
- * console.log(await checkIfPromiseIsSettled(promise)) // true
+ * console.log(await isPromiseSettled(promise)) // true
  * ```
  */
-export async function checkIfPromiseIsSettled(promise: Promise<unknown>): Promise<boolean> {
+export async function isPromiseSettled(promise: Promise<unknown>): Promise<boolean> {
   const immediate = Promise.resolve(PROMISE_FINISHED_SYMBOL)
   try {
     const result = await Promise.race([promise, immediate])

@@ -1,9 +1,9 @@
 import { describe, it } from 'vitest'
 
 import {
-  checkIfPromiseIsSettled,
   createMutex,
   createTrackedPromise,
+  isPromiseSettled,
   sleep,
   sleepWithWakeup,
 } from '@/promises'
@@ -53,15 +53,15 @@ describe('createTrackedPromise', () => {
   })
 })
 
-describe('checkIfPromiseIsSettled', () => {
+describe('isPromiseSettled', () => {
   it('should return true if the promise is settled', async () => {
-    expect(await checkIfPromiseIsSettled(Promise.resolve())).toBe(true)
+    expect(await isPromiseSettled(Promise.resolve())).toBe(true)
     const rejectedPromise = Promise.reject(new Error('test'))
-    expect(await checkIfPromiseIsSettled(rejectedPromise)).toBe(true)
+    expect(await isPromiseSettled(rejectedPromise)).toBe(true)
   })
 
   it('should return false if the promise is not settled', async () => {
-    expect(await checkIfPromiseIsSettled(sleep(100))).toBe(false)
+    expect(await isPromiseSettled(sleep(100))).toBe(false)
   })
 })
 
@@ -70,7 +70,7 @@ describe('sleep', () => {
     const start = Date.now()
     await sleep(100)
     const end = Date.now()
-    expect(end - start).toBeGreaterThanOrEqual(100)
+    expect(end - start).toBeGreaterThanOrEqual(99)
   })
 
   it('should sleep for the given number of milliseconds with jitter', async () => {

@@ -11,13 +11,21 @@ const HTML_FILES = ['**/*.html']
 const CSS_FILES = ['**/*.css']
 
 export type TailwindcssConfigOptions = {
-  /** Path to the css entry file, eg. `src/styles/index.css` */
+  /**
+  Path to the css entry file, eg. `src/styles/index.css`
+  */
   entryPoint?: string
-  /** Path to the `tsconfig.json` file, used to resolve path aliases */
+  /**
+  Path to the `tsconfig.json` file, used to resolve path aliases
+  */
   tsconfig?: string
-  /** Working directory used to resolve tailwindcss and its config files. Useful in monorepos */
+  /**
+  Working directory used to resolve tailwindcss and its config files. Useful in monorepos
+  */
   cwd?: string
-  /** Detect tailwind v4 custom component classes to avoid false `no-unknown-classes` reports */
+  /**
+  Detect tailwind v4 custom component classes to avoid false `no-unknown-classes` reports
+  */
   detectComponentClasses?: boolean
 }
 

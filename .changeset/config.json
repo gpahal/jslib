@@ -4,7 +4,6 @@
   "updateInternalDependencies": "patch",
   "linked": [],
   "access": "public",
-  "baseBranch": "main",
   "ignore": [],
   "changelog": false
 }

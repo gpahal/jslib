@@ -31,7 +31,7 @@ projects.
 
 ### Markdown utilities
 
-- [@gpahal/remark-preset-lint-md](/packages/remark-preset-lint-md)
+- [@gpahal/remark-preset-lint](/packages/remark-preset-lint)
 
 ### Tailwind CSS plugins
 
