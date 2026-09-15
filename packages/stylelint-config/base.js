@@ -25,6 +25,7 @@ const config = {
     'comment-empty-line-before': null,
     'nesting-selector-no-missing-scoping-root': null,
     'import-notation': 'string',
+    'at-rule-prelude-no-invalid': [true, { ignoreAtRules: ['media', 'apply'] }],
   },
 }
 
