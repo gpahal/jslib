@@ -28,8 +28,12 @@ pnpm-debug.log*
 .env
 .env.*
 
-# Claude Code
+# AI tools
 .claude/settings.local.json
+.scratch
+.specs
+.tickets
+.handoffs
 
 # Editors
 
