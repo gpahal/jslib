@@ -505,13 +505,10 @@ function getPictureSourceOptionsMediaAttribute({
   minWidth,
   maxWidth,
 }: PictureSourceOptions): string {
-  const queries: Array<string> = []
-  if (minWidth) {
-    queries.push(`(min-width: ${minWidth}px)`)
-  }
-  if (maxWidth) {
-    queries.push(`(max-width: ${maxWidth}px)`)
-  }
+  const queries: Array<string> = [
+    ...(minWidth ? [`(min-width: ${minWidth}px)`] : []),
+    ...(maxWidth ? [`(max-width: ${maxWidth}px)`] : []),
+  ]
   return queries.join(' and ')
 }
 

@@ -35,10 +35,8 @@ export class Logger {
         info.message = normalizeMessage(String(info.message), prefix)
         return info
       })(),
+      ...(isVerbose ? [format.timestamp()] : []),
     ]
-    if (isVerbose) {
-      formats.push(format.timestamp())
-    }
 
     if (showOutputAsJSON) {
       formats.push(format.json())

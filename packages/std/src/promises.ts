@@ -39,12 +39,6 @@ export function sleep(
     ms *= 1 + jitterRatio * (Math.random() * 2 - 1)
   }
 
-  if (!stopOnCancelSignal) {
-    return new Promise((resolve) => {
-      setTimeout(resolve, ms)
-    })
-  }
-
   return new Promise((resolve) => {
     let timeout: ReturnType<typeof setTimeout> | undefined
     const clear = () => {
@@ -56,11 +50,11 @@ export function sleep(
       timeout = undefined
     }
 
-    stopOnCancelSignal.onCancelled(clear)
+    stopOnCancelSignal?.onCancelled(clear)
 
     timeout = setTimeout(() => {
       resolve()
-      stopOnCancelSignal.clearOnCancelled(clear)
+      stopOnCancelSignal?.clearOnCancelled(clear)
       timeout = undefined
     }, ms)
   })

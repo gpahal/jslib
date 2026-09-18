@@ -42,17 +42,11 @@ export function stripSuffix(s: string, suffix: string): string {
 }
 
 export function trimStart(s: string, chars?: string): string {
-  if (!chars) {
-    return s.trimStart()
-  }
-  return s.replace(new RegExp(`^[${chars}]+`), '')
+  return !chars ? s.trimStart() : s.replace(new RegExp(`^[${chars}]+`), '')
 }
 
 export function trimEnd(s: string, chars?: string): string {
-  if (!chars) {
-    return s.trimEnd()
-  }
-  return s.replace(new RegExp(`[${chars}]+$`), '')
+  return !chars ? s.trimEnd() : s.replace(new RegExp(`[${chars}]+$`), '')
 }
 
 export function trim(s: string, chars?: string): string {

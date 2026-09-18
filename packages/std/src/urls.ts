@@ -64,9 +64,5 @@ export function getExtension(urlOrFilePath: Url): string {
   }
 
   const pos = basename.lastIndexOf('.')
-  if (pos < 1) {
-    return ''
-  }
-
-  return basename.slice(pos + 1)
+  return pos < 1 ? '' : basename.slice(pos + 1)
 }

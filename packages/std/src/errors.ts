@@ -15,8 +15,5 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof Error || hasMessageString(error)) {
     return error.message
   }
-  if (error == null || (!isObject(error) && !isFunction(error))) {
-    return String(error)
-  }
-  return 'Unknown error'
+  return error == null || (!isObject(error) && !isFunction(error)) ? String(error) : 'Unknown error'
 }

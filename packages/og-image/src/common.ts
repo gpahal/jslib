@@ -63,14 +63,13 @@ export async function generateOgImageWithSatoriFn(
 }
 
 async function getSatoriFontOptions(font: FontInfo): Promise<SatoriOptions['fonts'][number]> {
-  if (typeof font.data === 'function') {
-    return {
-      ...font,
-      data: await font.data(),
-    }
-  }
-  return {
-    ...font,
-    data: await font.data,
-  }
+  return typeof font.data === 'function'
+    ? {
+        ...font,
+        data: await font.data(),
+      }
+    : {
+        ...font,
+        data: await font.data,
+      }
 }

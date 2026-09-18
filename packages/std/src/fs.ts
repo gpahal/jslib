@@ -372,10 +372,12 @@ function updateFlattenedFileMapIndexInternal<T>(
         curr,
       )
     }
-    if (parent) {
-      parent.childrenIndices ||= []
-      parent.childrenIndices.push(curr.index)
+    if (!parent) {
+      continue
     }
+
+    parent.childrenIndices ||= []
+    parent.childrenIndices.push(curr.index)
   }
 }
 

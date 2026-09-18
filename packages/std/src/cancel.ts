@@ -192,10 +192,7 @@ export function createCancellablePromise<T>(
   }
 
   const getCancelledError = () => {
-    if (cancelledError) {
-      return cancelledError
-    }
-    return new Error('Cancelled')
+    return cancelledError ?? new Error('Cancelled')
   }
 
   return new Promise((resolve, reject) => {
