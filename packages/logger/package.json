@@ -1,8 +1,11 @@
 {
   "name": "@gpahal/logger",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "sideEffects": false,
   "type": "module",
   "exports": {

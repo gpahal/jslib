@@ -1,8 +1,11 @@
 {
   "name": "@gpahal/prettier-config",
-  "version": "0.0.40",
+  "version": "0.0.42",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "sideEffects": false,
   "type": "module",
   "exports": {

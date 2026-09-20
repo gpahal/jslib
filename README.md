@@ -1,7 +1,6 @@
 # jslib
 
-This is a collection of javascript/typescript libraries and configuration presets that I use in my
-projects.
+This is a collection of javascript/typescript libraries and configuration presets that I use in my projects.
 
 ## Packages
 
@@ -40,5 +39,4 @@ projects.
 
 ## License
 
-Licensed under MIT license ([LICENSE](LICENSE) or
-[opensource.org/licenses/MIT](https://opensource.org/licenses/MIT))
+Licensed under MIT license ([LICENSE](LICENSE) or [opensource.org/licenses/MIT](https://opensource.org/licenses/MIT))

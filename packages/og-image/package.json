@@ -1,8 +1,11 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.56",
+  "version": "0.0.58",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "sideEffects": false,
   "type": "module",
   "exports": {
@@ -42,6 +45,6 @@
   "devDependencies": {
     "@gpahal/font": "workspace:*",
     "@types/react": "^19.3.0",
-    "@types/node": "^26.6.1"
+    "@types/node": "^26.6.2"
   }
 }

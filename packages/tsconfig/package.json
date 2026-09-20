@@ -1,11 +1,15 @@
 {
   "name": "@gpahal/tsconfig",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "sideEffects": false,
   "files": [
     "package.json",
+    "README.md",
     "base.json",
     "vite.json",
     "vitest.json",

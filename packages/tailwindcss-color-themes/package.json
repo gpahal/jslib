@@ -1,8 +1,11 @@
 {
   "name": "@gpahal/tailwindcss-color-themes",
-  "version": "0.0.46",
+  "version": "0.0.48",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "sideEffects": false,
   "type": "module",
   "exports": {
@@ -34,7 +37,7 @@
     "@gpahal/std": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^26.6.1"
+    "@types/node": "^26.6.2"
   },
   "peerDependencies": {
     "tailwindcss": "^4.3"

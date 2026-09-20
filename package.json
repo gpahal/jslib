@@ -23,8 +23,8 @@
     "lint-fix": "run-s lint-fix:*",
     "lint-fix:eslint": "eslint . --fix",
     "lint-fix:stylelint": "stylelint \"**/*.css\" --fix",
-    "fmt": "prettier \"**/*.{js,mjs,cjs,ts,jsx,tsx,css,json}\" --write",
-    "fmt-check": "prettier \"**/*.{js,mjs,cjs,ts,jsx,tsx,css,json}\" --check"
+    "fmt": "prettier \"**/*.{js,mjs,cjs,ts,jsx,tsx,css,json,md}\" --write",
+    "fmt-check": "prettier \"**/*.{js,mjs,cjs,ts,jsx,tsx,css,json,md}\" --check"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
@@ -33,18 +33,18 @@
     "@gpahal/stylelint-config": "workspace:*",
     "@gpahal/tsconfig": "workspace:*",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
-    "@types/node": "^26.6.1",
+    "@types/node": "^26.6.2",
     "@vitest/ui": "^5.0.1",
-    "eslint": "^10.10.0",
+    "eslint": "^10.11.0",
     "npm-run-all2": "^9.0.3",
     "premove": "^4.0.0",
-    "prettier": "^3.9.7",
+    "prettier": "^3.9.8",
     "simple-git-hooks": "^2.14.0",
     "stylelint": "^17.15.0",
     "tsc-alias": "^1.9.5",
     "tsc-files": "^1.1.4",
     "tsup": "^8.5.1",
-    "turbo": "^2.10.13",
+    "turbo": "^2.11.2",
     "typescript": "^6.0.3",
     "vite": "^8.3.0",
     "vitest": "^5.0.1"

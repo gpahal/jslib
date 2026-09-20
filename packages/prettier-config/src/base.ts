@@ -46,6 +46,7 @@ const config: Config = {
     '',
     '^[./]',
   ],
+  overrides: [{ files: '*.md', options: { proseWrap: 'never' } }],
 }
 
 export default config

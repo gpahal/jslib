@@ -1,8 +1,11 @@
 {
   "name": "@gpahal/image",
-  "version": "0.0.54",
+  "version": "0.0.56",
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "sideEffects": false,
   "type": "module",
   "exports": {
@@ -34,6 +37,6 @@
     "mime": "^4.1.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.1"
+    "@types/node": "^26.6.2"
   }
 }

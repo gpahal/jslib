@@ -1,31 +1,24 @@
 # jslib
 
-Monorepo of TypeScript libraries and config presets published as `@gpahal/*`. pnpm workspaces +
-Turborepo. Scripts live in the root `package.json`.
+Monorepo of TypeScript libraries and config presets published as `@gpahal/*`. pnpm workspaces + Turborepo; every script lives in the root `package.json`. ESM only, `sideEffects: false`, Node `>=24`.
 
-**Run `pnpm build` first.** `build/` is gitignored and packages import each other through it, so
-typecheck and test fail on a clean checkout without it.
+**Run `pnpm build` first.** Packages resolve each other through gitignored `build/`, so a package's own `typecheck`/`test` script — and the editor — fails on a clean checkout. Root `pnpm typecheck`/`pnpm test` build first via `turbo.json`.
 
 ## Gotchas
 
-- tsup and vitest config live in `config/`, re-exported from the repo root; packages have none of
-  their own. tsup walks up and finds the root config, vitest does not — so every `test` script
-  needs `--config ../../vitest.config.ts`, or the `@/*` alias and `globals` are lost.
-- The root `eslint.config.mjs`, `.stylelintrc.cjs` and `.prettierrc.mjs` use this repo's own
-  presets. Rebuild a preset package before its changes take effect.
-- Types come from tsup's `onSuccess` hook (`tsc` + `tsc-alias`), not `dts`.
+- tsup and vitest config live in `config/`, re-exported from the repo root; packages have none of their own. tsup walks up and finds the root config, vitest does not — so every `test` script needs `--config ../../vitest.config.ts`, or `globals` and `environment: 'node'` are lost.
+- tsup's entry is `src/*`: every top-level file in `src/` becomes a build artifact, and in the wildcard-export packages a public entry point.
+- Tests live in a package's top-level `tests/` as `*.test.ts`, never beside the source. `globals` is on, so nothing is imported from `vitest`.
+- Types come from tsup's `onSuccess` hook (`tsc` + `tsc-alias`), not `dts`. `@/*` maps to `./src/*`; `tsc-alias` rewrites it at build time.
+- `eslint.config.mjs`, `.stylelintrc.cjs` and `.prettierrc.mjs` consume this repo's own presets — rebuild `eslint-config`/`prettier-config` before their changes take effect.
+- `pnpm fmt` formats Markdown with `proseWrap: never` — write each paragraph and list item as one unwrapped line.
 - Native build allowlist is `allowBuilds` in `pnpm-workspace.yaml`, not `onlyBuiltDependencies`.
-- Pre-push runs typecheck/lint/fmt-check, then build, then fails if the tree is dirty.
-- Prettier skips Markdown — wrap `.md` at 100 cols by hand.
+- There is no CI. The pre-push hook is the only gate: `typecheck`/`lint`/`fmt-check`, then `build`, then it fails if the tree is dirty.
 
 ## Conventions
 
-ESM only, `sideEffects: false`, Node `>=24`. `stylelint-config` is CJS because Stylelint requires
-it. Internal deps use `workspace:*`; config presets declare framework plugins as optional peer
-deps.
+ESLint enforces what formatting cannot fix: kebab-case filenames, `type` over `interface`, `Array<T>` over `T[]`, and `import type`. Prettier handles the rest (no semicolons, single quotes, sorted imports) — run `pnpm fmt`.
 
-Packages with many entry points use wildcard `./*` exports plus `typesVersions`; the rest export
-`.` only. `tsconfig`, `stylelint-config` and `tailwindcss-variants` ship static files with no build
-step.
+`stylelint-config` is CJS, shipping a single `base.js` consumed by `.stylelintrc.cjs`. Internal deps use `workspace:*`; `eslint-config` declares its framework plugins as optional peer deps.
 
-New package: follow `packages/ADDING_A_PACKAGE.md`. Publish: `pnpm cs`, then `pnpm cs-publish`.
+New package: follow `packages/ADDING_A_PACKAGE.md`. Publish: `pnpm cs` (bumps versions immediately), then `pnpm cs-publish`.
