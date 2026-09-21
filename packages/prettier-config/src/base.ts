@@ -46,7 +46,13 @@ const config: Config = {
     '',
     '^[./]',
   ],
-  overrides: [{ files: '*.md', options: { proseWrap: 'never' } }],
+  overrides: [
+    { files: '*.md', options: { proseWrap: 'never' } },
+    {
+      files: '*.jsonc',
+      options: { trailingComma: 'none' },
+    },
+  ],
 }
 
 export default config
