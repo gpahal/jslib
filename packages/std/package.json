@@ -1,6 +1,29 @@
 {
   "name": "@gpahal/std",
-  "version": "0.0.47",
+  "version": "0.0.48",
+  "description": "Standard library of TypeScript utilities for arrays, objects, strings, promises, errors, hashing, pattern matching and URLs",
+  "keywords": [
+    "std",
+    "stdlib",
+    "utilities",
+    "utils",
+    "helpers",
+    "typescript",
+    "arrays",
+    "objects",
+    "strings",
+    "promises",
+    "errors"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/std#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/std"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

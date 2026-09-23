@@ -1,6 +1,27 @@
 {
   "name": "@gpahal/font-fallback",
-  "version": "0.0.58",
+  "version": "0.0.59",
+  "description": "Generates size-adjusted CSS font fallbacks from font metrics to reduce layout shift",
+  "keywords": [
+    "font",
+    "font-fallback",
+    "fallback-font",
+    "size-adjust",
+    "font-metrics",
+    "cls",
+    "layout-shift",
+    "css",
+    "web-performance"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/font-fallback#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/font-fallback"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

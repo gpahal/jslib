@@ -1,6 +1,23 @@
 {
   "name": "@gpahal/stylelint-config",
-  "version": "0.0.25",
+  "version": "0.0.26",
+  "description": "Shared Stylelint config preset extending stylelint-config-standard",
+  "keywords": [
+    "stylelint",
+    "stylelint-config",
+    "stylelintconfig",
+    "css",
+    "lint"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/stylelint-config#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/stylelint-config"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

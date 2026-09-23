@@ -1,6 +1,26 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.58",
+  "version": "0.0.59",
+  "description": "Open Graph image generation from HTML via Satori, with a separate WASM entry point for edge runtimes",
+  "keywords": [
+    "og-image",
+    "open-graph",
+    "opengraph",
+    "social-image",
+    "satori",
+    "wasm",
+    "edge",
+    "image-generation"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/og-image#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/og-image"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

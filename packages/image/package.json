@@ -1,6 +1,26 @@
 {
   "name": "@gpahal/image",
-  "version": "0.0.56",
+  "version": "0.0.57",
+  "description": "Framework-agnostic helpers for building responsive img and picture props, with image format and crop types",
+  "keywords": [
+    "image",
+    "images",
+    "responsive-images",
+    "srcset",
+    "picture",
+    "img",
+    "image-optimization",
+    "typescript"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/image#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/image"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

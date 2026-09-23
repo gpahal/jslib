@@ -1,6 +1,26 @@
 {
   "name": "@gpahal/remark-preset-lint",
-  "version": "0.0.7",
+  "version": "0.0.8",
+  "description": "Remark lint preset for Markdown and MDX, with GFM, math and frontmatter support",
+  "keywords": [
+    "remark",
+    "remark-preset",
+    "remark-lint",
+    "markdown",
+    "mdx",
+    "gfm",
+    "lint",
+    "unified"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/remark-preset-lint#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/remark-preset-lint"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

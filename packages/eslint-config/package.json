@@ -1,6 +1,29 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.137",
+  "version": "0.0.138",
+  "description": "Shared flat ESLint config presets for TypeScript, React, Next.js, Astro, Tailwind CSS, Node, CSS, HTML, Turbo and Vitest",
+  "keywords": [
+    "eslint",
+    "eslint-config",
+    "eslintconfig",
+    "flat-config",
+    "typescript",
+    "react",
+    "nextjs",
+    "astro",
+    "tailwindcss",
+    "vitest",
+    "lint"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/eslint-config#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/eslint-config"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {
@@ -41,7 +64,7 @@
     "@eslint/js": "^10.0.1",
     "@eslint/json": "^2.1.0",
     "@gpahal/std": "workspace:*",
-    "@typescript-eslint/parser": "^8.70.0",
+    "@typescript-eslint/parser": "^8.70.1",
     "eslint-config-flat-gitignore": "^2.4.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.5",
@@ -53,14 +76,14 @@
     "eslint-plugin-regexp": "^3.3.1",
     "eslint-plugin-unicorn": "^76.0.0",
     "globals": "^17.12.0",
-    "typescript-eslint": "^8.70.0"
+    "typescript-eslint": "^8.70.1"
   },
   "devDependencies": {
-    "@eslint-react/eslint-plugin": "^5.20.2",
+    "@eslint-react/eslint-plugin": "^5.20.5",
     "@eslint/css": "^2.0.0",
     "@html-eslint/parser": "^0.66.1",
     "@next/eslint-plugin-next": "^16.3.5",
-    "@typescript-eslint/utils": "^8.70.0",
+    "@typescript-eslint/utils": "^8.70.1",
     "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.11.0",
     "eslint-plugin-astro": "^3.2.1",

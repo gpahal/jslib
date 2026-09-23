@@ -1,6 +1,24 @@
 {
   "name": "@gpahal/font",
-  "version": "0.0.15",
+  "version": "0.0.16",
+  "description": "Shared font types and constants for weights, styles and font data",
+  "keywords": [
+    "font",
+    "fonts",
+    "font-weight",
+    "font-style",
+    "typography",
+    "typescript"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/font#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/font"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

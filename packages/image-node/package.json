@@ -1,6 +1,25 @@
 {
   "name": "@gpahal/image-node",
-  "version": "0.0.64",
+  "version": "0.0.65",
+  "description": "Sharp-backed image buffer transformer implementing the @gpahal/image transform interface",
+  "keywords": [
+    "image",
+    "images",
+    "sharp",
+    "image-processing",
+    "image-transform",
+    "resize",
+    "node"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/image-node#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/image-node"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

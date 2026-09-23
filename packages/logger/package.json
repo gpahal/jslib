@@ -1,6 +1,24 @@
 {
   "name": "@gpahal/logger",
-  "version": "0.0.30",
+  "version": "0.0.31",
+  "description": "Leveled application logger built on Winston",
+  "keywords": [
+    "logger",
+    "logging",
+    "log",
+    "winston",
+    "node",
+    "typescript"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/logger#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/logger"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

@@ -1,6 +1,27 @@
 {
   "name": "@gpahal/tailwindcss-color-themes",
-  "version": "0.0.48",
+  "version": "0.0.49",
+  "description": "Generates Tailwind CSS color theme variables from a theme config",
+  "keywords": [
+    "tailwindcss",
+    "tailwind",
+    "tailwindcss-plugin",
+    "color-themes",
+    "themes",
+    "theming",
+    "dark-mode",
+    "css-variables",
+    "colors"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/tailwindcss-color-themes#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/tailwindcss-color-themes"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

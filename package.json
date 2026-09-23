@@ -2,6 +2,17 @@
   "name": "jslib",
   "private": true,
   "version": "0.0.0",
+  "description": "TypeScript libraries and config presets published as @gpahal/*",
+  "homepage": "https://github.com/gpahal/jslib#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git"
+  },
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "license": "MIT",
   "type": "module",
   "sideEffects": false,
   "packageManager": "pnpm@12.4.2",

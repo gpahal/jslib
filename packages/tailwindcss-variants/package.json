@@ -1,6 +1,25 @@
 {
   "name": "@gpahal/tailwindcss-variants",
-  "version": "0.0.34",
+  "version": "0.0.35",
+  "description": "Extra Tailwind CSS custom variants such as hocus, hocus-visible, required and optional",
+  "keywords": [
+    "tailwindcss",
+    "tailwind",
+    "tailwindcss-plugin",
+    "variants",
+    "custom-variants",
+    "hocus",
+    "css"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/tailwindcss-variants#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/tailwindcss-variants"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

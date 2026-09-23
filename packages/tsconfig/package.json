@@ -1,6 +1,26 @@
 {
   "name": "@gpahal/tsconfig",
-  "version": "0.0.22",
+  "version": "0.0.23",
+  "description": "Shared TypeScript config presets for base, Vite, Vitest, React, Next.js and Astro projects",
+  "keywords": [
+    "tsconfig",
+    "typescript",
+    "typescript-config",
+    "vite",
+    "vitest",
+    "react",
+    "nextjs",
+    "astro"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/tsconfig#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/tsconfig"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {

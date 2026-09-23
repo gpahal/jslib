@@ -1,6 +1,27 @@
 {
   "name": "@gpahal/std-node",
-  "version": "0.0.47",
+  "version": "0.0.48",
+  "description": "Node-only companion to @gpahal/std, with filesystem and process utilities",
+  "keywords": [
+    "std",
+    "stdlib",
+    "utilities",
+    "utils",
+    "node",
+    "fs",
+    "filesystem",
+    "process",
+    "typescript"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/std-node#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/std-node"
+  },
   "author": "Garvit Pahal <g10pahal@gmail.com>",
   "license": "MIT",
   "engines": {
