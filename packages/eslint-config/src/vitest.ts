@@ -17,7 +17,13 @@ const vitestConfig = defineConfig({
       typecheck: true,
     },
   },
-  rules: eslintPluginVitest.configs.recommended.rules,
+  rules: {
+    ...eslintPluginVitest.configs.recommended.rules,
+    // A second argument is a message that names the failing case: `expect(value, 'why')`
+    'vitest/valid-expect': ['error', { maxArgs: 2 }],
+    // Helpers named `expect…` assert too
+    'vitest/expect-expect': ['error', { assertFunctionNames: ['expect', 'expect*'] }],
+  },
 })
 
 export default vitestConfig

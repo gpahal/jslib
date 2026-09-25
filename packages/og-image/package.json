@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/og-image",
-  "version": "0.0.59",
+  "version": "0.0.60",
   "description": "Open Graph image generation from HTML via Satori, with a separate WASM entry point for edge runtimes",
   "keywords": [
     "og-image",
@@ -58,7 +58,7 @@
     "clean": "premove build .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "satori": "^0.33.4",
+    "satori": "^0.33.5",
     "satori-html": "^0.3.2",
     "yoga-wasm-web": "^0.3.3"
   },

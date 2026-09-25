@@ -29,6 +29,7 @@ const config: Config = {
     '^@/public/(.*)$',
     '^@/common/(.*)$',
     '^@/convex/(.*)$',
+    '^@convex/(.*)$',
     '',
     '^@/types/(.*)$',
     '^@/config/(.*)$',

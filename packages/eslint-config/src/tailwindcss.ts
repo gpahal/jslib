@@ -30,16 +30,26 @@ export type TailwindcssConfigOptions = {
 }
 
 export default function tailwindcssConfig(options: TailwindcssConfigOptions = {}): Array<Config> {
-  return defineConfig({
-    files: [...FILES, ...ASTRO_FILES, ...HTML_FILES, ...CSS_FILES],
-    extends: [eslintPluginBetterTailwindcss.configs.recommended],
-    settings: {
-      'better-tailwindcss': omitUndefinedValues(options),
+  return defineConfig(
+    {
+      files: [...FILES, ...ASTRO_FILES, ...HTML_FILES, ...CSS_FILES],
+      extends: [eslintPluginBetterTailwindcss.configs.recommended],
+      settings: {
+        'better-tailwindcss': omitUndefinedValues(options),
+      },
+      rules: {
+        // Handled by prettier via `prettier-plugin-tailwindcss`
+        'better-tailwindcss/enforce-consistent-class-order': 'off',
+        'better-tailwindcss/enforce-consistent-line-wrapping': 'off',
+      },
     },
-    rules: {
-      // Handled by prettier via `prettier-plugin-tailwindcss`
-      'better-tailwindcss/enforce-consistent-class-order': 'off',
-      'better-tailwindcss/enforce-consistent-line-wrapping': 'off',
+    {
+      files: ASTRO_FILES,
+      rules: {
+        // prettier-plugin-tailwindcss can't sort classes in .astro files: it doesn't support the AST of
+        // prettier-plugin-astro 1.x
+        'better-tailwindcss/enforce-consistent-class-order': 'warn',
+      },
     },
-  })
+  )
 }

@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/prettier-config",
-  "version": "0.0.44",
+  "version": "0.0.45",
   "description": "Shared Prettier config presets with sorted imports, plus Astro and Tailwind CSS variants",
   "keywords": [
     "prettier",
