@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.139",
+  "version": "0.0.140",
   "description": "Shared flat ESLint config presets for TypeScript, React, Next.js, Astro, Tailwind CSS, Node, CSS, HTML, Turbo and Vitest",
   "keywords": [
     "eslint",
@@ -89,7 +89,7 @@
     "eslint-plugin-astro": "^3.2.1",
     "eslint-plugin-better-tailwindcss": "^4.7.0",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-turbo": "^2.11.2",
+    "eslint-plugin-turbo": "^2.11.3",
     "tailwind-csstree": "^0.4.0",
     "tailwindcss": "^4.3.3"
   },
