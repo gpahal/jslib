@@ -40,17 +40,6 @@ const KEPT_AREAS_OFF: Array<[string, Partial<EslintConfigOptions>]> = [
 ]
 
 /**
- * The type-information modes don't change which areas are on, so only the first set turns each off
- */
-const OPTION_SETS: Array<[string, EslintConfigOptions]> = [
-  ...BASE_OPTION_SETS,
-  ...KEPT_AREAS_OFF.map(([offName, offOptions]): [string, EslintConfigOptions] => [
-    `every option on, ${offName}`,
-    { ...ALL_ON_OPTIONS, ...offOptions },
-  ]),
-]
-
-/**
  * Whether `a` and `b` may both be on
  */
 function isAllowedOverlap(a: string, b: string): boolean {
@@ -64,9 +53,55 @@ function isAllowedOverlap(a: string, b: string): boolean {
  */
 const PAIR_FILES = [...FILES, 'markdown/README.md/0.js']
 
+/**
+ * The code files that stand for the others in every set but the first, and every file that isn't
+ * code, which resolves quickly. Each file of `PAIR_FILES` had the same pairs' rules on and off, with
+ * and without the twins, as one of these in every option set, with code files grouped as `.ts`
+ * outside tests, untyped `.js`, test files, and Astro's and Markdown's own. Resolving a code file's
+ * config takes about 0.1s per file and ESLint, so the first set alone checks every file, to catch a
+ * file that leaves its group
+ */
+const AREA_PAIR_FILES = PAIR_FILES.filter(
+  (file) =>
+    ![
+      'react/src/x.jsx',
+      'x.mjs',
+      'cjs/x.cjs',
+      'typescript/src/x.mts',
+      'typescript/src/x.cts',
+      'typescript/src/x.d.ts',
+      'typescript/e2e/x.spec.ts',
+      'react/src/x.stories.tsx',
+      'x.config.ts',
+      'scripts/x.ts',
+      'browser/src/x.ts',
+      'server/src/x.ts',
+    ].includes(file),
+)
+
+/**
+ * The type-information modes don't change which areas are on, so only the first set turns each off
+ */
+const OPTION_SETS: Array<[string, EslintConfigOptions, ReadonlyArray<string>]> = [
+  ...BASE_OPTION_SETS.map(
+    ([name, options], index): [string, EslintConfigOptions, ReadonlyArray<string>] => [
+      name,
+      options,
+      index === 0 ? PAIR_FILES : AREA_PAIR_FILES,
+    ],
+  ),
+  ...KEPT_AREAS_OFF.map(
+    ([offName, offOptions]): [string, EslintConfigOptions, ReadonlyArray<string>] => [
+      `every option on, ${offName}`,
+      { ...ALL_ON_OPTIONS, ...offOptions },
+      AREA_PAIR_FILES,
+    ],
+  ),
+]
+
 test.each(OPTION_SETS)(
   'no file has both rules of a duplicate pair on, nor a twin off without its kept rules: %s',
-  async (_name, options) => {
+  async (_name, options, files) => {
     const configs = await defineConfig(options)
     const eslint = eslintWith(FIXTURES_DIR, configs)
     // The same configs with every twin left on
@@ -76,7 +111,7 @@ test.each(OPTION_SETS)(
     )
     const both: Array<string> = []
     const unkept: Array<string> = []
-    for (const file of PAIR_FILES) {
+    for (const file of files) {
       const config = (await eslint.calculateConfigForFile(file)) as Linter.Config | undefined
       const twinsConfig = (await eslintWithTwins.calculateConfigForFile(file)) as
         Linter.Config | undefined
@@ -353,6 +388,15 @@ describe('a mistake that two rules report gets one report', () => {
     ])
     expect(await reportingRules('rules', { unicorn: false }, typed, code, rules)).toEqual([
       '@typescript-eslint/no-unused-vars',
+    ])
+  })
+
+  it("reports with e18e's twin of `unicorn/prefer-at` in its place with unicorn off", async () => {
+    const code = 'export function last(v) {\n  return v[v.length - 1]\n}\n'
+    const rules = ['unicorn/prefer-at', 'e18e/prefer-array-at']
+    expect(await reportingRules('rules', {}, 'x.js', code, rules)).toEqual(['unicorn/prefer-at'])
+    expect(await reportingRules('rules', { unicorn: false }, 'x.js', code, rules)).toEqual([
+      'e18e/prefer-array-at',
     ])
   })
 

@@ -26,6 +26,7 @@ import { createIgnoreCheck, IgnoreLayers } from '@/internal/walk'
 import {
   BUILD_DIR,
   collator,
+  CORE_AREAS_OFF_SOURCE,
   createESLint,
   eslintWith,
   FIXTURES_DIR,
@@ -948,12 +949,14 @@ console.log(JSON.stringify(results))
 `
 
 /**
+ * The areas that the configs of child processes turn off, since these tests check only fatal
+ * messages, and loading the areas makes up most of the time a fresh process takes to build a config
  * An `eslint.config.mjs` that loads the build's `defineConfig` with `options`, a string of
  * JavaScript
  */
 function buildConfigFile(options = '') {
   const configUrl = new URL('../build/index.js', import.meta.url).href
-  return `import { defineConfig } from '${configUrl}'\n\nexport default defineConfig({ root: import.meta.dirname, ${options} })\n`
+  return `import { defineConfig } from '${configUrl}'\n\nexport default defineConfig({ root: import.meta.dirname, ${CORE_AREAS_OFF_SOURCE}, ${options} })\n`
 }
 
 /**
@@ -998,7 +1001,7 @@ async function lintRuns(
 
 // typescript-eslint keeps one project service per process, which the first config that uses it
 // creates. These lint in a process of their own, from the build
-describe('the project service', () => {
+describe.concurrent('the project service', () => {
   beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
   const RUN_A = { cwd: 'packages/a', files: ['eslint.config.mjs', 'a.config.ts', 'src/index.ts'] }
@@ -1078,7 +1081,9 @@ describe('the project service', () => {
     const configs = await defineConfig({ root })
     const { parser } = configs.find(
       (config) => config.name === 'gpahal/typescript/typescript-eslint/base',
-    )!.languageOptions as { parser: { parseForESLint: (code: string, options: object) => unknown } }
+    )!.languageOptions as {
+      parser: { parseForESLint: (code: string, options: object) => unknown }
+    }
     const file = path.join(link, 'index.ts')
     expect(() =>
       parser.parseForESLint('export const value = 1\n', {

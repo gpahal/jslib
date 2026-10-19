@@ -20,5 +20,24 @@ export default defineConfig({
     // takes several times a workstation's time. A timeout only catches hangs
     testTimeout: 120_000,
     hookTimeout: 120_000,
+    // Tests that build configs for fixture projects trigger eslint-config's setup warnings without
+    // checking them. This stops only the printing: spies on `process.emitWarning` still see them,
+    // and processes the tests spawn still print them. The codes are its `WARNING_CODES`
+    execArgv: [
+      'GPAHAL_FRAMEWORK_OPTION_UNSET',
+      'GPAHAL_UNSUPPORTED_FRAMEWORK',
+      'GPAHAL_COMMONJS_PACKAGE',
+      'GPAHAL_NO_TSCONFIG',
+      'GPAHAL_FILES_OUTSIDE_TSCONFIG',
+      'GPAHAL_DEFAULT_PROJECT_NODE_TYPES',
+      'GPAHAL_LARGE_DEFAULT_PROJECT',
+      'GPAHAL_ASTRO_TYPES_MISSING',
+      'GPAHAL_ASTRO_JSX_A11Y_MISSING',
+      'GPAHAL_PLAYWRIGHT_FILES_UNMATCHED',
+      'GPAHAL_GITIGNORE_WILDCARDS',
+      'GPAHAL_ROOT_GITIGNORED',
+      'GPAHAL_PEER_NEWER_THAN_RANGE',
+      'GPAHAL_SONARJS_TYPESCRIPT_COPY',
+    ].map((code) => `--disable-warning=${code}`),
   },
 })

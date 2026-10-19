@@ -13,7 +13,8 @@ import {
 import { describeValue, formatMessage } from '@gpahal/std/errors'
 
 // Writes each setup recipe of the repository README into a project laid out as pnpm installs it,
-// runs the README's fixers twice and each recipe's check script
+// runs the README's fixers and then each recipe's check script, which shows that a second fix run
+// would change nothing
 
 const PACKAGE_DIR = path.join(import.meta.dirname, '..')
 const REPO_DIR = path.join(PACKAGE_DIR, '../..')
@@ -96,6 +97,26 @@ function readScripts(): Record<string, string> {
   return Object.fromEntries(
     Object.entries(scripts).filter(([name]) => /^(?:check|fix)(?::|$)/.test(name)),
   )
+}
+
+/**
+ * `check` with `--max-warnings 0` on its Stylelint command, if it has one. ESLint and Prettier
+ * already fail on anything their fixers would change, and with this Stylelint does too, so a
+ * passing check after one fix run stands in for a second fix run that changes nothing. The
+ * README's check leaves warnings out so `plugin/use-baseline` can't fail it
+ */
+function strictCheck(check: string): string {
+  const parts = check.split(/(?<=^|&& )stylelint /)
+  if (parts.length > 2) {
+    throw new Error(
+      formatMessage(
+        '@gpahal/stylelint-config',
+        ['README recipe', '`check`'],
+        `expected at most one Stylelint command, received ${describeValue(check)}`,
+      ),
+    )
+  }
+  return parts.join('stylelint --max-warnings 0 ')
 }
 
 type Manifest = {
@@ -284,11 +305,6 @@ const VITE = '### Vite with React'
 const NEXTJS = '### Next.js with Tailwind CSS'
 const ASTRO = '### Astro with React, Tailwind CSS and Vitest'
 
-const MINIMAL_SOURCES = {
-  'src/sum.ts': 'export function sum(a:number,b:number):number{return a+b}\n',
-  'src/index.ts': 'import {sum} from "./sum"\n\nlet total = sum(1,2)\n\nexport { total }\n',
-}
-
 /**
  * An Astro page, with an island component imported into its frontmatter when `island` is set
  */
@@ -403,10 +419,6 @@ type Case = {
    * Globals that the project's code mustn't type-check with
    */
   missingGlobals?: Array<MissingGlobal>
-  /**
-   * Whether to run the check script, `false` where another case already checks the same project
-   */
-  checks?: boolean
 }
 
 /**
@@ -425,19 +437,13 @@ const CASES: Array<Case> = [
     name: 'minimal',
     heading: MINIMAL,
     sources: {
-      ...MINIMAL_SOURCES,
+      'src/sum.ts': 'export function sum(a:number,b:number):number{return a+b}\n',
+      'src/index.ts': 'import {sum} from "./sum"\n\nlet total = sum(1,2)\n\nexport { total }\n',
       'src/styles.css': CSS,
       // Prettier adds trailing commas to the multi-line ```jsonc block, which ESLint must parse
       'README.md':
         '# Setup\n\n```jsonc\n{\n  "compilerOptions": {\n    "types": ["node"]\n  }\n}\n```\n',
     },
-    invalidSource: { 'src/index.ts': 'export const title: string = 123\n' },
-  },
-  {
-    name: 'minimal without CSS',
-    heading: MINIMAL,
-    sources: MINIMAL_SOURCES,
-    checks: false,
     invalidSource: { 'src/index.ts': 'export const title: string = 123\n' },
   },
   {
@@ -599,7 +605,12 @@ async function setUpRecipe({
       name: 'recipe',
       version: '0.0.0',
       ...recipeManifest,
-      scripts: { ...readScripts(), ...recipeManifest.scripts },
+      scripts: Object.fromEntries(
+        Object.entries({ ...readScripts(), ...recipeManifest.scripts }).map(([name, script]) => [
+          name,
+          name === 'check' ? strictCheck(script) : script,
+        ]),
+      ),
       ...(appDependencies.length > 0 && { dependencies }),
       devDependencies,
     }
@@ -630,7 +641,7 @@ test('the minimal recipe writes a .gitignore', () => {
 
 // Each case runs in a temporary project of its own, whose child processes dominate its time
 test.concurrent.for(CASES)(
-  'the README recipe for $name passes the fixers, whose second run changes nothing, and its checks',
+  'the README recipe for $name passes the fixers and then its checks',
   { timeout: 600_000 },
   async (testCase, { expect }) => {
     await using project = await setUpRecipe(testCase)
@@ -651,13 +662,7 @@ test.concurrent.for(CASES)(
     )
     expect(scripts.filter(([, code]) => code.includes('let '))).toEqual([])
 
-    const second = await runScript(dir, 'fix')
-    expect(second.status, second.output).toBe(0)
-    expect(await snapshot(dir)).toEqual(once)
-
-    if (testCase.checks === false) {
-      return
-    }
+    // Fails on anything a second fix run would change, as `strictCheck` explains
     const checked = await runScript(dir, 'check')
     expect(checked.status, checked.output).toBe(0)
     // Such as `GPAHAL_DEFAULT_PROJECT_NODE_TYPES`, when the config files lack Node's types

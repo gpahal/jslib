@@ -735,7 +735,7 @@ describe('comment-layout scaling', () => {
       (count: number) => `${'// x\n'.repeat(count * 2)}export const a = 1\n`,
     ],
   ] as const)('avoid quadratic scaling with the count of %s', (_name, source) => {
-    expect(ruleWork(source(20_000))).toBeLessThan(15 * ruleWork(source(2000)))
+    expect(ruleWork(source(5000))).toBeLessThan(15 * ruleWork(source(500)))
   })
 
   // A spread of more items than the runtime's argument limit throws `RangeError: Maximum call

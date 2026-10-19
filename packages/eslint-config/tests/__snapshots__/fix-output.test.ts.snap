@@ -452,25 +452,3 @@ exports[`eslint --fix output with typeAware: false in an editor, as a difference
   },
 }
 `;
-
-exports[`eslint --fix output with unicorn: false, as a difference from the defaults 1`] = `
-{
-  "src/array-likes.js": {
-    "problems": [
-      "- 5:15 unicorn/prefer-at",
-      "- 12:10 unicorn/prefer-spread",
-      "+ 5:10 e18e/prefer-array-at",
-    ],
-  },
-  "src/index.ts": {
-    "problems": [
-      "- 9:17 unicorn/prefer-spread",
-    ],
-  },
-  "src/legacy.js": {
-    "problems": [
-      "- 10:10 unicorn/prefer-spread",
-    ],
-  },
-}
-`;

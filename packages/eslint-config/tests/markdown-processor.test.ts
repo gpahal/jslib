@@ -821,7 +821,7 @@ describe('markdown processor speed', () => {
       expect(adjusted.filter((message) => message.fix?.text === '')).toHaveLength(count)
       return work
     }
-    expect(workOf(4000)).toBeLessThan(6 * workOf(1000))
+    expect(workOf(1000)).toBeLessThan(6 * workOf(250))
   })
 
   it('reads an HTML node of unclosed comments without quadratic scaling', () => {

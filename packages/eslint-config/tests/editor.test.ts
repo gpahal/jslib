@@ -9,7 +9,7 @@ import { assertBuildIsCurrent, runNodeOk } from '@gpahal/internal/node/testing'
 import { defineConfig } from '@/index'
 import { isInEditorEnvOf, type EditorEnv } from '@/internal/editor'
 
-import { BUILD_DIR, eslintWith, withProject } from './helpers'
+import { BUILD_DIR, CORE_AREAS_OFF_SOURCE, eslintWith, withProject } from './helpers'
 
 beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
@@ -22,6 +22,10 @@ const DISABLED_PREFER_CONST =
 
 const FIXED_PREFER_CONST = 'export function one() {\n  const a = 1\n  return a\n}\n'
 
+/**
+ * The options that turn off the areas these tests' child processes don't check, since loading them
+ * makes up most of the time a fresh process takes to build the config
+ */
 const COPY_SCRIPT = `
 const { defineConfig } = await import(process.env.CONFIG_URL)
 const { ESLint } = await import(process.env.ESLINT_URL)
@@ -29,7 +33,7 @@ const cwd = process.cwd()
 const eslint = new ESLint({
   cwd,
   overrideConfigFile: true,
-  overrideConfig: await defineConfig({ root: cwd, isInEditor: true, typeAware: false }),
+  overrideConfig: await defineConfig({ root: cwd, isInEditor: true, typeAware: false, ${CORE_AREAS_OFF_SOURCE} }),
   fix: true,
 })
 const [result] = await eslint.lintFiles(['src/index.js'])
@@ -64,16 +68,18 @@ test("in an editor, prefer-const reports without fixing through the project's es
     }),
   )
   await fs.symlink(await fs.realpath(ESLINT_DIR), path.join(appModules, 'eslint'))
-  for (const eslintDir of [path.join(appModules, 'eslint'), path.join(copyModules, 'eslint')]) {
-    const stdout = await runNodeOk(['--input-type=module', '--eval', COPY_SCRIPT], {
-      cwd: path.join(project.dir, 'app'),
-      env: {
-        CONFIG_URL: pathToFileURL(path.join(configDir, 'build', 'index.js')).href,
-        ESLINT_URL: pathToFileURL(path.join(eslintDir, 'lib', 'api.js')).href,
-      },
-    })
-    expect(JSON.parse(stdout), eslintDir).toEqual({ ruleIds: ['prefer-const'] })
-  }
+  await Promise.all(
+    [path.join(appModules, 'eslint'), path.join(copyModules, 'eslint')].map(async (eslintDir) => {
+      const stdout = await runNodeOk(['--input-type=module', '--eval', COPY_SCRIPT], {
+        cwd: path.join(project.dir, 'app'),
+        env: {
+          CONFIG_URL: pathToFileURL(path.join(configDir, 'build', 'index.js')).href,
+          ESLINT_URL: pathToFileURL(path.join(eslintDir, 'lib', 'api.js')).href,
+        },
+      })
+      expect(JSON.parse(stdout), eslintDir).toEqual({ ruleIds: ['prefer-const'] })
+    }),
+  )
 })
 
 const ASYNC_RETURN =
@@ -182,7 +188,7 @@ test("ESLint's bin fixes, in `--concurrency` workers too, with an editor's varia
     'index.js': PREFER_CONST,
     'a.js': PREFER_CONST,
     'b.js': PREFER_CONST,
-    'eslint.config.mjs': `import { defineConfig } from ${JSON.stringify(new URL('../build/index.js', import.meta.url).href)}\n\nexport default defineConfig({ root: import.meta.dirname, typeAware: false })\n`,
+    'eslint.config.mjs': `import { defineConfig } from ${JSON.stringify(new URL('../build/index.js', import.meta.url).href)}\n\nexport default defineConfig({ root: import.meta.dirname, typeAware: false, ${CORE_AREAS_OFF_SOURCE} })\n`,
   })
   // ESLint's bin as the script, so `process.argv` is as when it runs, not from a package script,
   // as when an agent in an editor's terminal runs it
@@ -201,8 +207,8 @@ test("ESLint's bin fixes, in `--concurrency` workers too, with an editor's varia
         env: { VSCODE_PID: '1', npm_lifecycle_event: '', npm_lifecycle_script: '', CI: '' },
       },
     )
-  await fix('index.js')
-  await fix('--concurrency', '2', 'a.js', 'b.js')
+  // Separate files, so the runs can't race
+  await Promise.all([fix('index.js'), fix('--concurrency', '2', 'a.js', 'b.js')])
   for (const file of ['index.js', 'a.js', 'b.js']) {
     expect(await fs.readFile(path.join(project.dir, file), 'utf8'), file).toBe(FIXED_PREFER_CONST)
   }

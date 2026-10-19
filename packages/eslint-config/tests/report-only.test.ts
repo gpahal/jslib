@@ -16,7 +16,7 @@ import {
 import { isRuleOn, parseRuleId } from '@/internal/rules'
 
 import { ALL_ON_OPTIONS } from '../scripts/typegen'
-import { fixFiles, type FixResult } from './fix-helpers'
+import { fixFiles, reportFiles, type FixResult, type ReportResult } from './fix-helpers'
 import { collator, FIXTURES_DIR } from './helpers'
 
 // Each file of the `report-only` fixture holds code that a report-only rule's fix would change, with
@@ -181,20 +181,20 @@ const GROUPS: Array<[string, Array<string>, Partial<EslintConfigOptions>]> = [
 ]
 
 /**
- * `--fix` of `files` with only the report-only rules running, without the report-only configs with
- * `withFixes`
+ * The problems in `files` with only the report-only rules running, and those that `--fix` would
+ * fix, without the report-only configs with `withFixes`
  */
-async function fixCases(
+async function reportCases(
   dir: string,
   files: Array<string>,
   options: Partial<EslintConfigOptions>,
   withFixes: boolean,
-): Promise<Record<string, FixResult>> {
+): Promise<Record<string, ReportResult>> {
   const composer = defineConfig({ root: dir, isInEditor: false, gitignore: false, ...options })
   const configs: Array<Linter.Config> = withFixes
     ? await composer.remove('gpahal/fixes/report-only').remove('gpahal/fixes/report-only-untyped')
     : await composer
-  return fixFiles({
+  return reportFiles({
     dir,
     configs,
     files,
@@ -264,16 +264,16 @@ describe('report-only fixes', () => {
   it.for(GROUPS)(
     'reports each case without fixing it, and fixes it without the report-only configs, %s',
     async ([, files, options], { expect }) => {
-      const results = await fixCases(dir, files, options, false)
+      const results = await reportCases(dir, files, options, false)
       const failing = files.filter(
         (file) =>
           results[file]?.rules.includes(CASES[file] ?? '') !== true ||
-          results[file].output !== undefined,
+          results[file].fixing.length > 0,
       )
       expect(Object.fromEntries(failing.map((file) => [file, results[file]]))).toEqual({})
       // A case whose rule no longer fixes it is a report-only entry to remove
-      const fixed = await fixCases(dir, files, options, true)
-      expect(files.filter((file) => fixed[file]?.output === undefined)).toEqual([])
+      const fixed = await reportCases(dir, files, options, true)
+      expect(files.filter((file) => (fixed[file]?.fixing.length ?? 0) === 0)).toEqual([])
     },
   )
 

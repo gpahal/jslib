@@ -3,9 +3,23 @@
   "extends": ["//"],
   "tasks": {
     "test": {
-      // `tests/fix-script.test.ts` runs the fix scripts of the repository README, and
-      // `tests/setup-recipes.test.ts` its setup recipes
+      // `tests/fix-script.test.ts` runs the fix and Stylelint scripts of the repository README
       "inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/README.md"]
+    },
+    // `tests/setup-recipes.test.ts`, which the slow child processes of every setup recipe of the
+    // repository README make a task of its own. Its projects get the builds of the packages the
+    // recipes install, which `^build` hashes, and tsconfig's presets, which have no build
+    "test-recipes": {
+      "dependsOn": ["^build", "build"],
+      "inputs": [
+        "package.json",
+        "tsconfig.json",
+        "tests/tsconfig.json",
+        "tests/setup-recipes.test.ts",
+        "$TURBO_ROOT$/README.md",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/packages/tsconfig/*.json"
+      ]
     }
   }
 }

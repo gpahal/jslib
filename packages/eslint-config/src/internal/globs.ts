@@ -17,12 +17,25 @@ export function unescapeGlob(glob: string): string {
   return glob.replaceAll(/\\(.)/g, '$1')
 }
 
+/**
+ * Compiling a glob costs far more than matching it, and checking a config compiles the same globs
+ * for every config object it walks. A `Minimatch` keeps no state between matches
+ */
+const COMPILED_GLOBS = new Map<string, Minimatch>()
+
+function compileGlob(glob: string): Minimatch {
+  let matcher = COMPILED_GLOBS.get(glob)
+  if (matcher === undefined) {
+    matcher = new Minimatch(glob, MINIMATCH_OPTIONS)
+    COMPILED_GLOBS.set(glob, matcher)
+  }
+  return matcher
+}
+
 export function createGlobMatcher(
   globs: string | ReadonlyArray<string>,
 ): (path: string) => boolean {
-  const matchers = (typeof globs === 'string' ? [globs] : globs).map(
-    (glob) => new Minimatch(glob, MINIMATCH_OPTIONS),
-  )
+  const matchers = (typeof globs === 'string' ? [globs] : globs).map((glob) => compileGlob(glob))
   return (filePath) => matchers.some((matcher) => matcher.match(filePath))
 }
 
@@ -40,7 +53,7 @@ export function createListMatcher(globs: ReadonlyArray<string>): (file: string) 
 }
 
 export function hasGlobMagic(glob: string): boolean {
-  return new Minimatch(glob, MINIMATCH_OPTIONS).hasMagic()
+  return compileGlob(glob).hasMagic()
 }
 
 const GLOB_SPECIAL_CHAR = /[!()*+?@[\\\]{|}]/

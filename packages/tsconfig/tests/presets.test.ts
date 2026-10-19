@@ -86,11 +86,24 @@ function typecheck(
       toKey(dirName) === toKey(PROJECT_DIR) || ts.sys.directoryExists(dirName),
   }
 
-  const parsed = parseConfig(path.join(PROJECT_DIR, 'tsconfig.json'), overrides)
+  return diagnostics(parseConfig(path.join(PROJECT_DIR, 'tsconfig.json'), overrides), {
+    projectDir: PROJECT_DIR,
+    overrides,
+  }).map((diagnostic) => `TS${diagnostic.code}`)
+}
+
+/**
+ * The config and program diagnostics of `parsed`. Files outside `projectDir`, such as lib files
+ * and `@types/node`, come from `SHARED_SOURCE_FILES`
+ */
+function diagnostics(
+  parsed: ts.ParsedCommandLine,
+  { projectDir, overrides = {} }: { projectDir: string; overrides?: Partial<ts.CompilerHost> },
+): Array<ts.Diagnostic> {
   const host = Object.assign(ts.createCompilerHost(parsed.options), overrides)
   const getSourceFile = host.getSourceFile.bind(host)
   host.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
-    if (fileName.startsWith(`${PROJECT_DIR}${path.sep}`)) {
+    if (fileName.startsWith(`${projectDir}${path.sep}`)) {
       return getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile)
     }
     const options =
@@ -113,8 +126,15 @@ function typecheck(
     return sourceFile
   }
   const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options, host })
-  return [...parsed.errors, ...ts.getPreEmitDiagnostics(program)].map(
-    (diagnostic) => `TS${diagnostic.code}`,
+  return [...parsed.errors, ...ts.getPreEmitDiagnostics(program)]
+}
+
+/**
+ * The messages of `diagnostics`
+ */
+function messages(diagnostics: ReadonlyArray<ts.Diagnostic>): Array<string> {
+  return diagnostics.map((diagnostic) =>
+    ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'),
   )
 }
 
@@ -322,35 +342,35 @@ test('library-tests.json lets tests export values without explicit types', () =>
   expect(typecheck(['base.json', 'library.json', 'library-tests.json'], files)).toEqual([])
 })
 
-test.each([
-  ['emitDeclarationOnly', { emitDeclarationOnly: true }, {}],
-  // The preset can't clear `declarationDir`, so the tests' tsconfig does, as the README says
-  ['declarationDir', { declarationDir: 'types' }, { declarationDir: null }],
-  ['composite', { composite: true }, {}],
-] as const)(
-  'library-tests.json type-checks tests inheriting %s without emitting',
-  async (_, compilerOptions, testsCompilerOptions) => {
-    await using dir = await writeProject('library-tests-', {
-      'tsconfig.json': JSON.stringify({
-        extends: ['base.json', 'library.json'].map((preset) => path.join(PRESETS_DIR, preset)),
-        compilerOptions: { noEmit: false, rootDir: 'src', outDir: 'dist', ...compilerOptions },
-        include: ['src'],
-      }),
-      'tests/tsconfig.json': JSON.stringify({
-        extends: ['../tsconfig.json', path.join(PRESETS_DIR, 'library-tests.json')],
-        compilerOptions: { rootDir: '..', ...testsCompilerOptions },
-        include: ['**/*'],
-      }),
-      'src/a.ts': 'export const a: number = 1\n',
-      'tests/a.test.ts':
-        "import { a } from '../src/a.js'\n\nexport function b() {\n  return a\n}\n",
-    })
-    await expect(tscErrors(dir.path, 'tests')).resolves.toEqual([])
-    await expect(fs.readdir(path.join(dir.path, 'tests'))).resolves.toEqual(
-      expect.not.arrayContaining([expect.stringMatching(/\.(?:js|d\.ts)$/)]),
-    )
-  },
-)
+// One project inherits all three options, which catches library-tests failing to clear any of them
+test('library-tests.json type-checks tests inheriting emitDeclarationOnly, declarationDir and composite without emitting', async () => {
+  await using dir = await writeProject('library-tests-', {
+    'tsconfig.json': JSON.stringify({
+      extends: ['base.json', 'library.json'].map((preset) => path.join(PRESETS_DIR, preset)),
+      compilerOptions: {
+        noEmit: false,
+        rootDir: 'src',
+        outDir: 'dist',
+        emitDeclarationOnly: true,
+        declarationDir: 'types',
+        composite: true,
+      },
+      include: ['src'],
+    }),
+    // The preset can't clear `declarationDir`, so the tests' tsconfig does, as the README says
+    'tests/tsconfig.json': JSON.stringify({
+      extends: ['../tsconfig.json', path.join(PRESETS_DIR, 'library-tests.json')],
+      compilerOptions: { rootDir: '..', declarationDir: null },
+      include: ['**/*'],
+    }),
+    'src/a.ts': 'export const a: number = 1\n',
+    'tests/a.test.ts': "import { a } from '../src/a.js'\n\nexport function b() {\n  return a\n}\n",
+  })
+  await expect(tscErrors(dir.path, 'tests')).resolves.toEqual([])
+  await expect(fs.readdir(path.join(dir.path, 'tests'))).resolves.toEqual(
+    expect.not.arrayContaining([expect.stringMatching(/\.(?:js|d\.ts)$/)]),
+  )
+})
 
 /**
  * A `node-app` with a relative `.ts` import, a type-only import, a JSON import, `using` and ES2025
@@ -383,7 +403,10 @@ const NODE_APP_OUTPUT = ['disposed', 4, true, 1]
 
 test('Node runs the node-app sources, and tsc emits them for Node', async () => {
   await using dir = await writeProject('node-app-', NODE_APP)
-  await expect(tscErrors(dir.path)).resolves.toEqual([])
+  // In process: the emitting `tsc` run below checks the same sources
+  const parsed = parseConfig(path.join(dir.path, 'tsconfig.json'))
+  expect(relativeFiles(dir.path, parsed.fileNames)).toEqual(new Set(['src/lib.ts', 'src/main.ts']))
+  expect(messages(diagnostics(parsed, { projectDir: dir.path }))).toEqual([])
   expect(JSON.parse(await runNodeOk(['src/main.ts'], { cwd: dir.path }))).toEqual(NODE_APP_OUTPUT)
 
   await writeFiles(dir.path, {
@@ -566,12 +589,7 @@ test.each(README_SNIPPETS)('the README snippet extending %s compiles', async (_,
       snippet.includes('"include": ["src"]') ? ['src/a.ts'] : ['src/a.ts', 'tests/a.test.ts'],
     ),
   )
-  const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options })
-  expect(
-    [...parsed.errors, ...ts.getPreEmitDiagnostics(program)].map((diagnostic) =>
-      ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'),
-    ),
-  ).toEqual([])
+  expect(messages(diagnostics(parsed, { projectDir: dir.path }))).toEqual([])
 })
 
 test.each([
@@ -579,12 +597,13 @@ test.each([
     'react-app',
     'vite.config.ts',
     "import path from 'node:path'\n\nexport default { root: path.join(import.meta.dirname, 'src') }\n",
+    true,
   ],
   // A JavaScript root config file, as a stock Astro app has
-  ['astro-app', 'astro.config.mjs', 'export default { site: process.env.SITE }\n'],
+  ['astro-app', 'astro.config.mjs', 'export default { site: process.env.SITE }\n', false],
 ])(
   'the README root config files recipe type-checks %s and the root %s',
-  async (preset, configFile, config) => {
+  async (preset, configFile, config, runsTsc) => {
     const recipe = Object.fromEntries(
       Object.entries(ROOT_CONFIG_RECIPE).map(([name, code]) => [
         name,
@@ -602,6 +621,19 @@ test.each([
     })
     const parsed = parseConfig(path.join(dir.path, 'tsconfig.node.json'))
     expect(relativeFiles(dir.path, parsed.fileNames)).toEqual(new Set([configFile]))
-    await expect(runNodeOk([TSC_BIN, ...TYPECHECK_ARGS], { cwd: dir.path })).resolves.toBe('')
+    // Each project, in process. `tsc -b` checks the same through the references, so one row runs
+    // it, without paying for another `tsc` process in the other
+    expect(parseConfig(path.join(dir.path, 'tsconfig.json')).projectReferences).toHaveLength(2)
+    for (const config of ['tsconfig.app.json', 'tsconfig.node.json']) {
+      const project = parseConfig(path.join(dir.path, config))
+      expect([config, messages(diagnostics(project, { projectDir: dir.path }))]).toEqual([
+        config,
+        [],
+      ])
+    }
+    const tscOutput = runsTsc
+      ? await runNodeOk([TSC_BIN, ...TYPECHECK_ARGS], { cwd: dir.path })
+      : ''
+    expect(tscOutput).toBe('')
   },
 )

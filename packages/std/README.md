@@ -276,7 +276,7 @@ await retry(
 const mutex = createMutex()
 await mutex.runExclusive(async () => {
   // No other `runExclusive` callback of `mutex` runs until this one settles
-  await sleep(100)
+  await sleep(10)
 })
 ```
 
