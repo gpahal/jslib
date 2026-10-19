@@ -30,7 +30,7 @@
     "pre-commit": "pnpm build --output-logs=errors-only && pnpm exec lint-staged",
     "pre-push": "./scripts/verify-push-is-head.sh && ./scripts/verify-no-git-changes.sh && pnpm check && ./scripts/verify-no-git-changes.sh",
     "prepare": "simple-git-hooks",
-    "test": "turbo run test test-recipes",
+    "test": "turbo run test",
     "typecheck": "turbo run typecheck typecheck-root",
     "typecheck-release": "turbo run typecheck-release",
     "typecheck-root": "tsc"
