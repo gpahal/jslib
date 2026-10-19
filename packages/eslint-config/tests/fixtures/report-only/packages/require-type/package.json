@@ -1,0 +1,11 @@
+{
+  "name": "require-type",
+  "version": "1.0.0",
+  "description": "A package whose ESM index.js Node runs by syntax detection",
+  "license": "MIT",
+  "author": "A <a@example.com>",
+  "repository": "acme/require-type",
+  "exports": "./index.js",
+  "files": ["index.js"],
+  "sideEffects": false
+}

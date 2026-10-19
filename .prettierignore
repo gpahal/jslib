@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+**/*.gen.*
+# The import sorter would merge the duplicate imports the eslint-config fix-output test needs
+packages/eslint-config/tests/fixtures/fix-output/src/merged-imports.ts
+# Code that the report-only rules' fixes would change, which formatting and import sorting would change too
+packages/eslint-config/tests/fixtures/report-only
+# Fixtures that each audited rule's fix changes, which formatting would change too
+packages/eslint-config/tests/fixtures/audited-fixes

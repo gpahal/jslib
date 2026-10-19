@@ -1,0 +1,17 @@
+{
+  "$schema": "https://www.schemastore.org/tsconfig",
+  "display": "React App",
+  "extends": ["./base.json", "./react.json"],
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "incremental": true
+  },
+  "include": ["${configDir}/**/*"],
+  "exclude": [
+    "${configDir}/dist",
+    "${configDir}/build",
+    "${configDir}/out",
+    "${configDir}/coverage",
+    "${configDir}/*.config.*"
+  ]
+}

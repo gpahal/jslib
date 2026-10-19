@@ -1,0 +1,9 @@
+#Settings
+[ tool ]
+name  =  "demo"
+"version" = "1.0.0"
+features = [ "a", "b" ]
+[tool.lint]
+    select = ["E",
+  "F"]
+serde = {version = "1"}

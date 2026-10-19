@@ -1,0 +1,5 @@
+// Comments, unquoted keys and trailing commas are valid JSON5
+{
+  name: 'a',
+  name: 'b',
+}

@@ -1,0 +1,13 @@
+{
+  "name": "yaml-fixture",
+  "private": true,
+  "dependencies": {
+    "react": "catalog:",
+    "zod": "catalog:"
+  },
+  "pnpm": {
+    "overrides": {
+      "a": "1"
+    }
+  }
+}

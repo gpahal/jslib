@@ -1,0 +1,17 @@
+{
+  "$schema": "https://www.schemastore.org/tsconfig",
+  "display": "Astro App",
+  "extends": ["./base.json", "./astro.json"],
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "incremental": true
+  },
+  "include": ["${configDir}/.astro/types.d.ts", "${configDir}/**/*"],
+  "exclude": [
+    "${configDir}/dist",
+    "${configDir}/build",
+    "${configDir}/out",
+    "${configDir}/coverage",
+    "${configDir}/*.config.*"
+  ]
+}

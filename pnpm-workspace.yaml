@@ -1,0 +1,24 @@
+packages:
+  - packages/*
+# Their install scripts only check or fetch a binary that the platform package already has, or, for
+# simple-git-hooks, install the hooks that the root `prepare` script installs too
+allowBuilds:
+  esbuild: false
+  simple-git-hooks: false
+  unrs-resolver: false
+minimumReleaseAge: 4320
+# Old versions such as `semver@6.3.1` and `why-is-node-running@3.2.2` fail the check, so versions
+# older than 30 days (in minutes) are exempt
+trustPolicy: no-downgrade
+trustPolicyIgnoreAfter: 43200
+strictDepBuilds: true
+blockExoticSubdeps: true
+# Clears GHSA-238p-pmpm-9mq7 here only; consumers get `micromark-extension-math`'s own range.
+# eslint-config never runs the vulnerable renderer
+overrides:
+  katex@>=0.11.0 <0.18.2: ^0.18.2
+auditConfig:
+  ignoreGhsas:
+    # No fixed release. Reached through Stylelint's and fast-glob's file globs, which only trusted
+    # config and CLI arguments set. Remove once braces ships a fix
+    - GHSA-vfj7-8cjw-p6xm

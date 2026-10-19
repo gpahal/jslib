@@ -1,0 +1,5 @@
+{
+  "extends": ["../tsconfig.json", "../../../config/tsconfig.tests.json"],
+  // The declarations of the untyped modules that `src` imports
+  "include": [".", "../src/**/*.d.ts"]
+}

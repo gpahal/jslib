@@ -1,0 +1,8 @@
+{
+  "extends": "../../config/tsconfig.release.json",
+  "compilerOptions": {
+    // Browser-safe, so a Node type leaking into the declarations fails
+    "lib": ["es2024", "dom"],
+    "types": []
+  }
+}

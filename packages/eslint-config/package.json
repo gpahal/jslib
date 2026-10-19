@@ -1,0 +1,201 @@
+{
+  "name": "@gpahal/eslint-config",
+  "version": "0.0.141",
+  "description": "Composable flat ESLint config for TypeScript, React, Next.js, Astro, Tailwind CSS, Node, HTML, Turbo, Vitest, Playwright, Storybook, JSON, YAML, TOML and Markdown",
+  "keywords": [
+    "eslint",
+    "eslint-config",
+    "eslintconfig",
+    "flat-config",
+    "typescript",
+    "react",
+    "nextjs",
+    "astro",
+    "tailwindcss",
+    "vitest",
+    "lint",
+    "yaml",
+    "toml",
+    "sonarjs",
+    "jsdoc"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/eslint-config#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/eslint-config"
+  },
+  "license": "MIT",
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": "./build/index.js",
+    "./eslint-comments": "./build/eslint-comments.js",
+    "./slop": "./build/slop.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "!src/**/*.gen.d.ts",
+    "build"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "gen": "tsdown && node scripts/typegen.ts && tsdown",
+    "inspect": "eslint-config-inspector --config ../../eslint.config.mjs",
+    "lint-check": "eslint . --max-warnings 0",
+    "prepublishOnly": "../../scripts/verify-publish-tool.sh",
+    "test": "vitest run --config ../../vitest.config.ts --test-timeout=20000",
+    "typecheck": "tsc && tsc -p tests",
+    "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
+  },
+  "dependencies": {
+    "@e18e/eslint-plugin": "^0.8.1",
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
+    "@eslint/js": "^10.0.1",
+    "@eslint/json": "^2.1.1",
+    "@eslint/markdown": "^8.0.3",
+    "@gpahal/std": "workspace:*",
+    "@typescript-eslint/parser": "^8.71.2",
+    "@typescript-eslint/utils": "^8.71.2",
+    "brace-expansion": "^5.0.12",
+    "collapse-white-space": "^2.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-jsdoc": "^65.3.8",
+    "eslint-plugin-markdown-preferences": "^0.42.0",
+    "eslint-plugin-n": "^18.4.1",
+    "eslint-plugin-package-json": "^1.10.1",
+    "eslint-plugin-pnpm": "^1.9.1",
+    "eslint-plugin-regexp": "^3.3.1",
+    "eslint-plugin-sonarjs": "^4.2.2",
+    "eslint-plugin-toml": "^1.5.0",
+    "eslint-plugin-unicorn": "^78.0.0",
+    "eslint-plugin-yml": "^3.9.0",
+    "github-slugger": "^2.0.0",
+    "globals": "^17.13.0",
+    "hast-util-from-html": "^2.0.3",
+    "mdast-util-from-markdown": "^2.1.0",
+    "mdast-util-frontmatter": "^2.0.1",
+    "mdast-util-gfm": "^3.1.0",
+    "mdast-util-math": "^3.0.0",
+    "mdast-util-to-string": "^4.0.0",
+    "micromark-extension-frontmatter": "^2.0.0",
+    "micromark-extension-gfm": "^3.0.0",
+    "micromark-extension-math": "^3.1.0",
+    "micromark-util-normalize-identifier": "^2.0.1",
+    "minimatch": "^10.2.6",
+    "semver": "^7.8.5",
+    "typescript-eslint": "^8.71.2",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint-react/eslint-plugin": "^5.28.0",
+    "@eslint/config-inspector": "^3.5.0",
+    "@gpahal/internal": "workspace:*",
+    "@gpahal/prettier-config": "workspace:*",
+    "@html-eslint/eslint-plugin": "^0.67.0",
+    "@html-eslint/parser": "^0.67.0",
+    "@next/eslint-plugin-next": "^16.4.2",
+    "@types/estree": "^1.0.9",
+    "@types/hast": "^3.0.5",
+    "@types/mdast": "^4.0.4",
+    "@types/semver": "^7.8.0",
+    "@types/unist": "^3.0.3",
+    "@vitest/eslint-plugin": "^1.6.27",
+    "eslint": "^10.13.0",
+    "eslint-plugin-astro": "^3.2.1",
+    "eslint-plugin-better-tailwindcss": "^4.9.1",
+    "eslint-plugin-jsx-a11y-x": "^0.2.0",
+    "eslint-plugin-playwright": "^2.12.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "eslint-plugin-slop": "^0.1.3",
+    "eslint-plugin-storybook": "^10.6.2",
+    "eslint-plugin-turbo": "^2.11.8",
+    "eslint-typegen": "^2.3.1",
+    "prettier": "^3.9.10",
+    "tailwindcss": "^4.3.3",
+    "tsdown": "^0.23.1",
+    "typescript": "~6.0.3",
+    "unist-util-visit": "^5.1.0"
+  },
+  "peerDependencies": {
+    "@eslint-react/eslint-plugin": "^5.21",
+    "@html-eslint/eslint-plugin": ">=0.66.0 <1.0.0",
+    "@html-eslint/parser": ">=0.66.0 <1.0.0",
+    "@next/eslint-plugin-next": "^16.3",
+    "@vitest/eslint-plugin": "^1.6.13",
+    "eslint": "^10.11",
+    "eslint-plugin-astro": "^3.2",
+    "eslint-plugin-better-tailwindcss": "^4.7",
+    "eslint-plugin-jsx-a11y-x": ">=0.2.0 <1.0.0",
+    "eslint-plugin-playwright": "^2.12",
+    "eslint-plugin-react-hooks": "^7.1",
+    "eslint-plugin-react-refresh": ">=0.5.0 <1.0.0",
+    "eslint-plugin-slop": ">=0.1.3 <1.0.0",
+    "eslint-plugin-storybook": "^10.6",
+    "eslint-plugin-turbo": "^2.11",
+    "tailwindcss": "^4.3",
+    "typescript": "~6.0.3"
+  },
+  "peerDependenciesMeta": {
+    "@eslint-react/eslint-plugin": {
+      "optional": true
+    },
+    "@html-eslint/eslint-plugin": {
+      "optional": true
+    },
+    "@html-eslint/parser": {
+      "optional": true
+    },
+    "@next/eslint-plugin-next": {
+      "optional": true
+    },
+    "@vitest/eslint-plugin": {
+      "optional": true
+    },
+    "eslint-plugin-astro": {
+      "optional": true
+    },
+    "eslint-plugin-better-tailwindcss": {
+      "optional": true
+    },
+    "eslint-plugin-jsx-a11y-x": {
+      "optional": true
+    },
+    "eslint-plugin-playwright": {
+      "optional": true
+    },
+    "eslint-plugin-react-hooks": {
+      "optional": true
+    },
+    "eslint-plugin-react-refresh": {
+      "optional": true
+    },
+    "eslint-plugin-slop": {
+      "optional": true
+    },
+    "eslint-plugin-storybook": {
+      "optional": true
+    },
+    "eslint-plugin-turbo": {
+      "optional": true
+    },
+    "tailwindcss": {
+      "optional": true
+    },
+    "typescript": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=24.22.0"
+  }
+}

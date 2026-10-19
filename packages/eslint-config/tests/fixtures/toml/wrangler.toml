@@ -1,0 +1,24 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "my-worker"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "0123456789abcdef"
+
+[vars]
+API_URL = "https://example.com"
+
+[env.production]
+name = "my-worker-production"
+vars = { API_URL = "https://example.com", MODE = "prod" }
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "prod"
+database_id = "abc"

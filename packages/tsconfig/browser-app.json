@@ -1,0 +1,17 @@
+{
+  "$schema": "https://www.schemastore.org/tsconfig",
+  "display": "Browser App",
+  "extends": ["./base.json", "./browser.json"],
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "incremental": true
+  },
+  "include": ["${configDir}/**/*"],
+  "exclude": [
+    "${configDir}/dist",
+    "${configDir}/build",
+    "${configDir}/out",
+    "${configDir}/coverage",
+    "${configDir}/*.config.*"
+  ]
+}

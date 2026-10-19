@@ -1,0 +1,89 @@
+{
+  "name": "@gpahal/tsconfig",
+  "version": "0.0.24",
+  "description": "Shared TypeScript config presets for base, Node, browser, React, Next.js and Astro projects",
+  "keywords": [
+    "tsconfig",
+    "typescript",
+    "typescript-config",
+    "node",
+    "browser",
+    "react",
+    "nextjs",
+    "astro"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/tsconfig#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/tsconfig"
+  },
+  "license": "MIT",
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "type": "commonjs",
+  "exports": {
+    ".": "./base.json",
+    "./base": "./base.json",
+    "./nodenext": "./nodenext.json",
+    "./node": "./node.json",
+    "./node-strip-types": "./node-strip-types.json",
+    "./node-app": "./node-app.json",
+    "./browser": "./browser.json",
+    "./browser-app": "./browser-app.json",
+    "./react": "./react.json",
+    "./react-app": "./react-app.json",
+    "./nextjs": "./nextjs.json",
+    "./nextjs-app": "./nextjs-app.json",
+    "./astro": "./astro.json",
+    "./astro-app": "./astro-app.json",
+    "./library": "./library.json",
+    "./library-tests": "./library-tests.json",
+    "./erasable": "./erasable.json",
+    "./strictest": "./strictest.json",
+    "./*.json": "./*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "base.json",
+    "nodenext.json",
+    "node.json",
+    "node-strip-types.json",
+    "node-app.json",
+    "browser.json",
+    "browser-app.json",
+    "react.json",
+    "react-app.json",
+    "nextjs.json",
+    "nextjs-app.json",
+    "astro.json",
+    "astro-app.json",
+    "library.json",
+    "library-tests.json",
+    "erasable.json",
+    "strictest.json"
+  ],
+  "scripts": {
+    "lint-check": "eslint . --max-warnings 0",
+    "prepublishOnly": "../../scripts/verify-publish-tool.sh",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "@gpahal/internal": "workspace:*",
+    "@types/node": "^24.19.2",
+    "publint": "^0.3.25",
+    "typescript": "~6.0.3"
+  },
+  "peerDependencies": {
+    "@types/node": "*",
+    "typescript": "~6.0.3"
+  },
+  "peerDependenciesMeta": {
+    "@types/node": {
+      "optional": true
+    }
+  }
+}

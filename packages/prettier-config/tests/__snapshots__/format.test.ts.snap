@@ -1,0 +1,36 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`base config > keeps GitHub alert markers in nested blockquotes, lists and CRLF files with proseWrap: always 1`] = `
+"> [!NOTE]
+> word word word word word word word
+> word word word word word.
+>
+> - A list item
+> - [!TIP] Not a marker.
+>
+> > [!WARNING]
+> > Nested alert text.
+
+- Item
+
+  > [!CAUTION]
+  > Alert in a list.
+"
+`;
+
+exports[`base config > keeps GitHub alert markers in nested blockquotes, lists and CRLF files with proseWrap: never 1`] = `
+"> [!NOTE]
+> word word word word word word word word word word word word.
+>
+> - A list item
+> - [!TIP] Not a marker.
+>
+> > [!WARNING]
+> > Nested alert text.
+
+- Item
+
+  > [!CAUTION]
+  > Alert in a list.
+"
+`;

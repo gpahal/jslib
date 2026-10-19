@@ -1,0 +1,15 @@
+{
+  "$schema": "https://www.schemastore.org/tsconfig",
+  "display": "Node App",
+  "extends": ["./base.json", "./nodenext.json", "./node.json", "./node-strip-types.json"],
+  "compilerOptions": {
+    "incremental": true
+  },
+  "include": ["${configDir}/**/*"],
+  "exclude": [
+    "${configDir}/dist",
+    "${configDir}/build",
+    "${configDir}/out",
+    "${configDir}/coverage"
+  ]
+}

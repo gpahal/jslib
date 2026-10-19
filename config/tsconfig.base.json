@@ -1,0 +1,19 @@
+{
+  "$schema": "https://www.schemastore.org/tsconfig",
+  "extends": [
+    "../packages/tsconfig/base.json",
+    "../packages/tsconfig/library.json",
+    "../packages/tsconfig/erasable.json",
+    "../packages/tsconfig/strictest.json"
+  ],
+  "compilerOptions": {
+    "incremental": true,
+    // tsdown builds
+    "noEmit": true,
+    // No test globals, which `tests/tsconfig.json` adds, so they don't type-check in `src`
+    "types": ["node"],
+    "paths": {
+      "@/*": ["${configDir}/src/*"]
+    }
+  }
+}

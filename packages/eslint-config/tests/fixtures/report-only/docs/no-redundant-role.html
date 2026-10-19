@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>List</title>
+    <style>
+      ul[role='list'] {
+        list-style: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Safari drops the semantics of a list without bullets, which `role="list"` restores, and the style selects the role -->
+    <ul role="list">
+      <li>One</li>
+    </ul>
+  </body>
+</html>

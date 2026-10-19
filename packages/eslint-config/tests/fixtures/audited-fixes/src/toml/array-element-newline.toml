@@ -1,0 +1,4 @@
+classifiers = [
+  "a", "b",
+  "c",
+]

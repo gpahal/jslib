@@ -1,0 +1,12 @@
+{
+  "extends": "../../config/tsconfig.base.json",
+  "compilerOptions": {
+    // Runs in browsers too, and uses browser globals such as `document`. No Node types, so Node-only
+    // APIs don't type-check. `tests/tsconfig.json` adds them for the tests. The ES2024 lib matches
+    // tsdown's target, so an ES2025-only API, which tsdown doesn't transform, doesn't type-check
+    // either. The inherited ES2025 `target` doesn't matter: tsc doesn't emit, tsdown does
+    "lib": ["es2024", "dom"],
+    "types": []
+  },
+  "include": ["src"]
+}

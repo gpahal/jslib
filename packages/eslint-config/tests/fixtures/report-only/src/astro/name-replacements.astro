@@ -1,0 +1,8 @@
+---
+// renaming `btn` renames the shorthand attribute `{btn}`, which passes the prop `button`
+/* eslint unicorn/name-replacements: "error" */
+import Panel from './panel.astro'
+const btn = Astro.props.label
+---
+
+<Panel {btn} />

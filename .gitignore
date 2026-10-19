@@ -1,0 +1,38 @@
+# Turbo
+.turbo
+
+# Build output
+build
+
+# Temporary files
+tmp
+.tmp
+.cache
+.eslintcache
+*.tsbuildinfo
+*.tgz
+
+# Node
+node_modules
+npm-debug.log*
+pnpm-debug.log*
+# Can hold a registry token
+.npmrc
+
+# Environment variables
+.env
+.env.*
+
+# AI tools
+.claude
+.codex
+.scratch
+
+# Editors
+.vscode
+.history
+*.code-workspace
+
+# OS
+.DS_Store
+._*

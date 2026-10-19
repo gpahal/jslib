@@ -1,0 +1,11 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      // `tests/fix-script.test.ts` runs the fix scripts of the repository README, and
+      // `tests/setup-recipes.test.ts` its setup recipes
+      "inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/README.md"]
+    }
+  }
+}

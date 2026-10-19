@@ -1,0 +1,8 @@
+{
+  "name": "no-duplicate-catalog-item",
+  "private": true,
+  "dependencies": {
+    "react": "catalog:react18",
+    "react-dom": "catalog:react19"
+  }
+}

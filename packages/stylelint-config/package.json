@@ -1,0 +1,91 @@
+{
+  "name": "@gpahal/stylelint-config",
+  "version": "0.0.27",
+  "description": "Shared Stylelint config presets extending stylelint-config-standard, with a Tailwind CSS v4 variant",
+  "keywords": [
+    "stylelint",
+    "stylelint-config",
+    "stylelintconfig",
+    "css",
+    "lint",
+    "tailwindcss"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/stylelint-config#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/stylelint-config"
+  },
+  "license": "MIT",
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": "./build/index.js",
+    "./tailwindcss": "./build/tailwindcss.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "build"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "lint-check": "eslint . --max-warnings 0",
+    "prepublishOnly": "../../scripts/verify-publish-tool.sh",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "typecheck": "tsc && tsc -p tests",
+    "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
+  },
+  "dependencies": {
+    "@csstools/css-tokenizer": "^4.0.2",
+    "@gpahal/std": "workspace:*",
+    "brace-expansion": "^5.0.12",
+    "cosmiconfig": "^10.0.1",
+    "import-meta-resolve": "^4.2.0",
+    "postcss": "^8.5",
+    "postcss-html": "^2.0.0",
+    "postcss-markdown": "^2.0.0",
+    "stylelint-config-recess-order": "^7.8.0",
+    "stylelint-config-standard": "^40.0.0",
+    "stylelint-order": "^8.1.2",
+    "stylelint-plugin-use-baseline": "^1.4.7",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@gpahal/eslint-config": "workspace:*",
+    "@gpahal/internal": "workspace:*",
+    "@gpahal/prettier-config": "workspace:*",
+    "@gpahal/tsconfig": "workspace:*",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "astro": "^7.4.0",
+    "eslint": "^10.13.0",
+    "next": "^16.4.2",
+    "prettier": "^3.9.10",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "stylelint": "^17.16.0",
+    "tailwindcss": "^4.3.3",
+    "tsdown": "^0.23.1",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4"
+  },
+  "peerDependencies": {
+    "stylelint": "^17.15",
+    "tailwindcss": "^4.3"
+  },
+  "peerDependenciesMeta": {
+    "tailwindcss": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=24.22.0"
+  }
+}

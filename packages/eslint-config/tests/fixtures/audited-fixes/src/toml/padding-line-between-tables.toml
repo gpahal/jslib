@@ -1,0 +1,4 @@
+[package]
+name = "demo"
+[dependencies]
+serde = "1"

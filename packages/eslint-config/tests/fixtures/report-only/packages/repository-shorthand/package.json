@@ -1,0 +1,12 @@
+{
+  "name": "repository-shorthand",
+  "version": "1.0.0",
+  "description": "The fix garbles an scp-style URL",
+  "license": "MIT",
+  "author": "A <a@example.com>",
+  "repository": "git@github.com:acme/a.git",
+  "type": "module",
+  "exports": "./index.js",
+  "files": ["index.js"],
+  "sideEffects": false
+}

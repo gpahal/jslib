@@ -1,0 +1,11 @@
+{
+  "$schema": "https://www.schemastore.org/tsconfig",
+  // `typecheck-release` checks the built declarations as a consumer with `skipLibCheck` off would
+  "extends": "../packages/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "skipLibCheck": false
+  },
+  "include": ["${configDir}/build/**/*.d.ts"]
+}

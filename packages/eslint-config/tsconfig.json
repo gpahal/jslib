@@ -1,0 +1,8 @@
+{
+  "extends": "../../config/tsconfig.base.json",
+  "compilerOptions": {
+    // `scripts/typegen.ts` runs on Node's type stripping, which needs the `.ts` of a module it imports from `src`
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src", "scripts"]
+}

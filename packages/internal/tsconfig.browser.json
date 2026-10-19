@@ -1,0 +1,11 @@
+{
+  "extends": "../../config/tsconfig.base.json",
+  "compilerOptions": {
+    // The modules outside `src/node/` run anywhere a bundling package does, browsers too, so they
+    // type-check without Node's types: importing a Node module or a `src/node/` one fails here
+    "lib": ["es2024", "dom"],
+    "types": []
+  },
+  "include": ["src"],
+  "exclude": ["src/node"]
+}

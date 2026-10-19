@@ -1,0 +1,75 @@
+{
+  "name": "@gpahal/std",
+  "version": "0.0.49",
+  "description": "Standard library of TypeScript utilities for arrays, objects, strings, numbers, functions, promises, errors, hashing, lookups, URLs, queues, symbols and environments",
+  "keywords": [
+    "std",
+    "stdlib",
+    "utilities",
+    "utils",
+    "helpers",
+    "typescript",
+    "arrays",
+    "objects",
+    "strings",
+    "promises",
+    "functions",
+    "debounce",
+    "throttle",
+    "retry",
+    "numbers",
+    "errors",
+    "queue",
+    "envs",
+    "symbols",
+    "urls"
+  ],
+  "homepage": "https://github.com/gpahal/jslib/tree/main/packages/std#readme",
+  "bugs": {
+    "url": "https://github.com/gpahal/jslib/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpahal/jslib.git",
+    "directory": "packages/std"
+  },
+  "license": "MIT",
+  "author": "Garvit Pahal <g10pahal@gmail.com>",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    "./arrays": "./build/arrays.js",
+    "./envs": "./build/envs.js",
+    "./errors": "./build/errors.js",
+    "./functions": "./build/functions.js",
+    "./hash": "./build/hash.js",
+    "./match": "./build/match.js",
+    "./numbers": "./build/numbers.js",
+    "./objects": "./build/objects.js",
+    "./promises": "./build/promises.js",
+    "./queue": "./build/queue.js",
+    "./strings": "./build/strings.js",
+    "./symbols": "./build/symbols.js",
+    "./urls": "./build/urls.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "build"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "lint-check": "eslint . --max-warnings 0",
+    "prepublishOnly": "../../scripts/verify-publish-tool.sh",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "typecheck": "tsc && tsc -p tests",
+    "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
+  },
+  "devDependencies": {
+    "tsdown": "^0.23.1",
+    "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": ">=24.22.0"
+  }
+}

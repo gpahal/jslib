@@ -1,0 +1,11 @@
+{
+  "$schema": "https://www.schemastore.org/tsconfig",
+  // Each `tests/tsconfig.json` extends its package's `tsconfig.json`, then this
+  "extends": "../packages/tsconfig/library-tests.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@/*": ["${configDir}/../src/*"]
+    }
+  }
+}

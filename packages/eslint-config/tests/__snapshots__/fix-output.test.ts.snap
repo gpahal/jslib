@@ -1,0 +1,476 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`eslint --fix output with every preset on, as a difference from the defaults 1`] = `
+{
+  "index.html": {
+    "problems": [
+      "- not linted",
+      "+ 2:1 @html-eslint/require-lang",
+      "+ 3:3 @html-eslint/require-meta-viewport",
+      "+ 8:5 @html-eslint/require-img-alt",
+    ],
+  },
+  "src/app.tsx": {
+    "problems": [
+      "+ 1:19 better-tailwindcss/enforce-consistent-class-order",
+    ],
+  },
+  "src/page.astro": {
+    "problems": [
+      "- not linted",
+      "+ 3:19 better-tailwindcss/enforce-consistent-class-order",
+    ],
+    "text": [
+      "-2: let title = 'Page'",
+      "+2: const title = 'Page'",
+    ],
+  },
+}
+`;
+
+exports[`eslint --fix output with the defaults 1`] = `
+{
+  "config.toml": {
+    "problems": [],
+    "text": "# Settings
+[tool]
+name = "demo"
+version = "1.0.0"
+features = ["a", "b"]
+
+[tool.lint]
+select = [
+  "E",
+  "F"
+]
+serde = { version = "1" }
+",
+  },
+  "config.yaml": {
+    "problems": [
+      "2:3 yml/no-empty-sequence-entry",
+    ],
+    "text": "items:
+  -
+  - b
+",
+  },
+  "data.json": {
+    "problems": [
+      "1:11 json/no-duplicate-keys",
+    ],
+    "text": "{ "a": 1, "a": 2 }
+",
+  },
+  "docs.md": {
+    "problems": [
+      "3:1 @gpahal/markdown/no-missing-atx-heading-space",
+      "11:11 json/no-duplicate-keys",
+      "15:1 @gpahal/markdown/no-missing-atx-heading-space",
+    ],
+    "text": "# Docs
+
+##Install the package
+
+\`\`\`ts
+const a = 1
+export const b = a
+\`\`\`
+
+\`\`\`json
+{ "a": 1, "a": 2 }
+\`\`\`
+
+\`\`\`\`md
+##Usage notes
+
+\`\`\`js
+const c = 1
+\`\`\`
+\`\`\`\`
+",
+  },
+  "eslint.config.mjs": {
+    "problems": [],
+    "text": "export default []
+",
+  },
+  "index.html": {
+    "problems": "not linted",
+    "text": "<!doctype html>
+<html>
+  <head>
+    <title>Fix output</title>
+  </head>
+  <body>
+    <div class="p-4 flex text-red-500">Text</div>
+    <img src="a.png" />
+  </body>
+</html>
+",
+  },
+  "package.json": {
+    "problems": [],
+    "text": "{
+  "name": "fix-output",
+  "private": true,
+  "type": "module"
+}
+",
+  },
+  "src/app.tsx": {
+    "problems": [],
+    "text": "const className = 'p-4 flex text-red-500'
+
+/**
+ * The app
+ */
+export function App() {
+  const title = 'App'
+  return (
+    <div className={className}>
+      {/*
+       * The title,
+       * shown once
+       */}
+      {title}
+    </div>
+  )
+}
+",
+  },
+  "src/array-from-map.ts": {
+    "problems": [
+      "6:10 e18e/prefer-array-from-map",
+      "25:10 e18e/prefer-array-from-map",
+    ],
+    "text": "/**
+ * The values of \`set\`, adding each one's successor to it as it goes. \`Array.from(set, fn)\` would
+ * map the values added too, so \`[1, 2]\` would give \`[1, 2, 3, 4]\`
+ */
+export function withSuccessors(set: Set<number>): Array<number> {
+  return [...set].map((value) => {
+    if (value < 3) {
+      set.add(value + 2)
+    }
+    return value
+  })
+}
+
+/**
+ * The length of the array a value is mapped from, which \`Array.from\` doesn't pass
+ */
+function sizeOf(_value: number, _index: number, all: Array<number> = []): number {
+  return all.length
+}
+
+/**
+ * The size of \`set\` for each value, which \`Array.from(set, sizeOf)\` would make \`0\`
+ */
+export function sizes(set: Set<number>): Array<number> {
+  return [...set].map(sizeOf)
+}
+",
+  },
+  "src/array-likes.js": {
+    "problems": [
+      "5:15 unicorn/prefer-at",
+      "12:10 unicorn/prefer-spread",
+      "12:10 e18e/prefer-spread-syntax",
+    ],
+    "text": "/**
+ * The last of \`list\`, an array-like that may have no \`at\`
+ */
+export function last(list) {
+  return list[list.length - 1]
+}
+
+/**
+ * The items of \`list\`, an array-like that may not be iterable
+ */
+export function items(list) {
+  return Array.from(list)
+}
+",
+  },
+  "src/has-own.ts": {
+    "problems": [
+      "6:10 e18e/prefer-object-has-own",
+      "6:18 no-prototype-builtins",
+      "13:10 e18e/prefer-object-has-own",
+      "13:18 no-prototype-builtins",
+      "13:32 @typescript-eslint/no-unnecessary-condition",
+      "20:10 e18e/prefer-object-has-own",
+      "20:17 no-prototype-builtins",
+    ],
+    "text": "/**
+ * Whether \`object\` has its own \`key\`, \`false\` without an object. \`Object.hasOwn(object, 'key')\`
+ * would throw on \`undefined\`
+ */
+export function hasKey(object: Record<string, unknown> | undefined): boolean {
+  return object?.hasOwnProperty('key') ?? false
+}
+
+/**
+ * Whether \`object\` has its own \`key\`, \`false\` without an object
+ */
+export function hasKeyByCall(object: Record<string, unknown> | undefined): boolean {
+  return object?.hasOwnProperty?.('key') ?? false
+}
+
+/**
+ * Whether \`object\` has its own \`key\`. The rule reports it without a fix, as it does every call
+ */
+export function hasOwnKey(object: Record<string, unknown>): boolean {
+  return object.hasOwnProperty('key')
+}
+",
+  },
+  "src/index.ts": {
+    "problems": [
+      "1:10 @typescript-eslint/no-unused-vars",
+      "9:17 unicorn/prefer-spread",
+      "9:17 e18e/prefer-spread-syntax",
+      "13:1 @gpahal/comment-layout",
+    ],
+    "text": "import { readFile } from 'node:fs/promises'
+
+import type { Item } from './types'
+
+/**
+ * Lists the elements.
+ */
+export function list(nodes: NodeListOf<Element>): Array<Element> {
+  const items = Array.from(nodes)
+  return items
+}
+
+// The item's name
+export function nameOf(item: Item): string {
+  return item.name
+}
+",
+  },
+  "src/jsx.d.ts": {
+    "problems": [],
+    "text": "/**
+ * Stands in for the React types, so JSX has a type
+ */
+declare namespace JSX {
+  type Element = { type: unknown }
+  type IntrinsicElements = Record<string, unknown>
+}
+",
+  },
+  "src/legacy.cjs": {
+    "problems": [
+      "3:1 @gpahal/comment-layout",
+    ],
+    "text": "'use strict'
+
+// The starting count
+const count = 1
+
+module.exports = { count }
+",
+  },
+  "src/legacy.js": {
+    "problems": [
+      "1:1 @gpahal/comment-layout",
+      "10:10 unicorn/prefer-spread",
+      "10:10 e18e/prefer-spread-syntax",
+    ],
+    "text": "// The starting count
+const count = 1
+
+/**
+ * The count after one more
+ */
+export const total = count + 1
+
+export function first(nodes) {
+  return Array.from(nodes)[0]
+}
+",
+  },
+  "src/merged-imports.ts": {
+    "problems": [],
+    "text": "import type { Other, Shape  } from './types'
+
+/**
+ * Pairs a shape with its id
+ */
+export function pair(shape: Shape, other: Other): [Shape, Other] {
+  return [shape, other]
+}
+",
+  },
+  "src/node.d.ts": {
+    "problems": [],
+    "text": "/**
+ * Stands in for the Node types, which this package doesn't install
+ */
+declare module 'node:fs/promises' {
+  export function readFile(path: string): Promise<string>
+}
+",
+  },
+  "src/page.astro": {
+    "problems": "not linted",
+    "text": "---
+let title = 'Page'
+const className = 'p-4 flex text-red-500'
+---
+
+<h1 class={className}>{title}</h1>
+",
+  },
+  "src/styles.css": {
+    "problems": "not linted",
+    "text": "@import 'tailwindcss';
+",
+  },
+  "src/timers.ts": {
+    "problems": [
+      "7:3 e18e/prefer-timer-args",
+    ],
+    "text": "/**
+ * Reports the value that \`value\` holds when the timer fires
+ */
+export function schedule(report: (value: string) => void): string {
+  let value = 'before'
+  // \`e18e/prefer-timer-args\`' fix would read \`value\` when the timer is scheduled
+  setTimeout(() => report(value), 0)
+  value = 'after'
+  return value
+}
+",
+  },
+  "src/types.ts": {
+    "problems": [],
+    "text": "/**
+ * A type the other files import
+ */
+export type Item = { name: string }
+
+/**
+ * A type \`merged-imports.ts\` imports with an inline \`type\`
+ */
+export type Other = { id: number }
+
+/**
+ * A type \`merged-imports.ts\` imports with \`import type\`
+ */
+export type Shape = { kind: string }
+",
+  },
+  "tsconfig.json": {
+    "problems": [],
+    "text": "{
+  "compilerOptions": {
+    "strict": true,
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "noEmit": true,
+    "types": [],
+    "lib": ["es2024", "dom", "dom.iterable"]
+  },
+  "include": ["src/**/*"]
+}
+",
+  },
+  "turbo.json": {
+    "problems": [],
+    "text": "{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {}
+}
+",
+  },
+}
+`;
+
+exports[`eslint --fix output with typeAware: false in an editor, as a difference from the defaults 1`] = `
+{
+  "docs.md": {
+    "problems": [
+      "+ 6:5 prefer-const",
+      "+ 18:5 prefer-const",
+    ],
+    "text": [
+      "-6: const a = 1",
+      "+6: let a = 1",
+      "-18: const c = 1",
+      "+18: let c = 1",
+    ],
+  },
+  "src/app.tsx": {
+    "problems": [
+      "+ 7:7 prefer-const",
+    ],
+    "text": [
+      "-7:   const title = 'App'",
+      "+7:   let title = 'App'",
+    ],
+  },
+  "src/has-own.ts": {
+    "problems": [
+      "- 13:32 @typescript-eslint/no-unnecessary-condition",
+    ],
+  },
+  "src/index.ts": {
+    "problems": [
+      "- 9:17 unicorn/prefer-spread",
+      "- 9:17 e18e/prefer-spread-syntax",
+      "+ 9:7 prefer-const",
+      "+ 9:15 unicorn/prefer-spread",
+      "+ 9:15 e18e/prefer-spread-syntax",
+    ],
+    "text": [
+      "-9:   const items = Array.from(nodes)",
+      "+9:   let items = Array.from(nodes)",
+    ],
+  },
+  "src/legacy.cjs": {
+    "problems": [
+      "+ 4:5 prefer-const",
+    ],
+    "text": [
+      "-4: const count = 1",
+      "+4: let count = 1",
+    ],
+  },
+  "src/legacy.js": {
+    "problems": [
+      "+ 2:5 prefer-const",
+    ],
+    "text": [
+      "-2: const count = 1",
+      "+2: let count = 1",
+    ],
+  },
+}
+`;
+
+exports[`eslint --fix output with unicorn: false, as a difference from the defaults 1`] = `
+{
+  "src/array-likes.js": {
+    "problems": [
+      "- 5:15 unicorn/prefer-at",
+      "- 12:10 unicorn/prefer-spread",
+      "+ 5:10 e18e/prefer-array-at",
+    ],
+  },
+  "src/index.ts": {
+    "problems": [
+      "- 9:17 unicorn/prefer-spread",
+    ],
+  },
+  "src/legacy.js": {
+    "problems": [
+      "- 10:10 unicorn/prefer-spread",
+    ],
+  },
+}
+`;

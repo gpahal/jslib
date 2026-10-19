@@ -1,0 +1,5 @@
+{
+  "name": "report-only",
+  "private": true,
+  "type": "module"
+}

@@ -1,0 +1,5 @@
+[ package ]
+name = "demo"
+
+[[ bin ]]
+name = "cli"

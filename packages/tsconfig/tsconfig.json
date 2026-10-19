@@ -1,0 +1,7 @@
+{
+  // The package has only tests
+  "extends": ["../../config/tsconfig.base.json", "../../config/tsconfig.tests.json"],
+  "include": ["tests"],
+  // The tests write and delete projects there while `typecheck` may run beside them
+  "exclude": ["tests/tmp"]
+}

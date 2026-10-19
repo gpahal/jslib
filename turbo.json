@@ -1,0 +1,69 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "agentGuidance": false,
+  "globalDependencies": [
+    ".gitignore",
+    "config/**",
+    "tsdown.config.ts",
+    "packages/internal/src/node/source-maps.ts",
+    "packages/tsconfig/base.json",
+    "packages/tsconfig/library.json",
+    "packages/tsconfig/library-tests.json",
+    "packages/tsconfig/erasable.json",
+    "packages/tsconfig/strictest.json"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!tests/**", "!README.md"],
+      // `build` writes `exports` in `package.json`, so a cache hit has to restore it too
+      "outputs": ["build/**", "package.json"]
+    },
+    "typecheck": {
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "!README.md"]
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"]
+    },
+    // publint and `attw --pack` pack the package but read neither README.md nor a license file's
+    // text, only whether one is there
+    "typecheck-release": {
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "!tests/**", "!README.md"]
+    },
+    // The root config loads eslint-config's build and reads the root `package.json` for
+    // `engines.node`. Type-aware rules check `tsdown.config.ts` with the root `tsconfig.json`, and
+    // eslint-plugin-turbo reads the `turbo.json` files
+    "lint-check": {
+      "dependsOn": ["^build", "build", "@gpahal/eslint-config#build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/eslint.config.mjs",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/pnpm-workspace.yaml",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/turbo.json",
+        "$TURBO_ROOT$/packages/*/turbo.json"
+      ]
+    },
+    "//#typecheck-root": {
+      "dependsOn": ["@gpahal/eslint-config#build", "@gpahal/prettier-config#build"],
+      "cache": false
+    },
+    // `prettier.config.mjs` loads prettier-config's build
+    "//#lint-check-root": {
+      "dependsOn": ["@gpahal/eslint-config#build", "@gpahal/prettier-config#build"],
+      "cache": false
+    },
+    "//#fmt-check": {
+      "dependsOn": ["@gpahal/prettier-config#build"],
+      "cache": false
+    },
+    "//#knip": {
+      "dependsOn": ["@gpahal/eslint-config#build", "@gpahal/prettier-config#build"],
+      "cache": false
+    }
+  }
+}

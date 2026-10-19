@@ -1,0 +1,5 @@
+[tool]
+    line-length = 100
+names = [
+      "a",
+]

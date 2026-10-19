@@ -1,0 +1,25 @@
+{
+  "$schema": "https://www.schemastore.org/tsconfig",
+  "display": "Base",
+  "compilerOptions": {
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "target": "es2025",
+    "lib": ["es2025"],
+    "types": [],
+    "moduleDetection": "force",
+    "useDefineForClassFields": true,
+    "skipLibCheck": true,
+    "preserveWatchOutput": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "noEmitOnError": true
+  }
+}

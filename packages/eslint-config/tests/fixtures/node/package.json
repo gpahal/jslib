@@ -1,0 +1,8 @@
+{
+  "name": "node-fixture",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

@@ -1,0 +1,8 @@
+import { expect, test } from 'vitest'
+
+test('adds', () => {
+  expect(1 + 1).toBe(2)
+})
+test('adds', () => {
+  expect(2 + 2).toBe(4)
+})

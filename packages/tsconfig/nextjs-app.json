@@ -1,0 +1,22 @@
+{
+  "$schema": "https://www.schemastore.org/tsconfig",
+  "display": "Next.js App",
+  "extends": ["./base.json", "./nextjs.json"],
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "incremental": true,
+    "types": ["node"]
+  },
+  "include": [
+    "${configDir}/next-env.d.ts",
+    "${configDir}/**/*",
+    "${configDir}/.next/types/**/*.ts",
+    "${configDir}/.next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "${configDir}/dist",
+    "${configDir}/build",
+    "${configDir}/out",
+    "${configDir}/coverage"
+  ]
+}

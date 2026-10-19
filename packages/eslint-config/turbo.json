@@ -1,0 +1,19 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      // `tests/readme-tables.test.ts` checks the root README's compatibility table against the
+      // manifests, and `tests/default-project-warnings.test.ts` reads tsconfig's Astro presets and
+      // the base they extend
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/README.md",
+        "$TURBO_ROOT$/packages/*/package.json",
+        "$TURBO_ROOT$/packages/tsconfig/base.json",
+        "$TURBO_ROOT$/packages/tsconfig/astro.json",
+        "$TURBO_ROOT$/packages/tsconfig/astro-app.json"
+      ]
+    }
+  }
+}

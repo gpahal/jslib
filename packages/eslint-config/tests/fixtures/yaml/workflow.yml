@@ -1,0 +1,6 @@
+on: push
+jobs:
+  check:
+    steps:
+      - run: pnpm check
+      -

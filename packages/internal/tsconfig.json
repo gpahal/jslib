@@ -1,0 +1,11 @@
+{
+  "extends": "../../config/tsconfig.base.json",
+  "compilerOptions": {
+    // The Node-only modules in `src/node/` get Node's types. `tsconfig.browser.json` checks the
+    // other modules without them. The ES2024 lib matches tsdown's target, plus ES2025's iterator
+    // helpers, which Node has since 22
+    "lib": ["es2024", "es2025.iterator"],
+    "types": ["node"]
+  },
+  "include": ["src"]
+}
