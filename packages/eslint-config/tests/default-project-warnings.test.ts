@@ -109,29 +109,25 @@ describe('the default project warnings', () => {
   })
 
   // ESLint's `--concurrency` workers are worker threads that each load the config again
-  it(
-    'warns once under ESLint --concurrency, from the main thread',
-    { timeout: 60_000 },
-    async () => {
-      await assertBuildIsCurrent(BUILD_DIR)
-      const eslintBin = path.join(
-        path.dirname(fileURLToPath(import.meta.resolve('eslint/package.json'))),
-        'bin',
-        'eslint.js',
-      )
-      await using project = await withProject({
-        'package.json': '{ "private": true, "type": "module" }\n',
-        'tsconfig.json': '{ "compilerOptions": { "strict": true }, "include": ["src"] }\n',
-        'vite.config.ts': 'export default {}\n',
-        'eslint.config.mjs': `import { defineConfig } from ${JSON.stringify(CONFIG_URL)}\nexport default defineConfig({ root: import.meta.dirname })\n`,
-        ...Object.fromEntries(
-          [1, 2, 3, 4].map((index) => [`src/a${String(index)}.ts`, 'export const a = 1\n']),
-        ),
-      })
-      const { stderr } = await runNode([eslintBin, '--concurrency', '2', '.'], { cwd: project.dir })
-      expect(stderr.split('GPAHAL_DEFAULT_PROJECT_NODE_TYPES')).toHaveLength(2)
-    },
-  )
+  it('warns once under ESLint --concurrency, from the main thread', async () => {
+    await assertBuildIsCurrent(BUILD_DIR)
+    const eslintBin = path.join(
+      path.dirname(fileURLToPath(import.meta.resolve('eslint/package.json'))),
+      'bin',
+      'eslint.js',
+    )
+    await using project = await withProject({
+      'package.json': '{ "private": true, "type": "module" }\n',
+      'tsconfig.json': '{ "compilerOptions": { "strict": true }, "include": ["src"] }\n',
+      'vite.config.ts': 'export default {}\n',
+      'eslint.config.mjs': `import { defineConfig } from ${JSON.stringify(CONFIG_URL)}\nexport default defineConfig({ root: import.meta.dirname })\n`,
+      ...Object.fromEntries(
+        [1, 2, 3, 4].map((index) => [`src/a${String(index)}.ts`, 'export const a = 1\n']),
+      ),
+    })
+    const { stderr } = await runNode([eslintBin, '--concurrency', '2', '.'], { cwd: project.dir })
+    expect(stderr.split('GPAHAL_DEFAULT_PROJECT_NODE_TYPES')).toHaveLength(2)
+  })
 })
 
 describe('the large default project warning', () => {

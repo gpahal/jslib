@@ -505,7 +505,7 @@ describe('git ignore precedence, as git check-ignore has it', () => {
       '.',
       ['a/x.js', 'b/x.js', 'a/sub/x.js', 'c/x.js'],
     ],
-  ])('%s', { timeout: 30_000 }, async (_name, files, root, checked) => {
+  ])('%s', async (_name, files, root, checked) => {
     const results = await compare(files, root, checked)
     expect(results.map(({ file, eslint }) => ({ file, eslint }))).toEqual(
       results.map(({ file, git }) => ({ file, eslint: git })),
@@ -515,7 +515,6 @@ describe('git ignore precedence, as git check-ignore has it', () => {
   // Git turns `core.ignorecase` on when it makes a repository on a case-insensitive file system
   it.each([true, false])(
     'matches ignore rules in any case with core.ignorecase %s, as git does',
-    { timeout: 30_000 },
     async (ignoreCase) => {
       await using project = await withProject({
         '.gitignore': 'Secret.JS\n[X-Z]*.js\n',
@@ -815,42 +814,38 @@ describe('sibling .gitignore files', () => {
     ])
   })
 
-  it(
-    'merge under package names with glob characters as git reads them',
-    { timeout: 30_000 },
-    async () => {
-      await using project = await withProject()
-      git(project.dir, 'init', '--quiet')
-      const names = ['a', 'b', 'c', '[id]', '#h', 'a b', 'q,r', '{z}', '!n', 'a|b']
-      const perPackage = ['dist2/x.js', 'a.cache', 'keep.cache', 'a.log', 'out/x.js', 'sub/a.log']
-      const checked = names.flatMap((name) => perPackage.map((file) => `packages/${name}/${file}`))
-      await writeFiles(project.dir, {
-        '.gitignore': '*.log\n/packages/*/out/\n',
-        ...Object.fromEntries(
-          names.map((name) => [
-            `packages/${name}/.gitignore`,
-            name === 'c' ? 'dist2/\n*.cache\n' : 'dist2/\n*.cache\n!keep.cache\n',
-          ]),
-        ),
-        'packages/a/sub/.gitignore': '!*.log\n',
-        'packages/b/sub/.gitignore': '!*.log\n',
-        ...Object.fromEntries(checked.map((file) => [file, ''])),
+  it('merge under package names with glob characters as git reads them', async () => {
+    await using project = await withProject()
+    git(project.dir, 'init', '--quiet')
+    const names = ['a', 'b', 'c', '[id]', '#h', 'a b', 'q,r', '{z}', '!n', 'a|b']
+    const perPackage = ['dist2/x.js', 'a.cache', 'keep.cache', 'a.log', 'out/x.js', 'sub/a.log']
+    const checked = names.flatMap((name) => perPackage.map((file) => `packages/${name}/${file}`))
+    await writeFiles(project.dir, {
+      '.gitignore': '*.log\n/packages/*/out/\n',
+      ...Object.fromEntries(
+        names.map((name) => [
+          `packages/${name}/.gitignore`,
+          name === 'c' ? 'dist2/\n*.cache\n' : 'dist2/\n*.cache\n!keep.cache\n',
+        ]),
+      ),
+      'packages/a/sub/.gitignore': '!*.log\n',
+      'packages/b/sub/.gitignore': '!*.log\n',
+      ...Object.fromEntries(checked.map((file) => [file, ''])),
+    })
+    const ignored = gitIgnoredFiles(project.dir)
+    // The last config gives every file a config, since `isPathIgnored` is `true` for a file that
+    // no config's `files` matches
+    const eslint = await createESLint(project.dir, {
+      typeAware: false,
+      extraConfigs: [{ files: ['**/*.*'] }],
+    })
+    for (const file of checked) {
+      expect({ file, ignored: await eslint.isPathIgnored(file) }).toEqual({
+        file,
+        ignored: ignored.has(file),
       })
-      const ignored = gitIgnoredFiles(project.dir)
-      // The last config gives every file a config, since `isPathIgnored` is `true` for a file that
-      // no config's `files` matches
-      const eslint = await createESLint(project.dir, {
-        typeAware: false,
-        extraConfigs: [{ files: ['**/*.*'] }],
-      })
-      for (const file of checked) {
-        expect({ file, ignored: await eslint.isPathIgnored(file) }).toEqual({
-          file,
-          ignored: ignored.has(file),
-        })
-      }
-    },
-  )
+    }
+  })
 })
 
 describe('import resolver', () => {
@@ -1009,86 +1004,71 @@ describe('the project service', () => {
   const RUN_A = { cwd: 'packages/a', files: ['eslint.config.mjs', 'a.config.ts', 'src/index.ts'] }
   const RUN_B = { cwd: 'packages/b', files: ['eslint.config.mjs', 'b.config.ts', 'src/index.ts'] }
 
-  it(
-    'rejects the packages of a workspace with configs of their own, linted one after the other',
-    { timeout: 60_000 },
-    async () => {
-      await using project = await withProject({
-        ...workspacePackage('a', 'a.config.ts'),
-        ...workspacePackage('b', 'b.config.ts'),
-      })
-      const results = await lintRuns(project.dir, [RUN_A, RUN_B])
-      // The packages' other files match the same `allowDefaultProject` globs, relative to each
-      // package, and get the same compiler options
-      for (const file of [
-        'packages/a/eslint.config.mjs',
-        'packages/a/a.config.ts',
-        'packages/b/eslint.config.mjs',
-        'packages/b/src/index.ts',
-      ]) {
-        expect(results[file], file).toEqual([])
-      }
-      const file = path.join(project.dir, 'packages/b/b.config.ts')
-      expect(results['packages/b/b.config.ts']).toEqual([
-        `Parsing error: @gpahal/eslint-config: project service: \`${file}\`: the config of \`${path.join(project.dir, 'packages/b')}\` sets \`allowDefaultProject\` ["b.config.ts","eslint.config.mjs"], which matches the file, against ["a.config.ts","eslint.config.mjs"] in the config of \`${path.join(project.dir, 'packages/a')}\`, whose project service this process already uses. typescript-eslint keeps one project service per process, with the options of the first config that uses it. Lint the packages with one config at their common root, limiting presets with \`scope\` and settings with \`files\`, or run ESLint once per package`,
-      ])
-    },
-  )
+  it('rejects the packages of a workspace with configs of their own, linted one after the other', async () => {
+    await using project = await withProject({
+      ...workspacePackage('a', 'a.config.ts'),
+      ...workspacePackage('b', 'b.config.ts'),
+    })
+    const results = await lintRuns(project.dir, [RUN_A, RUN_B])
+    // The packages' other files match the same `allowDefaultProject` globs, relative to each
+    // package, and get the same compiler options
+    for (const file of [
+      'packages/a/eslint.config.mjs',
+      'packages/a/a.config.ts',
+      'packages/b/eslint.config.mjs',
+      'packages/b/src/index.ts',
+    ]) {
+      expect(results[file], file).toEqual([])
+    }
+    const file = path.join(project.dir, 'packages/b/b.config.ts')
+    expect(results['packages/b/b.config.ts']).toEqual([
+      `Parsing error: @gpahal/eslint-config: project service: \`${file}\`: the config of \`${path.join(project.dir, 'packages/b')}\` sets \`allowDefaultProject\` ["b.config.ts","eslint.config.mjs"], which matches the file, against ["a.config.ts","eslint.config.mjs"] in the config of \`${path.join(project.dir, 'packages/a')}\`, whose project service this process already uses. typescript-eslint keeps one project service per process, with the options of the first config that uses it. Lint the packages with one config at their common root, limiting presets with \`scope\` and settings with \`files\`, or run ESLint once per package`,
+    ])
+  })
 
-  it(
-    'lints every package from one config at the workspace root, and again with the same options',
-    { timeout: 60_000 },
-    async () => {
-      await using project = await withProject({
-        'package.json': '{ "name": "workspace", "private": true, "type": "module" }\n',
-        'eslint.config.mjs': buildConfigFile(),
-        ...workspacePackage('a', 'a.config.ts', ''),
-        ...workspacePackage('b', 'b.config.ts', ''),
-      })
-      const files = [
-        'eslint.config.mjs',
-        'packages/a/a.config.ts',
-        'packages/a/src/index.ts',
-        'packages/b/b.config.ts',
-        'packages/b/src/index.ts',
-      ]
-      const results = await lintRuns(project.dir, [
-        { cwd: '.', files },
-        { cwd: '.', files },
-      ])
-      expect(results).toEqual(Object.fromEntries(files.map((file) => [file, []])))
-    },
-  )
+  it('lints every package from one config at the workspace root, and again with the same options', async () => {
+    await using project = await withProject({
+      'package.json': '{ "name": "workspace", "private": true, "type": "module" }\n',
+      'eslint.config.mjs': buildConfigFile(),
+      ...workspacePackage('a', 'a.config.ts', ''),
+      ...workspacePackage('b', 'b.config.ts', ''),
+    })
+    const files = [
+      'eslint.config.mjs',
+      'packages/a/a.config.ts',
+      'packages/a/src/index.ts',
+      'packages/b/b.config.ts',
+      'packages/b/src/index.ts',
+    ]
+    const results = await lintRuns(project.dir, [
+      { cwd: '.', files },
+      { cwd: '.', files },
+    ])
+    expect(results).toEqual(Object.fromEntries(files.map((file) => [file, []])))
+  })
 
-  it(
-    'rejects a higher default project file limit after a lower one',
-    { timeout: 60_000 },
-    async () => {
-      await using project = await withProject({
-        ...workspacePackage(
-          'a',
-          'a.config.ts',
-          buildConfigFile("typeAware: { allowDefaultProject: ['*.config.ts'] }"),
-        ),
-        ...Object.fromEntries(
-          Array.from('bcdefghij', (name) => [
-            `packages/a/${name}.config.ts`,
-            'export default {}\n',
-          ]),
-        ),
-        'packages/a/small.config.mjs': buildConfigFile(
-          "typeAware: { allowDefaultProject: ['a.config.ts'] }",
-        ),
-      })
-      const large = { cwd: 'packages/a', files: ['a.config.ts'] }
-      const small = { ...large, overrideConfigFile: 'small.config.mjs' }
-      expect((await lintRuns(project.dir, [small, large]))['packages/a/a.config.ts']).toEqual([
-        expect.stringContaining(
-          "changed in this process, and now sets a default project file limit of 32, above 16 in the project service it set up first. typescript-eslint keeps one project service per process, with the options of the first config that uses it. Restart the ESLint server, as with VS Code's `ESLint: Restart ESLint Server` command, or run ESLint again",
-        ),
-      ])
-    },
-  )
+  it('rejects a higher default project file limit after a lower one', async () => {
+    await using project = await withProject({
+      ...workspacePackage(
+        'a',
+        'a.config.ts',
+        buildConfigFile("typeAware: { allowDefaultProject: ['*.config.ts'] }"),
+      ),
+      ...Object.fromEntries(
+        Array.from('bcdefghij', (name) => [`packages/a/${name}.config.ts`, 'export default {}\n']),
+      ),
+      'packages/a/small.config.mjs': buildConfigFile(
+        "typeAware: { allowDefaultProject: ['a.config.ts'] }",
+      ),
+    })
+    const large = { cwd: 'packages/a', files: ['a.config.ts'] }
+    const small = { ...large, overrideConfigFile: 'small.config.mjs' }
+    expect((await lintRuns(project.dir, [small, large]))['packages/a/a.config.ts']).toEqual([
+      expect.stringContaining(
+        "changed in this process, and now sets a default project file limit of 32, above 16 in the project service it set up first. typescript-eslint keeps one project service per process, with the options of the first config that uses it. Restart the ESLint server, as with VS Code's `ESLint: Restart ESLint Server` command, or run ESLint again",
+      ),
+    ])
+  })
 
   it('names the real path to run ESLint from for a file through a link to a folder below root', async () => {
     await using project = await withProject(workspacePackage('a', 'a.config.ts', ''))

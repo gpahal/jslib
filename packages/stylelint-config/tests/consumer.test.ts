@@ -90,7 +90,7 @@ describe('a pnpm consumer', () => {
     await project[Symbol.asyncDispose]()
   })
 
-  it('reports property order through defineConfig', { timeout: 30_000 }, async () => {
+  it('reports property order through defineConfig', async () => {
     const { status, output } = await runStylelint(projectDir, DEFINE_CONFIG, {
       'a.css': 'a {\n  color: red;\n  display: block;\n}\n',
     })
@@ -98,23 +98,19 @@ describe('a pnpm consumer', () => {
     expect(status).toBe(2)
   })
 
-  it(
-    "reports the package's error for a rejected option in an extended config",
-    { timeout: 30_000 },
-    async () => {
-      const preset = await writePreset(projectDir, presetConfig('bogus: 1'))
-      const { status, output } = await runStylelint(
-        projectDir,
-        `export default { extends: [${JSON.stringify(preset)}] }\n`,
-        { 'a.css': 'a {}\n' },
-      )
-      expect(output).toContain('@gpahal/stylelint-config: `bogus`: unknown option')
-      expect(output).not.toContain('ERR_REQUIRE_ASYNC_MODULE')
-      expect(status).not.toBe(0)
-    },
-  )
+  it("reports the package's error for a rejected option in an extended config", async () => {
+    const preset = await writePreset(projectDir, presetConfig('bogus: 1'))
+    const { status, output } = await runStylelint(
+      projectDir,
+      `export default { extends: [${JSON.stringify(preset)}] }\n`,
+      { 'a.css': 'a {}\n' },
+    )
+    expect(output).toContain('@gpahal/stylelint-config: `bogus`: unknown option')
+    expect(output).not.toContain('ERR_REQUIRE_ASYNC_MODULE')
+    expect(status).not.toBe(0)
+  })
 
-  it('extends the Tailwind CSS entry', { timeout: 30_000 }, async () => {
+  it('extends the Tailwind CSS entry', async () => {
     const { status, output } = await runStylelint(
       projectDir,
       "export default { extends: ['@gpahal/stylelint-config/tailwindcss'] }\n",
@@ -131,50 +127,42 @@ describe('a pnpm consumer', () => {
         'a defineConfig preset',
         async () => JSON.stringify(await writePreset(projectDir, presetConfig(''))),
       ],
-    ])(
-      'lints each file type with its syntax through %s',
-      { timeout: 30_000 },
-      async (_name, preset) => {
-        const { output } = await runStylelint(
-          projectDir,
-          `export default { extends: [${await preset()}] }\n`,
-          FILE_TYPES,
-        )
-        expect(rulesByFile(output)).toEqual({
-          'a.astro': ['property-no-unknown'],
-          'a.html': ['property-no-unknown'],
-          'a.md': ['property-no-unknown'],
-          'a.css': ['property-no-unknown'],
-        })
-      },
-    )
+    ])('lints each file type with its syntax through %s', async (_name, preset) => {
+      const { output } = await runStylelint(
+        projectDir,
+        `export default { extends: [${await preset()}] }\n`,
+        FILE_TYPES,
+      )
+      expect(rulesByFile(output)).toEqual({
+        'a.astro': ['property-no-unknown'],
+        'a.html': ['property-no-unknown'],
+        'a.md': ['property-no-unknown'],
+        'a.css': ['property-no-unknown'],
+      })
+    })
 
-    it(
-      'keeps the override globs of a preset relative to its root',
-      { timeout: 30_000 },
-      async () => {
-        const preset = await writePreset(
-          projectDir,
-          presetConfig("overrides: [{ files: ['src/*.css'], rules: { 'color-named': 'never' } }]"),
-        )
-        const consumer = await runStylelint(
-          projectDir,
-          `export default { extends: [${JSON.stringify(preset)}] }\n`,
-          { 'src/a.css': 'a {\n  color: red;\n}\n' },
-        )
-        expect(rulesByFile(consumer.output)).toEqual({ 'a.css': [] })
-        const { stdout, stderr } = await runNode(
-          [
-            path.join(projectDir, 'node_modules/stylelint/bin/stylelint.mjs'),
-            'src/a.css',
-            '--formatter',
-            'json',
-          ],
-          { cwd: path.dirname(preset) },
-        )
-        expect(rulesByFile(`${stdout}${stderr}`)).toEqual({ 'a.css': ['color-named'] })
-      },
-    )
+    it('keeps the override globs of a preset relative to its root', async () => {
+      const preset = await writePreset(
+        projectDir,
+        presetConfig("overrides: [{ files: ['src/*.css'], rules: { 'color-named': 'never' } }]"),
+      )
+      const consumer = await runStylelint(
+        projectDir,
+        `export default { extends: [${JSON.stringify(preset)}] }\n`,
+        { 'src/a.css': 'a {\n  color: red;\n}\n' },
+      )
+      expect(rulesByFile(consumer.output)).toEqual({ 'a.css': [] })
+      const { stdout, stderr } = await runNode(
+        [
+          path.join(projectDir, 'node_modules/stylelint/bin/stylelint.mjs'),
+          'src/a.css',
+          '--formatter',
+          'json',
+        ],
+        { cwd: path.dirname(preset) },
+      )
+      expect(rulesByFile(`${stdout}${stderr}`)).toEqual({ 'a.css': ['color-named'] })
+    })
   })
 })
 
@@ -265,7 +253,7 @@ describe('a pnpm consumer without hoisting', () => {
 
   const MARKDOWN = '<style>\n  a {\n    colr: red;\n  }\n</style>\n'
 
-  it('lints the HTML <style> blocks of .md files', { timeout: 30_000 }, async () => {
+  it('lints the HTML <style> blocks of .md files', async () => {
     const { status, output } = await runStylelint(projectDir, DEFINE_CONFIG, { 'a.md': MARKDOWN })
     expect(output).toContain('property-no-unknown')
     expect(status).toBe(2)

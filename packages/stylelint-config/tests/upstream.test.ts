@@ -151,40 +151,36 @@ describe('upstream workarounds', () => {
     ).toEqual(['color-named'])
   })
 
-  it(
-    'postcss-markdown: loads postcss-html by name from the working directory',
-    { timeout: 30_000 },
-    async () => {
-      // A `postcss-html` that only the working directory sees, which marks where it was loaded from
-      await using project = await withTmpProject('stylelint-config-md', {
-        'node_modules/postcss-html/package.json': JSON.stringify({
-          name: 'postcss-html',
-          main: 'index.cjs',
-        }),
-        'node_modules/postcss-html/index.cjs':
-          "module.exports = { parse() { throw new Error('fake postcss-html') }, stringify() {} }\n",
-      })
-      const script = [
-        `const { default: postcssMarkdown } = await import(${JSON.stringify(import.meta.resolve('postcss-markdown'))})`,
-        'try {',
-        String.raw`  postcssMarkdown().parse('<style>\na {}\n</style>\n', { from: 'a.md' })`,
-        "  console.log('real')",
-        '} catch (error) {',
-        '  console.log(error.message)',
-        '}',
-      ].join('\n')
-      const stdout = await runNodeOk(['--input-type=module', '--eval', script], {
-        cwd: project.dir,
-      })
-      expect(
-        stdout.trim(),
-        fixed(
-          "postcss-markdown's loading by name",
-          'MARKDOWN_HTML_SYNTAXES in src/internal/file-types.ts',
-        ),
-      ).toBe('fake postcss-html')
-    },
-  )
+  it('postcss-markdown: loads postcss-html by name from the working directory', async () => {
+    // A `postcss-html` that only the working directory sees, which marks where it was loaded from
+    await using project = await withTmpProject('stylelint-config-md', {
+      'node_modules/postcss-html/package.json': JSON.stringify({
+        name: 'postcss-html',
+        main: 'index.cjs',
+      }),
+      'node_modules/postcss-html/index.cjs':
+        "module.exports = { parse() { throw new Error('fake postcss-html') }, stringify() {} }\n",
+    })
+    const script = [
+      `const { default: postcssMarkdown } = await import(${JSON.stringify(import.meta.resolve('postcss-markdown'))})`,
+      'try {',
+      String.raw`  postcssMarkdown().parse('<style>\na {}\n</style>\n', { from: 'a.md' })`,
+      "  console.log('real')",
+      '} catch (error) {',
+      '  console.log(error.message)',
+      '}',
+    ].join('\n')
+    const stdout = await runNodeOk(['--input-type=module', '--eval', script], {
+      cwd: project.dir,
+    })
+    expect(
+      stdout.trim(),
+      fixed(
+        "postcss-markdown's loading by name",
+        'MARKDOWN_HTML_SYNTAXES in src/internal/file-types.ts',
+      ),
+    ).toBe('fake postcss-html')
+  })
 
   it("fs.globSync: a wildcard segment doesn't match through a symlinked folder", async () => {
     await using project = await withTmpProject('stylelint-config-glob-links', {

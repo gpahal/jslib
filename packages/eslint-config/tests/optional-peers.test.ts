@@ -208,13 +208,9 @@ function warningsOf(fn: () => void): Array<[string, string | undefined]> {
   }
 }
 
-test(
-  'the config of a JavaScript-only project loads without typescript',
-  { timeout: 30_000 },
-  async () => {
-    expect(await lintInProject([BASE], [], { omitted: ['typescript'] })).toEqual([{ messages: [] }])
-  },
-)
+test('the config of a JavaScript-only project loads without typescript', async () => {
+  expect(await lintInProject([BASE], [], { omitted: ['typescript'] })).toEqual([{ messages: [] }])
+})
 
 test('checkTypescriptInstalled throws only when typescript is needed and missing', async () => {
   await using project = await withProject()
@@ -260,12 +256,9 @@ describe('without any optional peer dependency', () => {
   })
 })
 
-test(
-  'astro without jsx-a11y where ESLint runs loads, warns once and leaves out the `astro/jsx-a11y/*` rules',
-  { timeout: 30_000 },
-  async () => {
-    // Builds the config twice to check the warning is emitted once
-    const script = `
+test('astro without jsx-a11y where ESLint runs loads, warns once and leaves out the `astro/jsx-a11y/*` rules', async () => {
+  // Builds the config twice to check the warning is emitted once
+  const script = `
 const { defineConfig } = await import('@gpahal/eslint-config')
 const { ESLint } = await import('eslint')
 const warnings = []
@@ -283,35 +276,31 @@ for (let i = 0; i < 2; i++) {
 }
 console.log(JSON.stringify([{ result, warnings }]))
 `
-    const [output] = await lintInProject<{ result: unknown; warnings: unknown }>(
-      [preset('astro')],
-      ['eslint-plugin-astro'],
-      {
-        script,
-        // Keeps the config file out of the default project, whose missing tsconfig would warn
-        files: { 'jsconfig.json': '{ "include": ["eslint.config.mjs"] }\n' },
-      },
-    )
-    expect(output).toEqual({
-      result: { a11yRules: 0, messages: [] },
-      warnings: [
-        [
-          expect.stringMatching(
-            /^@gpahal\/eslint-config: `astro`: `eslint-plugin-jsx-a11y-x` or `eslint-plugin-jsx-a11y` isn't installed where ESLint runs, `\/.+`, so the `astro\/jsx-a11y\/\*` rules are off\. Install it as a dev dependency there, as in `pnpm add -D eslint-plugin-jsx-a11y-x`$/,
-          ),
-          'GPAHAL_ASTRO_JSX_A11Y_MISSING',
-        ],
+  const [output] = await lintInProject<{ result: unknown; warnings: unknown }>(
+    [preset('astro')],
+    ['eslint-plugin-astro'],
+    {
+      script,
+      // Keeps the config file out of the default project, whose missing tsconfig would warn
+      files: { 'jsconfig.json': '{ "include": ["eslint.config.mjs"] }\n' },
+    },
+  )
+  expect(output).toEqual({
+    result: { a11yRules: 0, messages: [] },
+    warnings: [
+      [
+        expect.stringMatching(
+          /^@gpahal\/eslint-config: `astro`: `eslint-plugin-jsx-a11y-x` or `eslint-plugin-jsx-a11y` isn't installed where ESLint runs, `\/.+`, so the `astro\/jsx-a11y\/\*` rules are off\. Install it as a dev dependency there, as in `pnpm add -D eslint-plugin-jsx-a11y-x`$/,
+        ),
+        'GPAHAL_ASTRO_JSX_A11Y_MISSING',
       ],
-    })
-  },
-)
+    ],
+  })
+})
 
-test(
-  'an invalid config of yours, or a composer argument that throws, leaves no rejection for a missing peer, which awaiting still gives',
-  { timeout: 30_000 },
-  async () => {
-    // Waits long enough for the presets' imports to fail, which reject when they've started
-    const script = `
+test('an invalid config of yours, or a composer argument that throws, leaves no rejection for a missing peer, which awaiting still gives', async () => {
+  // Waits long enough for the presets' imports to fail, which reject when they've started
+  const script = `
 const { defineConfig } = await import('@gpahal/eslint-config')
 const rejections = []
 process.on('unhandledRejection', (reason) => rejections.push(reason.message))
@@ -332,17 +321,16 @@ await new Promise((resolve) => setTimeout(resolve, 1000))
 const awaited = await composer.then(() => undefined, (caught) => caught.message)
 console.log(JSON.stringify([{ configError, argumentError, rejections, awaited }]))
 `
-    const [result] = await lintInProject([preset('react')], [], { script })
-    expect(result).toEqual({
-      configError:
-        '@gpahal/eslint-config: `configs[0]`: expected a config object or an array of them, received `null`',
-      argumentError:
-        '@gpahal/eslint-config: `.overrideRules()`: expected an object of rule entries, received `null`',
-      rejections: [],
-      awaited: expect.stringMatching(/^@gpahal\/eslint-config: `react`: needs `/) as unknown,
-    })
-  },
-)
+  const [result] = await lintInProject([preset('react')], [], { script })
+  expect(result).toEqual({
+    configError:
+      '@gpahal/eslint-config: `configs[0]`: expected a config object or an array of them, received `null`',
+    argumentError:
+      '@gpahal/eslint-config: `.overrideRules()`: expected an object of rule entries, received `null`',
+    rejections: [],
+    awaited: expect.stringMatching(/^@gpahal\/eslint-config: `react`: needs `/) as unknown,
+  })
+})
 
 const NEXT_PLUGIN = 'node_modules/@next/eslint-plugin-next/package.json'
 

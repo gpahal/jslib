@@ -157,7 +157,6 @@ async function writeProject(
 // Catches an option flipped or dropped by mistake. Review a changed snapshot against the README
 test.concurrent.for(PRESETS)(
   '%s resolves to the options in the snapshot',
-  { timeout: 30_000 },
   async (preset, { expect }) => {
     await using dir = await writeProject('show-config-', {
       'tsconfig.json': JSON.stringify({ extends: path.join(PRESETS_DIR, preset) }),
@@ -188,33 +187,29 @@ test('no preset has a null value', () => {
   ).toEqual([])
 })
 
-test('base.json types ES2025 APIs without Node or the DOM', { timeout: 30_000 }, () => {
+test('base.json types ES2025 APIs without Node or the DOM', () => {
   expect(typecheck(['base.json'], { 'a.ts': 'void Promise.try(() => 1)' })).toEqual([])
   expect(typecheck(['base.json'], { 'a.ts': 'export const a = document' })).toEqual(['TS2584'])
 })
 
-test(
-  'nodenext.json rejects relative imports that fail at runtime in Node',
-  { timeout: 30_000 },
-  () => {
-    const files = { 'b.ts': 'export const b = 1' }
-    expect(
-      typecheck(['base.json', 'nodenext.json'], {
-        ...files,
-        'a.ts': "import { b } from './b'\nexport const a = b",
-      }),
-    ).toEqual(['TS2835'])
-    expect(
-      typecheck(['base.json', 'nodenext.json', 'node.json'], {
-        ...files,
-        'a.ts':
-          "import { readFile } from 'node:fs/promises'\nimport { b } from './b.js'\nexport const a = [b, readFile]",
-      }),
-    ).toEqual([])
-  },
-)
+test('nodenext.json rejects relative imports that fail at runtime in Node', () => {
+  const files = { 'b.ts': 'export const b = 1' }
+  expect(
+    typecheck(['base.json', 'nodenext.json'], {
+      ...files,
+      'a.ts': "import { b } from './b'\nexport const a = b",
+    }),
+  ).toEqual(['TS2835'])
+  expect(
+    typecheck(['base.json', 'nodenext.json', 'node.json'], {
+      ...files,
+      'a.ts':
+        "import { readFile } from 'node:fs/promises'\nimport { b } from './b.js'\nexport const a = [b, readFile]",
+    }),
+  ).toEqual([])
+})
 
-test('node.json types only the ESNext APIs that Node 24 has', { timeout: 30_000 }, () => {
+test('node.json types only the ESNext APIs that Node 24 has', () => {
   const presets = ['base.json', 'node.json']
   expect(
     typecheck(presets, {
@@ -227,21 +222,17 @@ test('node.json types only the ESNext APIs that Node 24 has', { timeout: 30_000 
   ])
 })
 
-test(
-  'node-strip-types.json allows the .ts imports that Node type stripping needs',
-  { timeout: 30_000 },
-  () => {
-    const presets = ['base.json', 'nodenext.json', 'node.json', 'erasable.json']
-    const files = {
-      'b.ts': 'export const b = 1',
-      'a.ts': "import { b } from './b.ts'\nexport const a = b",
-    }
-    expect(typecheck(presets, files)).toEqual(['TS5097'])
-    expect(typecheck([...presets, 'node-strip-types.json'], files)).toEqual([])
-  },
-)
+test('node-strip-types.json allows the .ts imports that Node type stripping needs', () => {
+  const presets = ['base.json', 'nodenext.json', 'node.json', 'erasable.json']
+  const files = {
+    'b.ts': 'export const b = 1',
+    'a.ts': "import { b } from './b.ts'\nexport const a = b",
+  }
+  expect(typecheck(presets, files)).toEqual(['TS5097'])
+  expect(typecheck([...presets, 'node-strip-types.json'], files)).toEqual([])
+})
 
-test('node-app.json checks code for Node type stripping', { timeout: 30_000 }, () => {
+test('node-app.json checks code for Node type stripping', () => {
   expect(typecheck(['node-app.json'], { 'a.ts': 'export enum E {\n  A,\n}' })).toEqual(['TS1294'])
   expect(typecheck(['node-app.json'], { 'a.ts': 'export const a = document' })).toEqual(['TS2584'])
   // Without `"type": "module"`, `nodenext` treats `.ts` files as CommonJS, where
@@ -270,22 +261,17 @@ const JSX_RUNTIME = {
 }`,
 }
 
-test.each(['react-app.json', 'nextjs-app.json'])(
-  '%s type-checks JSX',
-  { timeout: 30_000 },
-  (preset) => {
-    expect(
-      typecheck([preset], { ...JSX_RUNTIME, 'a.tsx': 'export const a = <div className="a" />' }),
-    ).toEqual([])
-    expect(
-      typecheck([preset], { ...JSX_RUNTIME, 'a.tsx': 'export const a = <div clasName="a" />' }),
-    ).toEqual(['TS2322'])
-  },
-)
+test.each(['react-app.json', 'nextjs-app.json'])('%s type-checks JSX', (preset) => {
+  expect(
+    typecheck([preset], { ...JSX_RUNTIME, 'a.tsx': 'export const a = <div className="a" />' }),
+  ).toEqual([])
+  expect(
+    typecheck([preset], { ...JSX_RUNTIME, 'a.tsx': 'export const a = <div clasName="a" />' }),
+  ).toEqual(['TS2322'])
+})
 
 test.each(['browser-app.json', 'react-app.json', 'nextjs-app.json', 'astro-app.json'])(
   '%s types ES2024 APIs and the DOM, but not ES2025 ones',
-  { timeout: 30_000 },
   (preset) => {
     expect(
       typecheck([preset], {
@@ -328,17 +314,13 @@ test('nextjs-app.json has the options that next build requires', () => {
   }
 })
 
-test(
-  'library-tests.json lets tests export values without explicit types',
-  { timeout: 30_000 },
-  () => {
-    const files = {
-      'a.ts': 'export function sum(a: number, b: number) {\n  return a + b\n}',
-    }
-    expect(typecheck(['base.json', 'library.json'], files)).toEqual(['TS9007'])
-    expect(typecheck(['base.json', 'library.json', 'library-tests.json'], files)).toEqual([])
-  },
-)
+test('library-tests.json lets tests export values without explicit types', () => {
+  const files = {
+    'a.ts': 'export function sum(a: number, b: number) {\n  return a + b\n}',
+  }
+  expect(typecheck(['base.json', 'library.json'], files)).toEqual(['TS9007'])
+  expect(typecheck(['base.json', 'library.json', 'library-tests.json'], files)).toEqual([])
+})
 
 test.each([
   ['emitDeclarationOnly', { emitDeclarationOnly: true }, {}],
@@ -347,7 +329,6 @@ test.each([
   ['composite', { composite: true }, {}],
 ] as const)(
   'library-tests.json type-checks tests inheriting %s without emitting',
-  { timeout: 60_000 },
   async (_, compilerOptions, testsCompilerOptions) => {
     await using dir = await writeProject('library-tests-', {
       'tsconfig.json': JSON.stringify({
@@ -400,64 +381,54 @@ const NODE_APP = {
 
 const NODE_APP_OUTPUT = ['disposed', 4, true, 1]
 
-test(
-  'Node runs the node-app sources, and tsc emits them for Node',
-  { timeout: 60_000 },
-  async () => {
-    await using dir = await writeProject('node-app-', NODE_APP)
-    await expect(tscErrors(dir.path)).resolves.toEqual([])
-    expect(JSON.parse(await runNodeOk(['src/main.ts'], { cwd: dir.path }))).toEqual(NODE_APP_OUTPUT)
+test('Node runs the node-app sources, and tsc emits them for Node', async () => {
+  await using dir = await writeProject('node-app-', NODE_APP)
+  await expect(tscErrors(dir.path)).resolves.toEqual([])
+  expect(JSON.parse(await runNodeOk(['src/main.ts'], { cwd: dir.path }))).toEqual(NODE_APP_OUTPUT)
 
-    await writeFiles(dir.path, {
-      'tsconfig.json': JSON.stringify({
-        extends: path.join(PRESETS_DIR, 'node-app.json'),
-        compilerOptions: { noEmit: false, rootDir: 'src', outDir: 'dist' },
-      }),
-    })
-    await expect(tscErrors(dir.path)).resolves.toEqual([])
-    expect(JSON.parse(await runNodeOk(['dist/main.js'], { cwd: dir.path }))).toEqual(
-      NODE_APP_OUTPUT,
-    )
-  },
-)
+  await writeFiles(dir.path, {
+    'tsconfig.json': JSON.stringify({
+      extends: path.join(PRESETS_DIR, 'node-app.json'),
+      compilerOptions: { noEmit: false, rootDir: 'src', outDir: 'dist' },
+    }),
+  })
+  await expect(tscErrors(dir.path)).resolves.toEqual([])
+  expect(JSON.parse(await runNodeOk(['dist/main.js'], { cwd: dir.path }))).toEqual(NODE_APP_OUTPUT)
+})
 
 // Canary for the README's warnings in "A Node app that strips types": node-app type-checks this
 // code, which Node can't run. Fails when Node starts running it, so the warning can go
-test(
-  'Node fails to run code that node-app type-checks, as the README warns',
-  { timeout: 30_000 },
-  async () => {
-    await using dir = await writeProject('node-app-unrunnable-', {
-      'package.json': JSON.stringify({ type: 'module' }),
-      'src/b.ts': 'export const b = 1\n',
-      'src/js-specifier.ts': "import { b } from './b.js'\n\nconsole.log(b)\n",
-      'src/decorator.ts': [
-        'function logged<T>(value: T, _context: ClassMethodDecoratorContext): T {',
-        '  return value',
-        '}',
-        'export class A {',
-        '  @logged',
-        '  c(): number {',
-        '    return 1',
-        '  }',
-        '}',
-        '',
-      ].join('\n'),
-      'src/accessor.ts': 'export class A {\n  accessor b = 1\n}\n',
-    })
-    const failures = await Promise.all(
-      ['src/js-specifier.ts', 'src/decorator.ts', 'src/accessor.ts'].map(async (file) => {
-        const { status, stderr } = await runNode([file], { cwd: dir.path })
-        return [file, status, /ERR_MODULE_NOT_FOUND|SyntaxError/.exec(stderr)?.[0]]
-      }),
-    )
-    expect(failures).toEqual([
-      ['src/js-specifier.ts', 1, 'ERR_MODULE_NOT_FOUND'],
-      ['src/decorator.ts', 1, 'SyntaxError'],
-      ['src/accessor.ts', 1, 'SyntaxError'],
-    ])
-  },
-)
+test('Node fails to run code that node-app type-checks, as the README warns', async () => {
+  await using dir = await writeProject('node-app-unrunnable-', {
+    'package.json': JSON.stringify({ type: 'module' }),
+    'src/b.ts': 'export const b = 1\n',
+    'src/js-specifier.ts': "import { b } from './b.js'\n\nconsole.log(b)\n",
+    'src/decorator.ts': [
+      'function logged<T>(value: T, _context: ClassMethodDecoratorContext): T {',
+      '  return value',
+      '}',
+      'export class A {',
+      '  @logged',
+      '  c(): number {',
+      '    return 1',
+      '  }',
+      '}',
+      '',
+    ].join('\n'),
+    'src/accessor.ts': 'export class A {\n  accessor b = 1\n}\n',
+  })
+  const failures = await Promise.all(
+    ['src/js-specifier.ts', 'src/decorator.ts', 'src/accessor.ts'].map(async (file) => {
+      const { status, stderr } = await runNode([file], { cwd: dir.path })
+      return [file, status, /ERR_MODULE_NOT_FOUND|SyntaxError/.exec(stderr)?.[0]]
+    }),
+  )
+  expect(failures).toEqual([
+    ['src/js-specifier.ts', 1, 'ERR_MODULE_NOT_FOUND'],
+    ['src/decorator.ts', 1, 'SyntaxError'],
+    ['src/accessor.ts', 1, 'SyntaxError'],
+  ])
+})
 
 /**
  * The files of a consumer in `apps/web` of a workspace
@@ -580,32 +551,28 @@ const VITE_CLIENT = {
     "declare module '*.css' {}\ndeclare module '*.svg' {\n  const src: string\n  export default src\n}\n",
 }
 
-test.each(README_SNIPPETS)(
-  'the README snippet extending %s compiles',
-  { timeout: 30_000 },
-  async (_, snippet) => {
-    await using dir = await writeProject('snippet-', {
-      ...VITE_CLIENT,
-      'package.json': JSON.stringify({ type: 'module' }),
-      'tsconfig.json': resolveSnippet(snippet),
-      'src/a.ts': 'export const a: number = 1\n',
-      'tests/a.test.ts': 'export const b: number = 1\n',
-    })
-    const parsed = parseConfig(path.join(dir.path, 'tsconfig.json'))
-    // The apps include every file, and the others list their folders
-    expect(relativeFiles(dir.path, parsed.fileNames)).toEqual(
-      new Set(
-        snippet.includes('"include": ["src"]') ? ['src/a.ts'] : ['src/a.ts', 'tests/a.test.ts'],
-      ),
-    )
-    const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options })
-    expect(
-      [...parsed.errors, ...ts.getPreEmitDiagnostics(program)].map((diagnostic) =>
-        ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'),
-      ),
-    ).toEqual([])
-  },
-)
+test.each(README_SNIPPETS)('the README snippet extending %s compiles', async (_, snippet) => {
+  await using dir = await writeProject('snippet-', {
+    ...VITE_CLIENT,
+    'package.json': JSON.stringify({ type: 'module' }),
+    'tsconfig.json': resolveSnippet(snippet),
+    'src/a.ts': 'export const a: number = 1\n',
+    'tests/a.test.ts': 'export const b: number = 1\n',
+  })
+  const parsed = parseConfig(path.join(dir.path, 'tsconfig.json'))
+  // The apps include every file, and the others list their folders
+  expect(relativeFiles(dir.path, parsed.fileNames)).toEqual(
+    new Set(
+      snippet.includes('"include": ["src"]') ? ['src/a.ts'] : ['src/a.ts', 'tests/a.test.ts'],
+    ),
+  )
+  const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options })
+  expect(
+    [...parsed.errors, ...ts.getPreEmitDiagnostics(program)].map((diagnostic) =>
+      ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'),
+    ),
+  ).toEqual([])
+})
 
 test.each([
   [
@@ -617,7 +584,6 @@ test.each([
   ['astro-app', 'astro.config.mjs', 'export default { site: process.env.SITE }\n'],
 ])(
   'the README root config files recipe type-checks %s and the root %s',
-  { timeout: 30_000 },
   async (preset, configFile, config) => {
     const recipe = Object.fromEntries(
       Object.entries(ROOT_CONFIG_RECIPE).map(([name, code]) => [

@@ -309,46 +309,42 @@ const MARKDOWN_CASES = CONTAINERS.flatMap(([container, wrap], containerIndex) =>
 )
 
 describe('markdown processor fixes', () => {
-  it(
-    'map reports to the right position and fixes into the block, in any container',
-    { timeout: 60_000 },
-    async () => {
-      const eslint = await createESLint('markdown', { extraConfigs: PROBE_CONFIGS })
-      const fixing = await createESLint('markdown', { extraConfigs: PROBE_CONFIGS }, { fix: true })
-      const failures: Array<string> = []
-      for (const { name, eol, markdown } of MARKDOWN_CASES) {
-        const [result] = await eslint.lintText(markdown, { filePath: 'docs.md' })
-        const markdownLines = markdown.replace('\u{FEFF}', '').split(/\r\n|\n/u)
-        const marks = result?.messages.filter(({ ruleId }) => ruleId === 'probe/mark') ?? []
-        if (marks.length === 0) {
-          failures.push(`${name}: no report`)
-        }
-        for (const message of marks) {
-          const word = message.message === 'mark' ? 'MARK' : 'MULTI'
-          const text = markdownLines[message.line - 1]?.slice(
-            message.column - 1,
-            (message.endColumn ?? 0) - 1,
-          )
-          if (text !== word || message.fix === undefined) {
-            failures.push(
-              `${name}: ${String(message.line)}:${String(message.column)} reads ${JSON.stringify(text)}`,
-            )
-          }
-        }
-        const [fixed] = await fixing.lintText(markdown, { filePath: 'docs.md' })
-        const expected = codeOf(markdown).map((value) =>
-          value
-            .replaceAll(/\bMARK\b/gu, 'MARKED')
-            // The fix's new line gets the file's line ending
-            .replaceAll(/\bMULTI\b/gu, () => `MULTIDONE${eol}const added = 1`),
+  it('map reports to the right position and fixes into the block, in any container', async () => {
+    const eslint = await createESLint('markdown', { extraConfigs: PROBE_CONFIGS })
+    const fixing = await createESLint('markdown', { extraConfigs: PROBE_CONFIGS }, { fix: true })
+    const failures: Array<string> = []
+    for (const { name, eol, markdown } of MARKDOWN_CASES) {
+      const [result] = await eslint.lintText(markdown, { filePath: 'docs.md' })
+      const markdownLines = markdown.replace('\u{FEFF}', '').split(/\r\n|\n/u)
+      const marks = result?.messages.filter(({ ruleId }) => ruleId === 'probe/mark') ?? []
+      if (marks.length === 0) {
+        failures.push(`${name}: no report`)
+      }
+      for (const message of marks) {
+        const word = message.message === 'mark' ? 'MARK' : 'MULTI'
+        const text = markdownLines[message.line - 1]?.slice(
+          message.column - 1,
+          (message.endColumn ?? 0) - 1,
         )
-        if (JSON.stringify(codeOf(fixed?.output ?? markdown)) !== JSON.stringify(expected)) {
-          failures.push(`${name}: fixed to ${JSON.stringify(fixed?.output)}`)
+        if (text !== word || message.fix === undefined) {
+          failures.push(
+            `${name}: ${String(message.line)}:${String(message.column)} reads ${JSON.stringify(text)}`,
+          )
         }
       }
-      expect(failures).toEqual([])
-    },
-  )
+      const [fixed] = await fixing.lintText(markdown, { filePath: 'docs.md' })
+      const expected = codeOf(markdown).map((value) =>
+        value
+          .replaceAll(/\bMARK\b/gu, 'MARKED')
+          // The fix's new line gets the file's line ending
+          .replaceAll(/\bMULTI\b/gu, () => `MULTIDONE${eol}const added = 1`),
+      )
+      if (JSON.stringify(codeOf(fixed?.output ?? markdown)) !== JSON.stringify(expected)) {
+        failures.push(`${name}: fixed to ${JSON.stringify(fixed?.output)}`)
+      }
+    }
+    expect(failures).toEqual([])
+  })
 
   it.each([
     ['a blockquote without a space after its marker', '>', '> ', '>```ts', '>```'],

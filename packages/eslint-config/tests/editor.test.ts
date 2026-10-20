@@ -36,52 +36,45 @@ const [result] = await eslint.lintFiles(['src/index.js'])
 console.log(JSON.stringify({ ruleIds: result.messages.map((message) => message.ruleId), output: result.output }))
 `
 
-test(
-  "in an editor, prefer-const reports without fixing through the project's eslint and the config's own copy",
-  { timeout: 30_000 },
-  async () => {
-    await using project = await withProject({
-      'app/package.json': '{ "name": "app", "type": "module" }\n',
-      'app/eslint.config.mjs': 'export default []\n',
-      'app/src/index.js': PREFER_CONST,
+test("in an editor, prefer-const reports without fixing through the project's eslint and the config's own copy", async () => {
+  await using project = await withProject({
+    'app/package.json': '{ "name": "app", "type": "module" }\n',
+    'app/eslint.config.mjs': 'export default []\n',
+    'app/src/index.js': PREFER_CONST,
+  })
+  const packageDir = path.join(import.meta.dirname, '..')
+  const appModules = path.join(project.dir, 'app', 'node_modules')
+  const configDir = path.join(appModules, '@gpahal', 'eslint-config')
+  // A second copy of eslint, with its dependencies, which the package manager gives the config
+  // when it can't share the project's
+  const copyModules = path.join(project.dir, 'copy', 'node_modules')
+  await fs.cp(path.dirname(await fs.realpath(ESLINT_DIR)), copyModules, { recursive: true })
+  await fs.mkdir(path.join(configDir, 'node_modules'), { recursive: true })
+  await fs.copyFile(path.join(packageDir, 'package.json'), path.join(configDir, 'package.json'))
+  await fs.cp(path.join(packageDir, 'build'), path.join(configDir, 'build'), { recursive: true })
+  await fs.symlink(path.join(copyModules, 'eslint'), path.join(configDir, 'node_modules', 'eslint'))
+  const { dependencies } = JSON.parse(
+    await fs.readFile(path.join(packageDir, 'package.json'), 'utf8'),
+  ) as { dependencies: Record<string, string> }
+  await Promise.all(
+    Object.keys(dependencies).map(async (name) => {
+      const link = path.join(appModules, name)
+      await fs.mkdir(path.dirname(link), { recursive: true })
+      await fs.symlink(await fs.realpath(path.join(packageDir, 'node_modules', name)), link)
+    }),
+  )
+  await fs.symlink(await fs.realpath(ESLINT_DIR), path.join(appModules, 'eslint'))
+  for (const eslintDir of [path.join(appModules, 'eslint'), path.join(copyModules, 'eslint')]) {
+    const stdout = await runNodeOk(['--input-type=module', '--eval', COPY_SCRIPT], {
+      cwd: path.join(project.dir, 'app'),
+      env: {
+        CONFIG_URL: pathToFileURL(path.join(configDir, 'build', 'index.js')).href,
+        ESLINT_URL: pathToFileURL(path.join(eslintDir, 'lib', 'api.js')).href,
+      },
     })
-    const packageDir = path.join(import.meta.dirname, '..')
-    const appModules = path.join(project.dir, 'app', 'node_modules')
-    const configDir = path.join(appModules, '@gpahal', 'eslint-config')
-    // A second copy of eslint, with its dependencies, which the package manager gives the config
-    // when it can't share the project's
-    const copyModules = path.join(project.dir, 'copy', 'node_modules')
-    await fs.cp(path.dirname(await fs.realpath(ESLINT_DIR)), copyModules, { recursive: true })
-    await fs.mkdir(path.join(configDir, 'node_modules'), { recursive: true })
-    await fs.copyFile(path.join(packageDir, 'package.json'), path.join(configDir, 'package.json'))
-    await fs.cp(path.join(packageDir, 'build'), path.join(configDir, 'build'), { recursive: true })
-    await fs.symlink(
-      path.join(copyModules, 'eslint'),
-      path.join(configDir, 'node_modules', 'eslint'),
-    )
-    const { dependencies } = JSON.parse(
-      await fs.readFile(path.join(packageDir, 'package.json'), 'utf8'),
-    ) as { dependencies: Record<string, string> }
-    await Promise.all(
-      Object.keys(dependencies).map(async (name) => {
-        const link = path.join(appModules, name)
-        await fs.mkdir(path.dirname(link), { recursive: true })
-        await fs.symlink(await fs.realpath(path.join(packageDir, 'node_modules', name)), link)
-      }),
-    )
-    await fs.symlink(await fs.realpath(ESLINT_DIR), path.join(appModules, 'eslint'))
-    for (const eslintDir of [path.join(appModules, 'eslint'), path.join(copyModules, 'eslint')]) {
-      const stdout = await runNodeOk(['--input-type=module', '--eval', COPY_SCRIPT], {
-        cwd: path.join(project.dir, 'app'),
-        env: {
-          CONFIG_URL: pathToFileURL(path.join(configDir, 'build', 'index.js')).href,
-          ESLINT_URL: pathToFileURL(path.join(eslintDir, 'lib', 'api.js')).href,
-        },
-      })
-      expect(JSON.parse(stdout), eslintDir).toEqual({ ruleIds: ['prefer-const'] })
-    }
-  },
-)
+    expect(JSON.parse(stdout), eslintDir).toEqual({ ruleIds: ['prefer-const'] })
+  }
+})
 
 const ASYNC_RETURN =
   "export function load(ok: boolean): Promise<number> {\n  if (!ok) {\n    throw new Error('sync')\n  }\n  return Promise.resolve(1)\n}\n"
@@ -183,38 +176,34 @@ test("ESLint's `--concurrency` workers run its worker script at the path editor 
   expect(eslintSource).toContain('"./worker.js"')
 })
 
-test(
-  "ESLint's bin fixes, in `--concurrency` workers too, with an editor's variables set and its output piped",
-  { timeout: 30_000 },
-  async () => {
-    await using project = await withProject({
-      'package.json': '{ "name": "bin", "type": "module" }\n',
-      'index.js': PREFER_CONST,
-      'a.js': PREFER_CONST,
-      'b.js': PREFER_CONST,
-      'eslint.config.mjs': `import { defineConfig } from ${JSON.stringify(new URL('../build/index.js', import.meta.url).href)}\n\nexport default defineConfig({ root: import.meta.dirname, typeAware: false })\n`,
-    })
-    // ESLint's bin as the script, so `process.argv` is as when it runs, not from a package script,
-    // as when an agent in an editor's terminal runs it
-    const fix = async (...args: Array<string>) =>
-      runNodeOk(
-        [
-          '--input-type=module',
-          '--eval',
-          `await import(${JSON.stringify(pathToFileURL(ESLINT_BIN).href)})`,
-          ESLINT_BIN,
-          '--fix',
-          ...args,
-        ],
-        {
-          cwd: project.dir,
-          env: { VSCODE_PID: '1', npm_lifecycle_event: '', npm_lifecycle_script: '', CI: '' },
-        },
-      )
-    await fix('index.js')
-    await fix('--concurrency', '2', 'a.js', 'b.js')
-    for (const file of ['index.js', 'a.js', 'b.js']) {
-      expect(await fs.readFile(path.join(project.dir, file), 'utf8'), file).toBe(FIXED_PREFER_CONST)
-    }
-  },
-)
+test("ESLint's bin fixes, in `--concurrency` workers too, with an editor's variables set and its output piped", async () => {
+  await using project = await withProject({
+    'package.json': '{ "name": "bin", "type": "module" }\n',
+    'index.js': PREFER_CONST,
+    'a.js': PREFER_CONST,
+    'b.js': PREFER_CONST,
+    'eslint.config.mjs': `import { defineConfig } from ${JSON.stringify(new URL('../build/index.js', import.meta.url).href)}\n\nexport default defineConfig({ root: import.meta.dirname, typeAware: false })\n`,
+  })
+  // ESLint's bin as the script, so `process.argv` is as when it runs, not from a package script,
+  // as when an agent in an editor's terminal runs it
+  const fix = async (...args: Array<string>) =>
+    runNodeOk(
+      [
+        '--input-type=module',
+        '--eval',
+        `await import(${JSON.stringify(pathToFileURL(ESLINT_BIN).href)})`,
+        ESLINT_BIN,
+        '--fix',
+        ...args,
+      ],
+      {
+        cwd: project.dir,
+        env: { VSCODE_PID: '1', npm_lifecycle_event: '', npm_lifecycle_script: '', CI: '' },
+      },
+    )
+  await fix('index.js')
+  await fix('--concurrency', '2', 'a.js', 'b.js')
+  for (const file of ['index.js', 'a.js', 'b.js']) {
+    expect(await fs.readFile(path.join(project.dir, file), 'utf8'), file).toBe(FIXED_PREFER_CONST)
+  }
+})

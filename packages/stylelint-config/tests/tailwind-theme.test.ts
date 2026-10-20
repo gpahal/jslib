@@ -82,7 +82,7 @@ describe('tailwindcss.entryPoint and root', () => {
       name: 'looks the theme up from root when the entry point is omitted',
       config: configOf(undefined),
     },
-  ])('$name', { timeout: 60_000 }, async ({ config }) => {
+  ])('$name', async ({ config }) => {
     await fs.writeFile(path.join(webDir, 'stylelint.config.mjs'), config)
     expect(await unknownProperties(rootDir, 'apps/web/a.css')).toEqual(['--color-brnd'])
     expect(await unknownProperties(webDir, 'a.css')).toEqual(['--color-brnd'])
@@ -91,7 +91,7 @@ describe('tailwindcss.entryPoint and root', () => {
 
 // `runNode` always empties `NODE_PATH`, so this test sets it on a child process of its own
 describe('NODE_PATH', () => {
-  it("doesn't resolve tailwindcss/theme.css through it", { timeout: 60_000 }, async () => {
+  it("doesn't resolve tailwindcss/theme.css through it", async () => {
     await assertBuildIsCurrent(path.join(PACKAGE_DIR, 'build'))
     await using project = await withTmpProject('stylelint-config-node-path', {
       'app/package.json': '{}',

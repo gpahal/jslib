@@ -189,15 +189,12 @@ test('rejects cyclic and over-deep extends graphs and keeps load failures as cau
 test.each([
   ['commonjs', 'module.exports ='],
   [undefined, 'export default await Promise.resolve'],
-])(
-  'reloads .js configs with package type %s and %s in Node',
-  { timeout: 30_000 },
-  async (type, exported) => {
-    const buildDir = path.join(import.meta.dirname, '../build')
-    await assertBuildIsCurrent(buildDir)
-    await using project = await withTmpProject('stylelint-config-js-reload', {
-      'package.json': JSON.stringify(type === undefined ? {} : { type }),
-      'check.mjs': `
+])('reloads .js configs with package type %s and %s in Node', async (type, exported) => {
+  const buildDir = path.join(import.meta.dirname, '../build')
+  await assertBuildIsCurrent(buildDir)
+  await using project = await withTmpProject('stylelint-config-js-reload', {
+    'package.json': JSON.stringify(type === undefined ? {} : { type }),
+    'check.mjs': `
       import assert from 'node:assert/strict'
       import fs from 'node:fs/promises'
       import { defineConfig } from ${JSON.stringify(pathToFileURL(path.join(buildDir, 'index.js')).href)}
@@ -207,10 +204,9 @@ test.each([
         assert.equal(config.reportInvalidScopeDisables, value)
       }
     `,
-    })
-    await runNodeOk([path.join(project.dir, 'check.mjs')], { cwd: project.dir })
-  },
-)
+  })
+  await runNodeOk([path.join(project.dir, 'check.mjs')], { cwd: project.dir })
+})
 
 /**
  * The source of a config module that counts its evaluations in the file `count` next to it

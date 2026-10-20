@@ -16,5 +16,9 @@ export default defineConfig({
     // typescript-eslint assumes a single run when `CI=true` and never refreshes a file's program,
     // so a test that lints new text under a path it already linted would get stale type information
     env: { TSESTREE_SINGLE_RUN: 'false' },
+    // Turbo runs every package's tests alongside the lint and type-checks, so a 4-vCPU CI runner
+    // takes several times a workstation's time. A timeout only catches hangs
+    testTimeout: 120_000,
+    hookTimeout: 120_000,
   },
 })

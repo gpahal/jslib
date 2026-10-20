@@ -538,17 +538,13 @@ describe('comment-layout fixes', () => {
   it.each([
     code('// @ts-expect-error', '', '// The value', 'export const a: string = 1', ''),
     code('/** Note', ' * @ts-expect-error */', 'export const x: string = 1', ''),
-  ])(
-    'keep `@ts-expect-error` on the line it expects an error on: %j',
-    { timeout: 30_000 },
-    (source) => {
-      expect(typeErrors(path.resolve('x.ts'), source, STRICT_MODULE)).toEqual([])
-      const { output } = linter.verifyAndFix(source, config, 'x.ts')
-      expect(typeErrors(path.resolve('x.ts'), output, STRICT_MODULE)).toEqual([])
-    },
-  )
+  ])('keep `@ts-expect-error` on the line it expects an error on: %j', (source) => {
+    expect(typeErrors(path.resolve('x.ts'), source, STRICT_MODULE)).toEqual([])
+    const { output } = linter.verifyAndFix(source, config, 'x.ts')
+    expect(typeErrors(path.resolve('x.ts'), output, STRICT_MODULE)).toEqual([])
+  })
 
-  it('keep a block between `@ts-expect-error` and its line', { timeout: 30_000 }, () => {
+  it('keep a block between `@ts-expect-error` and its line', () => {
     const source = code(
       'export function f() {',
       '// @ts-expect-error',
@@ -637,22 +633,18 @@ describe('comment-layout fixes', () => {
 
   // A `@ts-expect-error` before code on its line applies to the next line, so a change of the
   // number of lines on its line moves what it applies to
-  it(
-    'offer no change that moves the code a TypeScript directive covers',
-    { timeout: 30_000 },
-    () => {
-      const source = code(
-        '/* @ts-expect-error -- deliberate */ export const p = { c: 1, /** e */ d: 2 }',
-        'export const z: string = 1',
-        '',
-      )
-      const messages = linter.verify(source, config, 'x.ts')
-      expect(
-        messages.map((message) => [message.messageId, message.fix, message.suggestions]),
-      ).toEqual([['sameLine', undefined, undefined]])
-      expect(typeErrors(path.resolve('x.ts'), source, STRICT_MODULE)).toEqual([])
-    },
-  )
+  it('offer no change that moves the code a TypeScript directive covers', () => {
+    const source = code(
+      '/* @ts-expect-error -- deliberate */ export const p = { c: 1, /** e */ d: 2 }',
+      'export const z: string = 1',
+      '',
+    )
+    const messages = linter.verify(source, config, 'x.ts')
+    expect(
+      messages.map((message) => [message.messageId, message.fix, message.suggestions]),
+    ).toEqual([['sameLine', undefined, undefined]])
+    expect(typeErrors(path.resolve('x.ts'), source, STRICT_MODULE)).toEqual([])
+  })
 
   it('report comments in Astro scripts without changing them', async () => {
     const source = code(
@@ -828,7 +820,7 @@ describe('comment-layout on comments in odd places', () => {
     rules: { '@gpahal/comment-layout': 'error' },
   }
 
-  it('keeps the code, re-parses and settles in one pass after --fix', { timeout: 60_000 }, () => {
+  it('keeps the code, re-parses and settles in one pass after --fix', () => {
     const failures: Array<string> = []
     let count = 0
     for (const code of COMMENT_CASES) {

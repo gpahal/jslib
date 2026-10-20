@@ -66,9 +66,6 @@ const PAIR_FILES = [...FILES, 'markdown/README.md/0.js']
 
 test.each(OPTION_SETS)(
   'no file has both rules of a duplicate pair on, nor a twin off without its kept rules: %s',
-  // Building the configs and resolving them for every file takes 2-4s alone, close to the default
-  // 5s when the other packages' tests run at the same time
-  { timeout: 30_000 },
   async (_name, options) => {
     const configs = await defineConfig(options)
     const eslint = eslintWith(FIXTURES_DIR, configs)
@@ -313,7 +310,6 @@ describe('a mistake that two rules report gets one report', () => {
     ],
   ] as Array<[string, Partial<EslintConfigOptions>, string, string, string, string]>)(
     '%s, %j, %s: in %j, only %s reports, and %s does where the kept rule is off',
-    { timeout: 30_000 },
     async (fixture, options, file, code, kept, twin) => {
       expect(await reportingRules(fixture, options, file, code, [kept, twin])).toEqual([kept])
       const keptOff = {
@@ -343,26 +339,22 @@ describe('a mistake that two rules report gets one report', () => {
     ).toEqual(['unicorn/prefer-logical-operator-over-ternary'])
   })
 
-  it(
-    'reports an unused catch binding once, and `no-unused-vars` does with unicorn off',
-    { timeout: 30_000 },
-    async () => {
-      const code =
-        "export function f(): unknown {\n  try {\n    return JSON.parse('x')\n  } catch (e) {\n    return undefined\n  }\n}\n"
-      const rules = [
-        '@typescript-eslint/no-unused-vars',
-        'unicorn/prefer-optional-catch-binding',
-        'unicorn/catch-error-name',
-        'preserve-caught-error',
-      ]
-      expect(await reportingRules('rules', {}, typed, code, rules)).toEqual([
-        'unicorn/prefer-optional-catch-binding',
-      ])
-      expect(await reportingRules('rules', { unicorn: false }, typed, code, rules)).toEqual([
-        '@typescript-eslint/no-unused-vars',
-      ])
-    },
-  )
+  it('reports an unused catch binding once, and `no-unused-vars` does with unicorn off', async () => {
+    const code =
+      "export function f(): unknown {\n  try {\n    return JSON.parse('x')\n  } catch (e) {\n    return undefined\n  }\n}\n"
+    const rules = [
+      '@typescript-eslint/no-unused-vars',
+      'unicorn/prefer-optional-catch-binding',
+      'unicorn/catch-error-name',
+      'preserve-caught-error',
+    ]
+    expect(await reportingRules('rules', {}, typed, code, rules)).toEqual([
+      'unicorn/prefer-optional-catch-binding',
+    ])
+    expect(await reportingRules('rules', { unicorn: false }, typed, code, rules)).toEqual([
+      '@typescript-eslint/no-unused-vars',
+    ])
+  })
 
   it('keeps `no-script-url` outside JSX in React files', async () => {
     const code = "export function go(): void {\n  location.assign('javascript:void(0)')\n}\n"

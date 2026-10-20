@@ -77,7 +77,7 @@ describe('upstream workarounds', () => {
     const result = await runPrettier(file, cwd)
     expect(result.ok, fixed('prettier#17565', 'src/internal/plugins.ts')).toBe(false)
     expect(result.output).toContain("Cannot find package 'prettier-plugin-canary'")
-  }, 30_000)
+  })
 
   // The GitHub alerts plugin keeps the line break
   it("prettier#15479: Markdown joins a GitHub alert's marker to the next line", async () => {
@@ -119,7 +119,7 @@ export default {
       fixed('IanVS/prettier-plugin-sort-imports#233', 'src/internal/plugins.ts'),
     ).toBe(false)
     expect(result.output).toMatch(/could not be loaded\. {2}Is it installed\?/)
-  }, 30_000)
+  })
 
   // The `.mts` and `.cts` override parses them without `jsx`
   it('IanVS/prettier-plugin-sort-imports: the sorter drops `jsx` only in .ts files, not .mts and .cts', async () => {

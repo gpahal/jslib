@@ -39,7 +39,7 @@ function getExamples(): Map<string, string> {
 
 const examples = getExamples()
 
-test('JSDoc examples compile against the public declarations', { timeout: 30_000 }, () => {
+test('JSDoc examples compile against the public declarations', () => {
   expect(examples.size).toBeGreaterThan(0)
   expect([...examples.keys()]).toContainEqual(expect.stringContaining('internal-escape'))
   const options: ts.CompilerOptions = {
