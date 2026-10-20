@@ -873,7 +873,7 @@ pnpm build
 pnpm check
 ```
 
-Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate, and [CI](.github/workflows/ci.yml) runs it on Linux with read-only access and no secrets. [AGENTS.md](AGENTS.md) covers contributor conventions.
+Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate, and [CI](.github/workflows/ci.yml) runs it on Linux with read-only access and no secrets. On a push to `main`, CI skips the checks when a passing run on the merged PR's head tested the same files; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
 
 ## Releasing
 
