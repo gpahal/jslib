@@ -723,7 +723,7 @@ function fixTypedProjectsOnce(
     for (const [index, [key]] of entries.entries()) {
       results.set(key, fixes[index]!)
     }
-  }, 120_000)
+  })
   return (key) => {
     const result = results.get(key)
     if (result === undefined) {
@@ -1869,7 +1869,7 @@ describe('type-aware rules in tests and components', () => {
         fileMessages.filter((message) => RULES.some((rule) => message.endsWith(`:${rule}`))),
       ]),
     )
-  }, 60_000)
+  })
 
   it('`no-unnecessary-condition` passes typed assertions in tests, and still reports them elsewhere', () => {
     expect(reports['src/sum.test.ts']).toEqual([])

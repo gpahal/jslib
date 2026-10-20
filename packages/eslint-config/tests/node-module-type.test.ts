@@ -41,24 +41,20 @@ const PACKAGE_JSON = { name: 'node-project', private: true, engines: { node: '>=
 test.concurrent.each([
   ['without "type": "module"', PACKAGE_JSON],
   ['with "type": "module"', { ...PACKAGE_JSON, type: 'module' }],
-])(
-  'node preset picks the module type from the file extension, %s',
-  { timeout: 30_000 },
-  async (_name, packageJson) => {
-    await using project = await withProject({
-      ...FILES,
-      'package.json': JSON.stringify(packageJson),
-    })
-    const stdout = await runNodeOk(
-      [
-        '--input-type=module',
-        '--eval',
-        SCRIPT,
-        pathToFileURL(path.join(BUILD_DIR, 'index.js')).href,
-        pathToFileURL(createRequire(import.meta.url).resolve('eslint')).href,
-      ],
-      { cwd: project.dir },
-    )
-    expect(JSON.parse(stdout)).toEqual(['index.mjs: no-undef'])
-  },
-)
+])('node preset picks the module type from the file extension, %s', async (_name, packageJson) => {
+  await using project = await withProject({
+    ...FILES,
+    'package.json': JSON.stringify(packageJson),
+  })
+  const stdout = await runNodeOk(
+    [
+      '--input-type=module',
+      '--eval',
+      SCRIPT,
+      pathToFileURL(path.join(BUILD_DIR, 'index.js')).href,
+      pathToFileURL(createRequire(import.meta.url).resolve('eslint')).href,
+    ],
+    { cwd: project.dir },
+  )
+  expect(JSON.parse(stdout)).toEqual(['index.mjs: no-undef'])
+})

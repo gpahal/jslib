@@ -439,7 +439,7 @@ console.log(JSON.stringify(globalThis.result))`
 }
 
 describe('import sorting at run time', () => {
-  it('changes the order modules run in', { timeout: 30_000 }, async () => {
+  it('changes the order modules run in', async () => {
     expect(await runBeforeAndAfterFormat(ORDER_MAIN)).toEqual([
       [true, true],
       [true, false],
@@ -450,7 +450,7 @@ describe('import sorting at run time', () => {
   it.each([
     ['a bare import', `import './z-init.mjs'\n${ORDER_MAIN}`],
     ['// prettier-ignore', `// prettier-ignore\n${ORDER_MAIN}`],
-  ])('keeps the order with %s', { timeout: 30_000 }, async (_, main) => {
+  ])('keeps the order with %s', async (_, main) => {
     expect(await runBeforeAndAfterFormat(main)).toEqual([
       [true, true],
       [true, true],
@@ -737,7 +737,7 @@ console.log(JSON.stringify(steps))
         '',
       ].join('\n'),
     )
-  }, 30_000)
+  })
 
   // The README's CommonJS form, where `require` gives the module namespace, and the static config
   it.each([

@@ -701,17 +701,14 @@ process.stdout.write(JSON.stringify({ results, ms: (user + system) / 1000 }))
         return file
       }),
     )
-    const { status, stdout, stderr } = await runNode(
-      [
-        '--max-old-space-size=256',
-        '--input-type=module',
-        '--eval',
-        MEASURE_SCRIPT,
-        pathToFileURL(path.join(BUILD_DIR, 'index.js')).href,
-        ...files,
-      ],
-      { timeout: 60_000 },
-    )
+    const { status, stdout, stderr } = await runNode([
+      '--max-old-space-size=256',
+      '--input-type=module',
+      '--eval',
+      MEASURE_SCRIPT,
+      pathToFileURL(path.join(BUILD_DIR, 'index.js')).href,
+      ...files,
+    ])
     expect(stderr).toBe('')
     expect(status).toBe(0)
     const { results, ms } = JSON.parse(stdout) as {

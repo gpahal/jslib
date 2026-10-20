@@ -165,7 +165,7 @@ describe('rules', () => {
     })
   })
 
-  it('merge duplicate imports into TypeScript that compiles', { timeout: 30_000 }, async () => {
+  it('merge duplicate imports into TypeScript that compiles', async () => {
     const file = 'src/imports/duplicates.ts'
     // Turns `unicorn/prefer-export-from`'s fix back on to check how it combines with the merge
     const eslint = await createESLint(
@@ -211,7 +211,6 @@ describe('import rules', () => {
     ],
   ] as const)(
     'report a missing named import and namespace member in %s',
-    { timeout: 30_000 },
     async (_name, files, options, expected) => {
       await using project = await withProject({
         ...files,
@@ -237,39 +236,34 @@ describe('import rules', () => {
     expect(await ruleSeverity(eslint, path.join(project.dir, 'src/b.js'), 'import-x/named')).toBe(2)
   })
 
-  it(
-    'report a relative import of another package, outside config and test files, without fixing it',
-    { timeout: 30_000 },
-    async () => {
-      const importA = "import { a } from '../../a/src/index.js'\n\nexport const copy = a + 1\n"
-      await using project = await withProject({
-        'package.json': '{ "name": "repo", "private": true, "type": "module" }\n',
-        'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
-        'packages/a/package.json':
-          '{ "name": "a", "type": "module", "exports": "./src/index.js" }\n',
-        'packages/a/src/index.js': 'export const a = 1\n',
-        'packages/b/package.json': '{ "name": "b", "type": "module" }\n',
-        'packages/b/src/index.js': importA,
-        'packages/b/vite.config.js':
-          "import { a } from '../a/src/index.js'\n\nexport default { a }\n",
-        'packages/b/tests/a.test.js': importA,
-      })
-      const eslint = await createESLint(project.dir, { gitignore: false }, { fix: true })
-      const results = await eslint.lintFiles(['packages/b'])
-      expect(
-        Object.fromEntries(
-          results.map((result) => [
-            path.relative(project.dir, result.filePath),
-            [result.output, result.messages.map(ruleIdOf)],
-          ]),
-        ),
-      ).toMatchObject({
-        'packages/b/src/index.js': [undefined, ['import-x/no-relative-packages']],
-        'packages/b/vite.config.js': [undefined, []],
-        'packages/b/tests/a.test.js': [undefined, []],
-      })
-    },
-  )
+  it('report a relative import of another package, outside config and test files, without fixing it', async () => {
+    const importA = "import { a } from '../../a/src/index.js'\n\nexport const copy = a + 1\n"
+    await using project = await withProject({
+      'package.json': '{ "name": "repo", "private": true, "type": "module" }\n',
+      'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
+      'packages/a/package.json': '{ "name": "a", "type": "module", "exports": "./src/index.js" }\n',
+      'packages/a/src/index.js': 'export const a = 1\n',
+      'packages/b/package.json': '{ "name": "b", "type": "module" }\n',
+      'packages/b/src/index.js': importA,
+      'packages/b/vite.config.js':
+        "import { a } from '../a/src/index.js'\n\nexport default { a }\n",
+      'packages/b/tests/a.test.js': importA,
+    })
+    const eslint = await createESLint(project.dir, { gitignore: false }, { fix: true })
+    const results = await eslint.lintFiles(['packages/b'])
+    expect(
+      Object.fromEntries(
+        results.map((result) => [
+          path.relative(project.dir, result.filePath),
+          [result.output, result.messages.map(ruleIdOf)],
+        ]),
+      ),
+    ).toMatchObject({
+      'packages/b/src/index.js': [undefined, ['import-x/no-relative-packages']],
+      'packages/b/vite.config.js': [undefined, []],
+      'packages/b/tests/a.test.js': [undefined, []],
+    })
+  })
 })
 
 describe('json and yaml files', () => {

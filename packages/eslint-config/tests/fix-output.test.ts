@@ -182,7 +182,7 @@ async function getDefaultsOutput(): ReturnType<typeof fixOutput> {
   return defaultsOutput.promise
 }
 
-test('eslint --fix output with the defaults', { timeout: 120_000 }, async () => {
+test('eslint --fix output with the defaults', async () => {
   const { files, diagnostics } = await getDefaultsOutput()
   expect(diagnostics).toStrictEqual([])
   expect(files).toMatchSnapshot()
@@ -208,9 +208,6 @@ test.concurrent.for([
   ['unicorn: false', { unicorn: false }],
 ] satisfies Array<[string, Partial<EslintConfigOptions>]>)(
   'eslint --fix output with %s, as a difference from the defaults',
-  // Linting the fixture with type information and then type-checking it take about 9s alone, and
-  // several times that when the other packages' tests run at the same time
-  { timeout: 120_000 },
   // The context's `expect`, which concurrent snapshot tests need
   async ([, options], { expect }) => {
     const [{ files, diagnostics }, defaults] = await Promise.all([

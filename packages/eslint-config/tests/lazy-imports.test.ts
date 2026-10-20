@@ -62,7 +62,7 @@ test.concurrent.each([
   ['pnpm', '/eslint-plugin-pnpm/'],
   ['markdown', '/@eslint/markdown/'],
   ['markdown', '/mdast-util-from-markdown/'],
-])("imports the plugin of %s only when it's on: %s", { timeout: 30_000 }, async (area, plugin) => {
+])("imports the plugin of %s only when it's on: %s", async (area, plugin) => {
   expect(enabledUrls.some((url) => url.includes(plugin))).toBe(true)
   const off = await resolvedUrls({ [area]: false })
   expect(off.filter((url) => url.includes(plugin))).toEqual([])
@@ -70,7 +70,7 @@ test.concurrent.each([
 
 // eslint-plugin-unicorn's `relative-url-style` imports micromark and parse5 as the plugin loads, so
 // this turns it off
-test('imports micromark and the HTML parser only when needed', { timeout: 30_000 }, async () => {
+test('imports micromark and the HTML parser only when needed', async () => {
   const urls = await resolvedUrls({ unicorn: false })
   expect(
     urls.filter((url) => url.includes('/hast-util-from-html/') || url.includes('/parse5/')),
@@ -85,27 +85,19 @@ test('imports micromark and the HTML parser only when needed', { timeout: 30_000
 const TYPESCRIPT_ESLINT_REGEX =
   /\/node_modules\/(?:typescript-eslint|@typescript-eslint\/(?:parser|eslint-plugin|typescript-estree))\//
 
-test(
-  'loads typescript-eslint only outside a JavaScript-only project',
-  { timeout: 30_000 },
-  async () => {
-    expect(enabledUrls.some((url) => TYPESCRIPT_ESLINT_REGEX.test(url))).toBe(true)
-    const urls = await resolvedUrls({}, 'cjs')
-    expect(urls.filter((url) => TYPESCRIPT_ESLINT_REGEX.test(url))).toEqual([])
-  },
-)
+test('loads typescript-eslint only outside a JavaScript-only project', async () => {
+  expect(enabledUrls.some((url) => TYPESCRIPT_ESLINT_REGEX.test(url))).toBe(true)
+  const urls = await resolvedUrls({}, 'cjs')
+  expect(urls.filter((url) => TYPESCRIPT_ESLINT_REGEX.test(url))).toEqual([])
+})
 
 // eslint-plugin-sonarjs and eslint-plugin-regexp load TypeScript as they load, when it's installed
-test(
-  "doesn't load TypeScript for a JavaScript-only project without sonarjs and regexp",
-  { timeout: 30_000 },
-  async () => {
-    const urls = await resolvedUrls({ sonarjs: false, regexp: false }, 'cjs')
-    expect(urls.filter((url) => url.includes('/node_modules/typescript/'))).toEqual([])
-    expect(
-      (await resolvedUrls({ sonarjs: false, regexp: false })).some((url) =>
-        url.includes('/node_modules/typescript/'),
-      ),
-    ).toBe(true)
-  },
-)
+test("doesn't load TypeScript for a JavaScript-only project without sonarjs and regexp", async () => {
+  const urls = await resolvedUrls({ sonarjs: false, regexp: false }, 'cjs')
+  expect(urls.filter((url) => url.includes('/node_modules/typescript/'))).toEqual([])
+  expect(
+    (await resolvedUrls({ sonarjs: false, regexp: false })).some((url) =>
+      url.includes('/node_modules/typescript/'),
+    ),
+  ).toBe(true)
+})

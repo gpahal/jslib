@@ -219,8 +219,6 @@ const LAYOUT_RULES: Record<string, Array<string>> = {
 
 describe('with every preset on', () => {
   const configs = new Map<string, Linter.Config | undefined>()
-  // Loading every preset takes about 3s alone, close to the default 10s hook timeout when the other
-  // packages' tests run at the same time
   beforeAll(async () => {
     const eslint = await createAllPresetsESLint()
     for (const file of FILES) {
@@ -230,7 +228,7 @@ describe('with every preset on', () => {
           Linter.Config | undefined,
       )
     }
-  }, 30_000)
+  })
 
   it.each(FILES)('the rules on for %s', (file) => {
     const inventory = inventoryOf(configs.get(file))

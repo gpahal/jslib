@@ -101,11 +101,11 @@ describe('README examples', () => {
     ).toEqual(modules)
   })
 
-  it('type-checks', { timeout: 30_000 }, () => {
+  it('type-checks', () => {
     expect(typeCheckBlocks(blocks.map(({ code }) => code))).toBe('')
   })
 
-  it.each(blocks)('$heading', { timeout: 30_000 }, async ({ code }) => {
+  it.each(blocks)('$heading', async ({ code }) => {
     await expect(runExample(code)).resolves.toBeUndefined()
   })
 })

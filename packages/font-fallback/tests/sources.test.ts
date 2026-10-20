@@ -161,7 +161,6 @@ describe('file: URLs', () => {
 
   it.skipIf(process.platform === 'win32')(
     'rejects a folder, and a FIFO without blocking on it',
-    { timeout: 30_000 },
     async () => {
       await using project = await withTmpProject('font-fallback')
       const folder = path.join(project.dir, 'folder.ttf')

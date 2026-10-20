@@ -44,7 +44,6 @@ test('every preset is published and exported by its name, with base as the root'
 
 test.each(['@gpahal/tsconfig/base', '@gpahal/tsconfig/base.json', '@gpahal/tsconfig'])(
   'an installed project extends base as %s',
-  { timeout: 30_000 },
   async (preset) => {
     await using dir = await fs.mkdtempDisposable(path.join(os.tmpdir(), 'tsconfig-project-'))
     const scopeDir = path.join(dir.path, 'node_modules/@gpahal')

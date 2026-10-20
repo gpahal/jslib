@@ -85,5 +85,5 @@ describe("the README's fix script", () => {
     expect(await fs.readFile(path.join(dir, 'style.css'), 'utf8')).toBe(
       '@media (width <= 100px) {\n  a {\n    color: red;\n  }\n}\n',
     )
-  }, 60_000)
+  })
 })

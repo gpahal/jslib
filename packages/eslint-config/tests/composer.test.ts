@@ -1284,7 +1284,7 @@ console.log(JSON.stringify(results))
         rejections: [],
       },
     })
-  }, 30_000)
+  })
 })
 
 describe('plugins that the presets register, in configs of yours', () => {

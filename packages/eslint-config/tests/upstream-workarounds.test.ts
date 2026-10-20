@@ -489,19 +489,16 @@ describe('upstream workarounds', () => {
     ).toBe(false)
   })
 
-  it(
-    'eslint-plugin-astro still loads the TypeScript parser and jsx-a11y from the working directory',
-    { timeout: 30_000 },
-    async () => {
-      // A project with neither installed, as a pnpm project that doesn't list them sees it
-      await using project = await withTmpProject('eslint-config', {
-        'package.json': '{ "name": "astro" }\n',
-      })
-      const stdout = await runNodeOk(
-        [
-          '--input-type=module',
-          '--eval',
-          String.raw`
+  it('eslint-plugin-astro still loads the TypeScript parser and jsx-a11y from the working directory', async () => {
+    // A project with neither installed, as a pnpm project that doesn't list them sees it
+    await using project = await withTmpProject('eslint-config', {
+      'package.json': '{ "name": "astro" }\n',
+    })
+    const stdout = await runNodeOk(
+      [
+        '--input-type=module',
+        '--eval',
+        String.raw`
 const { default: astro } = await import(process.env.ASTRO_URL)
 const { Linter } = await import(process.env.ESLINT_URL)
 const configs = astro.configs['flat/recommended']
@@ -513,29 +510,28 @@ const messages = new Linter({ configType: 'flat' }).verify(
 )
 console.log(JSON.stringify({ parser: base.languageOptions.parserOptions.parser ?? null, messages: messages.map((message) => message.message) }))
 `,
-        ],
-        {
-          cwd: project.dir,
-          env: {
-            ASTRO_URL: import.meta.resolve('eslint-plugin-astro'),
-            ESLINT_URL: import.meta.resolve('eslint'),
-          },
+      ],
+      {
+        cwd: project.dir,
+        env: {
+          ASTRO_URL: import.meta.resolve('eslint-plugin-astro'),
+          ESLINT_URL: import.meta.resolve('eslint'),
         },
-      )
-      const { parser, messages } = JSON.parse(stdout) as {
-        parser: unknown
-        messages: Array<string>
-      }
-      expect(
-        parser,
-        "eslint-plugin-astro finds the TypeScript parser itself now: drop `parserOptions.parser` and the `gpahal/astro/script-parser` config's parser in src/internal/presets/astro.ts, which pass this package's",
-      ).toBeNull()
-      expect(
-        messages.join('\n'),
-        "eslint-plugin-astro loads jsx-a11y from its own dependencies now: drop `checkJsxA11y` in src/internal/presets/astro.ts and the README's note to install eslint-plugin-jsx-a11y-x",
-      ).toContain('you need to install eslint-plugin-jsx-a11y or eslint-plugin-jsx-a11y-x')
-    },
-  )
+      },
+    )
+    const { parser, messages } = JSON.parse(stdout) as {
+      parser: unknown
+      messages: Array<string>
+    }
+    expect(
+      parser,
+      "eslint-plugin-astro finds the TypeScript parser itself now: drop `parserOptions.parser` and the `gpahal/astro/script-parser` config's parser in src/internal/presets/astro.ts, which pass this package's",
+    ).toBeNull()
+    expect(
+      messages.join('\n'),
+      "eslint-plugin-astro loads jsx-a11y from its own dependencies now: drop `checkJsxA11y` in src/internal/presets/astro.ts and the README's note to install eslint-plugin-jsx-a11y-x",
+    ).toContain('you need to install eslint-plugin-jsx-a11y or eslint-plugin-jsx-a11y-x')
+  })
 
   it('astro-eslint-parser still gives template JSX the error type without `@types/react`', async () => {
     await using project = await withTmpProject('eslint-config', {
@@ -618,7 +614,7 @@ console.log(JSON.stringify({ parser: base.languageOptions.parserOptions.parser ?
       'c.config.ts',
       DEFAULT_PROJECT_CONFLICT,
     ],
-  ])('%s', { timeout: 30_000 }, async (message, dir, file, expected) => {
+  ])('%s', async (message, dir, file, expected) => {
     await using project = await withTmpProject('eslint-config-project-service')
     const tsconfig = '{ "include": ["src"] }\n'
     await writeFiles(project.dir, {
