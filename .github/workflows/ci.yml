@@ -15,7 +15,7 @@ concurrency:
 jobs:
   # On a push to main, outputs tested=true when this workflow already passed on the merged PR's head with the same files
   gate:
-    uses: gpahal/ci/.github/workflows/skip-if-tested.yml@6505abd9637546b881119d2bf45bb9d520cb4045 # v1.0.0
+    uses: gpahal/ci/.github/workflows/skip-if-tested.yml@ee5b876c99dc4af15f288630704e48421a637716 # v1.1.0
     permissions:
       actions: read
       contents: read
@@ -38,6 +38,8 @@ jobs:
           check-latest: true
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Only shipped dependencies gate CI, so a new dev-only advisory doesn't block unrelated PRs
+      - run: pnpm audit --prod
       # No remote Turbo cache, so every task runs from this checkout
       - run: pnpm check
       # The build rewrites `package.json` exports when entry points change
