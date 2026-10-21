@@ -873,13 +873,13 @@ pnpm build
 pnpm check
 ```
 
-Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate, and [CI](.github/workflows/ci.yml) runs it on Linux with read-only access and no secrets. On a push to `main`, CI skips the checks when a passing run on the merged PR's head tested the same files; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
+Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate, and [CI](.github/workflows/ci.yml) runs it and `pnpm audit --prod` on Linux with read-only access and no secrets. `main` takes only squash-merged pull requests with signed commits and a passing `check`. A PR doesn't have to be up to date with `main`, but on a push to `main`, CI skips the checks only when a passing run on the merged PR's head tested the same files, which requires the PR to contain the latest `main`; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
 
 ## Releasing
 
 Changesets version and publish the packages:
 
-1. `pnpm cs` adds a changeset interactively, then applies all pending changesets, bumping the versions of the packages they name. `changelog` is off in `.changeset/config.json`, so no `CHANGELOG.md` is written and a changeset's text is discarded. Commit the result and push it to `main`.
+1. `pnpm cs` adds a changeset interactively, then applies all pending changesets, bumping the versions of the packages they name. `changelog` is off in `.changeset/config.json`, so no `CHANGELOG.md` is written and a changeset's text is discarded. Commit the result on a branch, open a pull request and squash-merge it once `check` passes.
 2. `pnpm cs-publish` publishes from a clean `main` that matches `origin/main`. It runs every gate, builds, then runs `changeset publish --no-git-tag`, which skips versions npm already has and creates no git tags, so nothing is tagged locally or pushed to the remote.
 
 A bump of `@gpahal/std` also bumps every package that depends on it through `workspace:*`. `@gpahal/internal` is bundled and bumps nothing, so name the packages that bundle it in the changeset.

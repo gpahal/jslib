@@ -38,6 +38,8 @@ jobs:
           check-latest: true
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Only shipped dependencies gate CI, so a new dev-only advisory doesn't block unrelated PRs
+      - run: pnpm audit --prod
       # No remote Turbo cache, so every task runs from this checkout
       - run: pnpm check
       # The build rewrites `package.json` exports when entry points change
