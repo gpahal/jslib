@@ -27,8 +27,20 @@ async function lintFixture(
   files: Array<string>,
   options: Partial<EslintConfigOptions> = {},
 ) {
-  const eslint = await createESLint(fixture, options)
+  const eslint = await sharedESLint(fixture, options)
   return lint(eslint, files, ruleIdOf)
+}
+
+/**
+ * The rules fixture's messages for `files` with `typescript`, and the options of `reportingRules`
+ * otherwise, whose ESLint the default `typescript` shares
+ */
+async function lintRules(files: Array<string>, typescript: EslintConfigOptions['typescript']) {
+  // An empty `typescript` is the default, so it drops out of `sharedESLint`'s key
+  return lintFixture('rules', files, {
+    antislop: { slop: false },
+    typescript: Object.keys(typescript ?? {}).length === 0 ? undefined : typescript,
+  })
 }
 
 /**
@@ -111,9 +123,7 @@ describe('rules', () => {
   ] as const)(
     'report %s in %s and its test with typescript %j',
     async (rule, name, typescript, expected) => {
-      const messages = await lintFixture('rules', [`src/${name}.ts`, `src/__tests__/${name}.ts`], {
-        typescript,
-      })
+      const messages = await lintRules([`src/${name}.ts`, `src/__tests__/${name}.ts`], typescript)
       expect(Object.values(messages).map((ids) => ids.filter((id) => id === rule).length)).toEqual(
         expected,
       )
@@ -126,7 +136,7 @@ describe('rules', () => {
     ['src/switch-default.ts', {}, ['@typescript-eslint/switch-exhaustiveness-check']],
     ['src/switch-default.ts', { exhaustiveSwitch: 'default' }, []],
   ] as const)('report %s with typescript %j', async (file, typescript, expected) => {
-    expect(await lintFixture('rules', [file], { typescript })).toEqual({ [file]: expected })
+    expect(await lintRules([file], typescript)).toEqual({ [file]: expected })
   })
 
   describe('report implied eval, thrown literals, rejections with non-errors and bracket access', () => {

@@ -56,7 +56,7 @@ describe('html and astro code blocks', () => {
   ])(
     'are ignored by the %s preset without the html and astro presets',
     async (fixture, options) => {
-      const eslint = await sharedESLint(fixture, { ...options, markdown: true })
+      const eslint = await sharedESLint(fixture, { ...options, markdown: true, typeAware: false })
       expect(await lintText(eslint, 'README.md', CODE_BLOCKS_MARKDOWN)).toEqual([])
     },
   )
@@ -195,16 +195,19 @@ describe('react and nextjs presets', () => {
       '}',
       '',
     ].join('\n')
-    const eslint = await sharedESLint('react', { react: true })
+    const eslint = await sharedESLint('react', { react: true, typeAware: false })
     expect(await lintText(eslint, 'src/counter.tsx', code)).toEqual([
       expect.stringMatching(/^react-refresh\/only-export-components: /),
     ])
-    const withoutRefresh = await sharedESLint('react', { react: { refresh: false } })
+    const withoutRefresh = await sharedESLint('react', {
+      react: { refresh: false },
+      typeAware: false,
+    })
     expect(await lintText(withoutRefresh, 'src/counter.tsx', code)).toEqual([])
   })
 
   it('add browser globals to all but config and CommonJS files', async () => {
-    const eslint = await sharedESLint('react', { react: true })
+    const eslint = await sharedESLint('react', { react: true, typeAware: false })
     const code = 'export const title = document.title\n'
     expect(await lintText(eslint, 'src/title.jsx', code)).toEqual([])
     expect(await lintText(eslint, 'vite.config.js', 'export default document.title\n')).toEqual([
@@ -231,18 +234,23 @@ describe('nextjs preset', () => {
   })
 
   it('limits the React rules to `nextjs.scope` without `react.scope`', async () => {
-    const eslint = await sharedESLint('react', { nextjs: { scope: ['apps/web/**'] } })
+    const eslint = await sharedESLint('react', {
+      nextjs: { scope: ['apps/web/**'] },
+      typeAware: false,
+    })
     const rule = '@eslint-react/dom-no-missing-button-type'
     expect(await ruleSeverity(eslint, 'apps/web/page.jsx', rule)).toBe(2)
     expect(await ruleSeverity(eslint, 'apps/docs/page.jsx', rule)).toBeUndefined()
     const withReactScope = await sharedESLint('react', {
       react: { scope: ['apps/**'] },
       nextjs: { scope: ['apps/web/**'] },
+      typeAware: false,
     })
     expect(await ruleSeverity(withReactScope, 'apps/docs/page.jsx', rule)).toBe(2)
     const withReact = await sharedESLint('react', {
       react: true,
       nextjs: { scope: ['apps/web/**'] },
+      typeAware: false,
     })
     expect(await ruleSeverity(withReact, 'apps/web/page.jsx', rule)).toBe(2)
     expect(await ruleSeverity(withReact, 'apps/docs/page.jsx', rule)).toBeUndefined()
@@ -253,6 +261,7 @@ describe('nextjs preset', () => {
     const eslint = await sharedESLint('react', {
       react: { scope: ['apps/**'] },
       nextjs: { scope: ['apps/web/**'] },
+      typeAware: false,
     })
     const code = [
       "export const metadata = { title: 'Home' }",
@@ -292,7 +301,7 @@ describe('tailwindcss preset', () => {
   }
 
   it('reports unknown classes against the entry point', async () => {
-    const eslint = await sharedESLint('tailwindcss', { tailwindcss })
+    const eslint = await sharedESLint('tailwindcss', { tailwindcss, typeAware: false })
     const messages = await lintText(
       eslint,
       'src/classes.js',
@@ -307,7 +316,7 @@ describe('tailwindcss preset', () => {
   })
 
   it('reports class order, except where Prettier sorts it', async () => {
-    const eslint = await sharedESLint('tailwindcss', { astro: true, tailwindcss })
+    const eslint = await sharedESLint('tailwindcss', { astro: true, tailwindcss, typeAware: false })
     const classOrder: unknown = expect.stringMatching(
       /^better-tailwindcss\/enforce-consistent-class-order: /,
     )
@@ -330,7 +339,11 @@ describe('tailwindcss preset', () => {
   // No tailwind-merge call reads a native element's `class`, and prettier-plugin-tailwindcss
   // doesn't sort `.astro` files, so `--fix` sorts it there
   it('sorts the class order of a native element in an .astro file with --fix', async () => {
-    const eslint = await createESLint('tailwindcss', { astro: true, tailwindcss }, { fix: true })
+    const eslint = await createESLint(
+      'tailwindcss',
+      { astro: true, tailwindcss, typeAware: false },
+      { fix: true },
+    )
     const [result] = await eslint.lintText('<div class="p-2 flex"></div>\n', {
       filePath: path.join(FIXTURES_DIR, 'tailwindcss/src/page.astro'),
     })
@@ -343,6 +356,7 @@ describe('tailwindcss preset', () => {
     const configs = await defineConfig({
       root,
       isInEditor: false,
+      typeAware: false,
       tailwindcss: { entryPoint: 'src/styles.css', settings: { cwd: 'src' } },
     })
     const settings: unknown = configs.find((config) => config.name === 'gpahal/tailwindcss/rules')
@@ -363,18 +377,18 @@ describe('tailwindcss preset', () => {
   })
 
   it('lints .html files only with the html preset', async () => {
-    const eslint = await sharedESLint('html', { html: true, tailwindcss })
+    const eslint = await sharedESLint('html', { html: true, tailwindcss, typeAware: false })
     expect(await lint(eslint, ['index.html'])).toEqual({
       'index.html': [expect.stringMatching(/^better-tailwindcss\/no-duplicate-classes: /)],
     })
-    const withoutHtml = await sharedESLint('html', { tailwindcss })
+    const withoutHtml = await sharedESLint('html', { tailwindcss, typeAware: false })
     expect(await withoutHtml.isPathIgnored('index.html')).toBe(true)
   })
 })
 
 describe('html preset', () => {
   it('accepts valid HTML that Prettier formatted', async () => {
-    const eslint = await sharedESLint('html', { html: true })
+    const eslint = await sharedESLint('html', { html: true, typeAware: false })
     expect(await lint(eslint, ['index.html', 'clean.html'])).toEqual({
       'clean.html': [],
       'index.html': [],
@@ -382,7 +396,7 @@ describe('html preset', () => {
   })
 
   it('reports `target="_blank"` without `rel` and a `<button>` without `type`', async () => {
-    const eslint = await sharedESLint('html', { html: true })
+    const eslint = await sharedESLint('html', { html: true, typeAware: false })
     const messages = await lintText(
       eslint,
       'page.html',
@@ -397,7 +411,7 @@ describe('html preset', () => {
 
 describe('turbo preset', () => {
   it('reports environment variables missing from turbo.json', async () => {
-    const eslint = await sharedESLint('turbo', { turbo: true })
+    const eslint = await sharedESLint('turbo', { turbo: true, typeAware: false })
     expect(await lint(eslint, ['index.js'])).toEqual({
       'index.js': [expect.stringMatching(/^turbo\/no-undeclared-env-vars: .*UNDECLARED_VAR/)],
     })
@@ -639,8 +653,13 @@ describe('confusing browser globals', () => {
   }
 
   it.each([
-    ['react', 'react', { react: true }, 'src/counter.tsx'],
-    ['browser', 'browser', { browser: { files: ['src/client/**'] } }, 'src/client/app.ts'],
+    ['react', 'react', { react: true, typeAware: false }, 'src/counter.tsx'],
+    [
+      'browser',
+      'browser',
+      { browser: { files: ['src/client/**'] }, typeAware: false },
+      'src/client/app.ts',
+    ],
   ] as const)(
     'report a bare `top` or `innerHeight` (%s)',
     async (_name, fixture, options, file) => {

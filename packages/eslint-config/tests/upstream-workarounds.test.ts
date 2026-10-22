@@ -595,7 +595,7 @@ console.log(JSON.stringify({ parser: base.languageOptions.parserOptions.parser ?
   })
 
   // In a process of their own: typescript-eslint's project service lives as long as the process
-  it.each([
+  it.concurrent.each([
     [
       'typescript-eslint keeps a project service per config now: remove the reservation check from src/internal/project-service.ts',
       'b',

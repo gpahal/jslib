@@ -8,7 +8,7 @@ import { isRecord } from '@gpahal/std/objects'
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import { checkDefaultProjectTsconfig } from '@/internal/default-project'
 
-import { BUILD_DIR, warningsOf, withProject } from './helpers'
+import { BUILD_DIR, CORE_AREAS_OFF_SOURCE, warningsOf, withProject } from './helpers'
 
 const TSCONFIG_DIR = path.join(import.meta.dirname, '..', '..', 'tsconfig')
 
@@ -22,6 +22,8 @@ const SRC = { 'src/a.ts': 'export const a = 1\n' }
 
 const CONFIG_URL = pathToFileURL(path.join(BUILD_DIR, 'index.js')).href
 
+// The areas that the config of ESLint's process turns off, which the warnings don't depend on,
+// since loading them makes up most of the time each thread takes to build the config
 describe('checkDefaultProjectTsconfig', () => {
   it.each<[string, Record<string, string>]>([
     [
@@ -120,7 +122,7 @@ describe('the default project warnings', () => {
       'package.json': '{ "private": true, "type": "module" }\n',
       'tsconfig.json': '{ "compilerOptions": { "strict": true }, "include": ["src"] }\n',
       'vite.config.ts': 'export default {}\n',
-      'eslint.config.mjs': `import { defineConfig } from ${JSON.stringify(CONFIG_URL)}\nexport default defineConfig({ root: import.meta.dirname })\n`,
+      'eslint.config.mjs': `import { defineConfig } from ${JSON.stringify(CONFIG_URL)}\nexport default defineConfig({ root: import.meta.dirname, ${CORE_AREAS_OFF_SOURCE} })\n`,
       ...Object.fromEntries(
         [1, 2, 3, 4].map((index) => [`src/a${String(index)}.ts`, 'export const a = 1\n']),
       ),

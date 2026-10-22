@@ -10,19 +10,66 @@ const PACKAGE_DIR = path.join(import.meta.dirname, '..')
 const README_PATH = path.join(PACKAGE_DIR, '../../README.md')
 
 /**
- * The `fix` script and the `fix:*` scripts it runs, from the README's recipe
+ * The scripts of the README's "Running the fixers" section
  */
-async function readFixScripts(): Promise<Record<string, string>> {
+async function readScripts(): Promise<Record<string, string>> {
   const readme = await fs.readFile(README_PATH, 'utf8')
   const section = readme.slice(readme.indexOf('### Running the fixers'))
   const json = /```json\n(?<json>[\s\S]*?)\n```/.exec(section)?.groups?.['json']
   if (json === undefined) {
     throw new Error('No JSON block in the README\'s "Running the fixers" section')
   }
-  const { scripts } = JSON.parse(json) as { scripts: Record<string, string> }
+  return (JSON.parse(json) as { scripts: Record<string, string> }).scripts
+}
+
+/**
+ * The `fix` script and the `fix:*` scripts it runs
+ */
+async function readFixScripts(): Promise<Record<string, string>> {
   return Object.fromEntries(
-    Object.entries(scripts).filter(([name]) => name === 'fix' || name.startsWith('fix:')),
+    Object.entries(await readScripts()).filter(
+      ([name]) => name === 'fix' || name.startsWith('fix:'),
+    ),
   )
+}
+
+/**
+ * The README's Stylelint fix command, and the Stylelint command of its `check` script
+ */
+async function readStylelintScripts(): Promise<{
+  'fix:stylelint': string
+  'check:stylelint': string
+}> {
+  const scripts = await readScripts()
+  const fix = scripts['fix:stylelint']
+  const check = scripts['check']
+    ?.split(' && ')
+    .filter((command) => command.startsWith('stylelint '))
+  expect(fix).toBeDefined()
+  expect(check).toHaveLength(1)
+  return { 'fix:stylelint': fix!, 'check:stylelint': check![0]! }
+}
+
+/**
+ * Runs `pnpm run <script>` in `dir`
+ */
+function runScript(dir: string, script: string): { status: number | null; output: string } {
+  const { status, stdout, stderr } = spawnSync('pnpm', ['run', script], {
+    cwd: dir,
+    encoding: 'utf8',
+  })
+  return { status, output: `${stdout}${stderr}` }
+}
+
+/**
+ * Links this package's CLIs `names` into `dir`'s `node_modules/.bin`
+ */
+async function linkBins(dir: string, names: Array<string>) {
+  const binDir = path.join(dir, 'node_modules/.bin')
+  await fs.mkdir(binDir, { recursive: true })
+  for (const name of names) {
+    await fs.symlink(path.join(PACKAGE_DIR, 'node_modules/.bin', name), path.join(binDir, name))
+  }
 }
 
 /**
@@ -59,11 +106,7 @@ describe("the README's fix script", () => {
       'style.css': CSS,
     })
     dir = project.dir
-    const binDir = path.join(dir, 'node_modules/.bin')
-    await fs.mkdir(binDir, { recursive: true })
-    for (const name of ['eslint', 'prettier', 'stylelint']) {
-      await fs.symlink(path.join(PACKAGE_DIR, 'node_modules/.bin', name), path.join(binDir, name))
-    }
+    await linkBins(dir, ['eslint', 'prettier', 'stylelint'])
   })
 
   afterAll(async () => {
@@ -71,11 +114,7 @@ describe("the README's fix script", () => {
   })
 
   it('runs every fixer after an ESLint error and fails', async () => {
-    const { status, stdout, stderr } = spawnSync('pnpm', ['run', 'fix'], {
-      cwd: dir,
-      encoding: 'utf8',
-    })
-    const output = `${stdout}${stderr}`
+    const { status, output } = runScript(dir, 'fix')
 
     expect(status, output).not.toBe(0)
     expect(output).toContain('no-debugger')
@@ -85,5 +124,23 @@ describe("the README's fix script", () => {
     expect(await fs.readFile(path.join(dir, 'style.css'), 'utf8')).toBe(
       '@media (width <= 100px) {\n  a {\n    color: red;\n  }\n}\n',
     )
+  })
+})
+
+// The setup recipes' projects all have styled files, so this covers the README's
+// `--allow-empty-input`
+describe("the README's Stylelint commands", () => {
+  it('pass in a project without styled files', async () => {
+    await using project = await withTmpProject('stylelint-config-no-styles', {
+      'package.json': `${JSON.stringify({ type: 'module', scripts: await readStylelintScripts() })}\n`,
+      '.gitignore': 'node_modules\n',
+      'stylelint.config.mjs': `import { defineConfig } from ${JSON.stringify(import.meta.resolve('@gpahal/stylelint-config'))}\n\nexport default await defineConfig({ root: import.meta.dirname })\n`,
+      'index.js': 'export const a = 1\n',
+    })
+    await linkBins(project.dir, ['stylelint'])
+    for (const script of ['fix:stylelint', 'check:stylelint']) {
+      const { status, output } = runScript(project.dir, script)
+      expect(status, output).toBe(0)
+    }
   })
 })

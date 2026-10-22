@@ -203,9 +203,8 @@ test.concurrent.for([
       antislop: true,
     },
   ],
+  // duplicate-rules.test.ts shows e18e's twins running with `unicorn: false`
   ['typeAware: false in an editor', { typeAware: false, isInEditor: true }],
-  // e18e's twins of `unicorn/prefer-at` and `unicorn/prefer-spread` run in their place
-  ['unicorn: false', { unicorn: false }],
 ] satisfies Array<[string, Partial<EslintConfigOptions>]>)(
   'eslint --fix output with %s, as a difference from the defaults',
   // The context's `expect`, which concurrent snapshot tests need

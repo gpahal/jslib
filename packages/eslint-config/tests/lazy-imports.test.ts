@@ -54,50 +54,80 @@ async function resolvedUrls(
   return JSON.parse(stdout) as Array<string>
 }
 
-test.concurrent.each([
-  ['unicorn', '/eslint-plugin-unicorn/'],
-  ['sonarjs', '/eslint-plugin-sonarjs/'],
-  ['jsdoc', '/eslint-plugin-jsdoc/'],
-  ['imports', '/eslint-plugin-import-x/'],
-  ['pnpm', '/eslint-plugin-pnpm/'],
-  ['markdown', '/@eslint/markdown/'],
-  ['markdown', '/mdast-util-from-markdown/'],
-])("imports the plugin of %s only when it's on: %s", async (area, plugin) => {
-  expect(enabledUrls.some((url) => url.includes(plugin))).toBe(true)
-  const off = await resolvedUrls({ [area]: false })
-  expect(off.filter((url) => url.includes(plugin))).toEqual([])
-})
-
-// eslint-plugin-unicorn's `relative-url-style` imports micromark and parse5 as the plugin loads, so
-// this turns it off
-test('imports micromark and the HTML parser only when needed', async () => {
-  const urls = await resolvedUrls({ unicorn: false })
-  expect(
-    urls.filter((url) => url.includes('/hast-util-from-html/') || url.includes('/parse5/')),
-  ).toEqual([])
-  const off = await resolvedUrls({ markdown: false, unicorn: false })
-  expect(off.filter((url) => url.includes('/micromark/'))).toEqual([])
-})
-
 /**
  * The URLs of typescript-eslint's packages that load TypeScript
  */
 const TYPESCRIPT_ESLINT_REGEX =
   /\/node_modules\/(?:typescript-eslint|@typescript-eslint\/(?:parser|eslint-plugin|typescript-estree))\//
 
-test('loads typescript-eslint only outside a JavaScript-only project', async () => {
+/**
+ * The modules each area loads, which `enabledUrls` must have
+ */
+const AREA_MODULES = {
+  unicorn: ['/eslint-plugin-unicorn/'],
+  sonarjs: ['/eslint-plugin-sonarjs/'],
+  jsdoc: ['/eslint-plugin-jsdoc/'],
+  imports: ['/eslint-plugin-import-x/'],
+  pnpm: ['/eslint-plugin-pnpm/'],
+  markdown: ['/@eslint/markdown/', '/mdast-util-from-markdown/'],
+}
+
+test('loads the plugin of every area that is on', () => {
+  for (const module of Object.values(AREA_MODULES).flat()) {
+    expect(
+      enabledUrls.some((url) => url.includes(module)),
+      module,
+    ).toBe(true)
+  }
   expect(enabledUrls.some((url) => TYPESCRIPT_ESLINT_REGEX.test(url))).toBe(true)
-  const urls = await resolvedUrls({}, 'cjs')
-  expect(urls.filter((url) => TYPESCRIPT_ESLINT_REGEX.test(url))).toEqual([])
 })
 
-// eslint-plugin-sonarjs and eslint-plugin-regexp load TypeScript as they load, when it's installed
-test("doesn't load TypeScript for a JavaScript-only project without sonarjs and regexp", async () => {
-  const urls = await resolvedUrls({ sonarjs: false, regexp: false }, 'cjs')
-  expect(urls.filter((url) => url.includes('/node_modules/typescript/'))).toEqual([])
-  expect(
-    (await resolvedUrls({ sonarjs: false, regexp: false })).some((url) =>
-      url.includes('/node_modules/typescript/'),
-    ),
-  ).toBe(true)
+// Each process turns half of the areas off, so each area's plugin is checked to stay out while
+// the other half is on, which would load it if they imported it
+describe.concurrent('with areas off', () => {
+  // eslint-plugin-unicorn's `relative-url-style` imports parse5, and markdown stays on, so this
+  // also checks that markdown doesn't load the HTML parser. eslint-plugin-sonarjs and
+  // eslint-plugin-regexp load TypeScript as they load, when it's installed
+  it("doesn't import unicorn, sonarjs, jsdoc or the HTML parser, and loads TypeScript for a TypeScript project", async () => {
+    const urls = await resolvedUrls({
+      unicorn: false,
+      sonarjs: false,
+      jsdoc: false,
+      regexp: false,
+    })
+    for (const module of [
+      ...AREA_MODULES.unicorn,
+      ...AREA_MODULES.sonarjs,
+      ...AREA_MODULES.jsdoc,
+      '/hast-util-from-html/',
+      '/parse5/',
+    ]) {
+      expect(urls.filter((url) => url.includes(module))).toEqual([])
+    }
+    expect(urls.some((url) => url.includes('/node_modules/typescript/'))).toBe(true)
+  })
+
+  // eslint-plugin-unicorn imports micromark as it loads, so this turns it off
+  it("doesn't import imports, pnpm, markdown or micromark", async () => {
+    const urls = await resolvedUrls({
+      imports: false,
+      pnpm: false,
+      markdown: false,
+      unicorn: false,
+    })
+    for (const module of [
+      ...AREA_MODULES.imports,
+      ...AREA_MODULES.pnpm,
+      ...AREA_MODULES.markdown,
+      '/micromark/',
+    ]) {
+      expect(urls.filter((url) => url.includes(module))).toEqual([])
+    }
+  })
+
+  it("doesn't load typescript-eslint or TypeScript for a JavaScript-only project without sonarjs and regexp", async () => {
+    const urls = await resolvedUrls({ sonarjs: false, regexp: false }, 'cjs')
+    expect(urls.filter((url) => TYPESCRIPT_ESLINT_REGEX.test(url))).toEqual([])
+    expect(urls.filter((url) => url.includes('/node_modules/typescript/'))).toEqual([])
+  })
 })

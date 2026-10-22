@@ -125,7 +125,7 @@ export type SleepOptions = { jitterRatio?: number | undefined; signal?: AbortSig
  * ```ts
  * import { sleep } from '@gpahal/std/promises'
  *
- * await sleep(1000)
+ * await sleep(10)
  * ```
  */
 export async function sleep(ms: number, options: SleepOptions = {}): Promise<void> {

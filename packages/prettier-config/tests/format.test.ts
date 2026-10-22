@@ -419,42 +419,38 @@ globalThis.result = [initialized, observed]
 `
 
 /**
- * The `globalThis.result` that `main` sets when Node runs it, before and after formatting it with
- * the base config, each in its own process
+ * The `globalThis.result` that `main` sets when Node runs it in its own process
  */
-async function runBeforeAndAfterFormat(main: string) {
-  await using project = await withTmpProject('prettier-config-order', ORDER_MODULES)
-  const mainPath = path.join(project.dir, 'main.mjs')
-  const run = async (source: string) => {
-    await writeFiles(project.dir, { 'main.mjs': source })
-    const script = `await import(${JSON.stringify(pathToFileURL(mainPath).href)})
+async function runMain(main: string) {
+  await using project = await withTmpProject('prettier-config-order', {
+    ...ORDER_MODULES,
+    'main.mjs': main,
+  })
+  const script = `await import(${JSON.stringify(pathToFileURL(path.join(project.dir, 'main.mjs')).href)})
 console.log(JSON.stringify(globalThis.result))`
-    await using emptyProject = await withTmpProject('prettier-config-no-root')
-    const stdout = await runNodeOk(['--input-type=module', '--eval', script], {
-      cwd: emptyProject.dir,
-    })
-    return JSON.parse(stdout) as unknown
-  }
-  return [await run(main), await run(await formatWith(baseConfig, 'main.mjs', main))]
+  await using emptyProject = await withTmpProject('prettier-config-no-root')
+  const stdout = await runNodeOk(['--input-type=module', '--eval', script], {
+    cwd: emptyProject.dir,
+  })
+  return JSON.parse(stdout) as unknown
 }
 
 describe('import sorting at run time', () => {
   it('changes the order modules run in', async () => {
-    expect(await runBeforeAndAfterFormat(ORDER_MAIN)).toEqual([
-      [true, true],
-      [true, false],
+    expect(await runMain(ORDER_MAIN)).toEqual([true, true])
+    expect(await runMain(await formatWith(baseConfig, 'main.mjs', ORDER_MAIN))).toEqual([
+      true,
+      false,
     ])
   })
 
-  // The README's escapes
+  // The README's escapes. Each adds only a line to `ORDER_MAIN`, whose order before formatting the
+  // test above runs
   it.each([
     ['a bare import', `import './z-init.mjs'\n${ORDER_MAIN}`],
     ['// prettier-ignore', `// prettier-ignore\n${ORDER_MAIN}`],
   ])('keeps the order with %s', async (_, main) => {
-    expect(await runBeforeAndAfterFormat(main)).toEqual([
-      [true, true],
-      [true, true],
-    ])
+    expect(await runMain(await formatWith(baseConfig, 'main.mjs', main))).toEqual([true, true])
   })
 })
 
@@ -746,25 +742,21 @@ console.log(JSON.stringify(steps))
       "const { defineConfig } = require('@gpahal/prettier-config')\n\nmodule.exports = defineConfig({})\n",
     ],
     ['package.json', JSON.stringify({ name: 'consumer', prettier: '@gpahal/prettier-config' })],
-  ])(
-    'formats with the package installed and a %s',
-    async (file, config) => {
-      await using project = await withTmpProject('prettier-config-cjs', {
-        'package.json': JSON.stringify({ name: 'consumer', type: 'commonjs' }),
-        [file]: config,
-        'a.ts': UNSORTED_IMPORTS,
-      })
-      const scopeDir = path.join(project.dir, 'node_modules/@gpahal')
-      await fs.mkdir(scopeDir, { recursive: true })
-      await fs.symlink(path.join(import.meta.dirname, '..'), path.join(scopeDir, 'prettier-config'))
-      const { status, stdout, stderr } = await runNode(
-        [PRETTIER_BIN, path.join(project.dir, 'a.ts')],
-        { cwd: project.dir },
-      )
-      expect(stderr).toBe('')
-      expect(status).toBe(0)
-      expect(stdout).toBe(SORTED_IMPORTS)
-    },
-    30_000,
-  )
+  ])('formats with the package installed and a %s', async (file, config) => {
+    await using project = await withTmpProject('prettier-config-cjs', {
+      'package.json': JSON.stringify({ name: 'consumer', type: 'commonjs' }),
+      [file]: config,
+      'a.ts': UNSORTED_IMPORTS,
+    })
+    const scopeDir = path.join(project.dir, 'node_modules/@gpahal')
+    await fs.mkdir(scopeDir, { recursive: true })
+    await fs.symlink(path.join(import.meta.dirname, '..'), path.join(scopeDir, 'prettier-config'))
+    const { status, stdout, stderr } = await runNode(
+      [PRETTIER_BIN, path.join(project.dir, 'a.ts')],
+      { cwd: project.dir },
+    )
+    expect(stderr).toBe('')
+    expect(status).toBe(0)
+    expect(stdout).toBe(SORTED_IMPORTS)
+  })
 })

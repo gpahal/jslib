@@ -13,7 +13,7 @@ import {
   warnOfSonarjsTypescriptCopy,
 } from '@/internal/peers'
 
-import { BUILD_DIR, FIXTURES_DIR, withProject } from './helpers'
+import { BUILD_DIR, CORE_AREAS_OFF, FIXTURES_DIR, withProject } from './helpers'
 
 beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
@@ -151,8 +151,12 @@ test('every optional peer dependency but typescript belongs to a preset', () => 
 type CaseResult = { messages?: Array<string>; error?: string }
 
 /**
- * Runs `script` on `presets` from a project whose `node_modules` holds the package, what it
- * requires but `omitted`, and `peers`
+ * The options that the cases add to their own by default, turning off the type information and
+ * the areas that load no optional peer, since loading them makes up most of the time a fresh
+ * process takes to build a config. The JavaScript-only project keeps them on to check that none of
+ * them needs an optional peer
+ * Runs `script` on `presets`, with `defaults` under their options, from a project whose
+ * `node_modules` holds the package, what it requires but `omitted`, and `peers`
  */
 async function lintInProject<T = CaseResult>(
   presets: Array<Preset>,
@@ -161,10 +165,12 @@ async function lintInProject<T = CaseResult>(
     script = SCRIPT,
     files = {},
     omitted = [],
+    defaults = { typeAware: false, ...CORE_AREAS_OFF },
   }: {
     script?: string
     files?: Record<string, string>
     omitted?: Array<string>
+    defaults?: object
   } = {},
 ): Promise<Array<T>> {
   await using project = await withProject({
@@ -187,7 +193,11 @@ async function lintInProject<T = CaseResult>(
   ])
   const stdout = await runNodeOk(['--input-type=module', '--eval', script], {
     cwd: project.dir,
-    env: { CASES: JSON.stringify(presets.map(({ options, file }) => ({ options, file }))) },
+    env: {
+      CASES: JSON.stringify(
+        presets.map(({ options, file }) => ({ options: { ...defaults, ...options }, file })),
+      ),
+    },
   })
   return JSON.parse(stdout) as Array<T>
 }
@@ -209,7 +219,9 @@ function warningsOf(fn: () => void): Array<[string, string | undefined]> {
 }
 
 test('the config of a JavaScript-only project loads without typescript', async () => {
-  expect(await lintInProject([BASE], [], { omitted: ['typescript'] })).toEqual([{ messages: [] }])
+  expect(await lintInProject([BASE], [], { omitted: ['typescript'], defaults: {} })).toEqual([
+    { messages: [] },
+  ])
 })
 
 test('checkTypescriptInstalled throws only when typescript is needed and missing', async () => {
@@ -281,8 +293,6 @@ console.log(JSON.stringify([{ result, warnings }]))
     ['eslint-plugin-astro'],
     {
       script,
-      // Keeps the config file out of the default project, whose missing tsconfig would warn
-      files: { 'jsconfig.json': '{ "include": ["eslint.config.mjs"] }\n' },
     },
   )
   expect(output).toEqual({

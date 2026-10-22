@@ -33,6 +33,26 @@ export async function withProject(
   return withTmpProject('eslint-config', hasConfigFile ? files : { ...CONFIG_FILE, ...files })
 }
 
+/**
+ * The core areas a test's config can turn off when it checks neither their rules nor their
+ * loading. A fresh process loads the config about four times as fast without them
+ */
+export const CORE_AREAS_OFF = {
+  unicorn: false,
+  sonarjs: false,
+  regexp: false,
+  imports: false,
+  antislop: false,
+  packageJson: false,
+  pnpm: false,
+  markdown: false,
+} as const satisfies Partial<EslintConfigOptions>
+
+/**
+ * `CORE_AREAS_OFF` as a spread in a config file's options object
+ */
+export const CORE_AREAS_OFF_SOURCE = `...${JSON.stringify(CORE_AREAS_OFF)}`
+
 const SEVERITIES: Record<string, Linter.Severity> = { off: 0, warn: 1, error: 2 }
 const SEVERITY_LEVELS: Array<Linter.Severity> = [0, 1, 2]
 
@@ -235,13 +255,15 @@ const TYPE_SOURCE_FILES = new Map<string, ts.SourceFile>()
 
 /**
  * The TypeScript errors in `code` type-checked in memory as `filePath` with `options`, as
- * `TS<code>: <message>`. `filePath` needn't exist
+ * `TS<code>: <message>`. `filePath` needn't exist. Declaration files aren't checked, which takes
+ * most of the time and finds nothing in the code under test
  */
 export function typeErrors(
   filePath: string,
   code: string,
-  options: ts.CompilerOptions,
+  compilerOptions: ts.CompilerOptions,
 ): Array<string> {
+  const options = { ...compilerOptions, skipLibCheck: true }
   const host = ts.createCompilerHost(options)
   const readFile = host.readFile.bind(host)
   const fileExists = host.fileExists.bind(host)

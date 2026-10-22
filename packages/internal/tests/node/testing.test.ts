@@ -245,11 +245,12 @@ test('`minCpuMs` runs the functions in turn, and leaves out time the thread spen
       },
       () => {
         order.push('idle')
-        Atomics.wait(wait, 0, 0, 100)
+        // Waits at least 40ms of wall-clock time, and spends next to no CPU time
+        Atomics.wait(wait, 0, 0, 40)
       },
     ],
     2,
   )
   expect(order).toEqual(['busy', 'idle', 'busy', 'idle'])
-  expect(Math.max(...times)).toBeLessThan(50)
+  expect(Math.max(...times)).toBeLessThan(20)
 })

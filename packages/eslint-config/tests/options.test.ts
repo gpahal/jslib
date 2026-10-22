@@ -18,6 +18,7 @@ import { bindWarnings, WARNING_CODES, warnOfSetup, withWarnings } from '@/intern
 
 import {
   BUILD_DIR,
+  CORE_AREAS_OFF,
   createESLint,
   eslintWith,
   FIXTURES_DIR,
@@ -168,6 +169,8 @@ describe('area rules', () => {
 })
 
 /**
+ * The areas that child processes turn off, which their tests don't check, since loading them makes
+ * up most of the time a fresh process takes to build the config
  * Lints the files in `process.argv[4]` of the working directory with the build's config for the
  * options in `process.argv[3]`, and prints each file's messages. A string
  * `typeAware.allowDefaultProject` or `ignores` is the source of a function
@@ -212,7 +215,7 @@ async function lintInChild(
       LINT_SCRIPT,
       pathToFileURL(path.join(BUILD_DIR, 'index.js')).href,
       pathToFileURL(createRequire(import.meta.url).resolve('eslint')).href,
-      JSON.stringify(options),
+      JSON.stringify({ ...CORE_AREAS_OFF, ...options }),
       JSON.stringify(files),
     ],
     { cwd: dir },
@@ -309,7 +312,31 @@ describe('typeAware.allowDefaultProject', () => {
     ])
   })
 
-  describe('a config file that an included file imports', () => {
+  it('un-ignores JavaScript config files in folders with glob characters, with globs that match them', async () => {
+    const folders = ['[slug]', '(group)', '{a,b}', '#tools']
+    await using project = await withProject({
+      ...PROJECT,
+      ...Object.fromEntries(
+        folders.flatMap((folder) => [
+          [`${folder}/tsconfig.json`, '{ "include": ["src"] }\n'],
+          [`${folder}/eslint.config.mjs`, 'export default []\n'],
+        ]),
+      ),
+    })
+    const unignores = (resolveOptions({ root: project.dir }).typeAware?.ignores ?? [])
+      .filter((glob) => glob.startsWith('!'))
+      .map((glob) => glob.slice(1))
+    expect(unignores).toHaveLength(folders.length + 1)
+    for (const folder of folders) {
+      const file = `${folder}/eslint.config.mjs`
+      expect(
+        unignores.filter((glob) => minimatch(file, glob, { dot: true })),
+        file,
+      ).toHaveLength(1)
+    }
+  })
+
+  describe.concurrent('a config file that an included file imports', () => {
     const IMPORTING_PROJECT = {
       ...PROJECT,
       'tsconfig.json':
@@ -348,31 +375,7 @@ describe('typeAware.allowDefaultProject', () => {
     })
   })
 
-  it('un-ignores JavaScript config files in folders with glob characters, with globs that match them', async () => {
-    const folders = ['[slug]', '(group)', '{a,b}', '#tools']
-    await using project = await withProject({
-      ...PROJECT,
-      ...Object.fromEntries(
-        folders.flatMap((folder) => [
-          [`${folder}/tsconfig.json`, '{ "include": ["src"] }\n'],
-          [`${folder}/eslint.config.mjs`, 'export default []\n'],
-        ]),
-      ),
-    })
-    const unignores = (resolveOptions({ root: project.dir }).typeAware?.ignores ?? [])
-      .filter((glob) => glob.startsWith('!'))
-      .map((glob) => glob.slice(1))
-    expect(unignores).toHaveLength(folders.length + 1)
-    for (const folder of folders) {
-      const file = `${folder}/eslint.config.mjs`
-      expect(
-        unignores.filter((glob) => minimatch(file, glob, { dot: true })),
-        file,
-      ).toHaveLength(1)
-    }
-  })
-
-  it.each<[string, Record<string, string>, Record<string, unknown>, Array<unknown>]>([
+  it.concurrent.each<[string, Record<string, string>, Record<string, unknown>, Array<unknown>]>([
     [
       'lints with a function that adds to the default',
       { 'vitest.setup.ts': 'export {}\n' },
@@ -393,7 +396,7 @@ describe('typeAware.allowDefaultProject', () => {
     })
   })
 
-  it.each<[string, Record<string, string>, Record<string, unknown>, Array<string>]>([
+  it.concurrent.each<[string, Record<string, string>, Record<string, unknown>, Array<string>]>([
     [
       'more than 8 root config files',
       Object.fromEntries(
@@ -422,98 +425,108 @@ describe('typeAware.allowDefaultProject', () => {
     )
   })
 
-  it('lists the config files that no tsconfig the project service opens includes, and lints each', async () => {
-    const base = '{ "compilerOptions": { "strict": true, "types": ["*"], "skipLibCheck": true } }\n'
-    const config = 'export default {}\n'
-    const source = 'export const x = 1\n'
-    const shared =
-      // eslint-disable-next-line no-template-curly-in-string -- tsconfig's own template
-      '{ "extends": "./tsconfig.base.json", "include": ["${configDir}/src", "${configDir}/*.config.ts"] }\n'
-    await using project = await withProject({
-      'package.json': '{ "private": true, "type": "module" }\n',
-      'node_modules/@scope/tsconfig/package.json':
-        '{ "name": "@scope/tsconfig", "version": "1.0.0", "exports": { "./base": "./base.json" } }\n',
-      'node_modules/@scope/tsconfig/base.json': base,
-      'tsconfig.base.json': base,
-      'tsconfig.json':
-        '{ "extends": "./tsconfig.base.json", "files": [], "references": [{ "path": "./packages/a" }] }\n',
-      // Not included
-      'packages/a/tsconfig.json':
-        '{ "extends": "../../tsconfig.base.json", "compilerOptions": { "composite": true }, "include": ["src"] }\n',
-      'packages/a/src/x.ts': source,
-      'packages/a/vitest.config.ts': config,
-      // Through a package's export
-      'packages/b/tsconfig.json':
-        '{ "extends": "@scope/tsconfig/base", "include": ["src", "*.config.ts"] }\n',
-      'packages/b/src/x.ts': source,
-      'packages/b/vitest.config.ts': config,
-      // Through the last of an `extends` array
-      'packages/c/x.json': '{ "compilerOptions": { "strict": true } }\n',
-      'packages/c/y.json': '{ "extends": "../../tsconfig.base.json", "include": ["**/*"] }\n',
-      'packages/c/tsconfig.json': '{ "extends": ["./x.json", "./y.json"] }\n',
-      'packages/c/src/x.ts': source,
-      'packages/c/vite.config.ts': config,
-      // Through `${configDir}` in a shared tsconfig, which TypeScript resolves from the folder of
-      // each tsconfig extending it
-      'tsconfig.shared.json': shared,
-      'packages/d/tsconfig.json': '{ "extends": "../../tsconfig.shared.json" }\n',
-      'packages/d/src/x.ts': source,
-      'packages/d/vite.config.ts': config,
-      // Excluded
-      'packages/i/tsconfig.json':
-        '{ "extends": "../../tsconfig.base.json", "include": ["**/*"], "exclude": ["vitest.config.ts"] }\n',
-      'packages/i/src/x.ts': source,
-      'packages/i/vitest.config.ts': config,
-    })
-    expect(findDefaults(project.dir)).toEqual([
-      'eslint.config.mjs',
-      'packages/a/vitest.config.ts',
-      'packages/i/vitest.config.ts',
-    ])
-    const configFiles = [
-      'eslint.config.mjs',
-      ...['a', 'b', 'i'].map((name) => `packages/${name}/vitest.config.ts`),
-      ...['c', 'd'].map((name) => `packages/${name}/vite.config.ts`),
-    ]
-    expect(
-      await lintInChild(project.dir, { packageJson: false, pnpm: false }, configFiles),
-    ).toEqual(Object.fromEntries(configFiles.map((file) => [file, []])))
-  })
+  it.concurrent(
+    'lists the config files that no tsconfig the project service opens includes, and lints each',
+    async () => {
+      const base =
+        '{ "compilerOptions": { "strict": true, "types": ["*"], "skipLibCheck": true } }\n'
+      const config = 'export default {}\n'
+      const source = 'export const x = 1\n'
+      const shared =
+        // eslint-disable-next-line no-template-curly-in-string -- tsconfig's own template
+        '{ "extends": "./tsconfig.base.json", "include": ["${configDir}/src", "${configDir}/*.config.ts"] }\n'
+      await using project = await withProject({
+        'package.json': '{ "private": true, "type": "module" }\n',
+        'node_modules/@scope/tsconfig/package.json':
+          '{ "name": "@scope/tsconfig", "version": "1.0.0", "exports": { "./base": "./base.json" } }\n',
+        'node_modules/@scope/tsconfig/base.json': base,
+        'tsconfig.base.json': base,
+        'tsconfig.json':
+          '{ "extends": "./tsconfig.base.json", "files": [], "references": [{ "path": "./packages/a" }] }\n',
+        // Not included
+        'packages/a/tsconfig.json':
+          '{ "extends": "../../tsconfig.base.json", "compilerOptions": { "composite": true }, "include": ["src"] }\n',
+        'packages/a/src/x.ts': source,
+        'packages/a/vitest.config.ts': config,
+        // Through a package's export
+        'packages/b/tsconfig.json':
+          '{ "extends": "@scope/tsconfig/base", "include": ["src", "*.config.ts"] }\n',
+        'packages/b/src/x.ts': source,
+        'packages/b/vitest.config.ts': config,
+        // Through the last of an `extends` array
+        'packages/c/x.json': '{ "compilerOptions": { "strict": true } }\n',
+        'packages/c/y.json': '{ "extends": "../../tsconfig.base.json", "include": ["**/*"] }\n',
+        'packages/c/tsconfig.json': '{ "extends": ["./x.json", "./y.json"] }\n',
+        'packages/c/src/x.ts': source,
+        'packages/c/vite.config.ts': config,
+        // Through `${configDir}` in a shared tsconfig, which TypeScript resolves from the folder of
+        // each tsconfig extending it
+        'tsconfig.shared.json': shared,
+        'packages/d/tsconfig.json': '{ "extends": "../../tsconfig.shared.json" }\n',
+        'packages/d/src/x.ts': source,
+        'packages/d/vite.config.ts': config,
+        // Excluded
+        'packages/i/tsconfig.json':
+          '{ "extends": "../../tsconfig.base.json", "include": ["**/*"], "exclude": ["vitest.config.ts"] }\n',
+        'packages/i/src/x.ts': source,
+        'packages/i/vitest.config.ts': config,
+      })
+      expect(findDefaults(project.dir)).toEqual([
+        'eslint.config.mjs',
+        'packages/a/vitest.config.ts',
+        'packages/i/vitest.config.ts',
+      ])
+      const configFiles = [
+        'eslint.config.mjs',
+        ...['a', 'b', 'i'].map((name) => `packages/${name}/vitest.config.ts`),
+        ...['c', 'd'].map((name) => `packages/${name}/vite.config.ts`),
+      ]
+      expect(await lintInChild(project.dir, {}, configFiles)).toEqual(
+        Object.fromEntries(configFiles.map((file) => [file, []])),
+      )
+    },
+  )
 
-  it('lints a JavaScript project whose jsconfig.json includes its eslint.config.mjs', async () => {
-    await using project = await withProject({
-      'package.json': '{ "name": "js-project", "private": true, "type": "module" }\n',
-      // `allowJs` is on by default in a jsconfig.json, without `checkJs`
-      'jsconfig.json': '{}\n',
-      'eslint.config.mjs': 'export default []\n',
-      'index.js': 'export const a = 1\n',
-    })
-    expect(findDefaults(project.dir)).toEqual([])
-    expect(await lintInChild(project.dir, {}, ['eslint.config.mjs', 'index.js'])).toEqual({
-      'eslint.config.mjs': [],
-      'index.js': [],
-    })
-  })
+  it.concurrent(
+    'lints a JavaScript project whose jsconfig.json includes its eslint.config.mjs',
+    async () => {
+      await using project = await withProject({
+        'package.json': '{ "name": "js-project", "private": true, "type": "module" }\n',
+        // `allowJs` is on by default in a jsconfig.json, without `checkJs`
+        'jsconfig.json': '{}\n',
+        'eslint.config.mjs': 'export default []\n',
+        'index.js': 'export const a = 1\n',
+      })
+      expect(findDefaults(project.dir)).toEqual([])
+      expect(await lintInChild(project.dir, {}, ['eslint.config.mjs', 'index.js'])).toEqual({
+        'eslint.config.mjs': [],
+        'index.js': [],
+      })
+    },
+  )
 
   // Without a tsconfig, the default project would type it with typescript-eslint's defaults, which
   // lack Node's types, so `import.meta.dirname` would be an error type
-  it('lints the JavaScript config files of a project without a tsconfig, jsconfig or TypeScript files without type information', async () => {
-    await using project = await withProject({
-      'package.json': '{ "name": "js-project", "private": true, "type": "module" }\n',
-      'eslint.config.mjs': 'export const root = import.meta.dirname\n\nexport default []\n',
-      'vite.config.ts': 'export default {}\n',
-      'src/index.js': 'export const answer = 42\n',
-    })
-    expect(resolveOptions({ root: project.dir }).allowDefaultProject).toEqual(['vite.config.ts'])
-    expect(await lintInChild(project.dir, {}, ['eslint.config.mjs', 'src/index.js'])).toEqual({
-      'eslint.config.mjs': [],
-      'src/index.js': [],
-    })
-  })
+  it.concurrent(
+    'lints the JavaScript config files of a project without a tsconfig, jsconfig or TypeScript files without type information',
+    async () => {
+      await using project = await withProject({
+        'package.json': '{ "name": "js-project", "private": true, "type": "module" }\n',
+        'eslint.config.mjs': 'export const root = import.meta.dirname\n\nexport default []\n',
+        'vite.config.ts': 'export default {}\n',
+        'src/index.js': 'export const answer = 42\n',
+      })
+      expect(resolveOptions({ root: project.dir }).allowDefaultProject).toEqual(['vite.config.ts'])
+      expect(await lintInChild(project.dir, {}, ['eslint.config.mjs', 'src/index.js'])).toEqual({
+        'eslint.config.mjs': [],
+        'src/index.js': [],
+      })
+    },
+  )
 
   // No tsconfig of a Vite or Next.js template includes `.storybook`, and `storybook init` doesn't
   // add it, so its files parse only in the default project
-  it("gives Storybook's config files in `.storybook` the default project", async () => {
+  it.concurrent("gives Storybook's config files in `.storybook` the default project", async () => {
     await using project = await withProject({
       ...PROJECT,
       '.storybook/main.ts':
@@ -531,6 +544,27 @@ describe('typeAware.allowDefaultProject', () => {
     const messages = await lintInChild(project.dir, { vitest: false }, ['.storybook/main.ts'])
     expect(messages).toEqual({ '.storybook/main.ts': [] })
   })
+
+  it.concurrent.each([
+    ['braces', ['*.config.{js,mjs}', 'vitest.config.ts']],
+    ['`*`', ['*.config.*']],
+  ])(
+    'lints the JavaScript and TypeScript files of a glob with %s with type information',
+    async (_, allowDefaultProject) => {
+      await using project = await withProject({
+        ...PROJECT,
+        'eslint.config.mjs': "Promise.reject(new Error('a'))\n\nexport default []\n",
+        'vitest.config.ts': "Promise.reject(new Error('b'))\n\nexport default { test: {} }\n",
+      })
+      const floating = [expect.stringMatching(/^Promises must be awaited/)]
+      expect(
+        await lintInChild(project.dir, { typeAware: { allowDefaultProject } }, [
+          'eslint.config.mjs',
+          'vitest.config.ts',
+        ]),
+      ).toEqual({ 'eslint.config.mjs': floating, 'vitest.config.ts': floating })
+    },
+  )
 
   /**
    * The default project's file limit of the configs for `options`
@@ -584,27 +618,6 @@ describe('typeAware.allowDefaultProject', () => {
     const allowDefaultProject: ListTransform = (defaults) => [...defaults, 'scripts/*.ts']
     expect(await getFileLimit({ root: project.dir, typeAware: { allowDefaultProject } })).toBe(48)
   })
-
-  it.each([
-    ['braces', ['*.config.{js,mjs}', 'vitest.config.ts']],
-    ['`*`', ['*.config.*']],
-  ])(
-    'lints the JavaScript and TypeScript files of a glob with %s with type information',
-    async (_, allowDefaultProject) => {
-      await using project = await withProject({
-        ...PROJECT,
-        'eslint.config.mjs': "Promise.reject(new Error('a'))\n\nexport default []\n",
-        'vitest.config.ts': "Promise.reject(new Error('b'))\n\nexport default { test: {} }\n",
-      })
-      const floating = [expect.stringMatching(/^Promises must be awaited/)]
-      expect(
-        await lintInChild(project.dir, { typeAware: { allowDefaultProject } }, [
-          'eslint.config.mjs',
-          'vitest.config.ts',
-        ]),
-      ).toEqual({ 'eslint.config.mjs': floating, 'vitest.config.ts': floating })
-    },
-  )
 })
 
 describe('globs', () => {
@@ -728,7 +741,7 @@ describe('nextjs.rootDir', () => {
   })
 })
 
-describe('a second root in the same process', () => {
+describe.concurrent('a second root in the same process', () => {
   /**
    * Roots `a` and `b` with equal compiler options and a default-project `tool.config.ts` that calls
    * `check()`, which each root's `@types/node` declares to return its `returnType`, at its
@@ -772,13 +785,13 @@ describe('a second root in the same process', () => {
       '--eval',
       `
       import path from 'node:path'
-      const [indexUrl, eslintUrl, dir] = process.argv.slice(1)
+      const [indexUrl, eslintUrl, dir, areasJson] = process.argv.slice(1)
       const { defineConfig } = await import(indexUrl)
       const { ESLint } = await import(eslintUrl)
       const output = {}
       for (const name of ['a', 'b']) {
         const root = path.join(dir, name)
-        const config = await defineConfig({ root, isInEditor: false, typeAware: { allowDefaultProject: ['tool.config.ts'] } })
+        const config = await defineConfig({ root, isInEditor: false, ...JSON.parse(areasJson), typeAware: { allowDefaultProject: ['tool.config.ts'] } })
         const eslint = new ESLint({ cwd: root, overrideConfigFile: true, overrideConfig: config })
         const [result] = await eslint.lintFiles([path.join(root, 'tool.config.ts')])
         output[name] = {
@@ -791,6 +804,7 @@ describe('a second root in the same process', () => {
       pathToFileURL(path.join(BUILD_DIR, 'index.js')).href,
       pathToFileURL(createRequire(import.meta.url).resolve('eslint')).href,
       dir,
+      JSON.stringify(CORE_AREAS_OFF),
     ])
     return JSON.parse(stdout) as Record<string, { floating: number; fatal: Array<string> }>
   }
@@ -1136,6 +1150,19 @@ describe('warnings', () => {
     expect(
       section
         .matchAll(/^\| `(GPAHAL_\w+)` \|/gm)
+        .map((match) => match[1])
+        .toArray(),
+    ).toEqual([...WARNING_CODES])
+  })
+
+  it('has every code hidden from the test output by the root vitest config', async () => {
+    const config = await fs.readFile(
+      path.join(import.meta.dirname, '..', '..', '..', 'vitest.config.ts'),
+      'utf8',
+    )
+    expect(
+      config
+        .matchAll(/'(GPAHAL_\w+)'/g)
         .map((match) => match[1])
         .toArray(),
     ).toEqual([...WARNING_CODES])

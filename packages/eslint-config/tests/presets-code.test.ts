@@ -41,7 +41,7 @@ describe('.mts and .cts files', () => {
   it('are linted with type information', async () => {
     // The fixture's tsconfig sets `verbatimModuleSyntax`, which makes `.cts` files use
     // `import = require`, `export =` and `__dirname`
-    const eslint = await createESLint('typescript')
+    const eslint = await sharedESLint('typescript')
     expect(await lint(eslint, ['.'])).toEqual({
       'src/index.cts': [expect.stringMatching(/^@typescript-eslint\/no-floating-promises: /)],
       'src/index.mts': [expect.stringMatching(/^@typescript-eslint\/no-floating-promises: /)],
@@ -706,23 +706,50 @@ async function fixTypedProjects(
   }))
 }
 
+type TypedBatch = {
+  cases: Array<() => Record<string, TypedCase>>
+  fixes?: Promise<Array<Map<string, TypedFix>>>
+}
+
 /**
- * Runs `fixTypedProjects` once for the describe block it's called in, and returns results by key
+ * The cases of each `fixTypedProjectsOnce` call, by its options, run as one `fixTypedProjects`
+ */
+const TYPED_BATCHES = new Map<string, TypedBatch>()
+
+async function fixTypedBatch(
+  batch: TypedBatch,
+  configOptions: ConfigOptions,
+): Promise<Array<Map<string, TypedFix>>> {
+  const groups = batch.cases.map((cases) => Object.entries(cases()))
+  const fixes = await fixTypedProjects(
+    groups.flatMap((entries) => entries.map(([, typedCase]) => typedCase)),
+    configOptions,
+  )
+  let index = 0
+  return groups.map((entries) => new Map(entries.map(([key]) => [key, fixes[index++]!] as const)))
+}
+
+/**
+ * Runs `fixTypedProjects` before the describe block it's called in, and returns results by key. The
+ * calls with the same options, which must be JSON, share one run, which has every call's cases as
+ * the tests are collected before any runs
  */
 function fixTypedProjectsOnce(
   cases: () => Record<string, TypedCase>,
   configOptions: ConfigOptions = {},
 ): (key: string) => TypedFix {
-  const results = new Map<string, TypedFix>()
+  const batchKey = JSON.stringify(configOptions)
+  let batch = TYPED_BATCHES.get(batchKey)
+  if (batch === undefined) {
+    batch = { cases: [] }
+    TYPED_BATCHES.set(batchKey, batch)
+  }
+  const group = batch.cases.length
+  batch.cases.push(cases)
+  let results = new Map<string, TypedFix>()
   beforeAll(async () => {
-    const entries = Object.entries(cases())
-    const fixes = await fixTypedProjects(
-      entries.map(([, typedCase]) => typedCase),
-      configOptions,
-    )
-    for (const [index, [key]] of entries.entries()) {
-      results.set(key, fixes[index]!)
-    }
+    batch.fixes ??= fixTypedBatch(batch, configOptions)
+    results = (await batch.fixes)[group]!
   })
   return (key) => {
     const result = results.get(key)
@@ -842,11 +869,17 @@ describe('imports.removeUnused', () => {
     expect(rules).toContain('@typescript-eslint/no-unused-vars')
   })
 
+  const UNUSED = "import { a, b } from './a.ts'\n\nexport const x = a\n"
+  // With the default options, so it joins the other batches with them
+  const fixedWithoutOption = fixTypedProjectsOnce(() => ({ unused: caseOf(UNUSED) }))
+
   it('only reports in an editor, and without the option', async () => {
-    const code = "import { a, b } from './a.ts'\n\nexport const x = a\n"
-    for (const options of [{ imports: { removeUnused: true }, isInEditor: true }, {}]) {
-      const [result] = await fixTypedProjects([caseOf(code)], options)
-      expect(result?.output).toBe(code)
+    const [inEditor] = await fixTypedProjects([caseOf(UNUSED)], {
+      imports: { removeUnused: true },
+      isInEditor: true,
+    })
+    for (const result of [inEditor, fixedWithoutOption('unused')]) {
+      expect(result?.output).toBe(UNUSED)
       expect(result?.rules).toContain('@typescript-eslint/no-unused-vars')
     }
   })
