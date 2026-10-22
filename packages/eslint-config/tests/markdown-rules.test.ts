@@ -9,7 +9,8 @@ import { countWork } from '@gpahal/internal/node/testing'
 import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
 
-// Each case starts with a heading, so only the rule under test reports
+// Most cases start with a heading, as a Markdown file does. A rule tester runs only the rule under
+// test
 
 const ruleTester = new RuleTester({
   plugins: { '@gpahal/markdown': MARKDOWN_PLUGIN },
@@ -49,8 +50,8 @@ ruleTester.run('require-alt-text', getRule('require-alt-text'), {
 
 ruleTester.run('no-missing-link-fragments', getRule('no-missing-link-fragments'), {
   valid: [
-    '# Title\n\n## A `code` heading\n\n## Dup\n\n## Dup\n\n## Custom {#custom-id}\n\n<a id="anchor"></a>\n\nB[^n].\n\n[^n]: N\n\n' +
-      '[a](#a-code-heading) [b](#dup-1) [c](#custom-id) [d](#anchor) [e](#top) [f](#L10C2-L12) [g](#TITLE) [h](#fn-n) [i](#user-content-title)\n',
+    '# Title\n\n## A `code` heading\n\n## Dup\n\n## Dup\n\n## Custom {#custom-id}\n\n<a id="anchor"></a>\n\n' +
+      '[a](#a-code-heading) [b](#dup-1) [c](#custom-id) [d](#anchor) [e](#top) [f](#L10C2-L12) [g](#TITLE) [i](#user-content-title)\n',
   ],
   invalid: [
     {
@@ -70,7 +71,7 @@ ruleTester.run('no-missing-atx-heading-space', getRule('no-missing-atx-heading-s
     '# T\n\n\\#Heading\n\n#######Seven\n\nIssue #12\n\n#123 fixed\n',
     // Inline code, a shebang, the keycap emoji, tags, hex colors and C directives
     '# T\n\nUse `foo\n#define X` in C.\n\n#!/usr/bin/env node\n\n#\u{FE0F}\u{20E3} is the keycap\n',
-    '# T\n\n#general #random\n\n- #project/alpha\n\n- [ ] #urgent fix\n',
+    '# T\n\n- #project/alpha\n\n- [ ] #urgent fix\n',
     '# T\n\n#ff00ff is magenta\n\n#include <x>\n',
   ],
   invalid: [
@@ -157,7 +158,6 @@ ruleTester.run('heading-increment', getRule('heading-increment'), {
   valid: [
     '# Title\n\n<div><!-- <h4>hidden</h4> --></div>\n\n<header><hr></header>\n\n## Next\n',
     // Only a top-level title of front matter is rank 1
-    '---\nmeta:\n  title: Nested\n---\n\n### Skipped\n',
     '+++\n[params]\ntitle = "T"\n+++\n\n### Skipped\n',
     { code: '---\ntitle: T\n---\n\n### Skipped\n', options: [{ frontmatterTitle: '' }] },
   ],

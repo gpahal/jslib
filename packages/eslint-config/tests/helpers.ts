@@ -131,18 +131,19 @@ export async function createESLint(
 const SHARED_ESLINTS = new Map<string, Promise<ESLint>>()
 
 /**
- * The ESLint of `createESLint` for `fixture` and `options`, made once per test file, for tests that
- * only lint. `options` must be JSON, which keys the instance, and the fixture's files must not
- * change while the tests run
+ * The ESLint of `createESLint` for `fixture` and `options`, made once per test file. `options`
+ * must be JSON, which keys the instance with `fix`, and the fixture's files must not change while
+ * the tests run. With `fix`, it fixes `lintText` input and doesn't write files
  */
 export async function sharedESLint(
   fixture: string,
-  options: Partial<EslintConfigOptions> = {},
+  options: ConfigOptions = {},
+  { fix = false }: { fix?: boolean } = {},
 ): Promise<ESLint> {
-  const key = JSON.stringify([fixture, options])
+  const key = JSON.stringify([fixture, options, fix])
   let eslint = SHARED_ESLINTS.get(key)
   if (eslint === undefined) {
-    eslint = createESLint(fixture, options)
+    eslint = createESLint(fixture, options, { fix })
     SHARED_ESLINTS.set(key, eslint)
   }
   return eslint
@@ -248,6 +249,21 @@ export async function lintText(
 }
 
 /**
+ * The rule of each message for `code` linted as `filePath`, or its text when it has none, kept to
+ * `rules` when given
+ */
+export async function lintRuleIds(
+  eslint: ESLint,
+  filePath: string,
+  code: string,
+  rules?: ReadonlyArray<string>,
+): Promise<Array<string>> {
+  const results = await eslint.lintText(code, { filePath })
+  const ruleIds = results.flatMap((result) => result.messages.map(ruleIdOf))
+  return rules === undefined ? ruleIds : ruleIds.filter((rule) => rules.includes(rule))
+}
+
+/**
  * The parsed files other than the checked one, such as TypeScript's libs, which every call of
  * `typeErrors` would parse again
  */
@@ -294,22 +310,44 @@ export function typeErrors(
 }
 
 /**
- * The warnings that resolving `options` for `root` emits, with the project scan's, as
- * `[message, code]`
+ * Warnings as `[message, code]`
+ */
+export type Warnings = Array<[message: string, code: string | undefined]>
+
+/**
+ * The warnings that `fn` emits, kept from the output. `fn` gets the list as it grows, to check it
+ * before `fn` ends, and the list is complete once a promise that `fn` returns settles
+ */
+export function captureWarnings(fn: (warnings: Warnings) => Promise<unknown>): Promise<Warnings>
+export function captureWarnings(fn: (warnings: Warnings) => unknown): Warnings
+export function captureWarnings(fn: (warnings: Warnings) => unknown): Warnings | Promise<Warnings> {
+  const warnings: Warnings = []
+  const emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation((warning, options) => {
+    warnings.push([String(warning), typeof options === 'object' ? options.code : undefined])
+  })
+  let result: unknown
+  try {
+    result = fn(warnings)
+  } catch (error) {
+    emitWarning.mockRestore()
+    throw error
+  }
+  if (result instanceof Promise) {
+    return result.then(() => warnings).finally(() => emitWarning.mockRestore())
+  }
+  emitWarning.mockRestore()
+  return warnings
+}
+
+/**
+ * The warnings that resolving `options` for `root` emits, with the project scan's
  */
 export function warningsOf(
   root: string,
   options: Omit<EslintConfigOptions, 'root'> = {},
-): Array<[string, string | undefined]> {
-  const emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined)
-  try {
+): Warnings {
+  return captureWarnings(() => {
     // As the composer's finalizer does, with `configs` as the methods leave them
     resolveOptions({ root, ...options }).warnOfProjectScan(options.configs ?? [])
-    return emitWarning.mock.calls.map(([warning, warningOptions]) => [
-      String(warning),
-      typeof warningOptions === 'object' ? warningOptions.code : undefined,
-    ])
-  } finally {
-    emitWarning.mockRestore()
-  }
+  })
 }

@@ -1,8 +1,9 @@
 import fs from 'node:fs/promises'
-import os from 'node:os'
 import path from 'node:path'
 
 import { build, type InlineConfig } from 'tsdown'
+
+import { withPeerProject } from './peer-project'
 
 /**
  * A project with `source` as `index.ts` and an unbundled peer, built with an empty
@@ -11,28 +12,8 @@ import { build, type InlineConfig } from 'tsdown'
 async function withCanaryProject(
   source: string,
 ): Promise<{ config: InlineConfig; cwd: string } & AsyncDisposable> {
-  const directory = await fs.mkdtempDisposable(path.join(os.tmpdir(), 'tsdown-canary-'))
-  const cwd = directory.path
-  await fs.mkdir(path.join(cwd, 'node_modules/fixture-peer'), { recursive: true })
-  await fs.writeFile(
-    path.join(cwd, 'node_modules/fixture-peer/package.json'),
-    JSON.stringify({ name: 'fixture-peer', types: 'index.d.ts' }),
-  )
-  await fs.writeFile(
-    path.join(cwd, 'node_modules/fixture-peer/index.d.ts'),
-    'export type Value = string',
-  )
-  await fs.writeFile(
-    path.join(cwd, 'package.json'),
-    JSON.stringify({ name: 'canary', type: 'module', devDependencies: { 'fixture-peer': '*' } }),
-  )
-  await fs.writeFile(
-    path.join(cwd, 'tsconfig.json'),
-    JSON.stringify({
-      compilerOptions: { declaration: true, isolatedDeclarations: true, skipLibCheck: true },
-    }),
-  )
-  await fs.writeFile(path.join(cwd, 'index.ts'), source)
+  const project = await withPeerProject('canary', { 'index.ts': source })
+  const cwd = project.dir
   return {
     cwd,
     config: {
@@ -45,7 +26,7 @@ async function withCanaryProject(
       deps: { neverBundle: ['fixture-peer'], onlyImport: [] },
       logLevel: 'silent',
     },
-    [Symbol.asyncDispose]: async () => directory[Symbol.asyncDispose](),
+    [Symbol.asyncDispose]: async () => project[Symbol.asyncDispose](),
   }
 }
 

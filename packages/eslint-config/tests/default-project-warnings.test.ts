@@ -3,12 +3,18 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { assertBuildIsCurrent, runNode } from '@gpahal/internal/node/testing'
-import { isRecord } from '@gpahal/std/objects'
 
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import { checkDefaultProjectTsconfig } from '@/internal/default-project'
 
-import { BUILD_DIR, CORE_AREAS_OFF_SOURCE, warningsOf, withProject } from './helpers'
+import {
+  BUILD_DIR,
+  captureWarnings,
+  CORE_AREAS_OFF_SOURCE,
+  warningsOf,
+  withProject,
+  type Warnings,
+} from './helpers'
 
 const TSCONFIG_DIR = path.join(import.meta.dirname, '..', '..', 'tsconfig')
 
@@ -22,8 +28,6 @@ const SRC = { 'src/a.ts': 'export const a = 1\n' }
 
 const CONFIG_URL = pathToFileURL(path.join(BUILD_DIR, 'index.js')).href
 
-// The areas that the config of ESLint's process turns off, which the warnings don't depend on,
-// since loading them makes up most of the time each thread takes to build the config
 describe('checkDefaultProjectTsconfig', () => {
   it.each<[string, Record<string, string>]>([
     [
@@ -242,22 +246,17 @@ describe('GPAHAL_FILES_OUTSIDE_TSCONFIG', () => {
       'tools/t.ts': 'export const t = 1\n',
       ...scripts(2),
     })
-    const emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined)
-    const namedFiles = () =>
-      emitWarning.mock.calls
-        .filter(
-          ([, options]) => isRecord(options) && options.code === 'GPAHAL_FILES_OUTSIDE_TSCONFIG',
-        )
-        .map(([message]) => String(message).match(/`[^`]+\.ts`/g))
-    try {
+    const namedFiles = (warnings: Warnings) =>
+      warnings
+        .filter(([, code]) => code === 'GPAHAL_FILES_OUTSIDE_TSCONFIG')
+        .map(([message]) => message.match(/`[^`]+\.ts`/g))
+    await captureWarnings(async (warnings) => {
       const composer = defineConfig({ root: project.dir }).insertBefore('gpahal/ignores/defaults', {
         ignores: ['scripts/**'],
       })
-      expect(namedFiles()).toEqual([])
+      expect(namedFiles(warnings)).toEqual([])
       await composer
-      expect(namedFiles()).toEqual([['`tools/t.ts`']])
-    } finally {
-      emitWarning.mockRestore()
-    }
+      expect(namedFiles(warnings)).toEqual([['`tools/t.ts`']])
+    })
   })
 })

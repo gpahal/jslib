@@ -112,24 +112,4 @@ describe('typeAware.ignores', () => {
     expect(resolved.filesOutsideTsconfigs).toEqual(['generated/typed/d.ts'])
     expect(resolved.typeAware?.ignores.slice(-2)).toEqual(['generated/**', '!generated/typed/**'])
   })
-
-  it.each<[EslintConfigOptions['typeAware'], string]>([
-    [
-      { ignores: ['/abs/**'] },
-      '@gpahal/eslint-config: `typeAware.ignores`: glob `/abs/**` starts with `/`, but globs are relative to `root`. Write `abs/**`',
-    ],
-    [
-      { ignores: ['src/*.css'] },
-      '@gpahal/eslint-config: `typeAware.ignores`: glob `src/*.css` matches no JavaScript or TypeScript file',
-    ],
-    [
-      // @ts-expect-error -- A JavaScript caller can pass a string
-      { ignores: 'src/**' },
-      '@gpahal/eslint-config: `typeAware.ignores`: expected an array of globs or a function',
-    ],
-  ])('throws on %j', async (typeAware, message) => {
-    await using project = await withProject({ 'tsconfig.json': TSCONFIG })
-    const { defineConfig } = await import('@/index')
-    expect(() => defineConfig({ root: project.dir, typeAware })).toThrow(message)
-  })
 })

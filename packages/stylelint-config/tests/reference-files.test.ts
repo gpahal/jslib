@@ -13,6 +13,8 @@ import { isRecord } from '@gpahal/std/objects'
 import { defineConfig } from '@/index'
 import { isReset, KEPT_NAMESPACES } from '@/internal/tailwind-theme-function'
 
+import { linkTailwind } from './helpers'
+
 /**
  * The `globby` that Stylelint globs `referenceFiles` with, which the package doesn't depend on
  */
@@ -89,17 +91,6 @@ function referenceGlobs(referenceFiles: Config['referenceFiles']): Array<string>
     .flatMap((entry) => (typeof entry === 'string' ? entry : [entry.files].flat()))
 }
 
-/**
- * Links the package's Tailwind CSS into `dir`'s `node_modules`
- */
-async function linkTailwind(dir: string): Promise<void> {
-  await fs.mkdir(path.join(dir, 'node_modules'), { recursive: true })
-  await fs.symlink(
-    await fs.realpath(path.join(import.meta.dirname, '../node_modules/tailwindcss')),
-    path.join(dir, 'node_modules/tailwindcss'),
-  )
-}
-
 describe('referenceFiles', () => {
   let project: Awaited<ReturnType<typeof withTmpProject>>
   let dir: string
@@ -109,6 +100,7 @@ describe('referenceFiles', () => {
     })
     dir = project.dir
     await linkTailwind(dir)
+    await fs.mkdir(path.join(dir, 'empty'))
   })
   afterAll(async () => {
     await project[Symbol.asyncDispose]()
@@ -127,15 +119,11 @@ describe('referenceFiles', () => {
     ])
   })
 
-  it('leaves the rules off without reference files', async () => {
-    for (const config of [
-      await defineConfig({ root: dir, tailwindcss: true }),
-      await defineConfig({ root: dir, referenceFiles: [] }),
-    ]) {
-      expect(config).not.toHaveProperty('referenceFiles')
-      expect(config.rules).not.toHaveProperty('no-unknown-custom-properties')
-      expect(await lintReferences(CSS, config, dir)).toEqual([])
-    }
+  it('leaves the rules off with an empty list of reference files', async () => {
+    const config = await defineConfig({ root: dir, referenceFiles: [] })
+    expect(config).not.toHaveProperty('referenceFiles')
+    expect(config.rules).not.toHaveProperty('no-unknown-custom-properties')
+    expect(await lintReferences(CSS, config, dir)).toEqual([])
   })
 
   it("gives an override's referenceFiles Tailwind's theme without top-level reference files", async () => {
@@ -450,20 +438,6 @@ describe('referenceFiles', () => {
       },
     )
 
-    it("leaves the default theme's variables of a namespace reset after a nested block out", async () => {
-      expect(
-        await lintWithEntry(
-          'reset-after-block',
-          {
-            'global.css': "@import 'tailwindcss';\n@import './tokens.css';\n",
-            'tokens.css':
-              '@theme {\n  @keyframes wiggle {\n    0% {\n      rotate: 0;\n    }\n  }\n  --animate-*: initial;\n  --animate-wiggle: wiggle 1s;\n}\n',
-          },
-          'a {\n  animation: var(--animate-wiggle);\n  transition: var(--animate-spin);\n}\n',
-        ),
-      ).toEqual(['3:no-unknown-custom-properties'])
-    })
-
     it.each([
       ['the tailwindcss import', 'import', "@import 'tailwindcss' prefix(tw);"],
       ['a @theme block', 'theme', "@import 'tailwindcss';\n@theme prefix(tw) {}"],
@@ -631,50 +605,31 @@ describe('referenceFiles', () => {
     ])
   })
 
-  it.each([
-    [{ referenceFiles: 'missing/*.css' }, '`referenceFiles`: `missing/*.css`'],
-    // Stylelint's globby skips dotfiles, as `fs.promises.glob` does
-    [{ referenceFiles: 'hidden/*.css' }, '`referenceFiles`: `hidden/*.css`'],
-  ])('rejects a glob that matches no file, in %j', async (options, message) => {
-    await writeFiles(dir, { 'hidden/.a.css': '' })
-    await expect(defineConfig({ root: dir, ...options })).rejects.toThrow(
-      new TypeError(
-        `@gpahal/stylelint-config: ${message} matches no file. Create a file it matches, or remove the entry`,
-      ),
-    )
-  })
-
+  // Stylelint fails only on an entry that matches no file, so one with a path that does is taken
   it.each([
     [
-      { overrides: [{ files: ['*.css'], referenceFiles: 'missing.css' }] },
-      '`overrides[0].referenceFiles`: `missing.css`',
+      { referenceFiles: 'missing/*.css' },
+      '`referenceFiles`: `missing/*.css` matches no file. Create a file it matches, or remove the entry',
     ],
-  ])("rejects a path that isn't a glob and doesn't exist, in %j", async (options, message) => {
+    [
+      { overrides: [{ files: ['*.css'], referenceFiles: 'missing.css' }] },
+      "`overrides[0].referenceFiles`: `missing.css` doesn't exist. Create the file, or remove the entry",
+    ],
+    [
+      { referenceFiles: [{ files: ['empty'] }] },
+      '`referenceFiles[0].files[0]`: `empty` is a folder with no file. Add a file to it, or remove the entry',
+    ],
+    [
+      { referenceFiles: [{ files: ['missing.css', 'gone.css'] }] },
+      '`referenceFiles[0].files`: none of `missing.css`, `gone.css` exists. Create one of the files, or remove the entry',
+    ],
+    [
+      { referenceFiles: [{ files: ['tok*.css', '!tokens.css'] }] },
+      '`referenceFiles[0].files`: none of `tok*.css`, `!tokens.css` matches a file. Create a file one of them matches, or remove the entry',
+    ],
+  ])('says why an entry matches no file, in %j', async (options, message) => {
     await expect(defineConfig({ root: dir, ...options })).rejects.toThrow(
-      new TypeError(
-        `@gpahal/stylelint-config: ${message} doesn't exist. Create the file, or remove the entry`,
-      ),
-    )
-  })
-
-  // Stylelint fails only on an entry that matches no file
-  it('rejects an entry none of whose paths exists, and takes one with a path that does', async () => {
-    await expect(
-      defineConfig({ root: dir, referenceFiles: [{ files: ['missing.css', 'gone.css'] }] }),
-    ).rejects.toThrow(
-      new TypeError(
-        '@gpahal/stylelint-config: `referenceFiles[0].files`: none of `missing.css`, `gone.css` exists. Create one of the files, or remove the entry',
-      ),
-    )
-    await expect(
-      defineConfig({ root: dir, referenceFiles: [{ files: ['missing/*.css', 'tokens.css'] }] }),
-    ).resolves.toBeDefined()
-    await expect(
-      defineConfig({ root: dir, referenceFiles: [{ files: ['tok*.css', '!tokens.css'] }] }),
-    ).rejects.toThrow(
-      new TypeError(
-        '@gpahal/stylelint-config: `referenceFiles[0].files`: none of `tok*.css`, `!tokens.css` matches a file. Create a file one of them matches, or remove the entry',
-      ),
+      new TypeError(`@gpahal/stylelint-config: ${message}`),
     )
   })
 })

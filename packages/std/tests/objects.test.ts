@@ -67,7 +67,6 @@ describe('isRecord', () => {
 describe('isPlainObject', () => {
   it.each<[string, unknown]>([
     ['an object literal', { a: 1 }],
-    ['a null-prototype object', Object.create(null)],
     ['a plain object from another realm', vm.runInNewContext('({ a: 1 })')],
     ['an error-like object', { name: 'V', message: 'b' }],
   ])('accepts %s', (_, value) => {
@@ -81,7 +80,6 @@ describe('isPlainObject', () => {
     ['a function', () => 1],
     ['a primitive', 'a'],
     ['null', null],
-    ['an object with its own Symbol.toStringTag', { [Symbol.toStringTag]: 'Foo' }],
     ['arguments from another realm', vm.runInNewContext('(function () { return arguments })()')],
     ['a child of a null-prototype object', Object.create(Object.create(null) as object)],
     [

@@ -2,10 +2,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { Linter, RuleTester } from 'eslint'
+import { RuleTester } from 'eslint'
 import { parser as tsEslintParser } from 'typescript-eslint'
-
-import { runNodeOk } from '@gpahal/internal/node/testing'
 
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
 
@@ -83,6 +81,8 @@ tester.run('no-js-specifier-for-ts', GPAHAL_PLUGIN.rules['no-js-specifier-for-ts
     { code: "import b from './b%00.js'", filename },
     // eslint-disable-next-line no-template-curly-in-string -- the linted code's template literal
     { code: 'export const b = await import(`./${name}.js`)', filename },
+    // Node loads `a b.js`, as ESM specifiers are percent-decoded URLs
+    { code: "import x from './a%20b.js'", filename: path.join(encodedDir, 'main.ts') },
   ],
   invalid: [
     fix("import { b } from './b.js'", "import { b } from './b.ts'"),
@@ -121,23 +121,4 @@ tester.run('no-js-specifier-for-ts', GPAHAL_PLUGIN.rules['no-js-specifier-for-ts
     // An escape in the extension isn't rewritten
     { code: String.raw`import { b } from './b.\u006as'`, output: null, filename, errors },
   ],
-})
-
-test('keeps a percent-encoded import that Node loads', async () => {
-  const code = "import x from './a%20b.js'\nconsole.log(x)\n"
-  const main = path.join(encodedDir, 'main.ts')
-  fs.writeFileSync(main, code)
-  expect(await runNodeOk([main])).toBe('42\n')
-  const { output } = new Linter({ configType: 'flat', cwd: encodedDir }).verifyAndFix(
-    code,
-    {
-      files: ['**/*.ts'],
-      languageOptions: { parser: tsEslintParser },
-      plugins: { '@gpahal': GPAHAL_PLUGIN },
-      rules: { '@gpahal/no-js-specifier-for-ts': 'error' },
-    },
-    main,
-  )
-  fs.writeFileSync(main, output)
-  expect(await runNodeOk([main])).toBe('42\n')
 })

@@ -203,7 +203,8 @@ test.concurrent.for([
       antislop: true,
     },
   ],
-  // duplicate-rules.test.ts shows e18e's twins running with `unicorn: false`
+  // duplicate-rules.test.ts checks that `unicorn: false` leaves no twin off without its kept rules,
+  // which keeps e18e's twins running
   ['typeAware: false in an editor', { typeAware: false, isInEditor: true }],
 ] satisfies Array<[string, Partial<EslintConfigOptions>]>)(
   'eslint --fix output with %s, as a difference from the defaults',

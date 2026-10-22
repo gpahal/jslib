@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import fs from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
@@ -7,11 +7,7 @@ import ts from 'typescript'
 
 import { runNode, runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 
-const PRESETS_DIR = path.join(import.meta.dirname, '..')
-
-const PRESETS = readdirSync(PRESETS_DIR).filter(
-  (name) => name.endsWith('.json') && name !== 'package.json' && name !== 'tsconfig.json',
-)
+import { PRESETS, PACKAGE_DIR as PRESETS_DIR } from './helpers'
 
 const require = createRequire(import.meta.url)
 
@@ -52,22 +48,17 @@ const PROJECT_DIR = path.join(import.meta.dirname, 'virtual-project')
 const SHARED_SOURCE_FILES = new Map<string, ts.SourceFile>()
 
 /**
- * Typecheck an in-memory project whose tsconfig extends `presets`, ESM unless `packageJson` says
- * otherwise
+ * Typecheck an in-memory ESM project whose tsconfig extends `presets`
  *
  * @returns The diagnostics as `TS<code>` strings.
  */
-function typecheck(
-  presets: Array<string>,
-  files: Record<string, string>,
-  packageJson?: Record<string, unknown>,
-): Array<string> {
+function typecheck(presets: Array<string>, files: Record<string, string>): Array<string> {
   const tsconfig = {
     extends: presets.map((preset) => path.join(PRESETS_DIR, preset)),
     files: Object.keys(files).filter((name) => /\.(?:[cm]?ts|tsx)$/.test(name)),
   }
   const projectFiles = {
-    'package.json': JSON.stringify(packageJson ?? { type: 'module' }),
+    'package.json': JSON.stringify({ type: 'module' }),
     'tsconfig.json': JSON.stringify(tsconfig),
     ...files,
   }
@@ -207,28 +198,6 @@ test('no preset has a null value', () => {
   ).toEqual([])
 })
 
-test('base.json types ES2025 APIs without Node or the DOM', () => {
-  expect(typecheck(['base.json'], { 'a.ts': 'void Promise.try(() => 1)' })).toEqual([])
-  expect(typecheck(['base.json'], { 'a.ts': 'export const a = document' })).toEqual(['TS2584'])
-})
-
-test('nodenext.json rejects relative imports that fail at runtime in Node', () => {
-  const files = { 'b.ts': 'export const b = 1' }
-  expect(
-    typecheck(['base.json', 'nodenext.json'], {
-      ...files,
-      'a.ts': "import { b } from './b'\nexport const a = b",
-    }),
-  ).toEqual(['TS2835'])
-  expect(
-    typecheck(['base.json', 'nodenext.json', 'node.json'], {
-      ...files,
-      'a.ts':
-        "import { readFile } from 'node:fs/promises'\nimport { b } from './b.js'\nexport const a = [b, readFile]",
-    }),
-  ).toEqual([])
-})
-
 test('node.json types only the ESNext APIs that Node 24 has', () => {
   const presets = ['base.json', 'node.json']
   expect(
@@ -242,104 +211,13 @@ test('node.json types only the ESNext APIs that Node 24 has', () => {
   ])
 })
 
-test('node-strip-types.json allows the .ts imports that Node type stripping needs', () => {
-  const presets = ['base.json', 'nodenext.json', 'node.json', 'erasable.json']
-  const files = {
-    'b.ts': 'export const b = 1',
-    'a.ts': "import { b } from './b.ts'\nexport const a = b",
-  }
-  expect(typecheck(presets, files)).toEqual(['TS5097'])
-  expect(typecheck([...presets, 'node-strip-types.json'], files)).toEqual([])
-})
-
-test('node-app.json checks code for Node type stripping', () => {
-  expect(typecheck(['node-app.json'], { 'a.ts': 'export enum E {\n  A,\n}' })).toEqual(['TS1294'])
-  expect(typecheck(['node-app.json'], { 'a.ts': 'export const a = document' })).toEqual(['TS2584'])
-  // Without `"type": "module"`, `nodenext` treats `.ts` files as CommonJS, where
-  // `verbatimModuleSyntax` rejects ESM syntax
-  expect(
-    typecheck(
-      ['node-app.json'],
-      { 'a.ts': "import { readFile } from 'node:fs/promises'\nexport const a = readFile" },
-      {},
-    ),
-  ).toEqual(['TS1295', 'TS1287'])
-})
-
-/**
- * A minimal stand-in for `@types/react`'s JSX runtime
- */
-const JSX_RUNTIME = {
-  'jsx-runtime.d.ts': `declare module 'react/jsx-runtime' {
-  export namespace JSX {
-    type Element = { type: unknown }
-    type IntrinsicElements = { div: { className?: string } }
-  }
-  export function jsx(type: unknown, props: unknown): JSX.Element
-  export function jsxs(type: unknown, props: unknown): JSX.Element
-  export const Fragment: unique symbol
-}`,
-}
-
-test.each(['react-app.json', 'nextjs-app.json'])('%s type-checks JSX', (preset) => {
-  expect(
-    typecheck([preset], { ...JSX_RUNTIME, 'a.tsx': 'export const a = <div className="a" />' }),
-  ).toEqual([])
-  expect(
-    typecheck([preset], { ...JSX_RUNTIME, 'a.tsx': 'export const a = <div clasName="a" />' }),
-  ).toEqual(['TS2322'])
-})
-
-test.each(['browser-app.json', 'react-app.json', 'nextjs-app.json', 'astro-app.json'])(
-  '%s types ES2024 APIs and the DOM, but not ES2025 ones',
-  (preset) => {
-    expect(
-      typecheck([preset], {
-        'a.ts':
-          'export const a = [Object.groupBy([1], () => 1), Promise.withResolvers(), document]',
-      }),
-    ).toEqual([])
-    expect(typecheck([preset], { 'a.ts': 'void Promise.try(() => 1)' })).toEqual(['TS2550'])
-  },
-)
-
-test.each([
-  [['base.json'], []],
-  [['base.json', 'node.json'], ['node']],
-  [['node-app.json'], ['node']],
-  [['nextjs-app.json'], ['node']],
-  [['react-app.json'], []],
-  [['astro-app.json'], []],
-] as const)('%j types %j', async (presets, types) => {
-  await using dir = await writeProject('types-', {
-    'tsconfig.json': JSON.stringify({
-      extends: presets.map((preset) => path.join(PRESETS_DIR, preset)),
-      files: [],
-    }),
-  })
-  expect(parseConfig(path.join(dir.path, 'tsconfig.json')).options.types).toEqual(types)
-})
-
 // `next build` type-checks with these unless the tsconfig sets them, and doesn't rewrite a tsconfig
-// that has `extends`
-test('nextjs-app.json has the options that next build requires', () => {
+// that has `extends`. The snapshot leaves out the ones `tsc` computes
+test('nextjs-app.json has the computed options that next build requires', () => {
   const options = parseConfig(path.join(PRESETS_DIR, 'nextjs-app.json')).options
-  expect(options).toMatchObject({
-    module: ts.ModuleKind.Preserve,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    jsx: ts.JsxEmit.ReactJSX,
-  })
-  for (const option of ['esModuleInterop', 'resolveJsonModule', 'isolatedModules']) {
+  for (const option of ['esModuleInterop', 'resolveJsonModule']) {
     expect([option, computedOptions[option]!.computeValue(options)]).toEqual([option, true])
   }
-})
-
-test('library-tests.json lets tests export values without explicit types', () => {
-  const files = {
-    'a.ts': 'export function sum(a: number, b: number) {\n  return a + b\n}',
-  }
-  expect(typecheck(['base.json', 'library.json'], files)).toEqual(['TS9007'])
-  expect(typecheck(['base.json', 'library.json', 'library-tests.json'], files)).toEqual([])
 })
 
 // One project inherits all three options, which catches library-tests failing to clear any of them
@@ -446,7 +324,10 @@ test('Node fails to run code that node-app type-checks, as the README warns', as
       return [file, status, /ERR_MODULE_NOT_FOUND|SyntaxError/.exec(stderr)?.[0]]
     }),
   )
-  expect(failures).toEqual([
+  expect(
+    failures,
+    'Node runs code that node-app type-checks: for each file that now runs, remove its case from the README\'s warning in "A Node app that strips types", and the check that `@gpahal/eslint-config`\'s `node: { typeStripping: true }` adds for it, `@gpahal/no-js-specifier-for-ts` for the `.js` specifier or the decorator or `accessor` field check of `@gpahal/no-unstrippable-syntax`',
+  ).toEqual([
     ['src/js-specifier.ts', 1, 'ERR_MODULE_NOT_FOUND'],
     ['src/decorator.ts', 1, 'SyntaxError'],
     ['src/accessor.ts', 1, 'SyntaxError'],

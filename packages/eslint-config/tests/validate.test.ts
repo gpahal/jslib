@@ -28,11 +28,14 @@ function build(options: Record<string, unknown>) {
 const ENTRY_POINT_EXPECTED =
   "expected an absolute path or one relative to `root`, or a `file:` URL or URL string with an absolute path, such as `import.meta.resolve('./src/styles/global.css')`"
 
+/**
+ * The message for a glob option of `name` that lists only negated globs
+ */
+function onlyNegated(name: string): string {
+  return `@gpahal/eslint-config: \`${name}\`: lists only negated globs, so it would match no file. Add the globs of the files to match, as in \`['src/**', '!src/legacy/**']\``
+}
+
 test.each([
-  [
-    { reactt: true },
-    /^@gpahal\/eslint-config: `reactt`: unknown option\. Known options: `root`, `isInEditor`, /,
-  ],
   [
     { typescript: { typeAwre: false } },
     '@gpahal/eslint-config: `typescript.typeAwre`: unknown option. Known options: `rules`, `rulesTypeAware`, `library`, `exhaustiveSwitch`, `strictBooleanExpressions`',
@@ -40,10 +43,6 @@ test.each([
   [
     { root: 'packages/a' },
     '@gpahal/eslint-config: `root`: expected an absolute path, such as `import.meta.dirname`, received `"packages/a"`',
-  ],
-  [
-    { root: path.join(root, 'tsconfig.json') },
-    `@gpahal/eslint-config: \`root\`: path \`${path.join(root, 'tsconfig.json')}\` isn't a folder`,
   ],
   [
     { ignores: 'dist' },
@@ -65,6 +64,15 @@ test.each([
     { nextjs: { rootDir: '../react' } },
     "@gpahal/eslint-config: `nextjs.rootDir`: path `../react` isn't a folder under `root`",
   ],
+  // Checked before the folders are looked up
+  [
+    { nextjs: { rootDir: '/apps/web' } },
+    '@gpahal/eslint-config: `nextjs.rootDir`: path `/apps/web` is absolute. Make it relative to `root`',
+  ],
+  [
+    { nextjs: { rootDir: 'apps/*/' } },
+    "@gpahal/eslint-config: `nextjs.rootDir`: path `apps/*/` is a glob, but this option lists folders, not globs. List each app, as in `['apps/web', 'apps/docs']`",
+  ],
   [
     { testFiles: ['**/*.test.md'] },
     '@gpahal/eslint-config: `testFiles`: glob `**/*.test.md` matches no JavaScript or TypeScript file. End it in `*` or an extension of one, as in `**/*.test.ts`',
@@ -76,6 +84,25 @@ test.each([
   [
     { vitest: { files: [] } },
     '@gpahal/eslint-config: `vitest.files`: lists no globs, so it would match no file. Leave it out for the default',
+  ],
+  [{ testFiles: () => ['!**/fixtures/**'] }, onlyNegated('testFiles')],
+  [{ server: { files: ['!src/client/**'] } }, onlyNegated('server.files')],
+  [{ node: { scope: ['!apps/x/**'] } }, onlyNegated('node.scope')],
+  [
+    { commonjs: { files: ['src/**/*.ts'] } },
+    '@gpahal/eslint-config: `commonjs.files`: glob `src/**/*.ts` matches no `.js` file. End it in `*` or an extension of one, as in `src/**/*.js`',
+  ],
+  [
+    { typeAware: { ignores: ['/abs/**'] } },
+    '@gpahal/eslint-config: `typeAware.ignores`: glob `/abs/**` starts with `/`, but globs are relative to `root`. Write `abs/**`',
+  ],
+  [
+    { typeAware: { ignores: ['src/*.css'] } },
+    '@gpahal/eslint-config: `typeAware.ignores`: glob `src/*.css` matches no JavaScript or TypeScript file',
+  ],
+  [
+    { typeAware: { ignores: 'src/**' } },
+    '@gpahal/eslint-config: `typeAware.ignores`: expected an array of globs or a function',
   ],
   [
     { browser: ['src/client/**'] },
@@ -112,10 +139,6 @@ test.each([
   [
     { allowFormattingRules: ['no-unexpected-multiline'] },
     '@gpahal/eslint-config: `allowFormattingRules`: `no-unexpected-multiline`: stays on already; this package keeps it on',
-  ],
-  [
-    { configs: [[{ rules: { quotes: 'error' } }]] },
-    "@gpahal/eslint-config: `configs[0][0]`: `quotes`: is a rule that eslint-config-prettier turns off, since it conflicts with Prettier or is only safe with some options. To use a plugin's preset that turns on such rules, wrap it in `withoutFormattingRules`. Turn it off, or list it in `allowFormattingRules`",
   ],
 ])('throws on %j', (options, message) => {
   expect(build(options)).toThrow(message)
@@ -861,6 +884,14 @@ test.each<[(composer: UntypedComposer) => unknown, string]>([
   [
     (composer) => composer['override']!(undefined, {}),
     '`.override()`: expected a config name, received `undefined`',
+  ],
+  [
+    (composer) => composer['overrideRules']!({ 'no-console': 'warning' }),
+    '`.overrideRules()`: `no-console`: expected a severity',
+  ],
+  [
+    (composer) => composer['overrideRules']!({ 'no-console': ['warning'] }),
+    '`.overrideRules()`: `no-console`: expected a severity',
   ],
 ])('throws on a wrong argument when called: %s', (call, message) => {
   expect(() => call(untypedComposer())).toThrow(`@gpahal/eslint-config: ${message}`)

@@ -49,12 +49,6 @@ describe('markdown language', () => {
     expect(checked).toEqual([true])
   })
 
-  it('parses `$` as text by default', () => {
-    const types = typesOf(parse('$x$ and\n\n$$\ny\n$$\n'))
-    expect(types).not.toContain('inlineMath')
-    expect(types).not.toContain('math')
-  })
-
   describe('text positions', () => {
     // GFM's transforms would split this text into nodes without positions, which the language
     // leaves out

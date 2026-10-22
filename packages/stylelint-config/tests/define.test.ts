@@ -57,7 +57,7 @@ function formatter(): string {
 }
 
 describe('defineConfig', () => {
-  it('turns off the file type overrides and the comment layout rule', async () => {
+  it('turns off the file type overrides and the comment layout rule, whose plugin stays registered so you can set it', async () => {
     const config = await defineConfig({
       root: process.cwd(),
       astro: false,
@@ -67,6 +67,15 @@ describe('defineConfig', () => {
     })
     expect(config.overrides?.map(({ files }) => files)).toEqual(['*.module.css'])
     expect(config.rules).not.toHaveProperty('@gpahal/comment-layout')
+    expect(config.plugins).toContain(commentLayout)
+    const withRule = await defineConfig({
+      root: process.cwd(),
+      commentLayout: false,
+      rules: { '@gpahal/comment-layout': true },
+    })
+    expect(await lintRules('/* One\n   two. */\na {\n  color: red;\n}\n', withRule)).toEqual([
+      '@gpahal/comment-layout',
+    ])
   })
 
   it('prefers flow-relative properties, units and keywords with logical', async () => {
@@ -104,18 +113,6 @@ describe('defineConfig', () => {
     })
     expect(config.plugins).toEqual([...[baseConfig.plugins].flat(), noRed])
     expect(await lintRules('a {\n  color: red;\n}\n', config)).toEqual(['local/no-red'])
-  })
-
-  it('registers the comment layout plugin with the rule off, so you can set it', async () => {
-    const config = await defineConfig({
-      root: process.cwd(),
-      commentLayout: false,
-      rules: { '@gpahal/comment-layout': true },
-    })
-    expect(config.plugins).toContain(commentLayout)
-    expect(await lintRules('/* One\n   two. */\na {\n  color: red;\n}\n', config)).toEqual([
-      '@gpahal/comment-layout',
-    ])
   })
 
   it('puts your rules and overrides after its own', async () => {
@@ -199,24 +196,6 @@ describe('defineConfig', () => {
         { disableFix: true },
       ])
     }
-  })
-
-  it("adds the ignore lists of your rules to the preset's", async () => {
-    const config = await defineConfig({
-      root: process.cwd(),
-      tailwindcss: true,
-      rules: {
-        'at-rule-no-unknown': [true, { ignoreAtRules: ['my-rule'] }],
-        'function-no-unknown': [true, { ignoreFunctions: ['brand'], severity: 'warning' }],
-      },
-    })
-    expect(topLevelRules(config)['function-no-unknown']).toEqual([
-      true,
-      { ignoreFunctions: ['tech', 'theme', 'brand'], severity: 'warning' },
-    ])
-    const css =
-      '@my-rule;\n\n@theme {\n  --color-x: red;\n}\n\na {\n  color: theme(--color-x);\n}\n'
-    expect(await lintRules(css, config)).toEqual([])
   })
 })
 
@@ -323,34 +302,6 @@ describe("defineConfig's Stylelint options", () => {
   )
 })
 
-describe('needless disables', () => {
-  async function lintQuiet(code: string, quiet: boolean) {
-    const { errored, results } = await stylelint.lint({ code, config: baseConfig, quiet })
-    return {
-      errored,
-      rules: results.flatMap((result) => result.warnings.map((warning) => warning.rule)),
-    }
-  }
-
-  it('skip a disable of plugin/use-baseline, whose warnings --quiet leaves out', async () => {
-    const css =
-      'a {\n  /* stylelint-disable-next-line plugin/use-baseline -- Progressive enhancement */\n  reading-flow: grid-order;\n}\n'
-    expect(await lintQuiet(css, true)).toEqual({ errored: false, rules: [] })
-    expect(await lintQuiet(css, false)).toEqual({ errored: false, rules: [] })
-  })
-
-  it('report a disable that suppresses nothing', async () => {
-    const css =
-      'a {\n  /* stylelint-disable-next-line color-hex-length -- Brand color */\n  color: #f00;\n}\n'
-    for (const quiet of [true, false]) {
-      expect(await lintQuiet(css, quiet)).toEqual({
-        errored: true,
-        rules: ['--report-needless-disables'],
-      })
-    }
-  })
-})
-
 /**
  * `options` that the types would reject, to check what `defineConfig` does with them at run time
  */
@@ -369,16 +320,9 @@ const PREFIX = '@gpahal/stylelint-config'
 const KNOWN_OPTIONS =
   '`root`, `tailwindcss`, `astro`, `html`, `markdown`, `commentLayout`, `logical`, `plugins`, `rules`, `overrides`, `ignoreFiles`, `referenceFiles`, `extends`, `languageOptions`, `defaultSeverity`, `customSyntax`, `quiet`, `formatter`, `ignoreDisables`, `reportNeedlessDisables`, `reportInvalidScopeDisables`, `reportDescriptionlessDisables`, `reportUnscopedDisables`, `maxWarnings`, `computeEditInfo`, `configurationComment`, `processors`, `allowEmptyInput`, `cache`'
 
-const KNOWN_OVERRIDE_KEYS =
-  '`files`, `name`, `extends`, `plugins`, `ignoreFiles`, `rules`, `quiet`, `defaultSeverity`, `ignoreDisables`, `reportNeedlessDisables`, `reportInvalidScopeDisables`, `reportDescriptionlessDisables`, `reportUnscopedDisables`, `configurationComment`, `customSyntax`, `processors`, `referenceFiles`, `languageOptions`, `computeEditInfo`, `validate`'
-
 describe('defineConfig validation', () => {
   it.each([
     [{ tailwind: true }, `\`tailwind\`: unknown option. Known options: ${KNOWN_OPTIONS}`],
-    [
-      { tailwindcss: { function: [] } },
-      '`tailwindcss.function`: unknown option. Known options: `functions`, `atRules`, `entryPoint`, `validateApply`',
-    ],
     [
       { tailwindcss: { functions: () => ['a.b'] } },
       "`tailwindcss.functions`: `a.b` isn't a CSS function name",
@@ -400,10 +344,6 @@ describe('defineConfig validation', () => {
     [
       { ignoreFiles: () => [1] },
       '`ignoreFiles`: expected the function to return an array of strings, received an array with `1`',
-    ],
-    [
-      { referenceFiles: [{ file: 'a.css' }] },
-      '2 issues\n  `referenceFiles[0].files`: expected a string or an array of strings, received `undefined`\n  `referenceFiles[0].file`: unknown option. Known options: `files`, `customSyntax`, `loader`',
     ],
     [
       { root: 'apps/web' },
@@ -430,11 +370,6 @@ describe('defineConfig validation', () => {
       },
       "`overrides[0].files`: matches files of types with different settings of `selector-pseudo-class-no-unknown`, and no glob matches just one type's files of it. Split this override into one per file type: `src/a*.astro`, `src/a*.html`, `src/a*.{md,markdown}`, `src/a*.@(css|pcss|postcss)`, `src/a*.module.css`, or wrap the setting with `replace()`",
     ],
-    // Stylelint ignores a key its overrides don't take, so a misspelled one would do nothing
-    [
-      { overrides: [{ files: '*.css', rule: { 'color-named': 'never' } }] },
-      `\`overrides[0]\`: \`rule\`: unknown option. Known options: ${KNOWN_OVERRIDE_KEYS}`,
-    ],
     // Stylelint applies a config's fixes in memory and drops their warnings, but writes them only
     // with the run's `fix`
     [
@@ -451,13 +386,6 @@ describe('defineConfig validation', () => {
     ],
   ])('throws a TypeError on %j', async (options, message) => {
     await expect(build(options)).rejects.toThrow(new TypeError(`${PREFIX}: ${message}`))
-  })
-
-  it.each([
-    ['__proto__', JSON.parse('{"__proto__": true}') as object],
-    ['[Symbol(unknown)]', { [Symbol('unknown')]: true }],
-  ])('rejects unknown or non-plain options at %s', async (subject, options) => {
-    await expect(build(options)).rejects.toThrow(`${PREFIX}: \`${subject}\`:`)
   })
 
   it('keeps a valid override as it is', async () => {
@@ -501,15 +429,6 @@ describe('defineConfig validation', () => {
       { 'selector-pseudo-class-no-unknown': pseudoClasses },
       { 'selector-pseudo-class-no-unknown': [null] },
     ])
-  })
-
-  it("throws when root isn't an existing folder", async () => {
-    await using project = await withTmpProject('stylelint-config-root', { 'a.css': '' })
-    for (const root of [path.join(project.dir, 'missing'), path.join(project.dir, 'a.css')]) {
-      await expect(build({ root })).rejects.toThrow(
-        new TypeError(`${PREFIX}: \`root\`: path \`${root}\` isn't a folder`),
-      )
-    }
   })
 })
 

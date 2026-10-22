@@ -37,7 +37,7 @@ describe('upstream workarounds', () => {
       }),
       fixed(
         'cosmiconfig masking awaited export errors',
-        'the README note on exporting without `await`, and the promise exports of the recipes and the tailwind-theme validation fixtures',
+        "the README note on exporting without `await`, and the promise exports of the recipes and of consumer.test.ts's rejected-option fixtures",
       ),
     ).rejects.toMatchObject({ code: 'ERR_REQUIRE_ASYNC_MODULE' })
   })
@@ -177,7 +177,7 @@ describe('upstream workarounds', () => {
       stdout.trim(),
       fixed(
         "postcss-markdown's loading by name",
-        'MARKDOWN_HTML_SYNTAXES in src/internal/file-types.ts',
+        'MARKDOWN_SYNTAXES in src/internal/file-types.ts',
       ),
     ).toBe('fake postcss-html')
   })

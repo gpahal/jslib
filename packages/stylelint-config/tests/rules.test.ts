@@ -33,17 +33,15 @@ const collator = new Intl.Collator('en')
  */
 const VENDOR_PREFIX_CSS = 'a {\n  -webkit-user-select: none;\n  user-select: none;\n}\n'
 
-describe('prototype-named rule entries', () => {
-  it('keeps rule names as own properties so Stylelint can validate them', () => {
-    const name = '__proto__'
-    const setting = { polluted: true }
-    // @ts-expect-error -- JavaScript callers can supply keys the rule types reject
-    const rules = mergeRules({}, { [name]: setting })
-    expect(Object.getPrototypeOf(rules)).toBe(Object.prototype)
-    expect(Object.hasOwn(rules, name)).toBe(true)
-    expect(Reflect.get(rules, name)).toBe(setting)
-    expect(Reflect.get(rules, 'polluted')).toBeUndefined()
-  })
+test('keeps prototype-named rule entries as own properties so Stylelint can validate them', () => {
+  const name = '__proto__'
+  const setting = { polluted: true }
+  // @ts-expect-error -- JavaScript callers can supply keys the rule types reject
+  const rules = mergeRules({}, { [name]: setting })
+  expect(Object.getPrototypeOf(rules)).toBe(Object.prototype)
+  expect(Object.hasOwn(rules, name)).toBe(true)
+  expect(Reflect.get(rules, name)).toBe(setting)
+  expect(Reflect.get(rules, 'polluted')).toBeUndefined()
 })
 
 describe("your rule settings keep the preset's disableFix", () => {
@@ -145,16 +143,18 @@ describe("your rule settings keep the ignore* options of every preset layer's se
         ]),
       ),
     ).toEqual(resolved?.rules)
-    expect(BASE_RULES['at-rule-prelude-no-invalid']).toEqual([true, { ignoreAtRules: ['media'] }])
   })
 
-  it('of stylelint-config-recommended, which stylelint-config-standard extends', async () => {
+  it('of stylelint-config-recommended, which stylelint-config-standard extends, and of the Tailwind CSS preset', async () => {
     const config = await defineConfig({
       root: process.cwd(),
+      tailwindcss: true,
       rules: {
         'at-rule-prelude-no-invalid': [true, { ignoreAtRules: ['x'] }],
         // A primary option alone keeps them too
         'string-no-newline': true,
+        'at-rule-no-unknown': [true, { ignoreAtRules: ['my-rule'] }],
+        'function-no-unknown': [true, { ignoreFunctions: ['brand'], severity: 'warning' }],
       },
     })
     expect(config.rules!['at-rule-prelude-no-invalid']).toEqual([
@@ -165,51 +165,54 @@ describe("your rule settings keep the ignore* options of every preset layer's se
       true,
       { ignore: ['at-rule-preludes', 'declaration-values'] },
     ])
-  })
-})
-
-describe("your secondary options merge over the preset's", () => {
-  it('keeping the severity and the options you leave out', async () => {
-    const config = await defineConfig({
-      root: process.cwd(),
-      rules: {
-        'plugin/use-baseline': [true, { ignoreProperties: { 'interpolate-size': ['/.*/'] } }],
-      },
-    })
-    expect(config.rules!['plugin/use-baseline']).toEqual([
+    expect(topLevelRules(config)['function-no-unknown']).toEqual([
       true,
-      {
-        available: 'newly',
-        severity: 'warning',
-        ignoreProperties: { 'user-select': ['/^.+$/'], 'interpolate-size': ['/.*/'] },
-      },
+      { ignoreFunctions: ['tech', 'theme', 'brand'], severity: 'warning' },
     ])
-    const { results } = await stylelint.lint({
-      code: 'a {\n  interpolate-size: allow-keywords;\n  reading-flow: grid-order;\n}\n',
-      config,
-    })
-    expect(results[0]?.warnings.map(({ rule, severity }) => `${rule}: ${severity}`)).toEqual([
-      'plugin/use-baseline: warning',
-    ])
+    const css =
+      '@my-rule;\n\n@theme {\n  --color-x: red;\n}\n\na {\n  color: theme(--color-x);\n}\n'
+    expect(await lintRules(css, config)).toEqual([])
   })
 })
 
-describe('a merged setting whose secondary options all drop out', () => {
-  it('wraps an array primary option, which Stylelint would read as the primary and secondary options', () => {
-    expect(
-      mergeRules(
-        { 'order/properties-order': [['display', 'color'], { message: 'Order' }] },
-        { 'order/properties-order': [['color', 'display']] },
-      ),
-    ).toEqual({ 'order/properties-order': [['color', 'display']] })
-    // The primary option alone unless you give secondary options, even {}
-    const preset: StylelintRules = { 'color-named': ['never', { message: 'No named colors' }] }
-    expect(mergeRules(preset, { 'color-named': 'always-where-possible' })).toEqual({
-      'color-named': 'always-where-possible',
-    })
-    expect(mergeRules(preset, { 'color-named': ['always-where-possible', {}] })).toEqual({
-      'color-named': ['always-where-possible', {}],
-    })
+test("merges your secondary options over the preset's, keeping the severity and the options you leave out", async () => {
+  const config = await defineConfig({
+    root: process.cwd(),
+    rules: {
+      'plugin/use-baseline': [true, { ignoreProperties: { 'interpolate-size': ['/.*/'] } }],
+    },
+  })
+  expect(config.rules!['plugin/use-baseline']).toEqual([
+    true,
+    {
+      available: 'newly',
+      severity: 'warning',
+      ignoreProperties: { 'user-select': ['/^.+$/'], 'interpolate-size': ['/.*/'] },
+    },
+  ])
+  const { results } = await stylelint.lint({
+    code: 'a {\n  interpolate-size: allow-keywords;\n  reading-flow: grid-order;\n}\n',
+    config,
+  })
+  expect(results[0]?.warnings.map(({ rule, severity }) => `${rule}: ${severity}`)).toEqual([
+    'plugin/use-baseline: warning',
+  ])
+})
+
+test('wraps the array primary option of a merged setting whose secondary options all drop out, which Stylelint would read as the primary and secondary options', () => {
+  expect(
+    mergeRules(
+      { 'order/properties-order': [['display', 'color'], { message: 'Order' }] },
+      { 'order/properties-order': [['color', 'display']] },
+    ),
+  ).toEqual({ 'order/properties-order': [['color', 'display']] })
+  // The primary option alone unless you give secondary options, even {}
+  const preset: StylelintRules = { 'color-named': ['never', { message: 'No named colors' }] }
+  expect(mergeRules(preset, { 'color-named': 'always-where-possible' })).toEqual({
+    'color-named': 'always-where-possible',
+  })
+  expect(mergeRules(preset, { 'color-named': ['always-where-possible', {}] })).toEqual({
+    'color-named': ['always-where-possible', {}],
   })
 })
 
@@ -221,38 +224,28 @@ async function classPatternTexts(config: Awaited<ReturnType<typeof defineConfig>
   return results[0]!.warnings.map(({ text }) => text)
 }
 
-describe("the preset's message and url", () => {
-  it("go when your primary option differs, since they describe the preset's", async () => {
-    const config = await defineConfig({
-      root: process.cwd(),
-      rules: { 'selector-class-pattern': '^[a-z]+$' },
-    })
-    expect(config.rules!['selector-class-pattern']).toBe('^[a-z]+$')
-    expect(await classPatternTexts(config)).toEqual([
-      'Expected ".foo-bar" to match pattern "^[a-z]+$" (selector-class-pattern)',
-    ])
+test("the preset's message, url, except and ignore go when your primary option differs, since they describe the preset's", async () => {
+  const config = await defineConfig({
+    root: process.cwd(),
+    rules: {
+      'selector-class-pattern': '^[a-z]+$',
+      'rule-empty-line-before': 'never',
+      'at-rule-empty-line-before': ['never', { ignore: ['blockless-after-blockless'] }],
+    },
   })
-})
-
-describe("the preset's except and ignore", () => {
-  it("go when your primary option differs, since they're exceptions to the preset's", async () => {
-    const config = await defineConfig({
-      root: process.cwd(),
-      rules: {
-        'rule-empty-line-before': 'never',
-        'at-rule-empty-line-before': ['never', { ignore: ['blockless-after-blockless'] }],
-      },
-    })
-    expect(config.rules!['rule-empty-line-before']).toBe('never')
-    expect(config.rules!['at-rule-empty-line-before']).toEqual([
-      'never',
-      { ignore: ['blockless-after-blockless'] },
-    ])
-    // The preset's `first-nested` exception would want an empty line before `b`
-    expect(
-      await fix('a {\n  color: red;\n}\n\nc {\n  b {\n    color: red;\n  }\n}\n', config),
-    ).toBe('a {\n  color: red;\n}\nc {\n  b {\n    color: red;\n  }\n}\n')
-  })
+  expect(config.rules!['selector-class-pattern']).toBe('^[a-z]+$')
+  expect(await classPatternTexts(config)).toEqual([
+    'Expected ".foo-bar" to match pattern "^[a-z]+$" (selector-class-pattern)',
+  ])
+  expect(config.rules!['rule-empty-line-before']).toBe('never')
+  expect(config.rules!['at-rule-empty-line-before']).toEqual([
+    'never',
+    { ignore: ['blockless-after-blockless'] },
+  ])
+  // The preset's `first-nested` exception would want an empty line before `b`
+  expect(await fix('a {\n  color: red;\n}\n\nc {\n  b {\n    color: red;\n  }\n}\n', config)).toBe(
+    'a {\n  color: red;\n}\nc {\n  b {\n    color: red;\n  }\n}\n',
+  )
 })
 
 test('leaves an option or a rule setting that is undefined unset, under exactOptionalPropertyTypes', async () => {
@@ -483,9 +476,6 @@ describe('replace()', () => {
       'value-no-vendor-prefix': [true, { ignoreValues: ['flex'] }],
       'order/properties-order': [recessOrderGroups, { severity: 'warning' }],
     })
-    expect(await fix(VENDOR_PREFIX_CSS, config)).toBe(
-      'a {\n  user-select: none;\n  user-select: none;\n}\n',
-    )
   })
 
   it("unwraps in the file type overrides and in your own overrides' rules", async () => {

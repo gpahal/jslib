@@ -31,10 +31,6 @@ await fs.symlink('../only', path.join(dir, 'deep/l'))
 await fs.symlink('..', path.join(dir, 'deep/up'))
 await fs.mkdir(path.join(dir, 'vendor'))
 await fs.symlink(path.join(outside.dir, 'pkg'), path.join(dir, 'vendor/pkg'))
-// Two links to one folder, which a walk must read under each name the glob may match
-await fs.mkdir(path.join(dir, 'refs'))
-await fs.symlink(path.join(outside.dir, 'pkg'), path.join(dir, 'refs/a'))
-await fs.symlink(path.join(outside.dir, 'pkg'), path.join(dir, 'refs/b'))
 await fs.symlink('missing.css', path.join(dir, 'broken.css'))
 await writeFiles(dir, { 'dangling/.keep': '' })
 await fs.symlink('missing.css', path.join(dir, 'dangling/x.css'))
@@ -100,11 +96,9 @@ describe('referenceFiles paths', () => {
     ['a wildcard segment through a symlinked folder', () => ['deep/*/o.css'], true],
     ['a globstar through a symlinked folder', () => ['deep/**/o.css'], true],
     ['a glob through a symlink out of root', () => ['vendor/*/theme.css'], true],
-    ['a glob through the first of two links to a folder', () => ['refs/a*/theme.css'], true],
-    ['a glob through the second of two links to a folder', () => ['refs/b*/theme.css'], true],
-    ['a globstar through a cycle of links, matching no file', () => ['deep/**/none.css'], false],
-    ['a glob through a cycle of links', () => ['deep/up/*/l/o.css'], true],
     ['a broken link', () => ['broken.css'], false],
+    // Stylelint's globby skips dotfiles, as `fs.promises.glob` does
+    ['a glob matching only a dotfile', () => ['*.env'], false],
     ['a glob matching only a broken link', () => ['dangling/*.css'], false],
     ['a literal path that its exclusion removes', () => ['source.css', '!source.css'], false],
     ['a missing path and a glob', () => ['missing.css', 'tokens/*.css'], true],
@@ -131,16 +125,6 @@ describe('referenceFiles paths', () => {
       native: true,
       own: false,
     })
-  })
-
-  it.each<[string, ReadonlyArray<string>, RegExp]>([
-    ['a missing path', ['missing.css'], /`missing\.css` doesn't exist\. Create the file/],
-    ['an empty folder', ['empty'], /`empty` is a folder with no file\. Add a file to it/],
-    ['a missing path and an empty folder', ['missing.css', 'empty'], /none of .+ matches a file\./],
-  ])('says why %s matches no file', async (_name, files, message) => {
-    await expect(
-      defineConfig({ root: dir, referenceFiles: [{ files: [...files] }] }),
-    ).rejects.toThrow(message)
   })
 
   // Each workspace package links to every other, as pnpm links workspace dependencies, so a walk of

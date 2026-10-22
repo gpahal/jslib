@@ -229,15 +229,14 @@ describe('CFF fonts', () => {
     expect(moved).toEqual(copy)
   })
 
-  it.each([['shorter than 6 bytes', 4, 4, 'its `maxp` table fails to parse']])(
-    'rejects a maxp table at the end of the file that is %s',
-    async (_, size, length, error) => {
-      const moved = moveTableToEnd(await readBytes(CFF_REGULAR_PATH), 'maxp')
-      const cut = moved.slice(0, moved.length - 6 + size)
-      setTableRecord(cut, 'maxp', { length })
-      await expect(getRejection(getCustomFallbacks(cut))).resolves.toEqual(expectFontError(error))
-    },
-  )
+  it('rejects a maxp table at the end of the file that is shorter than 6 bytes', async () => {
+    const moved = moveTableToEnd(await readBytes(CFF_REGULAR_PATH), 'maxp')
+    const cut = moved.slice(0, -2)
+    setTableRecord(cut, 'maxp', { length: 4 })
+    await expect(getRejection(getCustomFallbacks(cut))).resolves.toEqual(
+      expectFontError('its `maxp` table fails to parse'),
+    )
+  })
 })
 
 describe('rejected files', () => {

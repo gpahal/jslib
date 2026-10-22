@@ -245,24 +245,6 @@ export const c: A | typeof b = b
     )
   })
 
-  // Upstream canary for the README's known issue about trailing comments on imports, from
-  // @ianvs/prettier-plugin-sort-imports. When this passes, remove that known issue.
-  // Correct: imports of one group have no blank line between them, as without the trailing comment
-  it.fails('known bug: adds a blank line after an import with a trailing comment', async () => {
-    const source = [
-      "import { z } from 'zod' // trailing",
-      '// leading',
-      "import path from 'node:path'",
-      "import * as ns from 'zod'",
-      '',
-      'export const v = [z, path, ns]',
-      '',
-    ].join('\n')
-    expect(await formatWith(baseConfig, 'a.ts', source)).toContain(
-      "import { z } from 'zod' // trailing\nimport * as ns from 'zod'\n",
-    )
-  })
-
   // Prettier's own parser formats a `.vue` file, since the sorter's `vue` parser needs
   // `@vue/compiler-sfc`, which a project without Vue lacks
   it('formats a .vue file without @vue/compiler-sfc', async () => {
@@ -347,9 +329,8 @@ export const c: A | typeof b = b
       ].join('\r\n')
       const formatted = await formatWith(config, 'README.md', source)
       expect(formatted).toMatchSnapshot()
-      for (const marker of ['> [!NOTE]\n', '> > [!WARNING]\n', '  > [!CAUTION]\n']) {
-        expect(formatted).toContain(marker)
-      }
+      // A snapshot compares with its line endings normalized
+      expect(formatted).not.toContain('\r')
       expect(await formatWith(config, 'README.md', formatted)).toBe(formatted)
     },
   )

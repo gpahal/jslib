@@ -25,6 +25,7 @@ import { createIgnoreCheck, IgnoreLayers } from '@/internal/walk'
 
 import {
   BUILD_DIR,
+  captureWarnings,
   collator,
   CORE_AREAS_OFF_SOURCE,
   createESLint,
@@ -187,11 +188,8 @@ describe('packageJson area', () => {
     }
   })
 
-  it('is on by default, leaves sorting to Prettier, and is off with packageJson: false', async () => {
+  it('is off with packageJson: false', async () => {
     const manifest = '{\n  "version": "1.0.0",\n  "dependencies": { "b": "1", "a": "1" }\n}\n'
-    const messages = await lintText(await createESLint('json'), 'pkg/package.json', manifest)
-    expect(messages).toContainEqual(expect.stringMatching(/^package-json\/require-name: /))
-    expect(messages).not.toContainEqual(expect.stringMatching(/sort-collections/))
     const off = await createESLint('json', { packageJson: false })
     expect(await lintText(off, 'pkg/package.json', manifest)).toEqual([])
   })
@@ -279,8 +277,7 @@ describe('ignores', () => {
     })
     expect(await added.isPathIgnored('src/generated/index.js')).toBe(true)
     expect(await added.isPathIgnored('dist/index.js')).toBe(true)
-    const globs: ReadonlyArray<string> = Object.freeze(['**/generated'])
-    const replaced = await createESLint(tmpDir, { typeAware: false, ignores: globs })
+    const replaced = await createESLint(tmpDir, { typeAware: false, ignores: ['**/generated'] })
     expect(await replaced.isPathIgnored('src/generated/index.js')).toBe(true)
     expect(await replaced.isPathIgnored('dist/index.js')).toBe(false)
   })
@@ -380,8 +377,7 @@ describe('git ignore rules', () => {
   // ESLint's minimatch matches a segment of `n` wildcards in time that grows with the name to the
   // power of `n`: 24 wildcards on 200 characters hung ESLint, where git takes 5 ms
   it('skip a rule with more than 3 `*` wildcards in a path segment, and warn of its line once', async () => {
-    const emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined)
-    try {
+    const warnings = await captureWarnings(async () => {
       const slow = `${'a*'.repeat(8)}b`
       const kept = `${'a*'.repeat(3)}c`
       await using project = await withProject({
@@ -400,15 +396,13 @@ describe('git ignore rules', () => {
       )
       expect(ms).toBeLessThan(100)
       expect(gitignores.flatMap(({ ignores }) => ignores)).toEqual([`**/${kept}`])
-      expect(emitWarning.mock.calls).toEqual([
-        [
-          "@gpahal/eslint-config: `gitignore`: `src/.gitignore`: the rules on lines 2 and 5 have more than 3 `*` wildcards in one path segment, which can take ESLint seconds per path to match, so they're skipped. Use at most 3, as in `*.log`",
-          { code: 'GPAHAL_GITIGNORE_WILDCARDS' },
-        ],
-      ])
-    } finally {
-      emitWarning.mockRestore()
-    }
+    })
+    expect(warnings).toEqual([
+      [
+        "@gpahal/eslint-config: `gitignore`: `src/.gitignore`: the rules on lines 2 and 5 have more than 3 `*` wildcards in one path segment, which can take ESLint seconds per path to match, so they're skipped. Use at most 3, as in `*.log`",
+        'GPAHAL_GITIGNORE_WILDCARDS',
+      ],
+    ])
   })
 
   it('keeps the braces of a `.gitignore` literal, as git does, so a huge range expands to nothing', async () => {
@@ -949,8 +943,6 @@ console.log(JSON.stringify(results))
 `
 
 /**
- * The areas that the configs of child processes turn off, since these tests check only fatal
- * messages, and loading the areas makes up most of the time a fresh process takes to build a config
  * An `eslint.config.mjs` that loads the build's `defineConfig` with `options`, a string of
  * JavaScript
  */

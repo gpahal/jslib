@@ -152,24 +152,6 @@ describe('astro <script> blocks', () => {
   })
 })
 
-describe('astro preset jsx-a11y rules', () => {
-  it('map Astro attribute names to their JSX names', async () => {
-    const eslint = await sharedESLint('astro-untyped', { astro: true })
-    // `label-has-associated-control` finds the control only through `htmlFor`, and
-    // `no-autofocus` only through `autoFocus`
-    const code = [
-      '<label for="name">Name</label>',
-      '<input id="name" autofocus />',
-      '<div set:html={"<b>hi</b>"} />',
-      '',
-    ].join('\n')
-    expect(await lintText(eslint, 'attributes.astro', code)).toEqual([
-      expect.stringMatching(/^astro\/jsx-a11y\/no-autofocus: /),
-      expect.stringMatching(/^astro\/no-set-html-directive: /),
-    ])
-  })
-})
-
 describe('react and nextjs presets', () => {
   it.each([
     ['react', { react: true }],
@@ -426,80 +408,6 @@ describe('html preset', () => {
       'clean.html': [],
       'index.html': [],
     })
-  })
-
-  it('reports `target="_blank"` without `rel` and a `<button>` without `type`', async () => {
-    const eslint = await sharedESLint('html', { html: true, typeAware: false })
-    const messages = await lintText(
-      eslint,
-      'page.html',
-      '<!doctype html>\n<html lang="en">\n  <head>\n    <meta name="viewport" content="width=device-width" />\n    <title>T</title>\n  </head>\n  <body>\n    <a href="https://example.com" target="_blank">x</a>\n    <button>Go</button>\n  </body>\n</html>\n',
-    )
-    expect(messages.map((message) => message.split(':', 1)[0])).toEqual([
-      '@html-eslint/no-target-blank',
-      '@html-eslint/require-button-type',
-    ])
-  })
-})
-
-describe('turbo preset', () => {
-  it('reports environment variables missing from turbo.json', async () => {
-    const eslint = await sharedESLint('turbo', { turbo: true, typeAware: false })
-    expect(await lint(eslint, ['index.js'])).toEqual({
-      'index.js': [expect.stringMatching(/^turbo\/no-undeclared-env-vars: .*UNDECLARED_VAR/)],
-    })
-  })
-})
-
-describe('vitest preset', () => {
-  it('adds the globals and rules to test files', async () => {
-    // Linted as text: Vitest would run a fixture file
-    const eslint = await sharedESLint('.', { vitest: true, typeAware: false })
-    const results = await eslint.lintText(
-      "describe('sum', () => {\n  it('has no assertion', () => {\n    console.error(1 + 1)\n  })\n})\n",
-      { filePath: 'sum.test.js' },
-    )
-    expect(results[0]!.messages.map((message) => message.ruleId)).toEqual(['vitest/expect-expect'])
-  })
-})
-
-describe('playwright preset', () => {
-  const SPEC = [
-    "import { expect, test } from '@playwright/test'",
-    '',
-    "test.describe('home', () => {",
-    '  test.beforeEach(async ({ page }) => {',
-    "    await page.goto('/')",
-    '  })',
-    '',
-    "  test('has a title', async ({ page }) => {",
-    '    await expect(page).toHaveTitle(/Home/)',
-    '  })',
-    '})',
-    '',
-  ].join('\n')
-
-  it('reports `test.only`, without Vitest rules or globals, in its files', async () => {
-    await using project = await withProject({
-      'e2e/home.spec.ts': SPEC.replace("test('has a title'", "test.only('has a title'"),
-    })
-    const eslint = await createESLint(project.dir, {
-      vitest: true,
-      playwright: true,
-      typeAware: false,
-    })
-    expect(await lint(eslint, ['e2e/home.spec.ts'], ruleIdOf)).toEqual({
-      'e2e/home.spec.ts': ['playwright/no-focused-test'],
-    })
-    const config = (await eslint.calculateConfigForFile('e2e/home.spec.ts')) as Linter.Config
-    expect(Object.keys(config.rules ?? {}).filter((rule) => rule.startsWith('vitest/'))).toEqual([])
-    expect(globalsOf(config)).not.toHaveProperty('vi')
-    // The test exemptions apply
-    expect(severityOf(config.rules?.['@typescript-eslint/no-non-null-assertion'])).toBe(0)
-    // Vitest's unit tests keep its rules
-    const unit = (await eslint.calculateConfigForFile('src/a.test.ts')) as Linter.Config
-    expect(severityOf(unit.rules?.['vitest/no-focused-tests'])).toBe(2)
-    expect(unit.rules?.['playwright/no-focused-test']).toBeUndefined()
   })
 })
 

@@ -1,16 +1,11 @@
 import process from 'node:process'
 
-// Compiled by the package's `typecheck`, not run. Stylelint still exports `CoreRules`, which it
-// marks internal, and the rule types still take each rule's options from it
+// Compiled by the package's `typecheck`, not run. The rule types still take each rule's options
+// from Stylelint's `CoreRules`, which it marks internal
 
-import type { Config, CoreRules } from 'stylelint'
+import type { Config } from 'stylelint'
 
 import { defineConfig, replace, type Replaced, type StylelintRules } from '@/index'
-
-/**
- * A rule only Stylelint has, so it's typed only through `CoreRules`
- */
-export const hasCoreRule: 'color-no-hex' extends keyof CoreRules ? true : false = true
 
 export const typedPrimaryOption: StylelintRules = { 'number-max-precision': 4 }
 

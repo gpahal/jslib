@@ -129,25 +129,65 @@ function createCountingSource(count: number): {
   return { source: generate(), state }
 }
 
-test.each<[string, (fn: () => unknown, signal: AbortSignal) => Promise<unknown>]>([
-  ['mutex.runExclusive', async (fn, signal) => createMutex().runExclusive(fn, { signal })],
+const abortableCalls: ReadonlyArray<
+  [string, (fn: () => never, signal: AbortSignal) => Promise<unknown>]
+> = [
+  [
+    'mutex.runExclusive',
+    async (fn, signal) => {
+      const mutex = createMutex()
+      try {
+        return await mutex.runExclusive(fn, { signal })
+      } finally {
+        // It doesn't take the lock
+        expect(mutex.isLocked).toBe(false)
+      }
+    },
+  ],
   ['sleep', async (_fn, signal) => sleep(10, { signal })],
+  ['sleepWithWakeup', async (_fn, signal) => sleepWithWakeup(10, { signal }).promise],
   ['withTimeout', async (fn, signal) => withTimeout(fn, 10, { signal })],
   ['mapLimit', async (fn, signal) => mapLimit([1], 1, fn, { signal })],
-])('%s rejects with an AbortError when a pre-aborted signal has no reason', async (_name, call) => {
-  const fn = vi.fn<() => void>()
-  // @ts-expect-error - Not an `AbortSignal`, but shaped like one
-  const signal: AbortSignal = {
-    aborted: true,
-    reason: undefined,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-  }
-  const error = await getRejection(call(fn, signal))
-  expect(error).toBeInstanceOf(DOMException)
-  expect(error).toHaveProperty('name', 'AbortError')
-  expect(fn).not.toHaveBeenCalled()
-})
+  ['retry', async (fn, signal) => retry(fn, { signal })],
+  [
+    'mapLimitIterable',
+    async (fn, signal) => {
+      const { source, state } = createCountingSource(3)
+      try {
+        return await collect(mapLimitIterable(source, 1, fn, { signal }))
+      } finally {
+        // It doesn't read the source
+        expect(state.read).toBe(0)
+      }
+    },
+  ],
+]
+
+test.each(
+  abortableCalls.flatMap(([name, call]) => [
+    { name, call, reason: new Error('stop'), label: 'its reason' },
+    { name, call, reason: undefined, label: 'an AbortError without one' },
+  ]),
+)(
+  '$name with a pre-aborted signal rejects with $label, without calling fn or setting a timer',
+  async ({ call, reason }) => {
+    const fn = vi.fn<() => never>()
+    // @ts-expect-error - Not an `AbortSignal`, but shaped like one, since a real one replaces an
+    // `undefined` reason with an `AbortError`
+    const withoutReason: AbortSignal = {
+      aborted: true,
+      reason: undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }
+    const signal = reason === undefined ? withoutReason : AbortSignal.abort(reason)
+    expect(await getRejection(call(fn, signal))).toStrictEqual(
+      reason ?? new DOMException('This operation was aborted', 'AbortError'),
+    )
+    expect(fn).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  },
+)
 
 describe('createMutex', () => {
   it('runs fn asynchronously, even when the lock is free', async () => {
@@ -227,15 +267,6 @@ describe('createMutex', () => {
     first.release()
     await Promise.all([second, last])
     expect(events).toEqual(['second', 'last'])
-    expect(mutex.isLocked).toBe(false)
-  })
-
-  it('rejects right away with an already aborted signal, without taking the lock', async () => {
-    const mutex = createMutex()
-    const fn = vi.fn<() => void>()
-    const signal = AbortSignal.abort(new Error('stop'))
-    await expect(mutex.runExclusive(fn, { signal })).rejects.toThrow('stop')
-    expect(fn).not.toHaveBeenCalled()
     expect(mutex.isLocked).toBe(false)
   })
 
@@ -365,36 +396,32 @@ describe('createTrackedPromise', () => {
 
 describe('sleep', () => {
   it.each([
-    ['0.5', TypeError],
-    [null, TypeError],
-    [NaN, RangeError],
-    [2, RangeError],
-  ])('rejects the jitter ratio %s without scheduling a timer', async (jitterRatio, ErrorType) => {
-    const options = { jitterRatio: jitterRatio as number }
-    await expect(sleep(100, options)).rejects.toThrow(ErrorType)
-    await expect(sleepWithWakeup(100, options).promise).rejects.toThrow(ErrorType)
-    expect(vi.getTimerCount()).toBe(0)
-  })
+    ['0.5', TypeError, 'expected a number or `undefined`, received `"0.5"`'],
+    [null, TypeError, 'expected a number or `undefined`, received `null`'],
+    [NaN, RangeError, 'expected a number between 0 and 1, received `NaN`'],
+    [2, RangeError, 'expected a number between 0 and 1, received `2`'],
+  ])(
+    'rejects the jitter ratio %s without scheduling a timer',
+    async (jitterRatio, ErrorType, description) => {
+      const options = { jitterRatio: jitterRatio as number }
+      await expect(sleep(100, options)).rejects.toThrow(
+        new ErrorType(`@gpahal/std: \`sleep\`: \`options.jitterRatio\`: ${description}`),
+      )
+      await expect(sleepWithWakeup(100, options).promise).rejects.toThrow(
+        new ErrorType(`@gpahal/std: \`sleepWithWakeup\`: \`options.jitterRatio\`: ${description}`),
+      )
+      expect(vi.getTimerCount()).toBe(0)
+    },
+  )
 
   it('names the invalid value in its error', async () => {
     // @ts-expect-error - A string, as JavaScript callers can pass
     await expect(sleep('100')).rejects.toThrow(
       new TypeError('@gpahal/std: `sleep`: `ms`: expected a number, received `"100"`'),
     )
-    // @ts-expect-error - Not a number, as JavaScript callers can pass
-    await expect(sleep(1, { jitterRatio: null })).rejects.toThrow(
-      new TypeError(
-        '@gpahal/std: `sleep`: `options.jitterRatio`: expected a number or `undefined`, received `null`',
-      ),
-    )
     await expect(sleep(-1)).rejects.toThrow(
       new RangeError(
         '@gpahal/std: `sleep`: `ms`: expected a number between 0 and 2147483647, received `-1`',
-      ),
-    )
-    await expect(sleep(1, { jitterRatio: 2 })).rejects.toThrow(
-      new RangeError(
-        '@gpahal/std: `sleep`: `options.jitterRatio`: expected a number between 0 and 1, received `2`',
       ),
     )
   })
@@ -473,14 +500,12 @@ describe('sleepWithWakeup', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('rejects with the reason when the signal is aborted, even before the call', async () => {
+  it('rejects with the reason when the signal is aborted', async () => {
     const controller = new AbortController()
     const { promise } = sleepWithWakeup(10_000, { signal: controller.signal })
     expect(await isSettledAfter(promise, 10)).toBe(false)
     controller.abort(new Error('stop'))
     await expect(promise).rejects.toThrow('stop')
-    const early = sleepWithWakeup(10_000, { signal: AbortSignal.abort(new Error('early')) })
-    await expect(early.promise).rejects.toThrow('early')
     expect(vi.getTimerCount()).toBe(0)
   })
 
@@ -584,15 +609,6 @@ describe('withTimeout', () => {
     await expect(promise).rejects.toBe(reason)
     expect(received?.reason).toBe(reason)
     expect(getEventListeners(controller.signal, 'abort')).toEqual([])
-    expect(vi.getTimerCount()).toBe(0)
-  })
-
-  it('rejects with the reason of an already aborted signal without calling fn', async () => {
-    const fn = vi.fn<() => void>()
-    await expect(
-      withTimeout(fn, 1000, { signal: AbortSignal.abort(new Error('early')) }),
-    ).rejects.toThrow('early')
-    expect(fn).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
   })
 
@@ -747,43 +763,56 @@ describe('mapLimit', () => {
     expect(getEventListeners(signal, 'abort')).toEqual([])
   })
 
-  it('rejects with the reason of an already aborted signal without calling fn', async () => {
-    const fn = vi.fn<() => void>()
-    await expect(
-      mapLimit([1], 1, fn, { signal: AbortSignal.abort(new Error('early')) }),
-    ).rejects.toThrow('early')
-    expect(fn).not.toHaveBeenCalled()
-  })
-
-  it.each([
-    [0, RangeError],
-    [1.5, RangeError],
-    [NaN, RangeError],
-    ['2', TypeError],
-  ])('rejects the limit %s without calling fn', async (limit, ErrorType) => {
-    const fn = vi.fn<() => void>()
-    await expect(mapLimit([1], limit as number, fn)).rejects.toThrow(ErrorType)
-    expect(fn).not.toHaveBeenCalled()
-  })
-
-  it('rejects invalid arguments with the error shape', async () => {
-    await expect(mapLimit([1], 0, (item) => item)).rejects.toThrow(
+  it.each<[string, (fn: (item: unknown) => unknown) => Promise<unknown>, Error]>([
+    [
+      'a limit of 0',
+      async (fn) => mapLimit([1], 0, fn),
       new RangeError(
         '@gpahal/std: `mapLimit`: `limit`: expected a positive integer or `Infinity`, received `0`',
       ),
-    )
-    // @ts-expect-error - Not an iterable, as a JavaScript caller can pass
-    await expect(mapLimit({}, 1, (item) => item)).rejects.toThrow(
+    ],
+    [
+      'a fractional limit',
+      async (fn) => mapLimit([1], 1.5, fn),
+      new RangeError(
+        '@gpahal/std: `mapLimit`: `limit`: expected a positive integer or `Infinity`, received `1.5`',
+      ),
+    ],
+    [
+      'a NaN limit',
+      async (fn) => mapLimit([1], NaN, fn),
+      new RangeError(
+        '@gpahal/std: `mapLimit`: `limit`: expected a positive integer or `Infinity`, received `NaN`',
+      ),
+    ],
+    [
+      'a limit that is not a number',
+      // @ts-expect-error - A string, as a JavaScript caller can pass
+      async (fn) => mapLimit([1], '2', fn),
+      new TypeError('@gpahal/std: `mapLimit`: `limit`: expected a number, received `"2"`'),
+    ],
+    [
+      'items that are not iterable',
+      // @ts-expect-error - Not an iterable, as a JavaScript caller can pass
+      async (fn) => mapLimit({}, 1, fn),
       new TypeError('@gpahal/std: `mapLimit`: `items`: expected an iterable, received an object'),
-    )
-    // @ts-expect-error - Not an object, as a JavaScript caller can pass
-    await expect(mapLimit([1], 1, (item) => item, null)).rejects.toThrow(
+    ],
+    [
+      'options that are not an object',
+      // @ts-expect-error - Not an object, as a JavaScript caller can pass
+      async (fn) => mapLimit([1], 1, fn, null),
       new TypeError('@gpahal/std: `mapLimit`: `options`: expected an object, received `null`'),
-    )
-    // @ts-expect-error - Not a function, as a JavaScript caller can pass
-    await expect(mapLimit([1], 1, undefined)).rejects.toThrow(
+    ],
+    [
+      'an fn that is not a function',
+      // @ts-expect-error - Not a function, as a JavaScript caller can pass
+      async () => mapLimit([1], 1, undefined),
       new TypeError('@gpahal/std: `mapLimit`: `fn`: expected a function, received `undefined`'),
-    )
+    ],
+  ])('rejects %s without calling fn', async (_, call, error) => {
+    const fn = vi.fn<(item: unknown) => unknown>()
+    await expect(call(fn)).rejects.toThrow(error)
+    expect(fn).not.toHaveBeenCalled()
   })
 })
 
@@ -904,12 +933,8 @@ describe('retry', () => {
     expect(failing.mock.calls.length).toBeGreaterThan(5)
   })
 
-  it('passes the signal to fn and stops when it aborts, before, during a wait or during fn', async () => {
+  it('passes the signal to fn and stops when it aborts, during a wait or during fn', async () => {
     const reason = new Error('stop')
-    const fn = vi.fn<() => Promise<never>>()
-    await expect(retry(fn, { signal: AbortSignal.abort(reason) })).rejects.toBe(reason)
-    expect(fn).not.toHaveBeenCalled()
-
     const waiting = new AbortController()
     const signals: Array<AbortSignal> = []
     const duringWait = getRejection(
@@ -1077,16 +1102,8 @@ describe('mapLimitIterable', () => {
     expect(await iterator.next()).toEqual({ done: true, value: undefined })
   })
 
-  it('rejects with the reason when the signal aborts, before or during the iteration', async () => {
+  it('rejects with the reason when the signal aborts during the iteration', async () => {
     const reason = new Error('stop')
-    const fn = vi.fn((item: number) => item)
-    const { source, state } = createCountingSource(3)
-    await expect(
-      collect(mapLimitIterable(source, 1, fn, { signal: AbortSignal.abort(reason) })),
-    ).rejects.toBe(reason)
-    expect(fn).not.toHaveBeenCalled()
-    expect(state.read).toBe(0)
-
     const controller = new AbortController()
     const counting = createCountingSource(3)
     const rejection = getRejection(

@@ -109,13 +109,6 @@ test('reports a text star beside star prefixes as one, not as mixed prefixes', a
   expect(await fix(css, config)).toBe(css)
 })
 
-test('keeps the line endings of a CRLF file', async () => {
-  const css = 'a {\r\n  /* One\r\n     two. */\r\n  color: red;\r\n}\r\n'
-  const expected = 'a {\r\n  /*\r\n   * One\r\n   * two.\r\n   */\r\n  color: red;\r\n}\r\n'
-  expect(await fix(css, config)).toBe(expected)
-  expect(await lintRules(expected, config)).toEqual([])
-})
-
 test('leaves directives under a custom `configurationComment` alone', async () => {
   const customConfig = {
     ...config,

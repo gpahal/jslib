@@ -2,17 +2,12 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import stylelint, { type Config } from 'stylelint'
-import { compile } from 'tailwindcss'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
 import { defineConfig } from '@/index'
 
-import { topLevelRules } from './helpers'
-
-const TAILWIND_DIR = await fs.realpath(
-  path.join(import.meta.dirname, '../node_modules/tailwindcss'),
-)
+import { linkTailwind, tailwindProblemOf } from './helpers'
 
 const ENTRY = [
   "@import 'tailwindcss';",
@@ -66,10 +61,8 @@ const project = await withTmpProject('stylelint-config-tailwind-apply', {
   // Tailwind would read `.env` as CSS, and its parse error would print the secret
   'secret/global.css': "@import 'tailwindcss';\n@import './secret.env';\n",
   'secret/secret.env': 'API_KEY={ topsecret\n',
-  'capped/global.css': "@import 'tailwindcss';\n",
 })
-await fs.mkdir(path.join(project.dir, 'node_modules'), { recursive: true })
-await fs.symlink(TAILWIND_DIR, path.join(project.dir, 'node_modules/tailwindcss'))
+await linkTailwind(project.dir)
 await fs.mkdir(path.join(project.dir, 'linked-entry'))
 await fs.symlink('../shared/entry.css', path.join(project.dir, 'linked-entry/global.css'))
 
@@ -81,19 +74,10 @@ afterAll(async () => {
  * Whether Tailwind's `compile()` takes `@apply <candidate>` after `@import 'tailwindcss'`
  */
 async function tailwindApplies(candidate: string): Promise<boolean> {
-  try {
-    await compile(`@import 'tailwindcss';\n.t {\n  @apply ${candidate};\n}\n`, {
-      base: TAILWIND_DIR,
-      loadStylesheet: async (id: string) => {
-        if (id !== 'tailwindcss') throw new Error(`Can't resolve '${id}'`)
-        const file = path.join(TAILWIND_DIR, 'index.css')
-        return { path: file, base: TAILWIND_DIR, content: await fs.readFile(file, 'utf8') }
-      },
-    })
-    return true
-  } catch {
-    return false
-  }
+  return (
+    (await tailwindProblemOf(`@import 'tailwindcss';\n.t {\n  @apply ${candidate};\n}\n`)) ===
+    undefined
+  )
 }
 
 /**
@@ -222,19 +206,6 @@ describe('tailwindcss.validateApply', () => {
     } finally {
       await fs.writeFile(components, before)
     }
-  })
-
-  it('is off by default, and in Markdown', async () => {
-    const off = await defineConfig({
-      root: project.dir,
-      tailwindcss: { entryPoint: 'src/global.css' },
-    })
-    expect(topLevelRules(off)).not.toHaveProperty('@gpahal/tailwind-apply')
-    expect(await reportsOf('.a {\n  @apply nope;\n}\n', off)).toEqual([])
-    expect(topLevelRules(config)).toHaveProperty('@gpahal/tailwind-apply', true)
-    expect(
-      await reportsOf('# A\n\n```css\n.a {\n  @apply nope;\n}\n```\n', config, 'a.md'),
-    ).toEqual([])
   })
 
   it('throws when Tailwind fails to compile the entry point, with the error as the cause', async () => {

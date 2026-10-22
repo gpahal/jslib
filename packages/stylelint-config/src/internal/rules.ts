@@ -48,8 +48,8 @@ type RuleSettings<P, S extends object> =
   | Replaced<ConfigRuleSettings<P, SecondaryOptions<S>>>
 
 /**
- * Stylelint's own rules. `CoreRules` is marked internal, so `tests/rule-types.test-d.ts` fails if an
- * upgrade stops exporting it
+ * Stylelint's own rules. `CoreRules` is marked internal, so the package's typecheck fails if an
+ * upgrade stops exporting it, and `tests/rule-types.test-d.ts` if it stops typing their options
  */
 type CoreRuleSettings = {
   [K in keyof CoreRules]?: RuleSettings<

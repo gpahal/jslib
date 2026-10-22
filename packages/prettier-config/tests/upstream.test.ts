@@ -6,13 +6,16 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { format, type Options } from 'prettier'
+import { format, resolveConfig, type Config, type Options } from 'prettier'
 
 import { runNode, withTmpProject } from '@gpahal/internal/node/testing'
 
+import { defineConfig } from '@/index'
 import { resolveSortImportsPlugin } from '@/internal/plugins'
 
 const require = createRequire(import.meta.url)
+
+const baseConfig = defineConfig({ root: path.resolve(import.meta.dirname, '..') })
 
 const PRETTIER_BIN = path.join(
   path.dirname(require.resolve('prettier/package.json')),
@@ -52,6 +55,21 @@ function moduleUrl(id: string): string {
 async function runPrettier(file: string, cwd: string) {
   const { status, stdout, stderr } = await runNode([PRETTIER_BIN, file], { cwd })
   return status === 0 ? { ok: true, output: stdout } : { ok: false, output: stderr }
+}
+
+/**
+ * Formats like a project whose Prettier config file exports `config`: `overrides` apply only
+ * through a config file. Every plugin the preset adds is a path, which JSON can hold
+ */
+async function formatWith(config: Config, filename: string, source: string) {
+  await using project = await withTmpProject('prettier-config', {
+    '.prettierrc.json': JSON.stringify(config),
+  })
+  const filepath = path.join(project.dir, filename)
+  const options = await resolveConfig(filepath, {
+    config: path.join(project.dir, '.prettierrc.json'),
+  })
+  return await format(source, { ...options, filepath })
 }
 
 describe('upstream workarounds', () => {
@@ -262,6 +280,24 @@ describe('upstream known issues', () => {
     ).toBe('{\n  "name": "a",\n  "version": "1.0.0"\n}\n')
     expect(await format('{"name":"a","scripts":{"b":"1","b":"2"}}', options), message).toBe(
       '{\n  "name": "a",\n  "scripts": {\n    "b": "2"\n  }\n}\n',
+    )
+  })
+
+  // Upstream canary for the README's known issue about trailing comments on imports, from
+  // @ianvs/prettier-plugin-sort-imports. When this passes, remove that known issue.
+  // Correct: imports of one group have no blank line between them, as without the trailing comment
+  it.fails('known bug: adds a blank line after an import with a trailing comment', async () => {
+    const source = [
+      "import { z } from 'zod' // trailing",
+      '// leading',
+      "import path from 'node:path'",
+      "import * as ns from 'zod'",
+      '',
+      'export const v = [z, path, ns]',
+      '',
+    ].join('\n')
+    expect(await formatWith(baseConfig, 'a.ts', source)).toContain(
+      "import { z } from 'zod' // trailing\nimport * as ns from 'zod'\n",
     )
   })
 })
