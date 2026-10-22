@@ -14,6 +14,8 @@ import {
   toError,
 } from '@/errors'
 
+import { minCpuMs } from './cpu-time'
+
 describe('assertNever', () => {
   it('throws a TypeError that describes the value, or with the given message', () => {
     expect(() => assertNever({ kind: 'triangle' } as never)).toThrow(
@@ -433,9 +435,12 @@ describe('describeValue', () => {
   it('describes a bigint of more than 10,000 bits by its size, without writing its digits', () => {
     expect(describeValue(2n ** 10_000n - 1n)).toMatch(/^`1\d{39}…n`$/)
     expect(describeValue(-(2n ** 10_000n))).toBe('a negative 10001-bit bigint')
-    const start = performance.now()
-    expect(describeValue(2n ** 20_000_000n)).toBe('a 20000001-bit bigint')
-    expect(performance.now() - start).toBeLessThan(500)
+    const big = 2n ** 20_000_000n
+    expect(describeValue(big)).toBe('a 20000001-bit bigint')
+    // Against writing it in hexadecimal, which is linear. Writing its digits in decimal takes over
+    // 100 times as long
+    const [describeMs = 0, hexMs = 0] = minCpuMs([() => describeValue(big), () => big.toString(16)])
+    expect(describeMs).toBeLessThan(4 * hexMs + 50)
   })
 })
 
@@ -463,6 +468,20 @@ describe('formatNames', () => {
         `@gpahal/std: \`formatNames\`: ${subject}: expected ${expected}, received ${described}`,
       ),
     )
+  })
+
+  it.each([
+    [5, '`5`'],
+    ['nor', '`"nor"`'],
+  ])('throws a TypeError for the conjunction %o, even with one name', (conjunction, described) => {
+    for (const names of [['a', 'b'], ['a']]) {
+      // @ts-expect-error - Not a conjunction, as a JavaScript caller can pass
+      expect(() => formatNames(names, { conjunction })).toThrow(
+        new TypeError(
+          `@gpahal/std: \`formatNames\`: \`options.conjunction\`: expected \`"and"\`, \`"or"\` or \`undefined\`, received ${described}`,
+        ),
+      )
+    }
   })
 })
 

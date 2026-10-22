@@ -963,6 +963,8 @@ describe('interfaces that merge declarations', () => {
     ['src/global.ts', true],
     ['src/a.d.ts', false],
     ['src/b.d.ts', true],
+    // A declaration file's namespace members are exported without `export`, so they can merge
+    ['src/c.d.ts', true],
   ])('treat `%s` as a module whose interfaces other files see: %s', (filename, isVisible) => {
     const patchedFixes = patchUnsafeFixes(
       [{ plugins: { '@typescript-eslint': tseslint.plugin } }],
@@ -974,6 +976,7 @@ describe('interfaces that merge declarations', () => {
           "import type { B } from './b'\n\ninterface Local {\n  b: B\n}\n\nexport type All = Local\n\nexport {}\n",
         'src/b.d.ts':
           "import type { B } from './b'\n\ninterface Local {\n  b: B\n}\n\nexport type All = Local\n",
+        'src/c.d.ts': 'export namespace Api {\n  interface Local {\n    a: number\n  }\n}\n',
         'README.md/0.ts':
           'interface Local {\n  a: number\n}\n\nexport const local: Local = { a: 1 }\n',
       }[filename] ?? 'interface Local {\n  a: number\n}\n\nconst local: Local = { a: 1 }\n'

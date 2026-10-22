@@ -111,6 +111,23 @@ describe('debounce', () => {
       ),
     ],
     [() => debounce(() => 1, 100, { maxWaitMs: NaN }), RangeError],
+    [
+      // @ts-expect-error - JavaScript callers can pass anything
+      () => debounce(() => 1, '100'),
+      new TypeError('@gpahal/std: `debounce`: `waitMs`: expected a number, received `"100"`'),
+    ],
+    [
+      // @ts-expect-error - JavaScript callers can pass anything
+      () => throttle(() => 1, null),
+      new TypeError('@gpahal/std: `throttle`: `waitMs`: expected a number, received `null`'),
+    ],
+    [
+      // @ts-expect-error - JavaScript callers can pass anything
+      () => debounce(() => 1, 100, { maxWaitMs: '200' }),
+      new TypeError(
+        '@gpahal/std: `debounce`: `options.maxWaitMs`: expected a number or `undefined`, received `"200"`',
+      ),
+    ],
   ])('throws for invalid arguments, case %#', (call, error) => {
     expect(call).toThrow(error)
   })

@@ -10,7 +10,7 @@ import { ASTRO_FILES, ASTRO_SCRIPT_FILES, TYPED_CODE_EXTNS_WITH_DOT } from '@/in
 import { withSetup } from '@/internal/naming'
 import { importPeers, interopDefault, isInstalledIn } from '@/internal/peers'
 import type { TypedConfig, TypedRules } from '@/internal/types'
-import { formatErrorMessage, warnOfSetup } from '@/internal/utils'
+import { formatErrorMessage, warnOfSetupOnce } from '@/internal/utils'
 
 /**
  * The `astro/jsx-a11y/*` rules also need eslint-plugin-jsx-a11y-x where ESLint runs, which
@@ -32,16 +32,15 @@ function checkJsxA11y(dir: string): boolean {
   if (packages.some((name) => isInstalledIn(name, dir))) {
     return true
   }
-  if (!warnedJsxA11yDirs.has(dir)) {
-    warnedJsxA11yDirs.add(dir)
-    warnOfSetup(
-      formatErrorMessage(
-        [formatNames(['astro'])],
-        `${formatNames(packages, { conjunction: 'or' })} isn't installed where ESLint runs, ${formatNames([dir])}, so the \`astro/jsx-a11y/*\` rules are off. Install it as a dev dependency there, as in \`${formatInstallCommand(['eslint-plugin-jsx-a11y-x'], dir)}\``,
-      ),
-      'GPAHAL_ASTRO_JSX_A11Y_MISSING',
-    )
-  }
+  warnOfSetupOnce(
+    warnedJsxA11yDirs,
+    dir,
+    formatErrorMessage(
+      [formatNames(['astro'])],
+      `${formatNames(packages, { conjunction: 'or' })} isn't installed where ESLint runs, ${formatNames([dir])}, so the \`astro/jsx-a11y/*\` rules are off. Install it as a dev dependency there, as in \`${formatInstallCommand(['eslint-plugin-jsx-a11y-x'], dir)}\``,
+    ),
+    'GPAHAL_ASTRO_JSX_A11Y_MISSING',
+  )
   return false
 }
 

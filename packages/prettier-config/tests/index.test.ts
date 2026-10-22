@@ -369,6 +369,53 @@ describe('mergeConfigs', () => {
     ).toEqual([modulePath('prettier-plugin-merge')])
   })
 
+  it('names a plugin outside node_modules by its nearest package.json, stopping at an invalid one', async () => {
+    await using project = await withTmpProject('prettier-config-linked', {
+      'tailwind/package.json': `\u{FEFF}${JSON.stringify({ name: 'prettier-plugin-tailwindcss' })}`,
+      'tailwind/dist/index.mjs': '',
+      'classnames/package.json': JSON.stringify({ name: 'prettier-plugin-classnames' }),
+      'classnames/broken/package.json': '{',
+      'classnames/broken/index.js': '',
+    })
+    const tailwind = path.join(project.dir, 'tailwind/dist/index.mjs')
+    const broken = path.join(project.dir, 'classnames/broken/index.js')
+    expect(mergeConfigs({ plugins: [tailwind, broken, 'a'] }).plugins).toEqual([
+      broken,
+      'a',
+      tailwind,
+    ])
+  })
+
+  it("matches a resolved path to its name only in defineConfig's configs, whatever ran before", async () => {
+    await using project = await withTmpProject('prettier-config-plugin-names', {
+      'node_modules/prettier-plugin-example/package.json': JSON.stringify({
+        name: 'prettier-plugin-example',
+        main: 'index.js',
+      }),
+      'node_modules/prettier-plugin-example/index.js': '',
+    })
+    const name = 'prettier-plugin-example'
+    const pluginPath = await fs.realpath(path.join(project.dir, 'node_modules', name, 'index.js'))
+    const mergeUnrelated = () => mergeConfigs({ plugins: [pluginPath] }, { plugins: [name] })
+    const before = mergeUnrelated()
+    expect(before.plugins).toEqual([pluginPath, name])
+
+    const config = defineConfig({
+      root: project.dir,
+      sortImports: false,
+      options: { plugins: [name] },
+    })
+    expect(config.plugins).toContain(pluginPath)
+    expect(mergeUnrelated()).toEqual(before)
+
+    // The config that `defineConfig` returned, and merges of it, keep the plugin once
+    const merged = mergeConfigs(config, { plugins: [name] })
+    const examplePlugins = (plugins: Config['plugins']) =>
+      plugins?.filter((plugin) => plugin === pluginPath || plugin === name)
+    expect(examplePlugins(merged.plugins)).toEqual([pluginPath])
+    expect(examplePlugins(mergeConfigs({ plugins: [name] }, merged).plugins)).toEqual([name])
+  })
+
   it.each([
     [
       [{}, { overrides: [{ files: '*.ts', options: { plugins: [1] } }] }],
@@ -543,7 +590,7 @@ describe('plugin resolution', () => {
       warns
         ? [
             [
-              `${PREFIX}: \`prettier\`: Prettier ${version} is older than the 3.9 this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`pnpm add -D prettier@^3.9\``,
+              `${PREFIX}: \`prettier\`: version ${version} is older than the 3.9 this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`pnpm add -D prettier@^3.9\``,
               { code: 'GPAHAL_PRETTIER_OLD_PRETTIER' },
             ],
           ]
@@ -707,7 +754,7 @@ describe('defineConfig validation', () => {
     expect(build({ root: project.dir, tailwindcss: { entryPoint: 'loop' } })).toThrow(
       expect.objectContaining({
         message: expect.stringContaining(
-          `${PREFIX}: \`tailwindcss.entryPoint\`: could not inspect path \`${loop}\``,
+          `${PREFIX}: \`tailwindcss.entryPoint\`: reading \`${loop}\` failed: `,
         ) as unknown,
         cause: expect.objectContaining({ code: 'ELOOP' }) as unknown,
       }),

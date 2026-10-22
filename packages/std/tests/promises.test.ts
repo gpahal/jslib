@@ -13,6 +13,7 @@ import {
   sleep,
   sleepWithWakeup,
   withTimeout,
+  type RetryOptions,
   type TrackedPromise,
 } from '@/promises'
 
@@ -72,8 +73,9 @@ function hold(
 }
 
 /**
- * The promises reported as unhandled rejections while `run` runs, with real timers. Unhandled
- * rejections are reported after the microtasks, so a timer after `run` waits for them
+ * The promises reported as unhandled rejections while `run` runs, with real timers. Node reports
+ * unhandled rejections once the microtasks drain, before the next macrotask, so `setImmediate`
+ * waits for them
  */
 async function getUnhandledRejections(run: () => Promise<void>): Promise<Array<Promise<unknown>>> {
   vi.useRealTimers()
@@ -85,7 +87,7 @@ async function getUnhandledRejections(run: () => Promise<void>): Promise<Array<P
   try {
     await run()
     await new Promise((resolve) => {
-      setTimeout(resolve, 10)
+      setImmediate(resolve)
     })
   } finally {
     process.off('unhandledRejection', onUnhandled)
@@ -362,21 +364,32 @@ describe('createTrackedPromise', () => {
 })
 
 describe('sleep', () => {
-  it.each(['0.5', null, NaN, 2])(
-    'rejects the jitter ratio %s without scheduling a timer',
-    async (jitterRatio) => {
-      const options = { jitterRatio: jitterRatio as number }
-      await expect(sleep(100, options)).rejects.toThrow(RangeError)
-      await expect(sleepWithWakeup(100, options).promise).rejects.toThrow(RangeError)
-      expect(vi.getTimerCount()).toBe(0)
-    },
-  )
+  it.each([
+    ['0.5', TypeError],
+    [null, TypeError],
+    [NaN, RangeError],
+    [2, RangeError],
+  ])('rejects the jitter ratio %s without scheduling a timer', async (jitterRatio, ErrorType) => {
+    const options = { jitterRatio: jitterRatio as number }
+    await expect(sleep(100, options)).rejects.toThrow(ErrorType)
+    await expect(sleepWithWakeup(100, options).promise).rejects.toThrow(ErrorType)
+    expect(vi.getTimerCount()).toBe(0)
+  })
 
-  it('names the invalid value in its RangeError', async () => {
+  it('names the invalid value in its error', async () => {
     // @ts-expect-error - A string, as JavaScript callers can pass
     await expect(sleep('100')).rejects.toThrow(
+      new TypeError('@gpahal/std: `sleep`: `ms`: expected a number, received `"100"`'),
+    )
+    // @ts-expect-error - Not a number, as JavaScript callers can pass
+    await expect(sleep(1, { jitterRatio: null })).rejects.toThrow(
+      new TypeError(
+        '@gpahal/std: `sleep`: `options.jitterRatio`: expected a number or `undefined`, received `null`',
+      ),
+    )
+    await expect(sleep(-1)).rejects.toThrow(
       new RangeError(
-        '@gpahal/std: `sleep`: `ms`: expected a number between 0 and 2147483647, received `"100"`',
+        '@gpahal/std: `sleep`: `ms`: expected a number between 0 and 2147483647, received `-1`',
       ),
     )
     await expect(sleep(1, { jitterRatio: 2 })).rejects.toThrow(
@@ -606,6 +619,10 @@ describe('withTimeout', () => {
       ),
     )
     await expect(withTimeout(fn, MAX_TIMER_DELAY_MS + 1)).rejects.toThrow(RangeError)
+    // @ts-expect-error - Not a number, as a JavaScript caller can pass
+    await expect(withTimeout(fn, 10n)).rejects.toThrow(
+      new TypeError('@gpahal/std: `withTimeout`: `ms`: expected a number, received `10n`'),
+    )
     // @ts-expect-error - Not an `AbortSignal`, as a JavaScript caller can pass
     await expect(withTimeout(fn, 10, { signal: {} })).rejects.toThrow(TypeError)
     // @ts-expect-error - Not a function, as a JavaScript caller can pass
@@ -738,9 +755,14 @@ describe('mapLimit', () => {
     expect(fn).not.toHaveBeenCalled()
   })
 
-  it.each([0, 1.5, NaN, '2'])('rejects the limit %s without calling fn', async (limit) => {
+  it.each([
+    [0, RangeError],
+    [1.5, RangeError],
+    [NaN, RangeError],
+    ['2', TypeError],
+  ])('rejects the limit %s without calling fn', async (limit, ErrorType) => {
     const fn = vi.fn<() => void>()
-    await expect(mapLimit([1], limit as number, fn)).rejects.toThrow(RangeError)
+    await expect(mapLimit([1], limit as number, fn)).rejects.toThrow(ErrorType)
     expect(fn).not.toHaveBeenCalled()
   })
 
@@ -918,7 +940,7 @@ describe('retry', () => {
     expect(await duringFn).toBe(reason)
   })
 
-  it.each<[Parameters<typeof retry>[1], ErrorConstructor, string]>([
+  it.each<[object, ErrorConstructor, string]>([
     [
       { retries: 1.5 },
       RangeError,
@@ -935,13 +957,28 @@ describe('retry', () => {
       '`options.factor`: expected a number of at least 1, received `0.5`',
     ],
     [
-      // @ts-expect-error - Not a function, as a JavaScript caller can pass
+      { retries: '2' },
+      TypeError,
+      '`options.retries`: expected a number or `undefined`, received `"2"`',
+    ],
+    [
+      { minDelayMs: null },
+      TypeError,
+      '`options.minDelayMs`: expected a number or `undefined`, received `null`',
+    ],
+    [
+      { jitterRatio: 1n },
+      TypeError,
+      '`options.jitterRatio`: expected a number or `undefined`, received `1n`',
+    ],
+    [
       { shouldRetry: true },
       TypeError,
       '`options.shouldRetry`: expected a function or `undefined`, received `true`',
     ],
   ])('rejects the invalid options %o', async (options, ErrorType, message) => {
-    await expect(retry(async () => 1, options)).rejects.toThrow(
+    // Not options of the right types, as a JavaScript caller can pass
+    await expect(retry(async () => 1, options as RetryOptions)).rejects.toThrow(
       new ErrorType(`@gpahal/std: \`retry\`: ${message}`),
     )
   })

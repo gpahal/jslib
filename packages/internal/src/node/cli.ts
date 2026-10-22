@@ -6,7 +6,7 @@
 
 import { styleText } from 'node:util'
 
-import { describeValue, formatMessage, getErrorMessage } from '@gpahal/std/errors'
+import { describeValue, formatMessage, getErrorMessage, getErrorReason } from '@gpahal/std/errors'
 import { escapeControls } from '@gpahal/std/strings'
 
 import { readJsonFile } from '@/node/json'
@@ -23,7 +23,10 @@ export async function readPackageVersion(prefix: string, manifestUrl: URL): Prom
   try {
     manifest = readJsonFile(manifestUrl)
   } catch (error) {
-    throw new Error(formatMessage(prefix, ['`package.json`'], 'failed to read'), { cause: error })
+    throw new Error(
+      formatMessage(prefix, ['`package.json`'], `reading it failed: ${getErrorReason(error)}`),
+      { cause: error },
+    )
   }
   const version: unknown =
     typeof manifest === 'object' && manifest !== null ? Reflect.get(manifest, 'version') : undefined

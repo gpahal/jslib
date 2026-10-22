@@ -182,16 +182,22 @@ describe('upstream workarounds', () => {
     ).toBe('fake postcss-html')
   })
 
-  it("fs.globSync: a wildcard segment doesn't match through a symlinked folder", async () => {
+  it("fs.promises.glob: a wildcard segment doesn't match through a symlinked folder", async () => {
     await using project = await withTmpProject('stylelint-config-glob-links', {
       'only/o.css': 'a {}\n',
     })
     fs.mkdirSync(path.join(project.dir, 'deep'))
     fs.symlinkSync('../only', path.join(project.dir, 'deep/l'))
+    // Not `Array.fromAsync`, which is newer than the ES2024 lib
+    const iterator = fs.promises.glob('deep/*/o.css', { cwd: project.dir })[Symbol.asyncIterator]()
+    const matches: Array<string> = []
+    for (let step = await iterator.next(); step.done !== true; step = await iterator.next()) {
+      matches.push(step.value)
+    }
     expect(
-      fs.globSync('deep/*/o.css', { cwd: project.dir }),
+      matches,
       fixed(
-        "fs.globSync's skipping of symlinked folders",
+        "fs.promises.glob's skipping of symlinked folders",
         'matchesThroughFolderLinks and walkFolder in src/internal/paths.ts, and the README note on the walk',
       ),
     ).toEqual([])

@@ -30,13 +30,6 @@ const browserDocument: unknown = Reflect.get(globalThis, 'document')
  */
 export const hasDocument: boolean = browserDocument != null
 
-/**
- * Whether a global `document` exists. Despite its name, it's `false` in workers
- *
- * @deprecated Use {@link hasDocument}, which this equals, or {@link isWebWorker}.
- */
-export const isBrowser: boolean = browserDocument != null
-
 function isWorkerGlobalScope(): boolean {
   const WorkerGlobalScope: unknown = Reflect.get(globalThis, 'WorkerGlobalScope')
   if (typeof WorkerGlobalScope !== 'function') {

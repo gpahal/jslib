@@ -226,6 +226,11 @@ describe('GPAHAL_FILES_OUTSIDE_TSCONFIG', () => {
       scripts(2),
       { ignores: (defaults) => [...defaults, 'scripts'] },
     ],
+    [
+      'the ignores leave the files out with a leading `./`, which ESLint drops',
+      scripts(2),
+      { ignores: (defaults) => [...defaults, './scripts/**'] },
+    ],
   ])("doesn't warn when %s", async (_name, files, options) => {
     await using project = await withProject({ ...BASE, ...files })
     expect(outsideWarnings(project.dir, options)).toEqual([])

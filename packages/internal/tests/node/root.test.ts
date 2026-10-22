@@ -42,21 +42,21 @@ test('wraps an error reading the path, with the error as the cause', async () =>
   )
 })
 
-test.each([fsSync.constants.X_OK])(
-  'rejects a folder without access %s, keeping the cause',
-  async (denied) => {
-    await using project = await withTmpProject('internal-root')
-    const cause = Object.assign(new Error('permission denied'), { code: 'EACCES' })
-    const accessSync = fsSync.accessSync
-    using _access = vi.spyOn(fsSync, 'accessSync').mockImplementation((file, mode) => {
-      if (file === project.dir && ((mode ?? 0) & denied) !== 0) throw cause
-      accessSync(file, mode)
-    })
-    expect(() => checkRoot(PREFIX, project.dir)).toThrow(
-      expect.objectContaining({
-        message: `${PREFIX}: \`root\`: reading \`${project.dir}\` failed: permission denied`,
-        cause,
-      }),
-    )
-  },
-)
+test.each([
+  { access: 'read', denied: fsSync.constants.R_OK },
+  { access: 'search', denied: fsSync.constants.X_OK },
+])('rejects a folder without $access access, keeping the cause', async ({ denied }) => {
+  await using project = await withTmpProject('internal-root')
+  const cause = Object.assign(new Error('permission denied'), { code: 'EACCES' })
+  const accessSync = fsSync.accessSync
+  using _access = vi.spyOn(fsSync, 'accessSync').mockImplementation((file, mode) => {
+    if (file === project.dir && ((mode ?? 0) & denied) !== 0) throw cause
+    accessSync(file, mode)
+  })
+  expect(() => checkRoot(PREFIX, project.dir)).toThrow(
+    expect.objectContaining({
+      message: `${PREFIX}: \`root\`: reading \`${project.dir}\` failed: permission denied`,
+      cause,
+    }),
+  )
+})

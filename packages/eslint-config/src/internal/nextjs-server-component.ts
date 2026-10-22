@@ -83,6 +83,50 @@ function isTypeofOperand(ancestors: Array<ESTree.Node>): boolean {
 }
 
 /**
+ * A browser global, or `globalThis`, which reads them as properties
+ */
+function isChecked(name: string): boolean {
+  return BROWSER_GLOBALS.has(name) || name === 'globalThis'
+}
+
+function getPropertyName(node: ESTree.MemberExpression): string | undefined {
+  const { property } = node
+  if (!node.computed && property.type === 'Identifier') {
+    return property.name
+  }
+  if (property.type === 'TemplateLiteral' && property.expressions.length === 0) {
+    return property.quasis[0]?.value.cooked ?? undefined
+  }
+  return property.type === 'Literal' && typeof property.value === 'string'
+    ? property.value
+    : undefined
+}
+
+/**
+ * The member that reads a browser global from `globalThis`, through type assertions, as in
+ * `globalThis.window` or `(globalThis as any).document`, named as `globalThis.window`. Pops
+ * `ancestors` up to the member's parent
+ */
+function getGlobalThisRead(
+  identifier: ESTree.Identifier,
+  ancestors: Array<ESTree.Node>,
+): { node: ESTree.MemberExpression; name: string } | undefined {
+  let child: ESTree.Node = identifier
+  let parent = ancestors.pop()
+  while (parent !== undefined && TYPE_WRAPPER_TYPES.has(parent.type)) {
+    child = parent
+    parent = ancestors.pop()
+  }
+  if (parent?.type !== 'MemberExpression' || parent.object !== child) {
+    return undefined
+  }
+  const name = getPropertyName(parent)
+  return name !== undefined && BROWSER_GLOBALS.has(name)
+    ? { node: parent, name: `globalThis.${name}` }
+    : undefined
+}
+
+/**
  * As `useState()` or `React.useState()`
  */
 function getClientHookName(node: ESTree.CallExpression): string | undefined {
@@ -107,10 +151,10 @@ function isValueReference(reference: Scope.Reference): boolean {
 
 /**
  * In an App Router server entry or route handler without `'use client'`, reports a browser global
- * that Node lacks, except under `typeof`, and a client-only hook call. In an `error` or
- * `global-error` file, reports the missing directive. With `ignoresBrowserGlobals`, for `server`
- * files, globals are left to `@gpahal/no-browser-globals`. No fix: moving the code or the file to
- * the client is the author's call
+ * that Node lacks, also read from the global `globalThis`, except under `typeof`, and a client-only
+ * hook call. In an `error` or `global-error` file, reports the missing directive. With
+ * `ignoresBrowserGlobals`, for `server` files, globals are left to `@gpahal/no-browser-globals`.
+ * No fix: moving the code or the file to the client is the author's call
  */
 export const nextjsServerComponent: Rule.RuleModule = {
   meta: {
@@ -183,26 +227,28 @@ export const nextjsServerComponent: Rule.RuleModule = {
         // A defined global resolves to its variable, and an undefined one stays in `through`
         const references = [
           ...globalScope.variables
-            .filter((variable) => BROWSER_GLOBALS.has(variable.name) && variable.defs.length === 0)
+            .filter((variable) => isChecked(variable.name) && variable.defs.length === 0)
             .flatMap((variable) => variable.references),
-          ...globalScope.through.filter((reference) =>
-            BROWSER_GLOBALS.has(reference.identifier.name),
-          ),
+          ...globalScope.through.filter((reference) => isChecked(reference.identifier.name)),
         ].toSorted((a, b) => (a.identifier.range?.[0] ?? 0) - (b.identifier.range?.[0] ?? 0))
         for (const reference of references) {
           const { identifier } = reference
-          if (
-            // A JSX element's name, such as `<Image />`, names a component
-            identifier.type !== 'Identifier' ||
-            !isValueReference(reference) ||
-            isTypeofOperand(sourceCode.getAncestors(identifier))
-          ) {
+          // A JSX element's name, such as `<Image />`, names a component
+          if (identifier.type !== 'Identifier' || !isValueReference(reference)) {
+            continue
+          }
+          const ancestors = sourceCode.getAncestors(identifier)
+          const read =
+            identifier.name === 'globalThis'
+              ? getGlobalThisRead(identifier, ancestors)
+              : { node: identifier, name: identifier.name }
+          if (read === undefined || isTypeofOperand(ancestors)) {
             continue
           }
           context.report({
-            node: identifier,
+            node: read.node,
             messageId: isRoute ? 'routeBrowserGlobal' : 'browserGlobal',
-            data: { name: identifier.name },
+            data: { name: read.name },
           })
         }
       },

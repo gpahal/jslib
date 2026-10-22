@@ -4,6 +4,7 @@
 
 import { describeValue } from '@/internal/describe'
 import { stdMessage } from '@/internal/message'
+import { checkNumber } from '@/internal/options'
 
 /**
  * `value` limited to the range from `min` to `max`, both included. A `NaN` value gives `NaN`. An
@@ -19,10 +20,11 @@ import { stdMessage } from '@/internal/message'
  * ```
  */
 export function clamp(value: number, min: number, max: number): number {
-  // Inline checks rather than a loop over arrays, which would allocate on every call
-  checkNumber('`value`', value)
-  checkNumber('`min`', min)
-  checkNumber('`max`', max)
+  // Inline checks rather than a loop over arrays, which would allocate on every call. Without the
+  // type checks, a bigint throws a raw error and a string is coerced
+  checkNumber('`clamp`', '`value`', value)
+  checkNumber('`clamp`', '`min`', min)
+  checkNumber('`clamp`', '`max`', max)
   checkBound('`min`', min)
   checkBound('`max`', max)
   if (min > max) {
@@ -36,21 +38,13 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
 }
 
-/**
- * Without it, a bigint throws a raw error and a string is coerced
- */
-function checkNumber(name: string, input: unknown): void {
-  if (typeof input !== 'number') {
-    throw new TypeError(
-      stdMessage(['`clamp`', name], `expected a number, received ${describeValue(input)}`),
-    )
-  }
-}
-
 function checkBound(name: string, bound: number): void {
   if (Number.isNaN(bound)) {
     throw new RangeError(
-      stdMessage(['`clamp`', name], `expected a number, received ${describeValue(bound)}`),
+      stdMessage(
+        ['`clamp`', name],
+        `expected a number other than \`NaN\`, received ${describeValue(bound)}`,
+      ),
     )
   }
 }

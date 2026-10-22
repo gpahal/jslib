@@ -448,8 +448,12 @@ describe('resolved addresses', () => {
   it.each([
     '169.254.169.254',
     '::ffff:a9fe:a9fe',
-    // NAT64 and 6to4 forms of private IPv4 addresses
+    '192.0.0.1',
+    '240.0.0.1',
+    // NAT64, local-use NAT64, SIIT and 6to4 forms of private IPv4 addresses
     '64:ff9b::7f00:1',
+    '64:ff9b:1::a9fe:a9fe',
+    '::ffff:0:a9fe:a9fe',
     '2002:ac1f:ffff::',
   ])('rejects a host that resolves to %s, without fetching it', async (address) => {
     const fetchMock = stubFetch(() => fontResponse(font))
@@ -464,7 +468,7 @@ describe('resolved addresses', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it.each(['172.32.0.1', '64:ff9b::808:808'])(
+  it.each(['172.32.0.1', '198.18.0.1', '64:ff9b::808:808'])(
     'fetches a host that resolves to %s',
     async (address) => {
       const fetchMock = stubFetch(() => fontResponse(font))

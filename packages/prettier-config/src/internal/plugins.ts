@@ -274,7 +274,7 @@ export function warnOfPrettierVersion(
     formatMessage(
       PREFIX,
       ['`prettier`'],
-      `Prettier ${version} is older than the ${minMajor}.${minMinor} this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`${formatInstallCommand([`prettier@^${minMajor}.${minMinor}`], dir ?? process.cwd())}\``,
+      `version ${version} is older than the ${minMajor}.${minMinor} this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`${formatInstallCommand([`prettier@^${minMajor}.${minMinor}`], dir ?? process.cwd())}\``,
     ),
     'GPAHAL_PRETTIER_OLD_PRETTIER',
   )

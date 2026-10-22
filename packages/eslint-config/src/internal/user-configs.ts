@@ -29,6 +29,7 @@ import {
   rebaseGlob,
   splitGlobs,
   unescapeGlob,
+  withoutLeadingDotSlash,
 } from '@/internal/globs'
 import { AREA_RULE_PREFIXES, PLUGIN_AREAS, type AreaName } from '@/internal/names'
 import {
@@ -979,7 +980,8 @@ function checkUntypedOnlyRules(
   const basePath =
     typeof config.basePath === 'string' ? path.resolve(kinds.root, config.basePath) : kinds.root
   // A glob relative to another `basePath` is classified as the `root`-relative globs it stands for
-  const kindOf = (glob: string): UntypedKind | undefined => {
+  const kindOf = (rawGlob: string): UntypedKind | undefined => {
+    const glob = withoutLeadingDotSlash(rawGlob)
     const rebased = basePath === kinds.root ? [glob] : rebaseGlob(glob, basePath, kinds.root)
     const rebasedKinds = rebased.map((item) => getUntypedKind(subjects, item, kinds))
     return rebasedKinds.every((kind) => kind !== undefined) ? rebasedKinds[0] : undefined
@@ -1287,12 +1289,12 @@ export function rescopeUserConfig(
   config: TypedConfig,
   source: UserConfigSource,
   original: TypedConfig,
-  context: Pick<UserConfigContext, 'allowFormattingRules'> & ScopeContext,
+  context: Pick<UserConfigContext, 'allowFormattingRules' | 'root'> & ScopeContext,
 ): Array<TypedConfig> {
   checkUserConfig(
     config,
     source,
-    { allowFormattingRules: context.allowFormattingRules },
+    { allowFormattingRules: context.allowFormattingRules, root: context.root },
     { original, isUnscoped: isUnscoped(config) },
   )
   return scopeUserConfig(config, source, context)

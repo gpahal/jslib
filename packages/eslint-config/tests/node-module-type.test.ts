@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 
 import { assertBuildIsCurrent, runNodeOk } from '@gpahal/internal/node/testing'
 
-import { BUILD_DIR, withProject } from './helpers'
+import { BUILD_DIR, CORE_AREAS_OFF_SOURCE, withProject } from './helpers'
 
 // The child process can't load the TypeScript sources, so it uses the build
 beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
@@ -27,7 +27,7 @@ const { ESLint } = await import(eslintUrl)
 const eslint = new ESLint({
   cwd: process.cwd(),
   overrideConfigFile: true,
-  overrideConfig: await defineConfig({ root: process.cwd(), node: true, packageJson: false }),
+  overrideConfig: await defineConfig({ root: process.cwd(), node: true, ${CORE_AREAS_OFF_SOURCE} }),
 })
 const results = await eslint.lintFiles(['.'])
 const messages = results.flatMap((result) =>

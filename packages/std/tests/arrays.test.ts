@@ -194,6 +194,16 @@ describe('chunk', () => {
       ),
     )
   })
+
+  it.each<[unknown, string]>([
+    ['2', '`"2"`'],
+    [2n, '`2n`'],
+    [undefined, '`undefined`'],
+  ])('throws a TypeError for a size of %o', (size, described) => {
+    expect(() => chunk([1], size as number)).toThrow(
+      new TypeError(`@gpahal/std: \`chunk\`: \`size\`: expected a number, received ${described}`),
+    )
+  })
 })
 
 describe('partition', () => {

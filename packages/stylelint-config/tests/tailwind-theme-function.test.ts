@@ -20,10 +20,20 @@ const ENTRY =
 
 const PREFIXED_ENTRY = "@import 'tailwindcss' prefix(tw);\n\n@theme {\n  --color-brand: red;\n}\n"
 
+/**
+ * An entry whose `a.css` resets the colors before `b.css` defines one
+ */
+const IMPORTS_ENTRY = "@import 'tailwindcss';\n@import './a.css';\n@import './b.css';\n"
+const IMPORTED_RESET =
+  '@theme {\n  --color-*: initial;\n}\n\n.a {\n  color: theme(--color-brand);\n}\n'
+
 const project = await withTmpProject('stylelint-config-theme-function', {
   'src/global.css': ENTRY,
   'prefixed/global.css': PREFIXED_ENTRY,
   'plugin/global.css': `${ENTRY}\n@plugin './plugin.js';\n`,
+  'imports/global.css': IMPORTS_ENTRY,
+  'imports/a.css': IMPORTED_RESET,
+  'imports/b.css': '@theme {\n  --color-brand: red;\n}\n',
 })
 await fs.mkdir(path.join(project.dir, 'node_modules'))
 await fs.symlink(TAILWIND_DIR, path.join(project.dir, 'node_modules/tailwindcss'))
@@ -33,16 +43,18 @@ afterAll(async () => {
 })
 
 /**
- * Tailwind's error for `css`, or `undefined` when it compiles
+ * Tailwind's error for `css`, whose relative imports resolve from `base`, or `undefined` when it
+ * compiles
  */
-async function tailwindErrorOf(css: string): Promise<string | undefined> {
+async function tailwindErrorOf(css: string, base = TAILWIND_DIR): Promise<string | undefined> {
   try {
     await compile(css, {
-      base: TAILWIND_DIR,
-      loadStylesheet: async (id: string) => {
-        if (id !== 'tailwindcss') throw new Error(`Can't resolve '${id}'`)
-        const file = path.join(TAILWIND_DIR, 'index.css')
-        return { path: file, base: TAILWIND_DIR, content: await fs.readFile(file, 'utf8') }
+      base,
+      loadStylesheet: async (id: string, from: string) => {
+        if (id !== 'tailwindcss' && !id.startsWith('./')) throw new Error(`Can't resolve '${id}'`)
+        const file =
+          id === 'tailwindcss' ? path.join(TAILWIND_DIR, 'index.css') : path.resolve(from, id)
+        return { path: file, base: path.dirname(file), content: await fs.readFile(file, 'utf8') }
       },
     })
     return undefined
@@ -112,6 +124,15 @@ describe('@gpahal/tailwind-theme-function', () => {
       '@media (width >= theme(--breakpoint-nope)) {\n  .a {\n    color: red;\n  }\n}\n',
       'Unexpected unknown theme variable "--breakpoint-nope" in "theme()"',
     ],
+    // Resets after the reference files' definitions
+    [
+      `@theme {\n  --color-brand: initial;\n}\n\n${colorOf('theme(--color-brand)')}`,
+      'Unexpected unknown theme variable "--color-brand" in "theme()"',
+    ],
+    [
+      `@theme {\n  --color-*: initial;\n}\n\n${colorOf('theme(--color-red-500)')}`,
+      'Unexpected unknown theme variable "--color-red-500" in "theme()"',
+    ],
   ])('reports what fails Tailwind, in %j', async (code, message) => {
     expect(await tailwindErrorOf(`${ENTRY}\n${code}`)).toMatch(/^Could not resolve value/)
     expect(await reportsOf(code)).toEqual([message])
@@ -126,6 +147,10 @@ describe('@gpahal/tailwind-theme-function', () => {
     '@theme {\n  --color-own: red;\n}\n\n.a {\n  color: theme(--color-own);\n}\n',
     // Tailwind evaluates functions only in these preludes, and its own at-rules'
     '@media (width >= theme(--breakpoint-md)) {\n  .a {\n    color: red;\n  }\n}\n',
+    `@theme {\n  --color-*: initial;\n  --color-brand: blue;\n}\n\n${colorOf('theme(--color-brand)')}`,
+    `@theme {\n  --color-*: initial;\n}\n\n${colorOf('theme(--color-red-500, red)')}`,
+    // `--font-*` keeps `--font-weight-*`
+    '@theme {\n  --font-*: initial;\n}\n\n.a {\n  font-weight: theme(--font-weight-bold);\n}\n',
   ])('takes what Tailwind compiles, in %j', async (code) => {
     expect(await tailwindErrorOf(`${ENTRY}\n${code}`)).toBeUndefined()
     expect(await reportsOf(code)).toEqual([])
@@ -144,6 +169,12 @@ describe('@gpahal/tailwind-theme-function', () => {
         'prefixed',
       ),
     ).toEqual(['Unexpected unknown theme variable "--tw-color-red-500" in "theme()"'])
+  })
+
+  // Its place among the reference files isn't known, so its resets remove only its own names
+  it('keeps the names of a reference file after the linted reference file resets them', async () => {
+    expect(await tailwindErrorOf(IMPORTS_ENTRY, path.join(project.dir, 'imports'))).toBeUndefined()
+    expect(await reportsOf(IMPORTED_RESET, 'imports', '../imports/a.css')).toEqual([])
   })
 
   // Tailwind turns the keys of a JavaScript theme into theme variables, as `colors.brand` into

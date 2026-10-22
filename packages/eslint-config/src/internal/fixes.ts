@@ -119,10 +119,49 @@ function isAstroNativeClass(context: Rule.RuleContext, descriptor: Rule.ReportDe
   )
 }
 
+const VALUE_WRAPPER_TYPES: ReadonlySet<string> = new Set([
+  'ParenthesizedExpression',
+  'TSAsExpression',
+  'TSNonNullExpression',
+  'TSSatisfiesExpression',
+  'TSTypeAssertion',
+])
+
+/**
+ * Whether `parent` can evaluate to the value of its child `node`, as a type assertion, a branch of
+ * a conditional or either side of a logical expression does
+ */
+function passesValue(node: ESTree.Node, parent: ESTree.Node): boolean {
+  if (parent.type === 'ConditionalExpression') {
+    return parent.test !== node
+  }
+  if (parent.type === 'SequenceExpression') {
+    return parent.expressions.at(-1) === node
+  }
+  if (parent.type === 'AssignmentExpression') {
+    return parent.operator === '=' && parent.right === node
+  }
+  return parent.type === 'LogicalExpression' || VALUE_WRAPPER_TYPES.has(parent.type)
+}
+
+/**
+ * Whether the value of `node`, through the expressions that pass it on, is an operand of `+`
+ */
+function isConcatenated(node: Rule.Node): boolean {
+  let child: Rule.Node = node
+  let { parent } = child
+  while (parent !== null && passesValue(child, parent)) {
+    child = parent
+    parent = child.parent
+  }
+  return parent?.type === 'BinaryExpression' && parent.operator === '+'
+}
+
 /**
  * A whitespace report that collapses the space between two classes of a plain, single-line string,
- * or trims one end. Template literals, concatenations and multi-line strings stay report-only,
- * since their whitespace can separate the classes they join
+ * or trims one end. Template literals, multi-line strings and strings concatenated, even through a
+ * conditional or logical expression, stay report-only, since their whitespace can separate the
+ * classes they join
  */
 function isClassListSpace(context: Rule.RuleContext, descriptor: Rule.ReportDescriptor): boolean {
   if (!('loc' in descriptor) || descriptor.fix == null) {
@@ -135,12 +174,10 @@ function isClassListSpace(context: Rule.RuleContext, descriptor: Rule.ReportDesc
   if (!isRuleNode(node) || node.type !== 'Literal' || typeof node.value !== 'string') {
     return false
   }
-  const { parent } = node
-  const isConcatenated = parent.type === 'BinaryExpression' && parent.operator === '+'
   const [literalStart, literalEnd] = rangeOf(node)
   const text = context.sourceCode.text.slice(literalStart, literalEnd)
   return (
-    !isConcatenated &&
+    !isConcatenated(node) &&
     !text.includes('\n') &&
     recordFix(descriptor.fix).every(
       ({ range, text: replacement }) =>
@@ -850,9 +887,12 @@ function isExportList(statement: ESTree.Node): boolean {
   }
 }
 
+const DECLARATION_FILE_REGEX = /\.d\.[cm]?ts$/u
+
 /**
- * Exported, global in a script file, or top-level in a module declaration file without an export
- * list, where TypeScript exports every declaration
+ * Exported, global in a script file, top-level in a module declaration file without an export
+ * list, where TypeScript exports every declaration, or in a declaration file's namespace, whose
+ * members are exported without `export` and can merge across its blocks
  */
 function isVisibleOutsideFile(node: Rule.Node, sourceCode: SourceCode, filename: string): boolean {
   const { parent } = node
@@ -862,13 +902,20 @@ function isVisibleOutsideFile(node: Rule.Node, sourceCode: SourceCode, filename:
   ) {
     return true
   }
+  const isDeclarationFile = DECLARATION_FILE_REGEX.test(filename)
+  if (
+    isDeclarationFile &&
+    declaringScope(node, sourceCode)?.block.type === ('TSModuleDeclaration' as string)
+  ) {
+    return true
+  }
   if (parent?.type !== 'Program') {
     return false
   }
   if (isScriptFile(sourceCode, filename)) {
     return true
   }
-  if (/\.d\.[cm]?ts$/u.test(filename) && !sourceCode.ast.body.some(isExportList)) {
+  if (isDeclarationFile && !sourceCode.ast.body.some(isExportList)) {
     return true
   }
   const name = interfaceName(node)

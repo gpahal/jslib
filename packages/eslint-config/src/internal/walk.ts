@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { createGlobMatcher } from '@/internal/globs'
+import { createGlobMatcher, withoutLeadingDotSlash } from '@/internal/globs'
 
 /**
  * As an ESLint global ignores config holds them
@@ -21,8 +21,8 @@ type GlobMatchers = Map<string, GlobMatcher>
 function getMatcher(glob: string, matchers: GlobMatchers): GlobMatcher {
   let matcher = matchers.get(glob)
   if (matcher === undefined) {
-    // `/`-separated paths and dotfiles, as ESLint matches them
-    matcher = createGlobMatcher(glob)
+    // `/`-separated paths, dotfiles and a leading `./`, as ESLint matches them
+    matcher = createGlobMatcher(withoutLeadingDotSlash(glob))
     matchers.set(glob, matcher)
   }
   return matcher

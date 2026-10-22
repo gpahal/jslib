@@ -86,6 +86,8 @@ export async function loadExtends(
   >()
   const heights = new Map<StylelintExtendedConfig, number>()
   const active = new Set<string | StylelintExtendedConfig>()
+  // Your overrides, whose `referenceFiles` `defineConfig` has checked
+  const checkedOverrides = new WeakSet<StylelintExtendedConfig>()
   // A call reads each file once, so all its uses see the same revision
   const loadModule = async (filename: string): Promise<unknown> => {
     if (modules.has(filename)) {
@@ -213,7 +215,12 @@ export async function loadExtends(
         })
       }
       const isBase = typeof key === 'string' && isBaseConfigFile(key)
-      const { rules: ownRules, ...normalized } = normalizeLoadedConfig(own, directory, subject)
+      const { rules: ownRules, ...normalized } = await normalizeLoadedConfig(
+        own,
+        directory,
+        subject,
+        !checkedOverrides.has(source),
+      )
       const result = {
         ...normalized,
         // Under `defineConfig`, a stock rule's setting is the own rule's that replaces it
@@ -242,7 +249,9 @@ export async function loadExtends(
   const overrides: Array<StylelintOverride> = []
   const overrideConfigs: Array<StylelintExtendedConfig> = []
   for (const [index, override] of userOverrides.entries()) {
-    const prepared = await visit(toOverride(override), root, `overrides[${index}]`, 1)
+    const entry = toOverride(override)
+    checkedOverrides.add(entry)
+    const prepared = await visit(entry, root, `overrides[${index}]`, 1)
     overrideConfigs.push(prepared)
     // Stylelint applies an override's extended rules itself, and `extendedRulesOf` reads them as the
     // base its rules merge over
@@ -294,19 +303,20 @@ function loadErrorReason(error: unknown): string {
 }
 
 /**
- * A loaded config's own keys, without `extends` and `overrides`, with paths resolved from its folder
+ * A loaded config's own keys, without `extends` and `overrides`, with paths resolved from its folder.
+ * With `checkReferences`, it checks that each `referenceFiles` entry matches a file
  *
- * @throws TypeError when a path doesn't resolve, or a `referenceFiles` path that isn't a glob
- *   doesn't exist.
+ * @throws TypeError when a path doesn't resolve, or a `referenceFiles` entry matches no file.
  */
-function normalizeLoadedConfig(
+async function normalizeLoadedConfig(
   own: Omit<StylelintExtendedConfig, 'extends' | 'overrides'>,
   directory: string,
   subject: string,
-): Config {
+  checkReferences: boolean,
+): Promise<Config> {
   const normalized = normalizeConfigPaths(clonePlain(omitUndefinedValues(own)), directory, subject)
-  if (own.referenceFiles !== undefined) {
-    checkReferencePathsExist(own.referenceFiles, directory, `${subject}.referenceFiles`)
+  if (checkReferences && own.referenceFiles !== undefined) {
+    await checkReferencePathsExist(own.referenceFiles, directory, `${subject}.referenceFiles`)
   }
   return normalized
 }

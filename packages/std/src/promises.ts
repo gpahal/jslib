@@ -8,7 +8,7 @@
 
 import { describeValue } from '@/internal/describe'
 import { stdMessage } from '@/internal/message'
-import { checkFunction, checkOptions } from '@/internal/options'
+import { checkFunction, checkNumber, checkOptions } from '@/internal/options'
 import { MAX_TIMER_DELAY_MS } from '@/internal/timers'
 import { createQueue, type Queue } from '@/queue'
 
@@ -38,6 +38,7 @@ export function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
 }
 
 function getJitteredDelay(caller: string, ms: number, jitterRatio: number): number {
+  checkNumber(caller, '`ms`', ms)
   if (!Number.isFinite(ms) || ms < 0 || ms > MAX_TIMER_DELAY_MS) {
     throw new RangeError(
       stdMessage(
@@ -46,6 +47,7 @@ function getJitteredDelay(caller: string, ms: number, jitterRatio: number): numb
       ),
     )
   }
+  checkNumber(caller, '`options.jitterRatio`', jitterRatio, 'a number or `undefined`')
   if (!Number.isFinite(jitterRatio) || jitterRatio < 0 || jitterRatio > 1) {
     throw new RangeError(
       stdMessage(
@@ -92,6 +94,7 @@ function checkSignal(caller: string, signal: unknown): void {
 }
 
 function checkLimit(caller: string, limit: number): void {
+  checkNumber(caller, '`limit`', limit)
   // eslint-disable-next-line unicorn/prefer-number-is-safe-integer -- A limit at or above the item count behaves the same, so one past 2 ** 53 is valid
   if (limit !== Infinity && (!Number.isInteger(limit) || limit < 1)) {
     throw new RangeError(
@@ -847,30 +850,35 @@ export type RetryOptions = {
 
 function checkRetryNumber(
   name: string,
-  value: unknown,
+  untypedValue: unknown,
   { min, max }: { min: number; max: number },
 ): void {
-  if (value === undefined) {
+  if (untypedValue === undefined) {
     return
   }
-  const isValid =
-    typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max
-  if (!isValid) {
+  const subject = `\`options.${name}\``
+  const value = checkNumber('`retry`', subject, untypedValue, 'a number or `undefined`')
+  if (!Number.isFinite(value) || value < min || value > max) {
     throw new RangeError(
       stdMessage(
-        ['`retry`', `\`options.${name}\``],
+        ['`retry`', subject],
         `expected a number ${max === Infinity ? `of at least ${min}` : `between ${min} and ${max}`}, received ${describeValue(value)}`,
       ),
     )
   }
 }
 
-function checkRetries(retries: unknown): void {
-  if (
-    retries !== undefined &&
-    retries !== Infinity &&
-    !(typeof retries === 'number' && Number.isSafeInteger(retries) && retries >= 0)
-  ) {
+function checkRetries(untypedRetries: unknown): void {
+  if (untypedRetries === undefined) {
+    return
+  }
+  const retries = checkNumber(
+    '`retry`',
+    '`options.retries`',
+    untypedRetries,
+    'a number or `undefined`',
+  )
+  if (retries !== Infinity && !(Number.isSafeInteger(retries) && retries >= 0)) {
     throw new RangeError(
       stdMessage(
         ['`retry`', '`options.retries`'],

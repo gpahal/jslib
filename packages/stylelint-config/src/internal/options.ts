@@ -43,8 +43,8 @@ export type StylelintConfigOptions = {
   /**
    * Accept Tailwind CSS v4's at-rules, functions and theme variables. `functions` and `atRules` take
    * an array that replaces the defaults or a function of them; a CSS at-rule such as `media` throws.
-   * `entryPoint`, a path relative to `root` or a `file:` URL, adds the entry stylesheet, its imports
-   * and Tailwind's `theme.css` to the reference files. See
+   * `entryPoint`, an absolute path, a path relative to `root`, or a `file:` URL or URL string, adds
+   * the entry stylesheet, its imports and Tailwind's `theme.css` to the reference files. See
    * https://github.com/gpahal/jslib/tree/main/packages/stylelint-config#tailwind-css-changes
    */
   tailwindcss?:

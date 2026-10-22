@@ -4,9 +4,10 @@ import { pathToFileURL } from 'node:url'
 import type { Linter } from 'eslint'
 import * as eslintPluginRegexp from 'eslint-plugin-regexp'
 
-import { withTmpProject } from '@gpahal/internal/node/testing'
+import { countWork, withTmpProject } from '@gpahal/internal/node/testing'
 
 import { defineConfig, files, untyped, withoutFormattingRules, type TypedRules } from '@/index'
+import { getLanguageSources } from '@/internal/preset-languages'
 
 import { eslintWith } from './helpers'
 
@@ -98,7 +99,7 @@ test.each([
   ],
   [
     { tailwindcss: { settings: { entryPoint } } },
-    '@gpahal/eslint-config: `tailwindcss.settings.entryPoint`: is now `tailwindcss.entryPoint`. Move it',
+    '@gpahal/eslint-config: `tailwindcss.settings.entryPoint`: is set from `tailwindcss.entryPoint`, so `tailwindcss.settings` may not hold it. Set `tailwindcss.entryPoint` instead',
   ],
   [
     { markdown: { rules: { 'unicorn/no-null': 'off' } } },
@@ -910,7 +911,6 @@ test('throws on an AND entry of brace patterns with more than 1000 combinations'
   const patterns = ['env', 'region', 'component', 'version', 'name'].map(
     (key) => `**/*{${values.map((value) => `${key}-${value}`).join(',')}}*.json`,
   )
-  const start = performance.now()
   await expect(
     defineConfig({
       root,
@@ -920,8 +920,14 @@ test('throws on an AND entry of brace patterns with more than 1000 combinations'
   ).rejects.toThrow(
     /^@gpahal\/eslint-config: config `[^`]+`: `files\[0\]`: the brace alternatives of the globs that a file must all match make more than 1000 combinations\. Split the entry into entries with fewer alternatives each$/,
   )
-  // Thrown before making the combinations
-  expect(performance.now() - start).toBeLessThan(5000)
+  // Thrown before making the combinations, so five globs cost about what four do, not 10 times
+  const workOf = (count: number) =>
+    countWork(() => {
+      expect(() =>
+        getLanguageSources([{ files: [patterns.slice(0, count)], language: 'json/json' }]),
+      ).toThrow(TypeError)
+    })
+  expect(workOf(5)).toBeLessThan(2 * workOf(4))
 })
 
 describe('a plugin preset with formatting rules', () => {

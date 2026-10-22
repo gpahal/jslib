@@ -1,7 +1,7 @@
 /**
  * The `@gpahal/tailwind-theme-function` rule: each `theme()` and `--theme()` call without a
- * fallback names a variable that an `@theme` block of the file or the reference files defines, as
- * Tailwind's build requires. A legacy key path such as `colors.red.500` is checked as the variable
+ * fallback names a variable that an `@theme` block of the file or the reference files defines, and
+ * no later `initial` value or namespace reset removes, as Tailwind's build requires. A legacy key path such as `colors.red.500` is checked as the variable
  * it maps to through {@link LEGACY_NAMESPACES}. A file with `@config` or `@plugin`, whose
  * JavaScript can add theme keys, is skipped
  */
@@ -53,6 +53,37 @@ export const LEGACY_NAMESPACES: Readonly<Record<string, string>> = {
 }
 
 /**
+ * The namespaces Tailwind keeps when a shorter one is reset, as `--font-*: initial` keeps
+ * `--font-weight-bold`. A copy of Tailwind's list, which `tests/reference-files.test.ts` checks
+ */
+export const KEPT_NAMESPACES: Readonly<Record<string, ReadonlyArray<string>>> = {
+  '--font': ['--font-weight', '--font-size'],
+  '--inset': ['--inset-shadow', '--inset-ring'],
+  '--text': [
+    '--text-color',
+    '--text-decoration-color',
+    '--text-decoration-thickness',
+    '--text-indent',
+    '--text-shadow',
+    '--text-underline-offset',
+  ],
+  '--grid-column': ['--grid-column-start', '--grid-column-end'],
+  '--grid-row': ['--grid-row-start', '--grid-row-end'],
+}
+
+/**
+ * Whether resetting `resets` removes the theme variable `name`, as in Tailwind
+ */
+export function isReset(name: string, resets: ReadonlyArray<string>): boolean {
+  return resets.some(
+    (namespace) =>
+      namespace === '--' ||
+      (name.startsWith(namespace) &&
+        (KEPT_NAMESPACES[namespace] ?? []).every((kept) => !name.startsWith(kept))),
+  )
+}
+
+/**
  * The unprefixed names of the variables the reference loader prefixed, since `theme()` takes them
  * unprefixed
  */
@@ -62,10 +93,50 @@ export function recordUnprefixedName(declaration: Declaration, name: string): vo
   unprefixedNames.set(declaration, name)
 }
 
-function themeOf(roots: ReadonlyArray<Root>): { names: Set<string>; hasJavaScript: boolean } {
+/**
+ * The namespace that the `@theme` variable `name` resets with `value`, such as `--color` for
+ * `--color-*: initial` or `--` for `--*: initial`
+ */
+function resetNamespaceOf(name: string, value: string): string | undefined {
+  const match = /^(--(?:[\w-]*-)?)\*$/.exec(name)
+  if (match?.[1] === undefined || value.trim() !== 'initial') {
+    return undefined
+  }
+  return match[1] === '--' ? '--' : match[1].slice(0, -1)
+}
+
+/**
+ * The theme variables of `root` and `referenceRoots`. Each file's `@theme` variables apply in
+ * order, so an `initial` value or a namespace reset removes the names its file defined before it.
+ * The linted file's also remove the reference files' names, as Tailwind reads them after those,
+ * unless the linted file is a reference file, whose place among them isn't known
+ */
+function themeOf(
+  root: Root,
+  referenceRoots: ReadonlyArray<Root>,
+): { names: Set<string>; hasJavaScript: boolean } {
   const names = new Set<string>()
   let hasJavaScript = false
-  const readAtRule = (atRule: AtRule): void => {
+  const file = root.source?.input.file
+  const isReference =
+    file !== undefined && referenceRoots.some((reference) => reference.source?.input.file === file)
+  for (const current of [...referenceRoots, root]) {
+    const own = current === root && !isReference ? names : new Set<string>()
+    hasJavaScript = readTheme(current, own) || hasJavaScript
+    for (const name of own) {
+      names.add(name)
+    }
+  }
+  return { names, hasJavaScript }
+}
+
+/**
+ * Apply the `@theme` variables of `root` to `names` in order, and return whether `root` has a
+ * `@config` or `@plugin`
+ */
+function readTheme(root: Root, names: Set<string>): boolean {
+  let hasJavaScript = false
+  root.walkAtRules((atRule) => {
     const name = atRule.name.toLowerCase()
     if (name === 'config' || name === 'plugin') {
       hasJavaScript = true
@@ -76,15 +147,25 @@ function themeOf(roots: ReadonlyArray<Root>): { names: Set<string>; hasJavaScrip
     }
     const nodes = atRule.nodes ?? []
     for (const node of nodes) {
-      if (node.type === 'decl' && node.prop.startsWith('--') && !node.prop.includes('*')) {
-        names.add(unprefixedNames.get(node) ?? node.prop)
+      if (node.type !== 'decl' || !node.prop.startsWith('--')) {
+        continue
+      }
+      const variable = unprefixedNames.get(node) ?? node.prop
+      const namespace = resetNamespaceOf(variable, node.value)
+      if (namespace !== undefined) {
+        for (const defined of names) {
+          if (isReset(defined, [namespace])) {
+            names.delete(defined)
+          }
+        }
+      } else if (node.value.trim() === 'initial') {
+        names.delete(variable)
+      } else if (!variable.includes('*')) {
+        names.add(variable)
       }
     }
-  }
-  for (const root of roots) {
-    root.walkAtRules(readAtRule)
-  }
-  return { names, hasJavaScript }
+  })
+  return hasJavaScript
 }
 
 function unquote(text: string): string {
@@ -161,7 +242,7 @@ const ruleFunction: Rule = (primary: unknown) => (root, result) => {
       if (variable === undefined) {
         continue
       }
-      known ??= themeOf([root, ...referenceRoots])
+      known ??= themeOf(root, referenceRoots)
       if (known.hasJavaScript || known.names.has(variable.name)) {
         continue
       }

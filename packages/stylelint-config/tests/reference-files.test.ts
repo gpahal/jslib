@@ -11,7 +11,7 @@ import { countWork, withTmpProject, writeFiles } from '@gpahal/internal/node/tes
 import { isRecord } from '@gpahal/std/objects'
 
 import { defineConfig } from '@/index'
-import { isReset, KEPT_NAMESPACES } from '@/internal/tailwindcss'
+import { isReset, KEPT_NAMESPACES } from '@/internal/tailwind-theme-function'
 
 /**
  * The `globby` that Stylelint globs `referenceFiles` with, which the package doesn't depend on
@@ -450,6 +450,20 @@ describe('referenceFiles', () => {
       },
     )
 
+    it("leaves the default theme's variables of a namespace reset after a nested block out", async () => {
+      expect(
+        await lintWithEntry(
+          'reset-after-block',
+          {
+            'global.css': "@import 'tailwindcss';\n@import './tokens.css';\n",
+            'tokens.css':
+              '@theme {\n  @keyframes wiggle {\n    0% {\n      rotate: 0;\n    }\n  }\n  --animate-*: initial;\n  --animate-wiggle: wiggle 1s;\n}\n',
+          },
+          'a {\n  animation: var(--animate-wiggle);\n  transition: var(--animate-spin);\n}\n',
+        ),
+      ).toEqual(['3:no-unknown-custom-properties'])
+    })
+
     it.each([
       ['the tailwindcss import', 'import', "@import 'tailwindcss' prefix(tw);"],
       ['a @theme block', 'theme', "@import 'tailwindcss';\n@theme prefix(tw) {}"],
@@ -619,7 +633,7 @@ describe('referenceFiles', () => {
 
   it.each([
     [{ referenceFiles: 'missing/*.css' }, '`referenceFiles`: `missing/*.css`'],
-    // Stylelint's globby skips dotfiles, as `fs.globSync` does
+    // Stylelint's globby skips dotfiles, as `fs.promises.glob` does
     [{ referenceFiles: 'hidden/*.css' }, '`referenceFiles`: `hidden/*.css`'],
   ])('rejects a glob that matches no file, in %j', async (options, message) => {
     await writeFiles(dir, { 'hidden/.a.css': '' })

@@ -1,9 +1,10 @@
+import syncFs from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import stylelint from 'stylelint'
 
-import { withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
+import { countCalls, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 
 import { defineConfig } from '@/index'
 
@@ -30,6 +31,10 @@ await fs.symlink('../only', path.join(dir, 'deep/l'))
 await fs.symlink('..', path.join(dir, 'deep/up'))
 await fs.mkdir(path.join(dir, 'vendor'))
 await fs.symlink(path.join(outside.dir, 'pkg'), path.join(dir, 'vendor/pkg'))
+// Two links to one folder, which a walk must read under each name the glob may match
+await fs.mkdir(path.join(dir, 'refs'))
+await fs.symlink(path.join(outside.dir, 'pkg'), path.join(dir, 'refs/a'))
+await fs.symlink(path.join(outside.dir, 'pkg'), path.join(dir, 'refs/b'))
 await fs.symlink('missing.css', path.join(dir, 'broken.css'))
 await writeFiles(dir, { 'dangling/.keep': '' })
 await fs.symlink('missing.css', path.join(dir, 'dangling/x.css'))
@@ -95,6 +100,10 @@ describe('referenceFiles paths', () => {
     ['a wildcard segment through a symlinked folder', () => ['deep/*/o.css'], true],
     ['a globstar through a symlinked folder', () => ['deep/**/o.css'], true],
     ['a glob through a symlink out of root', () => ['vendor/*/theme.css'], true],
+    ['a glob through the first of two links to a folder', () => ['refs/a*/theme.css'], true],
+    ['a glob through the second of two links to a folder', () => ['refs/b*/theme.css'], true],
+    ['a globstar through a cycle of links, matching no file', () => ['deep/**/none.css'], false],
+    ['a glob through a cycle of links', () => ['deep/up/*/l/o.css'], true],
     ['a broken link', () => ['broken.css'], false],
     ['a glob matching only a broken link', () => ['dangling/*.css'], false],
     ['a literal path that its exclusion removes', () => ['source.css', '!source.css'], false],
@@ -150,11 +159,24 @@ describe('referenceFiles paths', () => {
           if (other !== name) await fs.symlink(`../../${other}`, path.join(modules, other))
         }
       }
-      const start = performance.now()
-      await expect(
-        defineConfig({ root: pnpm.dir, referenceFiles: ['**/tokns.css'] }),
-      ).rejects.toThrow(/`\*\*\/tokns\.css` matches no file/)
-      expect(performance.now() - start).toBeLessThan(2000)
+      // The folder entries the walk through symlinked folders reads
+      const { entries } = await countCalls(
+        async () => {
+          await expect(
+            defineConfig({ root: pnpm.dir, referenceFiles: ['**/tokns.css'] }),
+          ).rejects.toThrow(/`\*\*\/tokns\.css` matches no file/)
+        },
+        {
+          entries: [
+            syncFs,
+            'readdirSync',
+            ({ result }) => (Array.isArray(result) ? result.length : 0),
+          ],
+        },
+      )
+      expect(entries).toBeGreaterThan(0)
+      // Far under the 100_000 entries after which the walk gives up
+      expect(entries).toBeLessThan(1000)
       // A glob that names `node_modules` still walks it
       await defineConfig({
         root: pnpm.dir,

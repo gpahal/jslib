@@ -268,7 +268,7 @@ prettier --check --cache .
 
 Prettier's own options, such as `printWidth` and `semi`, go in `options`: at the top level they throw, as does any other unknown key, with a suggestion when it's close to an option's name. Keys inside `options` aren't checked, since plugins add their own.
 
-`markdown`, `astro`, `options` and overrides reject the keys the preset's options set: the `importOrder*` keys go in `sortImports`, the Tailwind plugin's `tailwindFunctions`, `tailwindAttributes`, `tailwindStylesheet`, `tailwindEntryPoint` and `tailwindPreserveWhitespace` in `tailwindcss`, and the preset's own options at the top level. `markdown` and `astro` also reject `plugins`, `overrides`, `files` and `excludeFiles`. To set a sorter key in Markdown or Astro files only, use an override such as `{ files: '*.md', options: { importOrder: [] } }`.
+`markdown`, `astro` and `options` reject the keys the preset's options set: the `importOrder*` keys go in `sortImports`, the Tailwind plugin's `tailwindFunctions`, `tailwindAttributes`, `tailwindStylesheet`, `tailwindEntryPoint` and `tailwindPreserveWhitespace` in `tailwindcss`, and the preset's own options at the top level. Overrides reject only the preset's own options, so an override can set a sorter or Tailwind key for its files. `markdown` and `astro` also reject `plugins`, `overrides`, `files` and `excludeFiles`. To set a sorter key in Markdown or Astro files only, use an override such as `{ files: '*.md', options: { importOrder: [] } }`.
 
 `defineConfig` throws a `TypeError` on invalid options and on the plugins in [Plugins that conflict][]. It also rejects a second copy of a plugin the preset adds, in `options.plugins` or an override's `plugins`: the import sorter while `sortImports` is on, `prettier-plugin-packagejson` while `packageJson` is on, and `prettier-plugin-astro` with `astro`. A missing optional plugin throws an `Error` that names every missing plugin at once, with an npm or pnpm command that installs each in its peer range.
 
@@ -331,7 +331,7 @@ The plugins are recognized by package name, by a path into their package, or by 
 
 ### Merging configs
 
-The root README's [Lists and merging](https://github.com/gpahal/jslib#lists-and-merging) summarizes the merge rules. A later config can't remove an earlier config's plugins. Turn the Tailwind plugin on with `defineConfig`'s `tailwindcss` rather than in a merged config: `mergeConfigs` throws on a Tailwind plugin when a config's import sorter is the wrapper that `defineConfig` adds without `tailwindcss`, which the Tailwind plugin can't compose. It throws on the plugins in [Plugins that conflict][] too, across all the configs.
+The root README's [Lists and merging](https://github.com/gpahal/jslib#lists-and-merging) summarizes the merge rules. A later config can't remove an earlier config's plugins. A plugin name that `defineConfig` resolved from `root` counts once with another config's same name, when `mergeConfigs` gets the config `defineConfig` returned rather than a copy. Turn the Tailwind plugin on with `defineConfig`'s `tailwindcss` rather than in a merged config: `mergeConfigs` throws on a Tailwind plugin when a config's import sorter is the wrapper that `defineConfig` adds without `tailwindcss`, which the Tailwind plugin can't compose. It throws on the plugins in [Plugins that conflict][] too, across all the configs.
 
 An override's `plugins` add to the merged config's plugins, including those of later configs. Here, the files in `docs/` get a local plugin and keep import sorting and the team config's plugins:
 

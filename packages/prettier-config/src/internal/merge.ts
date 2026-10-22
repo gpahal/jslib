@@ -1,13 +1,13 @@
-import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import type { Config as PrettierConfig } from 'prettier'
 
+import { readJsonFile } from '@gpahal/internal/node/json'
 import { optionsObject, required } from '@gpahal/internal/node/options'
 import { assertValid, plainObject, typeCheck } from '@gpahal/internal/node/zod'
 import { isArrayOf, uniqueBy } from '@gpahal/std/arrays'
-import { describeValue, formatMessage, formatNames } from '@gpahal/std/errors'
+import { describeValue, formatMessage, formatNames, getErrorCode } from '@gpahal/std/errors'
 import { once } from '@gpahal/std/functions'
 import {
   isPlainObject,
@@ -169,33 +169,38 @@ function copyFiles(files: string | ReadonlyArray<string>): string | Array<string
 }
 
 /**
+ * By the folder a lookup starts from, since each plugin is looked up per scope and per override on
+ * every config load
+ */
+const packageNamesByFolder = new Map<string, string | undefined>()
+
+/**
  * The `name` in the nearest `package.json` above `filePath`. Never throws
  */
 function packageNameOf(filePath: string): string | undefined {
-  let dir = path.dirname(filePath)
-  for (;;) {
-    let text: string | undefined
+  const folder = path.dirname(filePath)
+  if (!packageNamesByFolder.has(folder)) {
+    packageNamesByFolder.set(folder, readPackageName(folder))
+  }
+  return packageNamesByFolder.get(folder)
+}
+
+/**
+ * Walks up only past a missing `package.json`. One that can't be read or parsed, or has no `name`,
+ * gives `undefined`, since a folder above it isn't the plugin's package
+ */
+function readPackageName(folder: string): string | undefined {
+  for (let dir = folder; ; dir = path.dirname(dir)) {
+    let manifest: unknown
     try {
-      text = fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
-    } catch {
-      // Missing, or unreadable, which the folders above can't make up for unless it's missing
-      text = undefined
-    }
-    if (text !== undefined) {
-      try {
-        const manifest: unknown = JSON.parse(text)
-        return isRecord(manifest) && typeof manifest['name'] === 'string'
-          ? manifest['name']
-          : undefined
-      } catch {
-        return undefined
+      manifest = readJsonFile(path.join(dir, 'package.json'))
+    } catch (error) {
+      if (getErrorCode(error) === 'ENOENT' && path.dirname(dir) !== dir) {
+        continue
       }
-    }
-    const parent = path.dirname(dir)
-    if (parent === dir) {
       return undefined
     }
-    dir = parent
+    return isRecord(manifest) && typeof manifest['name'] === 'string' ? manifest['name'] : undefined
   }
 }
 
@@ -271,10 +276,13 @@ const AFTER_TAILWIND_PLUGINS: ReadonlyArray<string> = [
 /**
  * Each plugin once, in the order it first appears, with prettier-plugin-tailwindcss after the
  * others, since it wraps the parsers of the plugins before it, and {@link AFTER_TAILWIND_PLUGINS}
- * after it. Plugin objects aren't matched to them
+ * after it. Plugin objects aren't matched to them. A path in `pluginNames` counts as its name
  */
-export function orderPlugins(plugins: ReadonlyArray<PluginEntry>): Array<PluginEntry> {
-  const unique = uniqueBy(plugins, pluginKey)
+export function orderPlugins(
+  plugins: ReadonlyArray<PluginEntry>,
+  pluginNames: PluginNames,
+): Array<PluginEntry> {
+  const unique = uniqueBy(plugins, (plugin) => pluginKey(plugin, pluginNames))
   // 0 for the other plugins, 1 for the Tailwind plugin, and 2 on for the after-Tailwind plugins
   const ranked = unique.map((plugin) => {
     const packageName = packageOfPlugin(plugin)
@@ -295,20 +303,49 @@ export function orderPlugins(plugins: ReadonlyArray<PluginEntry>): Array<PluginE
  * The package names that `defineConfig` resolved from `root`, by path, so a plugin counts once with
  * a config that names it, as Prettier would otherwise load both
  */
-const pluginNamesByPath = new Map<string, string>()
+export type PluginNames = ReadonlyMap<string, string>
 
-export function addResolvedPluginName(pluginPath: string, name: string): void {
-  pluginNamesByPath.set(pluginPath, name)
+export const NO_PLUGIN_NAMES: PluginNames = new Map()
+
+/**
+ * The plugin names of each config that `defineConfig` or `mergeConfigs` returned, so a merge
+ * depends only on the configs it's given
+ */
+const pluginNamesByConfig = new WeakMap<object, PluginNames>()
+
+/**
+ * Returns `config`
+ */
+export function withPluginNames<T extends Config>(config: T, pluginNames: PluginNames): T {
+  if (pluginNames.size > 0) {
+    pluginNamesByConfig.set(config, pluginNames)
+  }
+  return config
+}
+
+/**
+ * The plugin names of all `configs`, a later config's winning for a path
+ */
+export function pluginNamesOf(configs: ReadonlyArray<ConfigInput>): PluginNames {
+  const names = new Map<string, string>()
+  for (const config of configs) {
+    // `WeakMap#get` gives `undefined` for a value that isn't an object, which the checks reject
+    const configNames = pluginNamesByConfig.get(config) ?? NO_PLUGIN_NAMES
+    for (const [pluginPath, name] of configNames) {
+      names.set(pluginPath, name)
+    }
+  }
+  return names
 }
 
 /**
  * What {@link orderPlugins} keeps a plugin once by
  */
-function pluginKey(plugin: PluginEntry): unknown {
+function pluginKey(plugin: PluginEntry, pluginNames: PluginNames): unknown {
   if (plugin instanceof URL) {
     return plugin.href
   }
-  return typeof plugin === 'string' ? (pluginNamesByPath.get(plugin) ?? plugin) : plugin
+  return typeof plugin === 'string' ? (pluginNames.get(plugin) ?? plugin) : plugin
 }
 
 /**
@@ -318,10 +355,14 @@ function pluginKey(plugin: PluginEntry): unknown {
 export function inheritPlugins(
   plugins: ReadonlyArray<PluginEntry>,
   overrides: ReadonlyArray<PrettierOverride>,
+  pluginNames: PluginNames,
 ): void {
   for (const override of overrides) {
     if (override.options?.plugins !== undefined) {
-      override.options.plugins = orderPlugins([...plugins, ...override.options.plugins])
+      override.options.plugins = orderPlugins(
+        [...plugins, ...override.options.plugins],
+        pluginNames,
+      )
     }
   }
 }
@@ -425,29 +466,30 @@ export function checkPluginConflicts(
   { sorter, tailwindcss }: { sorter: SorterEntry; tailwindcss: boolean },
   configLists: ReadonlyArray<PluginList>,
   overrideLists: ReadonlyArray<PluginList>,
+  pluginNames: PluginNames,
 ): void {
   // The Tailwind plugin that `tailwindcss` adds, which moves the after-Tailwind plugins after it
   const configPlugins = [
     ...(tailwindcss ? [TAILWIND_PLUGIN] : []),
     ...configLists.flatMap(({ plugins }) => plugins ?? []),
   ]
-  const configScope = orderPlugins(configPlugins)
+  const configScope = orderPlugins(configPlugins, pluginNames)
   const scopes = [
     ...configLists.map((list) => ({ list, scope: configScope })),
     ...overrideLists.map((list) => ({
       list,
-      scope: orderPlugins([...configScope, ...(list.plugins ?? [])]),
+      scope: orderPlugins([...configScope, ...(list.plugins ?? [])], pluginNames),
     })),
   ]
   for (const { list, scope } of scopes) {
     const packages = scope.map((plugin) => packageOfPlugin(plugin))
     const hasTailwind = scope.some((plugin) => isTailwindPlugin(plugin))
     const lastMerge = packages.lastIndexOf(MERGE_PLUGIN)
-    const keys = scope.map((plugin) => pluginKey(plugin))
+    const keys = scope.map((plugin) => pluginKey(plugin, pluginNames))
     const plugins = list.plugins ?? []
     for (const [index, plugin] of plugins.entries()) {
       // A repeated plugin takes the place of its first appearance
-      const position = keys.indexOf(pluginKey(plugin))
+      const position = keys.indexOf(pluginKey(plugin, pluginNames))
       const description = conflictOf(packages[position], {
         sorter,
         hasTailwind,
@@ -524,7 +566,10 @@ function organizeImportsConflict({
 /**
  * Merge Prettier configs as `mergeConfigs` describes, without checking them
  */
-export function mergeConfigList(configs: ReadonlyArray<ConfigInput>): Config {
+export function mergeConfigList(
+  configs: ReadonlyArray<ConfigInput>,
+  pluginNames: PluginNames,
+): Config {
   let merged: Config = {}
   const configPlugins: Array<PluginEntry> = []
   const overrides: Array<PrettierOverride> = []
@@ -535,8 +580,8 @@ export function mergeConfigList(configs: ReadonlyArray<ConfigInput>): Config {
     configPlugins.push(...(pluginList ?? []))
     overrides.push(...(overrideList ?? []).map((override) => copyOverride(override)))
   }
-  const plugins = orderPlugins(configPlugins)
-  inheritPlugins(plugins, overrides)
+  const plugins = orderPlugins(configPlugins, pluginNames)
+  inheritPlugins(plugins, overrides, pluginNames)
   return {
     ...merged,
     ...(plugins.length > 0 && { plugins }),
@@ -567,6 +612,7 @@ function mergedConfigSubject(i: number): string {
 export function checkConfigsToMerge(
   configs: ReadonlyArray<ConfigInput>,
   sorterWrapper: string,
+  pluginNames: PluginNames,
 ): Array<ConfigInput> {
   const checked = configs.map((config, i) => {
     const untypedConfig: unknown = config
@@ -623,6 +669,6 @@ export function checkConfigsToMerge(
       }
     }
   }
-  checkPluginConflicts({ sorter, tailwindcss: false }, configLists, overrideLists)
+  checkPluginConflicts({ sorter, tailwindcss: false }, configLists, overrideLists, pluginNames)
   return checked
 }

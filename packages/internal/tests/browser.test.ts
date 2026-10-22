@@ -6,6 +6,8 @@ import { assertBuildIsCurrent } from '@/node/testing'
 
 const BUILD_DIR = path.join(import.meta.dirname, '..', 'build')
 
+const SRC_DIR = path.join(import.meta.dirname, '..', 'src')
+
 /**
  * The specifiers of a built module's static and dynamic imports and re-exports
  */
@@ -43,9 +45,12 @@ beforeAll(async () => {
 })
 
 // The modules outside `src/node/`, which builds to `build/node`, are for any package, browser-safe
-// ones too
+// ones too. Listed from `src/`, so without a build `beforeAll` fails with its message
 test.each(
-  fs.readdirSync(BUILD_DIR).filter((file) => file.endsWith('.js') && !file.endsWith('.d.js')),
+  fs
+    .readdirSync(SRC_DIR)
+    .filter((file) => file.endsWith('.ts'))
+    .map((file) => file.replace(/\.ts$/u, '.js')),
 )('the browser module %s imports no Node module, directly or through a chunk', (file) => {
   const nodeImports = [...collectImports(path.join(BUILD_DIR, file))].filter((specifier) =>
     isNodeModule(specifier),

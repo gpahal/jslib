@@ -6,6 +6,7 @@
 import { copyArrayItems, sliceArray } from '@/internal/array-index'
 import { describeValue } from '@/internal/describe'
 import { stdMessage } from '@/internal/message'
+import { checkNumber } from '@/internal/options'
 
 /**
  * What {@link isArray} narrows `T` to: each member of a union that an array could be. `any`,
@@ -212,7 +213,7 @@ export function uniqueBy<T>(items: Iterable<T>, key: (item: T) => unknown): Arra
 
 /**
  * The items in arrays of `size` items, the last one shorter when they don't divide evenly. A `size`
- * that isn't a positive integer throws a `RangeError`
+ * that isn't a number throws a `TypeError`, and one that isn't a positive integer a `RangeError`
  *
  * @example
  * ```ts
@@ -222,6 +223,7 @@ export function uniqueBy<T>(items: Iterable<T>, key: (item: T) => unknown): Arra
  * ```
  */
 export function chunk<T>(items: Iterable<T>, size: number): Array<Array<T>> {
+  checkNumber('`chunk`', '`size`', size)
   if (!Number.isSafeInteger(size) || size < 1) {
     throw new RangeError(
       stdMessage(

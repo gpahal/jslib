@@ -351,6 +351,39 @@ describe('tailwindcss preset', () => {
     expect(result?.messages).toEqual([])
   })
 
+  let whitespaceFixer: Promise<ESLint> | undefined
+  it.for([
+    ["'flex  p-2 '", "'flex p-2'"],
+    ["'flex ' + extra", undefined],
+    ["(cond ? 'flex ' : 'grid ') + extra", undefined],
+    ["(extra || 'flex ') + extra", undefined],
+    ["('flex ' as string) + extra", undefined],
+    ["('flex ' satisfies string) + extra", undefined],
+  ] as const)(
+    'fixes the whitespace of `%s` only where it separates no concatenated classes',
+    async ([value, fixed], { expect }) => {
+      whitespaceFixer ??= createESLint(
+        'tailwindcss',
+        { tailwindcss, typeAware: false },
+        {
+          fix: true,
+          ruleFilter: ({ ruleId }) => ruleId === 'better-tailwindcss/no-unnecessary-whitespace',
+        },
+      )
+      const eslint = await whitespaceFixer
+      const header = 'declare const cond: boolean\ndeclare const extra: string\n'
+      const [result] = await eslint.lintText(`${header}export const className = ${value}\n`, {
+        filePath: path.join(FIXTURES_DIR, 'tailwindcss/src/classes.ts'),
+      })
+      expect(result?.output).toBe(
+        fixed === undefined ? undefined : `${header}export const className = ${fixed}\n`,
+      )
+      expect(new Set(result?.messages.map((message) => message.ruleId))).toEqual(
+        new Set(fixed === undefined ? ['better-tailwindcss/no-unnecessary-whitespace'] : []),
+      )
+    },
+  )
+
   it('resolves a relative `entryPoint` and `cwd` setting against root, wherever ESLint runs', async () => {
     const root = path.join(FIXTURES_DIR, 'tailwindcss')
     const configs = await defineConfig({

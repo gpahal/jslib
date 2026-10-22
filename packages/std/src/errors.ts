@@ -641,6 +641,20 @@ export function formatNames(
   }
   checkStrings('`formatNames`', 'names', names)
   const { conjunction } = options
+  const untypedConjunction: unknown = conjunction
+  if (
+    untypedConjunction !== undefined &&
+    untypedConjunction !== 'and' &&
+    untypedConjunction !== 'or'
+  ) {
+    throw new TypeError(
+      formatMessage(
+        '@gpahal/std',
+        ['`formatNames`', '`options.conjunction`'],
+        `expected \`"and"\`, \`"or"\` or \`undefined\`, received ${describeValue(untypedConjunction)}`,
+      ),
+    )
+  }
   const quoted = names.map((name) => code(name))
   if (conjunction === undefined || quoted.length < 2) {
     return quoted.join(', ')

@@ -18,7 +18,7 @@ import { pluginsToRulesDTS } from 'eslint-typegen/core'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
-import { runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
+import { minCpuMs, runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 import { isRecord } from '@gpahal/std/objects'
 
 import { defineConfig } from '@/index'
@@ -337,11 +337,13 @@ describe('upstream workarounds', () => {
     const isMasked = ['See [docs](https://a.dev)[^1] here.\n', 'Take f(x)[0] here.\n'].every(
       (text) => linter.verifyAndFix(text, config, 'doc.md').output === text,
     )
-    // Timed only once the fixes are right, since a slow rule takes about 11 s here
+    // Timed only once the fixes are right, and once, since a slow rule takes about 11 s here
     const isSlow = (): boolean => {
-      const start = performance.now()
-      linter.verify(`(${'(a)'.repeat(30)})x\n`, config, 'doc.md')
-      return performance.now() - start > 2000
+      const [ms = 0] = minCpuMs(
+        [() => linter.verify(`(${'(a)'.repeat(30)})x\n`, config, 'doc.md')],
+        1,
+      )
+      return ms > 2000
     }
     expect(
       !isMasked || isSlow(),

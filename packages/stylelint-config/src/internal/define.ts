@@ -119,12 +119,13 @@ export async function defineConfig(options: StylelintConfigOptions): Promise<Con
   checkRoot(PREFIX, validOptions.root)
   if (validOptions.referenceFiles !== undefined) {
     checkReferenceGlobs(validOptions.referenceFiles, 'referenceFiles')
-    checkReferencePathsExist(validOptions.referenceFiles, validOptions.root, 'referenceFiles')
+    await checkReferencePathsExist(validOptions.referenceFiles, validOptions.root, 'referenceFiles')
   }
   const userOverrides = checkOverrides(validOptions.overrides ?? [])
+  // Checked with the subjects you gave them; `loadExtends` doesn't check them again
   for (const [index, override] of userOverrides.entries()) {
     if (override.referenceFiles !== undefined) {
-      checkReferencePathsExist(
+      await checkReferencePathsExist(
         override.referenceFiles,
         validOptions.root,
         `overrides[${index}].referenceFiles`,

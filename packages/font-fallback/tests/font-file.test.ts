@@ -343,12 +343,18 @@ describe('rejected files', () => {
     expect(process.memoryUsage().rss - rss).toBeLessThan(size / 8)
   })
 
-  it('fails to parse a WOFF2 font with a UIntBase128 over 5 bytes, with the cause', async () => {
+  it('rejects a WOFF2 font with a UIntBase128 over 5 bytes', async () => {
     const bytes = createWoff2Bomb(1024, { entries: [[1, 0x81, 0x80, 0x80, 0x80, 0x80, 0]] })
-    const error = await getFontRejection(bytes)
-    expect(error.message).toBe(`${PREFIX}: ${FONT_BYTES}: failed to parse`)
-    expect(error.cause).toEqual(
-      new Error(`${PREFIX}: WOFF2 table directory: has a UIntBase128 over 5 bytes`),
+    await expect(getFontRejection(bytes)).resolves.toEqual(
+      expectFontError('its table directory has a UIntBase128 over 5 bytes'),
+    )
+  })
+
+  it('rejects a WOFF2 font whose table directory runs past the end of the file', async () => {
+    const bytes = createWoff2Bomb(1024).slice(0, 50)
+    new DataView(bytes.buffer).setUint32(8, bytes.length)
+    await expect(getFontRejection(bytes)).resolves.toEqual(
+      expectFontError('is truncated: its table directory runs past the end of the file'),
     )
   })
 
