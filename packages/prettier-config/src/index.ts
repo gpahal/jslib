@@ -14,14 +14,16 @@ import {
   TAILWIND_FUNCTIONS,
 } from '@/internal/defaults'
 import {
-  addResolvedPluginName,
   checkConfigsToMerge,
   copyOptions,
   copyOverride,
   inheritPlugins,
   mergeConfigList,
+  NO_PLUGIN_NAMES,
   orderPlugins,
+  pluginNamesOf,
   PREFIX,
+  withPluginNames,
 } from '@/internal/merge'
 import {
   checkConfigOptions,
@@ -100,20 +102,32 @@ export function defineConfig(configOptions: PrettierConfigOptions): Config {
   const preset = createConfig(options, options.root)
   // `mergeConfigs` leaves the preset's overrides as they are, so `markdown` and `astro` keep
   // winning over `options`
-  const config = options.options === undefined ? preset : mergeConfigList([preset, options.options])
-  const plugins = orderPlugins(resolvePluginPaths(options.root, config.plugins ?? []))
+  const config =
+    options.options === undefined
+      ? preset
+      : mergeConfigList([preset, options.options], NO_PLUGIN_NAMES)
+  // Kept with the config, for `mergeConfigs` to match a path to a name that another config gives
+  const pluginNames = new Map<string, string>()
+  const plugins = orderPlugins(
+    resolvePluginPaths(options.root, config.plugins ?? [], pluginNames),
+    pluginNames,
+  )
   if (config.plugins !== undefined) {
     config.plugins = plugins
   }
   const overrides = config.overrides ?? []
   for (const override of overrides) {
     if (override.options?.plugins !== undefined) {
-      override.options.plugins = resolvePluginPaths(options.root, override.options.plugins)
+      override.options.plugins = resolvePluginPaths(
+        options.root,
+        override.options.plugins,
+        pluginNames,
+      )
     }
   }
   // Again after resolving paths, so a plugin given by a relative and an absolute path is kept once
-  inheritPlugins(plugins, overrides)
-  return config
+  inheritPlugins(plugins, overrides, pluginNames)
+  return withPluginNames(config, pluginNames)
 }
 
 /**
@@ -121,24 +135,30 @@ export function defineConfig(configOptions: PrettierConfigOptions): Config {
  * wins, and every config's overrides are kept in order, so an override still wins in its files.
  *
  * Each plugin is kept once, in the order it first appears, with prettier-plugin-tailwindcss, then
- * prettier-plugin-classnames and prettier-plugin-merge, last. An override's `plugins` add to the
- * merged config's. An option that is `undefined` isn't set. The configs are left unchanged.
+ * prettier-plugin-classnames and prettier-plugin-merge, last. A path that `defineConfig` resolved
+ * from a name counts as that name, in the config it returned and in merges of it, not in a copy. An
+ * override's `plugins` add to the merged config's. An option that is `undefined` isn't set. The
+ * configs are left unchanged.
  *
  * @throws TypeError when a config, plugin or override isn't valid, or on the plugin conflicts
  *   `defineConfig` rejects.
  */
 export function mergeConfigs(...configs: Array<ConfigInput>): Config {
-  return mergeConfigList(checkConfigsToMerge(configs, SORT_IMPORTS_WRAPPER))
+  const pluginNames = pluginNamesOf(configs)
+  const checked = checkConfigsToMerge(configs, SORT_IMPORTS_WRAPPER, pluginNames)
+  return withPluginNames(mergeConfigList(checked, pluginNames), pluginNames)
 }
 
 /**
- * Resolve dot-prefixed paths and package names from `root`. Prettier resolves them from the config
- * file's folder or the working directory, which may be outside `root`, as in a monorepo whose app
- * installs a plugin. A name that doesn't resolve from `root` is left to Prettier
+ * Resolve dot-prefixed paths and package names from `root`, adding each resolved name to
+ * `pluginNames` by its path. Prettier resolves them from the config file's folder or the working
+ * directory, which may be outside `root`, as in a monorepo whose app installs a plugin. A name that
+ * doesn't resolve from `root` is left to Prettier
  */
 function resolvePluginPaths(
   root: string | undefined,
   plugins: NonNullable<Config['plugins']>,
+  pluginNames: Map<string, string>,
 ): NonNullable<Config['plugins']> {
   if (root === undefined) {
     return plugins
@@ -150,7 +170,15 @@ function resolvePluginPaths(
     if (plugin.startsWith('.')) {
       return path.resolve(root, plugin)
     }
-    return isPackageSpecifier(plugin) ? (resolvePluginName(plugin, root) ?? plugin) : plugin
+    if (!isPackageSpecifier(plugin)) {
+      return plugin
+    }
+    const resolved = resolvePluginName(plugin, root)
+    if (resolved === undefined) {
+      return plugin
+    }
+    pluginNames.set(resolved, plugin)
+    return resolved
   })
 }
 
@@ -159,20 +187,18 @@ function isPackageSpecifier(plugin: string): boolean {
 }
 
 /**
- * Resolved as Prettier imports a plugin name, with Node's ESM rules, so never the bundlers' `module`
+ * Close to how Prettier imports a plugin name: through `exports` with the `node` and `import`
+ * conditions, else `main`, never the bundlers' `module`. Unlike Node's ESM resolver, it tries the
+ * extensions on a subpath or `exports` target without one
  */
 function resolvePluginName(id: string, root: string): string | undefined {
   try {
-    const resolved = resolveFromNodeModules(id, path.join(root, 'noop.js'), {
+    return resolveFromNodeModules(id, path.join(root, 'noop.js'), {
       prefix: PREFIX,
       conditions: ['node', 'import'],
       mainFields: ['main'],
       extensions: ['.js', '.json', '.node'],
     })?.path
-    if (resolved !== undefined) {
-      addResolvedPluginName(resolved, id)
-    }
-    return resolved
   } catch {
     // Left for Prettier to resolve, and to report when it can't
     return undefined

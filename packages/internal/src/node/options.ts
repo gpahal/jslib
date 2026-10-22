@@ -109,7 +109,7 @@ export function deferred<V = unknown>(
  *
  * @example
  * ```ts
- * import type * as z from 'zod/mini'
+ * import * as z from 'zod/mini'
  * import { optionsObject } from '@gpahal/internal/node/options'
  * import { assertValid } from '@gpahal/internal/node/zod'
  *

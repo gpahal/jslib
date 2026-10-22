@@ -24,3 +24,23 @@ export function checkFunction(caller: string, fn: unknown): void {
     )
   }
 }
+
+/**
+ * `value`, or a `TypeError` unless it's a number, before a range check that would otherwise report
+ * a value of the wrong type as a `RangeError`. `expected` names what's accepted, such as
+ * ``'a number or `undefined`'`` for an option. It returns rather than asserts, since most callers'
+ * values are typed as numbers already
+ */
+export function checkNumber(
+  caller: string,
+  name: string,
+  value: unknown,
+  expected = 'a number',
+): number {
+  if (typeof value !== 'number') {
+    throw new TypeError(
+      stdMessage([caller, name], `expected ${expected}, received ${describeValue(value)}`),
+    )
+  }
+  return value
+}

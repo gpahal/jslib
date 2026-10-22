@@ -7,7 +7,7 @@
 import { describeValue } from '@/internal/describe'
 import { lazy } from '@/internal/lazy'
 import { stdMessage } from '@/internal/message'
-import { checkOptions } from '@/internal/options'
+import { checkNumber, checkOptions } from '@/internal/options'
 import { isSymbol } from '@/symbols'
 
 export { escapeControls } from '@/internal/escape'
@@ -258,7 +258,7 @@ export function trim(s: string, chars?: string): string {
  * it, so a decomposed `É` stays uppercase. Runs of `Lo` (such as CJK) and `Lm` are words of their
  * own. The lookbehinds try an ordinal and an uppercase run only from a run's first character, so a
  * long run isn't rescanned from each character. A bare pictograph matches before `\p{RGI_Emoji}` is
- * tried, since V8 tries each of its sequences first, which made 100,000 emoji about 30 times slower
+ * tried, since V8 tries each of that set's sequences first, which is slow on long runs of emoji
  */
 function getWordRegexSource(): string {
   return String.raw`[\p{Extended_Pictographic}--\p{L}](?![\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}\u{E0020}-\u{E007F}])|\p{RGI_Emoji}|(?<!\d)\d*(?:1st|2nd|3rd|\dth)(?![\p{Ll}\d])|(?<!\d)\d*(?:1ST|2ND|3RD|\dTH)(?![\p{Lu}\d])|(?<!\p{Lu})(?:\p{Lu}\p{M}*)+(?=\p{Lu}\p{M}*\p{Ll})|(?:\p{Lu}\p{M}*)?(?:\p{Ll}\p{M}*)+|(?:\p{Lu}\p{M}*)+|\p{Lt}\p{M}*(?:\p{Ll}\p{M}*)*|[\p{Lo}\p{Lm}][\p{Lo}\p{Lm}\p{M}]*|\p{N}+|\p{Extended_Pictographic}`
@@ -275,6 +275,30 @@ const getWordRegex = lazy(() => new RegExp(getWordRegexSource(), 'gv'))
  * apostrophe
  */
 const APOSTROPHE_REGEX = /['\u{2018}\u{2019}\u{2BC}]/gu
+
+/**
+ * Holds the `source` getter, which throws for an object without a `RegExp`'s internal slots, so a
+ * fake with a `Symbol.toStringTag` or a proxy fails it, and a `RegExp` from another realm passes
+ */
+const REGEXP_SOURCE = Object.getOwnPropertyDescriptor(RegExp.prototype, 'source')
+
+function isRegExp(value: unknown): value is RegExp {
+  // The getter gives `(?:)` for `RegExp.prototype`, which has no internal slots
+  if (
+    value === null ||
+    typeof value !== 'object' ||
+    value === RegExp.prototype ||
+    REGEXP_SOURCE?.get === undefined
+  ) {
+    return false
+  }
+  try {
+    REGEXP_SOURCE.get.call(value)
+    return true
+  } catch {
+    return false
+  }
+}
 
 /**
  * `String#match` returns only the first match without the `g` flag, and stops at the first
@@ -320,11 +344,10 @@ function toGlobalRegex(pattern: string | RegExp): RegExp {
 export function words(s: string, pattern?: string | RegExp): Array<string> {
   checkString('`words`', s)
   const untypedPattern: unknown = pattern
-  // Not `instanceof`, so a `RegExp` from another realm counts
   if (
     untypedPattern !== undefined &&
     typeof untypedPattern !== 'string' &&
-    Object.prototype.toString.call(untypedPattern) !== '[object RegExp]'
+    !isRegExp(untypedPattern)
   ) {
     throw new TypeError(
       stdMessage(
@@ -421,6 +444,7 @@ export function shorten(s: string, maxLen = 10, options: ShortenOptions = {}): s
       ),
     )
   }
+  checkNumber('`shorten`', '`maxLen`', maxLen, 'a number or `undefined`')
   if (!Number.isSafeInteger(maxLen) || maxLen < 0) {
     throw new RangeError(
       stdMessage(

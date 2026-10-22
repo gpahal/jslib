@@ -642,7 +642,6 @@ test('the minimal recipe writes a .gitignore', () => {
 // Each case runs in a temporary project of its own, whose child processes dominate its time
 test.concurrent.for(CASES)(
   'the README recipe for $name passes the fixers and then its checks',
-  { timeout: 600_000 },
   async (testCase, { expect }) => {
     await using project = await setUpRecipe(testCase)
     const { dir } = project

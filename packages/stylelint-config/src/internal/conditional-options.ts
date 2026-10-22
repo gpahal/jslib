@@ -220,8 +220,8 @@ export function preserveConditionalOptions(
           }
         })
       })
-      // Each user override merges over top-level settings, never over preceding overrides.
-      // Emit its delta independently so unchanged rule keys retain earlier matching settings.
+      // Each user override merges over top-level settings, never over preceding overrides, so its
+      // projection is a branch of its own, matched on its files, over the projection so far
       projected = {
         base: projected,
         branches: [

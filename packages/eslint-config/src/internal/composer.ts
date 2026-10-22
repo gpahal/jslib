@@ -749,8 +749,8 @@ export class Composer implements PromiseLike<Array<Linter.Config>> {
       configs = await operation(configs, named, removed, getContext(), removedPlugins)
     }
     for (const callback of this.#resolved) {
-      // What a callback keeps isn't re-checked. Each config is checked against the snapshot of the
-      // same object, or else of the only config with its name
+      // A config the callback keeps is checked against the snapshot of the same object, or else of
+      // the only config with its name, and isn't scoped again. An added one is scoped as `configs`
       const snapshots = new Map(configs.map((config) => [config, cloneConfig(config)]))
       const snapshotsByName = new Map<string, TypedConfig | undefined>()
       for (const [config, snapshot] of snapshots) {

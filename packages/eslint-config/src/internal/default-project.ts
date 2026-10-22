@@ -336,16 +336,27 @@ function findDefaultProjectProblem(configFile: string): DefaultProjectProblem | 
 }
 
 /**
+ * The latest result for each root, under the key it was found for, so a long-lived editor server
+ * keeps one per root rather than one per edit
+ */
+type LatestByRoot = Map<string, { key: string; files: Array<string> }>
+
+function getLatest(cache: LatestByRoot, root: string, key: string): Array<string> | undefined {
+  const latest = cache.get(root)
+  return latest?.key === key ? latest.files : undefined
+}
+
+/**
  * typescript-eslint keeps the first project service per process, so finding them again on a reload
  * can't change what it uses. The walk isn't kept, so `.gitignore` edits still apply
  */
-const discoveries = new Map<string, Array<string>>()
+const discoveries: LatestByRoot = new Map()
 
 /**
  * Keyed by the tsconfigs' modification times and sizes too, since the warning should see an edited
  * tsconfig. An extended tsconfig isn't checked
  */
-const outsideDiscoveries = new Map<string, Array<string>>()
+const outsideDiscoveries: LatestByRoot = new Map()
 
 const foundFiles = new Map<string, Set<string>>()
 
@@ -414,18 +425,19 @@ export function discoverProjects(
       .filter((file) => unlisted.has(file))
       .map((file) => path.relative(root, file).split(path.sep).join('/'))
       .toSorted((a, b) => (a < b ? -1 : Number(a > b)))
-  let defaultProjectFiles = discoveries.get(memoKey)
-  let filesOutsideTsconfigs = outsideDiscoveries.get(outsideKey)
+  const rootKey = path.resolve(root)
+  let defaultProjectFiles = getLatest(discoveries, rootKey, memoKey)
+  let filesOutsideTsconfigs = getLatest(outsideDiscoveries, rootKey, outsideKey)
   if (defaultProjectFiles === undefined) {
     const unlisted = findUnlistedFiles(root, tsconfigFiles, candidates, typescriptFiles)
     defaultProjectFiles = toRelative(candidates, unlisted)
     filesOutsideTsconfigs = toRelative(typescriptFiles, unlisted)
-    discoveries.set(memoKey, defaultProjectFiles)
+    discoveries.set(rootKey, { key: memoKey, files: defaultProjectFiles })
   } else if (filesOutsideTsconfigs === undefined) {
     const unlisted = findUnlistedFiles(root, tsconfigFiles, [], typescriptFiles)
     filesOutsideTsconfigs = toRelative(typescriptFiles, unlisted)
   }
-  outsideDiscoveries.set(outsideKey, filesOutsideTsconfigs)
+  outsideDiscoveries.set(rootKey, { key: outsideKey, files: filesOutsideTsconfigs })
   addFoundFiles(root, defaultProjectFiles)
   return {
     defaultProjectFiles: [...defaultProjectFiles],

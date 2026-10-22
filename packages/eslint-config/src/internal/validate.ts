@@ -34,7 +34,7 @@ import { CODE_EXTNS } from '@/internal/files'
 import { checkFormattingRules, FORMATTING_RULES, KEPT_RULES } from '@/internal/formatting'
 import { findUp } from '@/internal/fs'
 import { canMatchFile } from '@/internal/glob-match'
-import { hasGlobMagic } from '@/internal/globs'
+import { hasGlobMagic, withoutLeadingDotSlash } from '@/internal/globs'
 import { AREA_RULE_PREFIXES, hasRulePrefix, PLUGIN_AREAS, type AreaName } from '@/internal/names'
 import { resolveEntryPoint } from '@/internal/presets/tailwindcss'
 import { checkRelativeGlobs } from '@/internal/relative-globs'
@@ -389,7 +389,7 @@ export function checkCodeGlobs(
  */
 export function checkDefaultProjectGlobs(globs: ReadonlyArray<string>): void {
   // typescript-eslint matches without a leading `./`, and throws on a bare `*`
-  const starIndex = globs.findIndex((glob) => glob.replace(/^(?:\.\/)+/, '') === '*')
+  const starIndex = globs.findIndex((glob) => withoutLeadingDotSlash(glob) === '*')
   if (starIndex !== -1) {
     fail(
       [formatNames([`typeAware.allowDefaultProject[${String(starIndex)}]`])],
@@ -469,7 +469,10 @@ function checkTailwindcssEntryPoint(options: EslintConfigOptions): void {
     return
   }
   if (tailwindcss.settings !== undefined && Object.hasOwn(tailwindcss.settings, 'entryPoint')) {
-    fail(['`tailwindcss.settings.entryPoint`'], 'is now `tailwindcss.entryPoint`. Move it')
+    fail(
+      ['`tailwindcss.settings.entryPoint`'],
+      'is set from `tailwindcss.entryPoint`, so `tailwindcss.settings` may not hold it. Set `tailwindcss.entryPoint` instead',
+    )
   }
   const { entryPoint } = tailwindcss
   if (typeof entryPoint !== 'string' && !(entryPoint instanceof URL)) {

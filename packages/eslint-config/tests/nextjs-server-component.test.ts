@@ -31,6 +31,11 @@ tester.run('nextjs-server-component', GPAHAL_PLUGIN.rules['nextjs-server-compone
     // A file of the `server` option, where `@gpahal/no-browser-globals` reports them
     { filename: 'app/api/route.ts', code: ROUTE, options: [{ ignoresBrowserGlobals: true }] },
     { filename: 'app/nav.tsx', code: 'export const width = window.innerWidth\n' },
+    // `typeof` of a `globalThis` property, a property Node has, and a local `globalThis`
+    {
+      filename: 'app/page.tsx',
+      code: "export const isBrowser = typeof globalThis.window !== 'undefined' && typeof globalThis?.['document'] === 'object'\nexport const f = globalThis.fetch\nexport function title(globalThis: { document: { title: string } }) {\n  return globalThis.document.title\n}\n",
+    },
   ],
   invalid: [
     {
@@ -40,6 +45,15 @@ tester.run('nextjs-server-component', GPAHAL_PLUGIN.rules['nextjs-server-compone
         { messageId: 'clientHook', data: { name: 'useRef' }, line: 4 },
         { messageId: 'clientHook', data: { name: 'useEffect' }, line: 5 },
         { messageId: 'browserGlobal', data: { name: 'document' }, line: 6 },
+      ],
+    },
+    {
+      filename: 'app/page.tsx',
+      code: "export default function Page() {\n  return <p>{globalThis.window.innerWidth}{(globalThis as any)['document'].title}</p>\n}\nexport const store = globalThis.localStorage\n",
+      errors: [
+        { messageId: 'browserGlobal', data: { name: 'globalThis.window' }, line: 2 },
+        { messageId: 'browserGlobal', data: { name: 'globalThis.document' }, line: 2 },
+        { messageId: 'browserGlobal', data: { name: 'globalThis.localStorage' }, line: 4 },
       ],
     },
     {

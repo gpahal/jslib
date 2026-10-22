@@ -21,6 +21,7 @@ import { slopPlugin } from '@/slop'
 import { ALL_ON_OPTIONS } from '../scripts/typegen'
 import {
   collator,
+  CORE_AREAS_OFF_SOURCE,
   eslintWith,
   FIXTURES_DIR,
   lint,
@@ -1124,6 +1125,18 @@ describe('split configs of yours through `.override()`', () => {
       configs.filter((found) => found.name === 'user/split').map((found) => found.rules),
     ).toEqual(expected)
   })
+
+  it('suggests the glob from `root` for an absolute glob', async () => {
+    const absolute = `${root.split(path.sep).join('/')}/src/**`
+    await expect(
+      defineConfig({
+        root,
+        configs: [{ name: 'user/split', rules: { 'no-console': 'off', eqeqeq: 'error' } }],
+      }).override('user/split' as ConfigNames, { files: [absolute] }),
+    ).rejects.toThrow(
+      `@gpahal/eslint-config: \`.override('user/split')\`: \`files\`: glob \`${absolute}\` starts with \`/\`, but globs are relative to \`root\`. Write \`src/**\``,
+    )
+  })
 })
 
 describe('Markdown parse options through the composer', () => {
@@ -1253,21 +1266,22 @@ process.on('unhandledRejection', (error) => rejections.push(error.message))
 const root = process.argv[1]
 const results = {}
 for (const method of ['append', 'insertBefore']) {
-  const composer = defineConfig({ root, typeAware: false, gitignore: false })
+  const composer = defineConfig({ root, typeAware: false, gitignore: false, ${CORE_AREAS_OFF_SOURCE} })
   const input = Promise.reject(new Error('config failed'))
   if (method === 'append') composer.append(input)
   else composer[method]('gpahal/javascript/rules', input)
-  await new Promise((resolve) => setTimeout(resolve, 20))
+  // Past Node's check for unhandled rejections, which runs once the microtasks drain
+  await new Promise((resolve) => setImmediate(resolve))
   const error = await composer.then(() => undefined, (caught) => caught.message)
   results[method] = { error, rejections: rejections.splice(0) }
 }
 let error
 try {
-  defineConfig({ root, typeAware: false, gitignore: false }).insertAfter(undefined, Promise.reject(new Error('config failed')))
+  defineConfig({ root, typeAware: false, gitignore: false, ${CORE_AREAS_OFF_SOURCE} }).insertAfter(undefined, Promise.reject(new Error('config failed')))
 } catch (caught) {
   error = caught.message
 }
-await new Promise((resolve) => setTimeout(resolve, 20))
+await new Promise((resolve) => setImmediate(resolve))
 results.throws = { error, rejections: rejections.splice(0) }
 console.log(JSON.stringify(results))
 `,

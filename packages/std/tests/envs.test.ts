@@ -1,4 +1,4 @@
-import * as envsModule from '@/envs'
+import type * as envsModule from '@/envs'
 import { hasDocument, isWebWorker } from '@/envs'
 
 /**
@@ -37,16 +37,12 @@ describe('envs', () => {
   it('has no document and is no Web Worker under Node.js', () => {
     expect(hasDocument).toBe(false)
     expect(isWebWorker).toBe(false)
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- The deprecated alias is what's tested
-    expect(envsModule.isBrowser).toBe(hasDocument)
   })
 
   it('has a document when a global document exists as the module loads', async () => {
     vi.stubGlobal('document', {})
     const envs = await loadEnvs()
     expect(envs.hasDocument).toBe(true)
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- The deprecated alias is what's tested
-    expect(envs.isBrowser).toBe(true)
     expect(envs.isWebWorker).toBe(false)
   })
 

@@ -331,6 +331,29 @@ const FLOW_PARENTS: ReadonlySet<string> = new Set([
 ])
 
 /**
+ * The whitespace that HTML collapses and trims. Others, such as a no-break space, render
+ */
+const HTML_SPACE = ' \t\n\f\r'
+
+const HTML_SPACE_RUN_REGEX = /[\t\n\f\r ]+/gu
+
+function trimSpaceStart(text: string): string {
+  let index = 0
+  while (index < text.length && HTML_SPACE.includes(text.charAt(index))) {
+    index++
+  }
+  return text.slice(index)
+}
+
+function trimSpaceEnd(text: string): string {
+  let index = text.length
+  while (index > 0 && HTML_SPACE.includes(text.charAt(index - 1))) {
+    index--
+  }
+  return text.slice(0, index)
+}
+
+/**
  * Replaces ESLint's removal, which leaves a space that can make a hard break or stop separating
  * blocks. A comment with other text on its lines goes with adjacent whitespace, and one alone on
  * its lines goes with them. `undefined` when no edit keeps what renders
@@ -359,11 +382,11 @@ function getDirectiveRemoval(
   if (isFlow && after.trim() === '') {
     return getLineRemoval(state, [firstIndex, lastIndex], found, before, separators)
   }
-  const spaceBefore = before.length - before.trimEnd().length
-  if (after.trim() === '') {
+  const spaceBefore = before.length - trimSpaceEnd(before).length
+  if (trimSpaceStart(after) === '') {
     return { range: [start - spaceBefore, last.end], text: '' }
   }
-  const spaceAfter = after.length - after.trimStart().length
+  const spaceAfter = after.length - trimSpaceStart(after).length
   return {
     range: [start, isFlow || spaceBefore > 0 ? end + spaceAfter : end],
     text: '',
@@ -379,7 +402,9 @@ const TRIMMED_PARENTS: ReadonlySet<string> = new Set(['heading', 'paragraph', 't
 function toStructure(node: Nodes): Record<string, unknown> {
   const { position: _position, data: _data, ...rest } = node
   if (!('children' in node)) {
-    return node.type === 'text' ? { ...rest, value: node.value.replaceAll(/\s+/gu, ' ') } : rest
+    return node.type === 'text'
+      ? { ...rest, value: node.value.replaceAll(HTML_SPACE_RUN_REGEX, ' ') }
+      : rest
   }
   const children: Array<Record<string, unknown>> = []
   for (const child of node.children) {
@@ -390,7 +415,7 @@ function toStructure(node: Nodes): Record<string, unknown> {
     const last = children.at(-1)
     if (structure['type'] === 'text' && last?.['type'] === 'text') {
       last['value'] = `${String(last['value'])}${String(structure['value'])}`.replaceAll(
-        /\s+/gu,
+        HTML_SPACE_RUN_REGEX,
         ' ',
       )
     } else {
@@ -400,11 +425,11 @@ function toStructure(node: Nodes): Record<string, unknown> {
   if (TRIMMED_PARENTS.has(node.type)) {
     const first = children[0]
     if (first?.['type'] === 'text') {
-      first['value'] = String(first['value']).trimStart()
+      first['value'] = trimSpaceStart(String(first['value']))
     }
     const last = children.at(-1)
     if (last?.['type'] === 'text') {
-      last['value'] = String(last['value']).trimEnd()
+      last['value'] = trimSpaceEnd(String(last['value']))
     }
   }
   return {
@@ -482,15 +507,50 @@ function getCommentRanges({ lines }: FileState, node: Nodes): Array<[number, num
 }
 
 /**
+ * The first range that holds `[start, end]`. The ranges are in order and their ends never decrease,
+ * so only the first one that reaches `end` can
+ */
+function findContainingRange(
+  ranges: ReadonlyArray<[number, number]>,
+  start: number,
+  end: number,
+): [number, number] | undefined {
+  let low = 0
+  let high = ranges.length
+  while (low < high) {
+    const middle = (low + high) >>> 1
+    if ((ranges[middle]?.[1] ?? Infinity) < end) {
+      low = middle + 1
+    } else {
+      high = middle
+    }
+  }
+  const range = ranges[low]
+  return range !== undefined && range[0] <= start ? range : undefined
+}
+
+/**
  * `'whole'` when ESLint's fix replaces the whole comment with a space, `'inside'` when it edits
  * only the text inside, as when it drops some rules, or `undefined` for another fix, which isn't
- * applied
+ * applied. `rangesByNode` keeps each node's comment ranges, so many directives in one node don't
+ * each rescan it
  */
-function getFixKind(state: FileState, { range, text }: Rule.Fix): 'whole' | 'inside' | undefined {
+function getFixKind(
+  state: FileState,
+  { range, text }: Rule.Fix,
+  rangesByNode: Map<Nodes, Array<[number, number]>>,
+): 'whole' | 'inside' | undefined {
   const [start, end] = range
   const found = findHtmlNode(state, start, end)
-  const comment =
-    found && getCommentRanges(state, found.node).find(([from, to]) => from <= start && end <= to)
+  let ranges: Array<[number, number]> | undefined
+  if (found !== undefined) {
+    ranges = rangesByNode.get(found.node)
+    if (ranges === undefined) {
+      ranges = getCommentRanges(state, found.node)
+      rangesByNode.set(found.node, ranges)
+    }
+  }
+  const comment = ranges && findContainingRange(ranges, start, end)
   if (comment === undefined) {
     return undefined
   }
@@ -555,6 +615,7 @@ export function fixDirectiveRemovals(
   reparse: (text: string, isFileStart: boolean) => Root | undefined,
 ): Array<Linter.LintMessage> {
   let separators: ReadonlySet<Nodes> | undefined
+  const rangesByNode = new Map<Nodes, Array<[number, number]>>()
   const removals = new Map<number, Rule.Fix>()
   const adjusted = messages.map((message, index) => {
     const { fix } = message
@@ -562,7 +623,7 @@ export function fixDirectiveRemovals(
       return message
     }
     const { fix: _fix, ...withoutFix } = message
-    const kind = getFixKind(state, fix)
+    const kind = getFixKind(state, fix, rangesByNode)
     if (kind !== 'whole') {
       return kind === 'inside' ? message : withoutFix
     }

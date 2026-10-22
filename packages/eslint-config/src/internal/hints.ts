@@ -6,7 +6,7 @@ import { isRecord } from '@gpahal/std/objects'
 import { trimEnd } from '@gpahal/std/strings'
 
 import { AREAS } from '@/internal/areas'
-import { createGlobMatcher, splitGlobs } from '@/internal/globs'
+import { createGlobMatcher, splitGlobs, withoutLeadingDotSlash } from '@/internal/globs'
 import { findListingManifest, getListedPackages, type ProjectManifest } from '@/internal/manifests'
 import type { AreaName } from '@/internal/names'
 import { formatPeersInstallCommand, isInstalledIn } from '@/internal/peers'
@@ -260,7 +260,7 @@ export function warnOfPlaywrightTestDir(
       return
     }
     const example = dir === '.' ? 'example.spec.ts' : `${dir}/example.spec.ts`
-    const { positive, negated } = splitGlobs(playwrightGlobs)
+    const { positive, negated } = splitGlobs(playwrightGlobs.map(withoutLeadingDotSlash))
     if (createGlobMatcher(positive)(example) && !createGlobMatcher(negated)(example)) {
       return
     }

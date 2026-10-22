@@ -42,7 +42,7 @@ import {
   tailwindStylesheetPath,
   type TailwindCompile,
 } from '@/internal/tailwind-loader'
-import { recordUnprefixedName } from '@/internal/tailwind-theme-function'
+import { isReset, recordUnprefixedName } from '@/internal/tailwind-theme-function'
 
 type Syntax = NonNullable<NonNullable<Config['languageOptions']>['syntax']>
 
@@ -381,7 +381,8 @@ function isResetAfterName([star, colon, value, after]: ReadonlyArray<CSSToken>):
 }
 
 /**
- * Whether `tokens[index]` starts a declaration of the block opened at `tokens[start]`
+ * Whether `tokens[index]`, at depth 1, starts a declaration of the block opened at `tokens[start]`:
+ * it follows the block's `{`, a `;` or the `}` of a nested block
  */
 function isDeclarationStart(
   tokens: ReadonlyArray<CSSToken>,
@@ -389,7 +390,10 @@ function isDeclarationStart(
   start: number,
 ): boolean {
   const previous = tokens[index - 1]
-  return index === start + 1 || (previous !== undefined && isTokenSemicolon(previous))
+  return (
+    index === start + 1 ||
+    (previous !== undefined && (isTokenSemicolon(previous) || isTokenCloseCurly(previous)))
+  )
 }
 
 /**
@@ -758,37 +762,6 @@ function importGraph(
 }
 
 /**
- * The namespaces Tailwind keeps when a shorter one is reset, as `--font-*: initial` keeps
- * `--font-weight-bold`. A copy of Tailwind's list, which `tests/reference-files.test.ts` checks
- */
-export const KEPT_NAMESPACES: Readonly<Record<string, ReadonlyArray<string>>> = {
-  '--font': ['--font-weight', '--font-size'],
-  '--inset': ['--inset-shadow', '--inset-ring'],
-  '--text': [
-    '--text-color',
-    '--text-decoration-color',
-    '--text-decoration-thickness',
-    '--text-indent',
-    '--text-shadow',
-    '--text-underline-offset',
-  ],
-  '--grid-column': ['--grid-column-start', '--grid-column-end'],
-  '--grid-row': ['--grid-row-start', '--grid-row-end'],
-}
-
-/**
- * Whether resetting `resets` removes the theme variable `name`, as in Tailwind
- */
-export function isReset(name: string, resets: ReadonlyArray<string>): boolean {
-  return resets.some(
-    (namespace) =>
-      namespace === '--' ||
-      (name.startsWith(namespace) &&
-        (KEPT_NAMESPACES[namespace] ?? []).every((kept) => !name.startsWith(kept))),
-  )
-}
-
-/**
  * Parse the import at `file`, so one that doesn't parse fails once here rather than for every file
  * Stylelint lints. The error drops the file's text, which could hold secrets: postcss keeps it as
  * the source, and its `Unknown word` reason quotes it
@@ -1005,11 +978,12 @@ export function tailwindThemeLoader({
   resets?: ReadonlyArray<string> | undefined
 }): Plugin {
   const themeRealPath = realPathOf(theme)
+  const cachedRealPathOf = realPathCache()
   return {
     postcssPlugin: '@gpahal/stylelint-config/tailwind-theme',
     Once(root) {
       const file = root.source?.input.file
-      const isTheme = file !== undefined && realPathOf(file) === themeRealPath
+      const isTheme = file !== undefined && cachedRealPathOf(file) === themeRealPath
       if (isTheme && resets.length > 0) {
         root.walkAtRules(/^theme$/i, (atRule) => {
           atRule.walkDecls(/^--/, (declaration) => {
@@ -1046,16 +1020,33 @@ function realPathOf(file: string): string {
 }
 
 /**
+ * {@link realPathOf}, read once per file. A loader keeps one, so each reference file is resolved
+ * once per config, like the paths the loader compares it with
+ */
+function realPathCache(): (file: string) => string {
+  const realPaths = new Map<string, string>()
+  return (file) => {
+    let realPath = realPaths.get(file)
+    if (realPath === undefined) {
+      realPath = realPathOf(file)
+      realPaths.set(file, realPath)
+    }
+    return realPath
+  }
+}
+
+/**
  * The loader of your reference files under a prefixed theme. It empties the files of the theme's
  * import graph, which already load with the prefix and would otherwise add unprefixed names
  */
 export function outsideThemeGraphLoader(graphFiles: ReadonlyArray<string>): Plugin {
   const graphRealPaths = new Set(graphFiles.map((file) => realPathOf(file)))
+  const cachedRealPathOf = realPathCache()
   return {
     postcssPlugin: '@gpahal/stylelint-config/outside-theme-graph',
     Once(root) {
       const file = root.source?.input.file
-      if (file !== undefined && graphRealPaths.has(realPathOf(file))) {
+      if (file !== undefined && graphRealPaths.has(cachedRealPathOf(file))) {
         root.removeAll()
       }
     },

@@ -251,9 +251,14 @@ class GpahalMarkdownSourceCode extends MarkdownSourceCode {
       const stack: Array<Nodes> = [this.ast]
       for (let node = stack.pop(); node !== undefined; node = stack.pop()) {
         if (node.type === 'html' && node.position !== undefined && node.value.includes('<!--')) {
-          comments.push(
-            ...getInlineConfigComments(text, lines, this, { ...node, position: node.position }),
-          )
+          const nodeComments = getInlineConfigComments(text, lines, this, {
+            ...node,
+            position: node.position,
+          })
+          // A loop, since a `push` spread throws a RangeError past the runtime's argument limit
+          for (const comment of nodeComments) {
+            comments.push(comment)
+          }
         } else if ('children' in node) {
           for (const child of node.children.toReversed()) {
             stack.push(child)

@@ -15,7 +15,7 @@ import { trimEnd } from '@gpahal/std/strings'
 import { IGNORES } from '@/internal/configs/ignores'
 import { readJsonFile } from '@/internal/fs'
 import { findGitRoot } from '@/internal/git'
-import { createGlobMatcher, splitGlobs } from '@/internal/globs'
+import { createGlobMatcher, splitGlobs, withoutLeadingDotSlash } from '@/internal/globs'
 
 /**
  * With its `/`-separated path relative to `root`
@@ -61,7 +61,7 @@ function parsePnpmWorkspaceGlobs(text: string): Array<string> {
  * As pnpm reads them
  */
 function normalizeWorkspaceGlobs(globs: ReadonlyArray<string>): Array<string> {
-  return globs.map((glob) => trimEnd(glob.replace(/^(?:\.\/)+/, ''), '/'))
+  return globs.map((glob) => trimEnd(withoutLeadingDotSlash(glob), '/'))
 }
 
 function readTextFile(file: string): string | undefined {

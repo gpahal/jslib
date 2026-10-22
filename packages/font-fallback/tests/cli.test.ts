@@ -30,8 +30,8 @@ async function spawnCli(args: Array<string>): Promise<CliResult> {
 }
 
 /**
- * Runs the built CLI with `input` as its stdin. `runNode` ignores stdin, so this spawns Node as it
- * does
+ * Runs the built CLI with `input` as its stdin. Unlike `runNode`, it writes bytes rather than text
+ * and expects the EPIPE of a write the CLI stops reading
  */
 async function spawnCliWithInput(args: Array<string>, input: Uint8Array): Promise<CliResult> {
   const child = spawn(process.execPath, [CLI_PATH, ...args], {
@@ -176,7 +176,7 @@ test('prints only the rules with --css, and everything as JSON with --json', asy
     stderr: '',
     exitCode: 0,
   })
-  const json = await spawnCli(['Figtree', '-f', 'Arial', '--json'])
+  const json = await runCliInProcess(['Figtree', '-f', 'Arial', '--json'])
   expect(json.exitCode).toBe(0)
   expect(JSON.parse(json.stdout)).toEqual(result)
 })

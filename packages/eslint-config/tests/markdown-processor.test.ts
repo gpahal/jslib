@@ -116,9 +116,14 @@ function unusedEach(markdown: string, directive: string): Array<Linter.LintMessa
 }
 
 /**
+ * The whitespace that HTML collapses and trims, unlike a no-break space
+ */
+const HTML_SPACE_RUN_REGEX = /[\t\n\f\r ]+/gu
+
+/**
  * The rendered structure of `markdown`, parsed with GFM: its tree without positions and HTML
- * comments, with each run of whitespace in text as one space, and none at the end of a block, as
- * HTML renders it
+ * comments, with each run of HTML whitespace in text as one space, and none at the end of a block,
+ * as HTML renders it
  */
 function structureOf(markdown: string): unknown {
   const normalize = (nodes: ReadonlyArray<Nodes>): Array<unknown> => {
@@ -130,7 +135,10 @@ function structureOf(markdown: string): unknown {
       }
       const last = result.at(-1)
       if (node.type === 'text' && last?.['type'] === 'text') {
-        last['value'] = `${String(last['value'])}${node.value}`.replaceAll(/\s+/gu, ' ')
+        last['value'] = `${String(last['value'])}${node.value}`.replaceAll(
+          HTML_SPACE_RUN_REGEX,
+          ' ',
+        )
         continue
       }
       const { position: _position, ...rest } = node
@@ -138,13 +146,14 @@ function structureOf(markdown: string): unknown {
         'children' in node
           ? { ...rest, children: normalize(node.children) }
           : node.type === 'text'
-            ? { ...rest, value: node.value.replaceAll(/\s+/gu, ' ') }
+            ? { ...rest, value: node.value.replaceAll(HTML_SPACE_RUN_REGEX, ' ') }
             : rest,
       )
     }
     const last = result.at(-1)
     if (last?.['type'] === 'text') {
-      last['value'] = String(last['value']).trimEnd()
+      // Each run is one space by now
+      last['value'] = String(last['value']).replace(/ $/u, '')
     }
     return result
   }
@@ -712,6 +721,8 @@ describe('markdown processor unused directive removal', () => {
 
   it.each([
     ['between words', `a ${LINE_DIRECTIVE} b\n`, 'a b\n'],
+    // HTML collapses spaces but renders each no-break space
+    ['between no-break spaces', `a\u{A0}${LINE_DIRECTIVE}\u{A0}b\n`, 'a\u{A0}\u{A0}b\n'],
     ['after a quote, before lazy text', `> quote\n${DIRECTIVE}\nmore\n`, '> quote\n\nmore\n'],
     ['in a loose list item', `- item\n\n  ${DIRECTIVE}\n\n  text\n`, '- item\n\n  text\n'],
     [
@@ -822,6 +833,24 @@ describe('markdown processor speed', () => {
       return work
     }
     expect(workOf(1000)).toBeLessThan(6 * workOf(250))
+  })
+
+  it('checks the unused directives of one HTML node without quadratic scaling', () => {
+    const processor = createProcessor()
+    const directive = '<!-- eslint-disable markdown/no-html -- reason -->'
+    const lintOf = (count: number) => {
+      // One HTML block, since a comment block runs to the end of the line with its first `-->`
+      const markdown = `# T\n\n${`${directive} `.repeat(count)}\n\nText.\n`
+      const messages = unusedEach(markdown, directive)
+      return () => {
+        processor.preprocess?.(markdown, 'docs.md')
+        processor.postprocess?.([messages], 'docs.md')
+      }
+    }
+    // CPU time, since `countWork` weighs each slice of the one long line by its length, though the
+    // slices share its characters
+    const [shortMs = 0, longMs] = minCpuMs([lintOf(1000), lintOf(4000)])
+    expect(longMs).toBeLessThan(8 * shortMs + 50)
   })
 
   it('reads an HTML node of unclosed comments without quadratic scaling', () => {

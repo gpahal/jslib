@@ -13,6 +13,15 @@ const MINIMATCH_OPTIONS = { dot: true } as const
  */
 export const GLOBAL_IGNORES_KEYS: ReadonlySet<string> = new Set(['ignores', 'name', 'basePath'])
 
+/**
+ * A glob as ESLint and pnpm read it, without a leading `./` after any `!`, which minimatch would
+ * otherwise never match, as with `./src/**` and `src/a.ts`. typescript-eslint's
+ * `allowDefaultProject` keeps it, so that option is passed through this too
+ */
+export function withoutLeadingDotSlash(glob: string): string {
+  return glob.replace(/^(!?)(?:\.\/)+/, '$1')
+}
+
 export function unescapeGlob(glob: string): string {
   return glob.replaceAll(/\\(.)/g, '$1')
 }

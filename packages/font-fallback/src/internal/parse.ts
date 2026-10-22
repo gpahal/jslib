@@ -332,7 +332,7 @@ function checkWoff2(bytes: Buffer, fail: Fail): { tables: TableBytes; sfnt: Buff
       `expected a font that decompresses to at most ${formatMib(MAX_DECOMPRESSED_BYTES)}, received one that ${received}`,
       cause,
     )
-  const { entries, end } = readWoff2Directory(bytes, numTables)
+  const { entries, end } = readWoff2Directory(bytes, numTables, fail)
   // The directory is checked before the stream is decompressed, so a font it rejects costs no
   // decompression
   const tags = new Set<string>()
@@ -541,26 +541,35 @@ const WOFF2_KNOWN_TAGS: ReadonlyArray<string> = [
 function readWoff2Directory(
   bytes: Buffer,
   numTables: number,
+  fail: Fail,
 ): { entries: Array<Woff2Entry>; end: number } {
   let offset = 48
+  const checkLength = (length: number): void => {
+    if (offset + length > bytes.length) {
+      throw fail('is truncated: its table directory runs past the end of the file')
+    }
+  }
+  const readByte = (): number => {
+    checkLength(1)
+    return bytes.readUInt8(offset++)
+  }
   const readBase128 = (): number => {
     let value = 0
     for (let index = 0; index < 5; index++) {
-      const byte = bytes.readUInt8(offset++)
+      const byte = readByte()
       value = value * 128 + (byte & 0x7f)
       if ((byte & 0x80) === 0) {
         return value
       }
     }
-    throw new Error(
-      formatMessage(PREFIX, ['WOFF2 table directory'], 'has a UIntBase128 over 5 bytes'),
-    )
+    throw fail('its table directory has a UIntBase128 over 5 bytes')
   }
   const entries: Array<Woff2Entry> = []
   for (let index = 0; index < numTables; index++) {
-    const flags = bytes.readUInt8(offset++)
+    const flags = readByte()
     let tag = WOFF2_KNOWN_TAGS[flags & 0x3f]
     if (tag === undefined) {
+      checkLength(4)
       tag = bytes.toString('latin1', offset, offset + 4)
       offset += 4
     }

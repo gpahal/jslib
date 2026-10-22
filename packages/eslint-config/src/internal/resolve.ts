@@ -56,6 +56,7 @@ import {
   unescapeGlob,
   withNegatedGlobs,
   withoutGlobFiles,
+  withoutLeadingDotSlash,
   type FileSpecs,
   type Scope,
 } from '@/internal/globs'
@@ -425,7 +426,7 @@ function resolveAllowDefaultProject(
   checkRelativeGlobs('typeAware.allowDefaultProject', globs)
   checkDefaultProjectGlobs(globs)
   // typescript-eslint matches the globs against paths without a leading `./`
-  const relativeGlobs = globs.map((glob) => glob.replace(/^(?:\.\/)+/, ''))
+  const relativeGlobs = globs.map((glob) => withoutLeadingDotSlash(glob))
   return relativeGlobs.length > 0 ? relativeGlobs : undefined
 }
 
@@ -442,7 +443,7 @@ function resolveTypeAwareIgnores(
     'typeAware.ignores',
     resolveSubOptions(options.typeAware)?.ignores,
     [],
-  ).map((glob) => glob.replace(/^(!?)(?:\.\/)+/, '$1'))
+  ).map((glob) => withoutLeadingDotSlash(glob))
   if (globs.length > 0) {
     checkCodeGlobs(
       'typeAware.ignores',
@@ -749,13 +750,14 @@ function needsTypescriptEslint(
 }
 
 /**
- * The default is `undefined` for an array, which skips parsing the tsconfigs. It leaves out
- * JavaScript files in a JavaScript project, and always the files of `typeAware.ignores`
+ * An array, even an empty one, skips parsing the tsconfigs. The default leaves out JavaScript files
+ * in a JavaScript project, and always the files of `typeAware.ignores`
  */
 function findAllowDefaultProject({
   options,
   root,
   isTyped,
+  isDefaultProjectListed,
   listedDefaultProject,
   isJavascriptProject,
   tsconfigFiles,
@@ -766,6 +768,7 @@ function findAllowDefaultProject({
   options: EslintConfigOptions
   root: string
   isTyped: boolean
+  isDefaultProjectListed: boolean
   listedDefaultProject: Array<string> | undefined
   isJavascriptProject: boolean
   tsconfigFiles: ReadonlyArray<string>
@@ -773,7 +776,7 @@ function findAllowDefaultProject({
   sourceFiles: ReadonlyArray<string>
   isIgnored: (file: string) => boolean
 }): { discovery: ProjectDiscovery | undefined; allowDefaultProject: Array<string> | undefined } {
-  if (listedDefaultProject !== undefined) {
+  if (isDefaultProjectListed) {
     return { discovery: undefined, allowDefaultProject: listedDefaultProject }
   }
   const discovery = isTyped
@@ -966,6 +969,7 @@ function resolveRootedOptions(options: EslintConfigOptions, root: string): Resol
     options,
     root,
     isTyped,
+    isDefaultProjectListed,
     listedDefaultProject,
     isJavascriptProject,
     tsconfigFiles,

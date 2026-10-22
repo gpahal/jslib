@@ -71,10 +71,12 @@ function toHexGroups(address: string): [string, string] {
 }
 /**
  * The addresses a URL's host can't resolve to: unspecified, loopback, link-local, which holds cloud
- * metadata services, private (RFC 1918 and IPv6 unique local), shared (CGNAT) and multicast.
- * `BlockList` matches an IPv4-mapped IPv6 address, such as `::ffff:127.0.0.1`, by its IPv4 rules.
- * The NAT64 (`64:ff9b::/96`) and 6to4 (`2002::/16`) forms of the IPv4 ranges, which a gateway
- * routes to the IPv4 address, are listed too
+ * metadata services, private (RFC 1918 and IPv6 unique local), shared (CGNAT), IETF protocol
+ * assignments, multicast and reserved. `BlockList` matches an IPv4-mapped IPv6 address, such as
+ * `::ffff:127.0.0.1`, by its IPv4 rules. The NAT64 (`64:ff9b::/96`), SIIT (`::ffff:0:0:0/96`) and
+ * 6to4 (`2002::/16`) forms of the IPv4 ranges, which a gateway routes to the IPv4 address, are
+ * listed too, as is all of local-use NAT64 (`64:ff9b:1::/48`). Benchmarking (`198.18.0.0/15`) is
+ * left out, since proxies' fake-IP modes resolve public hosts to it
  */
 const PRIVATE_ADDRESSES: BlockList = (() => {
   const list = new BlockList()
@@ -85,17 +87,21 @@ const PRIVATE_ADDRESSES: BlockList = (() => {
     ['127.0.0.0', 8],
     ['169.254.0.0', 16],
     ['172.16.0.0', 12],
+    ['192.0.0.0', 24],
     ['192.168.0.0', 16],
     ['224.0.0.0', 4],
+    ['240.0.0.0', 4],
   ] as const) {
     list.addSubnet(network, prefix, 'ipv4')
     const [high, low] = toHexGroups(network)
     list.addSubnet(`64:ff9b::${high}:${low}`, 96 + prefix, 'ipv6')
+    list.addSubnet(`::ffff:0:${high}:${low}`, 96 + prefix, 'ipv6')
     list.addSubnet(`2002:${high}:${low}::`, 16 + prefix, 'ipv6')
   }
   for (const [network, prefix] of [
     ['::', 128],
     ['::1', 128],
+    ['64:ff9b:1::', 48],
     ['fe80::', 10],
     ['fc00::', 7],
     ['ff00::', 8],

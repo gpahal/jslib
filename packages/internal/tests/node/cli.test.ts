@@ -23,8 +23,20 @@ describe('readPackageVersion', () => {
       readPackageVersion('@scope/x', pathToFileURL(`${project.dir}/bad.json`)),
     ).rejects.toThrow(
       expect.objectContaining({
-        message: '@scope/x: `package.json`: failed to read',
+        message: expect.stringMatching(
+          /^@scope\/x: `package\.json`: reading it failed: \S/u,
+        ) as unknown,
         cause: expect.any(SyntaxError) as unknown,
+      }),
+    )
+    await expect(
+      readPackageVersion('@scope/x', pathToFileURL(`${project.dir}/missing.json`)),
+    ).rejects.toThrow(
+      expect.objectContaining({
+        message: expect.stringMatching(
+          /^@scope\/x: `package\.json`: reading it failed: ENOENT\b/u,
+        ) as unknown,
+        cause: expect.objectContaining({ code: 'ENOENT' }) as unknown,
       }),
     )
     await expect(

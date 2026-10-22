@@ -37,7 +37,7 @@
     "lint-check": "eslint . --max-warnings 0",
     "prepublishOnly": "../../scripts/verify-publish-tool.sh",
     "test": "vitest run --config ../../vitest.config.ts --exclude tests/setup-recipes.test.ts",
-    "test-recipes": "vitest run --config ../../vitest.config.ts tests/setup-recipes.test.ts",
+    "test-recipes": "vitest run --config ../../vitest.config.ts --test-timeout 600000 tests/setup-recipes.test.ts",
     "typecheck": "tsc && tsc -p tests",
     "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
   },

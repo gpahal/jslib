@@ -72,6 +72,12 @@ describe('pnpm', () => {
       false,
     ],
     [
+      'a package the workspace excludes with `!./`',
+      { ...GIT, 'pnpm-workspace.yaml': "packages: ['apps/*', '!./apps/old']\n" },
+      'apps/old',
+      false,
+    ],
+    [
       'a git repository under a folder with a stray workspace file',
       { 'pnpm-workspace.yaml': "packages: ['**']\n", 'repo/.git/HEAD': 'ref: refs/heads/main\n' },
       'repo',
@@ -990,7 +996,11 @@ describe("Playwright's testDir", () => {
         'GPAHAL_PLAYWRIGHT_FILES_UNMATCHED',
       ],
     ])
-    expect(testDirWarnings(project.dir, { playwright: { files: ['tests/**'] } })).toEqual([])
+    // A fresh project for each, since a hint is given once per root
+    for (const files of [['tests/**'], ['./tests/**']]) {
+      await using matched = await withProject(createPlaywright)
+      expect(testDirWarnings(matched.dir, { playwright: { files } })).toEqual([])
+    }
     await using dynamic = await withProject({
       ...createPlaywright,
       'playwright.config.ts': 'export default { testDir: process.env.DIR }\n',

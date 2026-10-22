@@ -30,6 +30,7 @@ import {
   copyOptions,
   isNonEmptyString,
   isTailwindPlugin,
+  NO_PLUGIN_NAMES,
   packageOfPlugin,
   PREFIX,
   SORT_IMPORTS_PLUGIN,
@@ -507,7 +508,7 @@ function statPath(name: string, file: string): fs.Stats | undefined {
       formatMessage(
         PREFIX,
         [formatNames([name])],
-        `could not inspect path ${formatNames([file])}: ${getErrorReason(error)}`,
+        `reading ${formatNames([file])} failed: ${getErrorReason(error)}`,
       ),
       { cause: error },
     )
@@ -628,7 +629,13 @@ export function checkConfigOptions(givenOptions: PrettierConfigOptions): Checked
     ...overridePluginLists('options.overrides', configOptions.options?.overrides),
   ]
   checkPresetPlugins(presetPluginPackages(configOptions), [...configLists, ...overrideLists])
-  checkPluginConflicts({ sorter, tailwindcss: isTailwindcss }, configLists, overrideLists)
+  // The plugins aren't resolved yet, so no path stands for a name
+  checkPluginConflicts(
+    { sorter, tailwindcss: isTailwindcss },
+    configLists,
+    overrideLists,
+    NO_PLUGIN_NAMES,
+  )
   return configOptions
 }
 

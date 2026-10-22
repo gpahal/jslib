@@ -1,6 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import vm from 'node:vm'
 
+import { describeValue } from '@/errors'
 import {
   camelCase,
   ensurePrefix,
@@ -17,6 +19,8 @@ import {
   trimStart,
   words,
 } from '@/strings'
+
+import { minCpuMs } from './cpu-time'
 
 /**
  * A seeded linear congruential generator, so a failure reproduces
@@ -142,6 +146,18 @@ describe('words', () => {
     )
   })
 
+  it('rejects an object that only claims to be a RegExp, and accepts one from another realm', () => {
+    const fake = { [Symbol.toStringTag]: 'RegExp', source: 'a', flags: '', global: false }
+    for (const pattern of [fake, new Proxy(/a/, {}), RegExp.prototype]) {
+      expect(() => words('a b', pattern as RegExp)).toThrow(
+        new TypeError(
+          `@gpahal/std: \`words\`: \`pattern\`: expected a string, a \`RegExp\` or \`undefined\`, received ${describeValue(pattern)}`,
+        ),
+      )
+    }
+    expect(words('a b', vm.runInNewContext('/[a-z]/') as RegExp)).toEqual(['a', 'b'])
+  })
+
   it('rejects a string pattern that is not a valid regular expression, keeping the cause', () => {
     let thrown: unknown
     try {
@@ -198,19 +214,19 @@ describe('words', () => {
     ])
   })
 
-  it('splits long adversarial runs in linear time', () => {
-    const inputs = [
-      'A'.repeat(50_000),
-      `${'1'.repeat(50_000)}st`,
-      `${'A\u{301}'.repeat(25_000)}a`,
-      'aA1'.repeat(17_000),
-      '😀'.repeat(100_000),
-    ]
-    for (const input of inputs) {
-      const start = performance.now()
-      words(input)
-      expect(performance.now() - start, input.slice(0, 6)).toBeLessThan(500)
-    }
+  it.each([
+    ['an uppercase run', (n: number) => 'A'.repeat(n)],
+    ['a long ordinal', (n: number) => `${'1'.repeat(n)}st`],
+    ['decomposed uppercase letters', (n: number) => `${'A\u{301}'.repeat(n / 2)}a`],
+    ['case and digit changes', (n: number) => 'aA1'.repeat(n / 2)],
+    ['emoji', (n: number) => '😀'.repeat(n)],
+  ])('splits %s in linear time', (_, makeInput) => {
+    const short = makeInput(12_500)
+    const long = makeInput(50_000)
+    // CPU time, since a regex backtracks inside one call. 4 times the input takes 16 times as long
+    // in quadratic code, and the slack covers the timer's resolution
+    const [shortMs = 0, longMs = 0] = minCpuMs([() => words(short), () => words(long)])
+    expect(longMs).toBeLessThan(8 * shortMs + 50)
   })
 
   it('returns every non-empty match of a custom pattern, even a sticky one', () => {
@@ -278,6 +294,14 @@ describe('shorten', () => {
   it.each([
     ['a negative maxLen', () => shorten('abc', -1), RangeError],
     ['a fractional maxLen', () => shorten('abc', 1.5), RangeError],
+    [
+      'a maxLen that is not a number',
+      // @ts-expect-error - JavaScript callers can pass anything
+      () => shorten('abc', '2'),
+      new TypeError(
+        '@gpahal/std: `shorten`: `maxLen`: expected a number or `undefined`, received `"2"`',
+      ),
+    ],
     [
       'options that are not an object',
       // @ts-expect-error - JavaScript callers can pass anything

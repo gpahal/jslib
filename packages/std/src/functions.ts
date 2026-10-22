@@ -6,7 +6,7 @@
 
 import { describeValue } from '@/internal/describe'
 import { stdMessage } from '@/internal/message'
-import { checkFunction, checkOptions } from '@/internal/options'
+import { checkFunction, checkNumber, checkOptions } from '@/internal/options'
 import { MAX_TIMER_DELAY_MS } from '@/internal/timers'
 
 /**
@@ -64,6 +64,7 @@ function checkTimedArguments(
   defaults: { leading: boolean; trailing: boolean },
 ): { leading: boolean; trailing: boolean } {
   checkFunction(caller, fn)
+  checkNumber(caller, '`waitMs`', waitMs)
   if (!Number.isFinite(waitMs) || waitMs < 0 || waitMs > MAX_TIMER_DELAY_MS) {
     throw new RangeError(
       stdMessage(
@@ -90,18 +91,16 @@ function checkTimedArguments(
   return { leading, trailing }
 }
 
-function checkMaxWait(waitMs: number, maxWaitMs: unknown): number | undefined {
-  if (maxWaitMs === undefined) {
+function checkMaxWait(waitMs: number, untypedMaxWaitMs: unknown): number | undefined {
+  if (untypedMaxWaitMs === undefined) {
     return undefined
   }
-  if (typeof maxWaitMs !== 'number') {
-    throw new TypeError(
-      stdMessage(
-        ['`debounce`', '`options.maxWaitMs`'],
-        `expected a number or \`undefined\`, received ${describeValue(maxWaitMs)}`,
-      ),
-    )
-  }
+  const maxWaitMs = checkNumber(
+    '`debounce`',
+    '`options.maxWaitMs`',
+    untypedMaxWaitMs,
+    'a number or `undefined`',
+  )
   if (!Number.isFinite(maxWaitMs) || maxWaitMs < waitMs || maxWaitMs > MAX_TIMER_DELAY_MS) {
     throw new RangeError(
       stdMessage(

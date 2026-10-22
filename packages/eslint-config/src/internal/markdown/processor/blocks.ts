@@ -349,7 +349,8 @@ function getNewLinePrefix(fencePrefix: string): string | undefined {
 
 /**
  * Its `filename="…"` meta, sanitized, or its index and language (` ```js{1} ` is `0.js`). Neither
- * holds a path separator or `..`, so it stays inside the Markdown file's path
+ * holds a path separator, and ESLint prefixes it with `<index>_`, so even `..` stays inside the
+ * Markdown file's path
  */
 function getBlockFilename(node: Code, index: number): string {
   const filename = FILENAME_META_REGEX.exec(node.meta ?? '')?.groups?.['filename']

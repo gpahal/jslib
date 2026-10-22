@@ -22,7 +22,7 @@ Import each module separately, such as `@gpahal/std/strings`. The JSDoc of each 
 | Module | Main exports | Input |
 | --- | --- | --- |
 | `arrays` | `isArray`, `isArrayOf`, `isNonEmpty`, `toArray`, `unique`, `uniqueBy`, `chunk`, `partition` | Your own code |
-| `envs` | `isWindows`, `hasDocument`, `isWebWorker`, and `isBrowser`, deprecated | Globals, read once when the module loads |
+| `envs` | `isWindows`, `hasDocument`, `isWebWorker` | Globals, read once when the module loads |
 | `errors` | `CustomError`, `getErrorMessage`, `getErrorReason`, `getErrorCode`, `toError`, `describeValue`, `assertNever`, `invariant`, `formatNames`, `formatMessage`, `formatMessageList` | Any thrown value for the getters and `toError`, which never throw. Your own code for the formatting helpers |
 | `functions` | `debounce`, `throttle`, `once`, `memoize` | Your own functions |
 | `hash` | `fnv1a52Hash`, `shortHash` | Any string. Not cryptographic |
@@ -58,7 +58,7 @@ export const pathSeparator = isWindows ? '\\' : '/'
 export const context = hasDocument ? 'page' : isWebWorker ? 'worker' : 'server'
 ```
 
-`hasDocument` is `true` when a global `document` exists, as in a browser's main thread or Node under jsdom, and `false` in workers, Deno and edge runtimes. `isWebWorker` is `true` in dedicated, shared and service workers. `isBrowser` is a deprecated alias of `hasDocument`.
+`hasDocument` is `true` when a global `document` exists, as in a browser's main thread or Node under jsdom, and `false` in workers, Deno and edge runtimes. `isWebWorker` is `true` in dedicated, shared and service workers.
 
 ### errors
 

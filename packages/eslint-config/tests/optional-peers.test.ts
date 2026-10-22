@@ -269,7 +269,8 @@ describe('without any optional peer dependency', () => {
 })
 
 test('astro without jsx-a11y where ESLint runs loads, warns once and leaves out the `astro/jsx-a11y/*` rules', async () => {
-  // Builds the config twice to check the warning is emitted once
+  // Builds a config that silences the warning, which leaves it to the next config, then two more
+  // to check the warning is emitted once
   const script = `
 const { defineConfig } = await import('@gpahal/eslint-config')
 const { ESLint } = await import('eslint')
@@ -277,8 +278,8 @@ const warnings = []
 process.emitWarning = (warning, options) => warnings.push([String(warning), options?.code])
 const [{ options, file }] = JSON.parse(process.env.CASES)
 let result
-for (let i = 0; i < 2; i++) {
-  const config = await defineConfig({ root: process.cwd(), ...options })
+for (const warningOptions of [{ GPAHAL_ASTRO_JSX_A11Y_MISSING: false }, {}, {}]) {
+  const config = await defineConfig({ root: process.cwd(), ...options, warnings: warningOptions })
   const eslint = new ESLint({ cwd: process.cwd(), overrideConfigFile: true, overrideConfig: config })
   const [lintResult] = await eslint.lintFiles([file])
   result = {
@@ -309,7 +310,9 @@ console.log(JSON.stringify([{ result, warnings }]))
 })
 
 test('an invalid config of yours, or a composer argument that throws, leaves no rejection for a missing peer, which awaiting still gives', async () => {
-  // Waits long enough for the presets' imports to fail, which reject when they've started
+  // A composer made after them loads the same modules in the same order, so once it settles, any
+  // of their presets' imports have failed too. The immediate runs after Node's check for unhandled
+  // rejections
   const script = `
 const { defineConfig } = await import('@gpahal/eslint-config')
 const rejections = []
@@ -327,7 +330,8 @@ try {
 } catch (caught) {
   argumentError = caught.message
 }
-await new Promise((resolve) => setTimeout(resolve, 1000))
+await defineConfig({ root: process.cwd(), react: true }).then(() => undefined, () => undefined)
+await new Promise((resolve) => setImmediate(resolve))
 const awaited = await composer.then(() => undefined, (caught) => caught.message)
 console.log(JSON.stringify([{ configError, argumentError, rejections, awaited }]))
 `

@@ -17,7 +17,15 @@ describe('clamp', () => {
     ],
     [
       [1, NaN, 10],
-      new RangeError('@gpahal/std: `clamp`: `min`: expected a number, received `NaN`'),
+      new RangeError(
+        '@gpahal/std: `clamp`: `min`: expected a number other than `NaN`, received `NaN`',
+      ),
+    ],
+    [
+      [1, 0, NaN],
+      new RangeError(
+        '@gpahal/std: `clamp`: `max`: expected a number other than `NaN`, received `NaN`',
+      ),
     ],
     [
       [1, 10, 0],
