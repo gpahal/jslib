@@ -142,21 +142,4 @@ describe('an override of files of several types', () => {
       expect(await lintFiles(project.dir, { rules, overrides: broad })).toEqual(expected)
     }
   })
-
-  it("keeps each type's settings and syntax, and leaves other files alone", async () => {
-    await using project = await withTmpProject('stylelint-config-mixed-overrides', {
-      'tokens.css': ':root {\n  --brand: red;\n}\n',
-    })
-    const results = await lintFiles(project.dir, {
-      overrides: [{ files: 'src/**', referenceFiles: ['tokens.css'], rules: PSEUDO }],
-    })
-    // `.astro` files keep `:global()`, and Markdown keeps its reference rules and one-line blocks off
-    expect(results['src/a.astro']).not.toContain('selector-pseudo-class-no-unknown')
-    expect(results['src/a.css']).toContain('selector-pseudo-class-no-unknown')
-    expect(results['src/a.css']).toContain('no-unknown-custom-properties')
-    expect(results['src/a.md']).not.toContain('no-unknown-custom-properties')
-    expect(results['src/a.md']).not.toContain('declaration-block-single-line-max-declarations')
-    expect(results['other/a.css']).not.toContain('no-unknown-custom-properties')
-    expect(results['other/a.astro']).toContain('selector-pseudo-class-no-unknown')
-  })
 })

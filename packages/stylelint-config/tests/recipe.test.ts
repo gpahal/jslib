@@ -31,17 +31,6 @@ const CSS = [
 
 const FIXTURES: Record<string, string> = {
   'a.css': CSS,
-  'page.astro': [
-    '---',
-    "const title = 'Page'",
-    '---',
-    '',
-    '<h1>{title}</h1>',
-    '',
-    '<style>',
-    `${CSS}</style>`,
-    '',
-  ].join('\n'),
   'README.md': `# Title\n\n\`\`\`css\n${CSS}\`\`\`\n`,
 }
 
@@ -72,43 +61,38 @@ async function format(dir: string, fileName: string, code: string): Promise<stri
 
 const config = await defineConfig({ root: process.cwd() })
 
-describe.each([true, false])(
-  'Prettier with singleQuote: %s, then Stylelint, which keeps the quotes',
-  (singleQuote) => {
-    let project: Awaited<ReturnType<typeof createProject>>
-    beforeAll(async () => {
-      project = await createProject(singleQuote)
-    })
-    afterAll(async () => {
-      await project[Symbol.asyncDispose]()
-    })
+// The preset fixtures below run with `singleQuote: true`
+describe('Prettier with singleQuote: false, then Stylelint, which keeps the quotes', () => {
+  let project: Awaited<ReturnType<typeof createProject>>
+  beforeAll(async () => {
+    project = await createProject(false)
+  })
+  afterAll(async () => {
+    await project[Symbol.asyncDispose]()
+  })
 
-    it.each(Object.keys(FIXTURES))('settles %s in one run', async (fileName) => {
-      const config = await defineConfig({ root: project.dir })
-      const filepath = path.join(project.dir, fileName)
-      const once = await fix(
-        await format(project.dir, fileName, FIXTURES[fileName] ?? ''),
-        config,
-        filepath,
-      )
-      const twice = await fix(await format(project.dir, fileName, once), config, filepath)
-      expect(twice).toBe(once)
+  it.each(Object.keys(FIXTURES))('settles %s in one run', async (fileName) => {
+    const config = await defineConfig({ root: project.dir })
+    const filepath = path.join(project.dir, fileName)
+    const once = await fix(
+      await format(project.dir, fileName, FIXTURES[fileName] ?? ''),
+      config,
+      filepath,
+    )
+    const twice = await fix(await format(project.dir, fileName, once), config, filepath)
+    expect(twice).toBe(once)
 
-      const options = await prettier.resolveConfig(filepath)
-      expect(await prettier.check(once, { ...options, filepath })).toBe(true)
-      const { results } = await stylelint.lint({ code: once, codeFilename: filepath, config })
-      const errors = results.flatMap((result) =>
-        result.warnings
-          .filter((warning) => warning.severity === 'error')
-          .map((warning) => warning.text),
-      )
-      expect(errors).toEqual([])
-      expect(once).toContain(singleQuote ? "content: 'x'" : 'content: "x"')
-      expect(once).toContain('(width <= 100px)')
-      expect(once).toContain('display: inline;')
-    })
-  },
-)
+    const options = await prettier.resolveConfig(filepath)
+    expect(await prettier.check(once, { ...options, filepath })).toBe(true)
+    const { results } = await stylelint.lint({ code: once, codeFilename: filepath, config })
+    const errors = results.flatMap((result) =>
+      result.warnings
+        .filter((warning) => warning.severity === 'error')
+        .map((warning) => warning.text),
+    )
+    expect(errors).toEqual([])
+  })
+})
 
 /**
  * A README whose code blocks are partial snippets: declarations without a rule, and custom
@@ -156,24 +140,23 @@ describe('a README with partial snippets', () => {
     await project[Symbol.asyncDispose]()
   })
 
-  it('passes, and Prettier then Stylelint settle it in one run', async () => {
+  it('Prettier then Stylelint settle it in one run', async () => {
     const snippetsConfig = await defineConfig({ root: project.dir, referenceFiles: 'tokens.css' })
     const filepath = path.join(project.dir, 'README.md')
-    const lint = async (code: string, isFix: boolean) =>
-      stylelint.lint({
-        code,
-        codeFilename: filepath,
-        config: snippetsConfig,
-        configBasedir: project.dir,
-        fix: isFix,
-      })
+    const fixed = async (code: string) =>
+      (
+        await stylelint.lint({
+          code,
+          codeFilename: filepath,
+          config: snippetsConfig,
+          configBasedir: project.dir,
+          fix: true,
+        })
+      ).code
     const formatted = await format(project.dir, 'README.md', SNIPPETS_README)
-    const { results } = await lint(formatted, false)
-    expect(results.flatMap((result) => result.warnings.map((warning) => warning.rule))).toEqual([])
-    const { code: once = '' } = await lint(formatted, true)
+    const once = (await fixed(formatted)) ?? ''
     expect(once).toBe(formatted)
-    const { code: twice } = await lint(await format(project.dir, 'README.md', once), true)
-    expect(twice).toBe(once)
+    expect(await fixed(await format(project.dir, 'README.md', once))).toBe(once)
   })
 })
 

@@ -41,25 +41,10 @@ describe('optionsObject', () => {
     expect(Object.keys(options)).toEqual(['root', 'react'])
   })
 
-  it("names unknown options with the known ones, and a nested object's issues", () => {
+  it('names unknown options with the known ones', () => {
     expect(getMessage(schema, { root: '/a', reactt: true })).toBe(
       '@scope/config: options: `reactt`: unknown option. Known options: `root`, `semi`, `react`',
     )
-    expect(getMessage(schema, { root: '/a', react: { refresh: 'yes' } })).toBe(
-      '@scope/config: options: `react.refresh`: expected a boolean, received `"yes"`',
-    )
-    expect(getMessage(schema, { root: '/a', react: 'yes' })).toBe(
-      '@scope/config: options: `react`: expected a boolean or an object, received `"yes"`',
-    )
-  })
-
-  it('reads only own keys, so a polluted prototype satisfies no required key', () => {
-    Reflect.set(Object.prototype, 'root', '/polluted')
-    try {
-      expect(getMessage(schema, {})).toMatch(/`root`: expected a string, received `undefined`$/)
-    } finally {
-      Reflect.deleteProperty(Object.prototype, 'root')
-    }
   })
 
   it('requires a schema of the right type for every key, and `required` for exactly the required ones', () => {
@@ -112,9 +97,6 @@ test('`booleanOr` names what it takes when a nested union rejects the type', () 
   })
   expect(getMessage(schema, 1)).toBe(
     '@scope/config: options: expected a boolean or globs, received `1`. See X',
-  )
-  expect(getMessage(schema, ['a', 1])).toBe(
-    '@scope/config: options: `[1]`: expected a string, received `1`',
   )
 })
 

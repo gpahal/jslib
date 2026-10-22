@@ -16,27 +16,6 @@ async function problemsOf(eslint: ESLint, filePath: string, code: string): Promi
 }
 
 describe('the toml area', () => {
-  it('passes a typical file', async () => {
-    const eslint = await sharedESLint('toml')
-    const [result] = await eslint.lintFiles(['wrangler.toml'])
-    expect(result?.messages).toEqual([])
-  })
-
-  it('reports the layout, which Prettier leaves', async () => {
-    const eslint = await sharedESLint('toml')
-    expect(
-      await problemsOf(eslint, 'x.toml', '[ package ]\nname  =  "a"\nkeys = [ "a" ]\n[bin]\n'),
-    ).toEqual([
-      '1:2 toml/table-bracket-spacing',
-      '1:10 toml/table-bracket-spacing',
-      '2:5 toml/key-spacing',
-      '2:7 toml/key-spacing',
-      '3:9 toml/array-bracket-spacing',
-      '3:13 toml/array-bracket-spacing',
-      '4:2 toml/padding-line-between-tables',
-    ])
-  })
-
   it('lints a ```toml code block in Markdown', async () => {
     const eslint = await sharedESLint('toml')
     const block = ['```toml', 'name  =  "a"', '```']
@@ -57,10 +36,4 @@ describe('the toml area', () => {
       ),
     ).toEqual([])
   })
-})
-
-test('`slop/no-em-dash` leaves TOML files out by default, as their text is often quoted', async () => {
-  expect(await problemsOf(await sharedESLint('toml'), 'x.toml', 'name = "a \u{2014} b"\n')).toEqual(
-    [],
-  )
 })

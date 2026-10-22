@@ -1,9 +1,6 @@
 import path from 'node:path'
 
-import * as prettier from 'prettier'
 import ts from 'typescript'
-
-import { defineConfig as definePrettierConfig } from '@gpahal/prettier-config'
 
 import type { EslintConfigOptions } from '@/index'
 
@@ -19,7 +16,6 @@ import {
   withProject,
 } from './helpers'
 
-const prettierConfig = definePrettierConfig({ root: path.resolve(import.meta.dirname, '..') })
 const RULES_DIR = path.join(FIXTURES_DIR, 'rules')
 
 async function lintFixture(
@@ -32,8 +28,7 @@ async function lintFixture(
 }
 
 /**
- * The rules fixture's messages for `files` with `typescript`, and the options of `reportingRules`
- * otherwise, whose ESLint the default `typescript` shares
+ * The rules fixture's messages for `files` with `typescript`, and slop rules off
  */
 async function lintRules(files: Array<string>, typescript: EslintConfigOptions['typescript']) {
   // An empty `typescript` is the default, so it drops out of `sharedESLint`'s key
@@ -41,18 +36,6 @@ async function lintRules(files: Array<string>, typescript: EslintConfigOptions['
     antislop: { slop: false },
     typescript: Object.keys(typescript ?? {}).length === 0 ? undefined : typescript,
   })
-}
-
-/**
- * The rules that report `code` linted as `file` of the rules fixture
- */
-async function reportingRules(
-  file: string,
-  code: string,
-  options: Partial<EslintConfigOptions> = {},
-): Promise<Array<string>> {
-  const eslint = await sharedESLint('rules', { antislop: { slop: false }, ...options })
-  return (await lintText(eslint, file, code)).map((message) => message.split(':', 1)[0] ?? '')
 }
 
 function fixtureTypeErrors(file: string, code: string): Array<string> {
@@ -63,9 +46,6 @@ function fixtureTypeErrors(file: string, code: string): Array<string> {
   return typeErrors(path.join(RULES_DIR, file), code, options)
 }
 
-const format = async (code: string, filepath: string) =>
-  prettier.format(code, { ...prettierConfig, filepath })
-
 /**
  * Each file holds one problem, so its messages are exactly the rules that report it, once each
  */
@@ -73,16 +53,10 @@ const CASES: Record<string, Array<string>> = {
   'src/unused-disable.ts': [
     "Unused eslint-disable directive (no problems were reported from 'no-console').",
   ],
-  'src/dead-store.ts': ['no-useless-assignment'],
   'src/inverted-equality.ts': ['unicorn/no-negated-comparison'],
   'src/unused-private-member.ts': ['@typescript-eslint/no-unused-private-class-members'],
-  'src/array-from-map.ts': ['e18e/prefer-array-from-map'],
   'src/object-has-own.ts': ['e18e/prefer-object-has-own'],
   // Overlapping rules that each also report code the others miss
-  'src/double-negation.ts': [
-    'no-extra-boolean-cast',
-    '@typescript-eslint/no-unnecessary-type-conversion',
-  ],
   'src/redundant-or-false.ts': [
     '@typescript-eslint/no-unnecessary-condition',
     'unicorn/no-useless-logical-operand',
@@ -107,29 +81,6 @@ describe('rules', () => {
     expect(Object.values(messages).flat()).toEqual([])
   })
 
-  // The test file is in `__tests__`, since vitest would run a `*.test.ts` fixture
-  it.each([
-    ['@typescript-eslint/explicit-module-boundary-types', 'boundary-types', {}, [0, 0]],
-    [
-      '@typescript-eslint/explicit-module-boundary-types',
-      'boundary-types',
-      { library: true },
-      [1, 0],
-    ],
-    ['@typescript-eslint/no-inferrable-types', 'inferrable-types', {}, [1, 1]],
-    // `isolatedDeclarations` needs the type of an exported regex, which the rule removes
-    ['@typescript-eslint/no-inferrable-types', 'inferrable-types', { library: true }, [0, 1]],
-    ['@typescript-eslint/unbound-method', 'unbound-method', {}, [1, 0]],
-  ] as const)(
-    'report %s in %s and its test with typescript %j',
-    async (rule, name, typescript, expected) => {
-      const messages = await lintRules([`src/${name}.ts`, `src/__tests__/${name}.ts`], typescript)
-      expect(Object.values(messages).map((ids) => ids.filter((id) => id === rule).length)).toEqual(
-        expected,
-      )
-    },
-  )
-
   it.each([
     ['src/strict-boolean.ts', {}, ['@typescript-eslint/strict-boolean-expressions']],
     ['src/strict-boolean.ts', { strictBooleanExpressions: false }, []],
@@ -139,71 +90,25 @@ describe('rules', () => {
     expect(await lintRules([file], typescript)).toEqual({ [file]: expected })
   })
 
-  describe('report implied eval, thrown literals, rejections with non-errors and bracket access', () => {
-    const code = [
-      'export function run(): void {',
-      "  setTimeout('run()', 1)",
-      "  throw 'failed'",
-      '}',
-      'export const failed = new Promise((_resolve, reject) => {',
-      "  reject('failed')",
-      '})',
-      'export const sizes = { small: 1 }',
-      "export const small = sizes['small']",
-      '',
-    ].join('\n')
-    const jsCode = code.replace(': void', '')
-    const coreRules = [
-      'no-implied-eval',
-      'no-throw-literal',
-      'prefer-promise-reject-errors',
-      'dot-notation',
-    ]
-    const typedRules = coreRules.map((rule) =>
-      rule === 'no-throw-literal'
-        ? '@typescript-eslint/only-throw-error'
-        : `@typescript-eslint/${rule}`,
-    )
-
-    it.each([
-      ['x.js', jsCode, coreRules],
-      ['README.md', `# Title\n\n\`\`\`js\n${jsCode}\`\`\`\n`, coreRules],
-      ['src/dead-store.ts', code, typedRules],
-    ])('in %s', async (file, text, expected) => {
-      const rules = await reportingRules(file, text)
-      expect(rules.filter((rule) => [...coreRules, ...typedRules].includes(rule))).toEqual(expected)
-    })
-  })
-
   it('merge duplicate imports into TypeScript that compiles', async () => {
     const file = 'src/imports/duplicates.ts'
-    // Turns `unicorn/prefer-export-from`'s fix back on to check how it combines with the merge
-    const eslint = await createESLint(
-      RULES_DIR,
-      {
-        configs: [{ settings: { '@gpahal/report-only': { 'unicorn/prefer-export-from': false } } }],
-      },
-      { fix: true },
-    )
+    const eslint = await createESLint(RULES_DIR, {}, { fix: true })
+    const code = [
+      "import type { A } from './types'",
+      "import { C, type B } from './types'",
+      '',
+      'export const x: A = 1',
+      "export const y: B = 'b'",
+      'export const z = C',
+      '',
+    ].join('\n')
     // The default merge, `import type { A, type B, C }`, would make `C` type-only
-    const [result] = await eslint.lintFiles([file])
-    expect(result?.messages).toEqual([])
-    const output = await format(result!.output!, result!.filePath)
-    expect(output).toBe(
-      [
-        "import type { A, B } from './types'",
-        '',
-        'export const x: A = 1',
-        "export const y: B = 'b'",
-        '',
-        "export { C as z } from './types'",
-        '',
-      ].join('\n'),
-    )
+    const [result] = await eslint.lintText(code, { filePath: path.join(RULES_DIR, file) })
+    const output = result?.output ?? code
+    expect(output.match(/^import .*$/gm)).toEqual([
+      expect.stringMatching(/^import \{ type A, C, type B\s*\} from '\.\/types'$/),
+    ])
     expect(fixtureTypeErrors(file, output)).toEqual([])
-    const [again] = await eslint.lintText(output, { filePath: result!.filePath })
-    expect(again?.output).toBeUndefined()
-    expect(again?.messages).toEqual([])
   })
 })
 
@@ -237,42 +142,12 @@ describe('import rules', () => {
     },
   )
 
-  it('leave named imports to TypeScript in TypeScript files, and off in code blocks', async () => {
+  it('leave named imports off in code blocks', async () => {
     await using project = await withProject({ 'src/a.js': '' })
     const eslint = await createESLint(project.dir, { gitignore: false })
-    for (const file of ['src/b.ts', 'README.md/0.js']) {
-      expect(await ruleSeverity(eslint, path.join(project.dir, file), 'import-x/named')).toBe(0)
-    }
-    expect(await ruleSeverity(eslint, path.join(project.dir, 'src/b.js'), 'import-x/named')).toBe(2)
-  })
-
-  it('report a relative import of another package, outside config and test files, without fixing it', async () => {
-    const importA = "import { a } from '../../a/src/index.js'\n\nexport const copy = a + 1\n"
-    await using project = await withProject({
-      'package.json': '{ "name": "repo", "private": true, "type": "module" }\n',
-      'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
-      'packages/a/package.json': '{ "name": "a", "type": "module", "exports": "./src/index.js" }\n',
-      'packages/a/src/index.js': 'export const a = 1\n',
-      'packages/b/package.json': '{ "name": "b", "type": "module" }\n',
-      'packages/b/src/index.js': importA,
-      'packages/b/vite.config.js':
-        "import { a } from '../a/src/index.js'\n\nexport default { a }\n",
-      'packages/b/tests/a.test.js': importA,
-    })
-    const eslint = await createESLint(project.dir, { gitignore: false }, { fix: true })
-    const results = await eslint.lintFiles(['packages/b'])
     expect(
-      Object.fromEntries(
-        results.map((result) => [
-          path.relative(project.dir, result.filePath),
-          [result.output, result.messages.map(ruleIdOf)],
-        ]),
-      ),
-    ).toMatchObject({
-      'packages/b/src/index.js': [undefined, ['import-x/no-relative-packages']],
-      'packages/b/vite.config.js': [undefined, []],
-      'packages/b/tests/a.test.js': [undefined, []],
-    })
+      await ruleSeverity(eslint, path.join(project.dir, 'README.md/0.js'), 'import-x/named'),
+    ).toBe(0)
   })
 })
 

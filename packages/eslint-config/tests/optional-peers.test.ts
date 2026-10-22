@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import process from 'node:process'
 
 import { assertBuildIsCurrent, runNodeOk } from '@gpahal/internal/node/testing'
 
@@ -13,7 +12,7 @@ import {
   warnOfSonarjsTypescriptCopy,
 } from '@/internal/peers'
 
-import { BUILD_DIR, CORE_AREAS_OFF, FIXTURES_DIR, withProject } from './helpers'
+import { BUILD_DIR, captureWarnings, CORE_AREAS_OFF, FIXTURES_DIR, withProject } from './helpers'
 
 beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
@@ -151,12 +150,11 @@ test('every optional peer dependency but typescript belongs to a preset', () => 
 type CaseResult = { messages?: Array<string>; error?: string }
 
 /**
- * The options that the cases add to their own by default, turning off the type information and
- * the areas that load no optional peer, since loading them makes up most of the time a fresh
- * process takes to build a config. The JavaScript-only project keeps them on to check that none of
- * them needs an optional peer
  * Runs `script` on `presets`, with `defaults` under their options, from a project whose
- * `node_modules` holds the package, what it requires but `omitted`, and `peers`
+ * `node_modules` holds the package, what it requires but `omitted`, and `peers`. The default
+ * `defaults` turn off the type information and the areas that load no optional peer, since loading
+ * them makes up most of the time a fresh process takes to build a config. The JavaScript-only
+ * project's test passes `{}` to keep them on, to check that none of them needs an optional peer
  */
 async function lintInProject<T = CaseResult>(
   presets: Array<Preset>,
@@ -200,22 +198,6 @@ async function lintInProject<T = CaseResult>(
     },
   })
   return JSON.parse(stdout) as Array<T>
-}
-
-/**
- * The warnings `fn` emits, as `[message, code]`
- */
-function warningsOf(fn: () => void): Array<[string, string | undefined]> {
-  const emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined)
-  try {
-    fn()
-    return emitWarning.mock.calls.map(([warning, options]) => [
-      String(warning),
-      typeof options === 'object' ? options.code : undefined,
-    ])
-  } finally {
-    emitWarning.mockRestore()
-  }
 }
 
 test('the config of a JavaScript-only project loads without typescript', async () => {
@@ -362,7 +344,7 @@ describe('checkPeerVersions', () => {
   it('warns once for a version newer than the range', async () => {
     await using project = await withProject({ [NEXT_PLUGIN]: '{"version":"17.0.0"}' })
     expect(
-      warningsOf(() => {
+      captureWarnings(() => {
         checkPeerVersions('nextjs', ['@next/eslint-plugin-next'], project.dir)
         checkPeerVersions('nextjs', ['@next/eslint-plugin-next'], project.dir)
       }),
@@ -467,7 +449,7 @@ describe('warnOfSonarjsTypescriptCopy', () => {
     await fs.symlink(path.join(project.dir, store, 'eslint-plugin-sonarjs'), link, 'dir')
     const dir = await fs.realpath(project.dir)
     expect(
-      warningsOf(() => {
+      captureWarnings(() => {
         warnOfSonarjsTypescriptCopy(project.dir)
         warnOfSonarjsTypescriptCopy(project.dir)
       }),
@@ -483,6 +465,6 @@ describe('warnOfSonarjsTypescriptCopy', () => {
 
   it("doesn't warn when both load one copy", async () => {
     await using project = await withProject(PARSER)
-    expect(warningsOf(() => warnOfSonarjsTypescriptCopy(project.dir))).toEqual([])
+    expect(captureWarnings(() => warnOfSonarjsTypescriptCopy(project.dir))).toEqual([])
   })
 })

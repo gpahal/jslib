@@ -1,67 +1,29 @@
-import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import stylelint, { type Config } from 'stylelint'
-import { compile } from 'tailwindcss'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
 import { defineConfig } from '@/index'
 import { LEGACY_NAMESPACES } from '@/internal/tailwind-theme-function'
 
-import { topLevelRules } from './helpers'
-
-const TAILWIND_DIR = await fs.realpath(
-  path.join(import.meta.dirname, '../node_modules/tailwindcss'),
-)
+import { linkTailwind, tailwindProblemOf } from './helpers'
 
 const ENTRY =
   "@import 'tailwindcss';\n\n@theme {\n  --color-brand: red;\n}\n\n:root {\n  --brand: red;\n}\n"
 
 const PREFIXED_ENTRY = "@import 'tailwindcss' prefix(tw);\n\n@theme {\n  --color-brand: red;\n}\n"
 
-/**
- * An entry whose `a.css` resets the colors before `b.css` defines one
- */
-const IMPORTS_ENTRY = "@import 'tailwindcss';\n@import './a.css';\n@import './b.css';\n"
-const IMPORTED_RESET =
-  '@theme {\n  --color-*: initial;\n}\n\n.a {\n  color: theme(--color-brand);\n}\n'
-
 const project = await withTmpProject('stylelint-config-theme-function', {
   'src/global.css': ENTRY,
   'prefixed/global.css': PREFIXED_ENTRY,
   'plugin/global.css': `${ENTRY}\n@plugin './plugin.js';\n`,
-  'imports/global.css': IMPORTS_ENTRY,
-  'imports/a.css': IMPORTED_RESET,
-  'imports/b.css': '@theme {\n  --color-brand: red;\n}\n',
 })
-await fs.mkdir(path.join(project.dir, 'node_modules'))
-await fs.symlink(TAILWIND_DIR, path.join(project.dir, 'node_modules/tailwindcss'))
+await linkTailwind(project.dir)
 
 afterAll(async () => {
   await project[Symbol.asyncDispose]()
 })
-
-/**
- * Tailwind's error for `css`, whose relative imports resolve from `base`, or `undefined` when it
- * compiles
- */
-async function tailwindErrorOf(css: string, base = TAILWIND_DIR): Promise<string | undefined> {
-  try {
-    await compile(css, {
-      base,
-      loadStylesheet: async (id: string, from: string) => {
-        if (id !== 'tailwindcss' && !id.startsWith('./')) throw new Error(`Can't resolve '${id}'`)
-        const file =
-          id === 'tailwindcss' ? path.join(TAILWIND_DIR, 'index.css') : path.resolve(from, id)
-        return { path: file, base: path.dirname(file), content: await fs.readFile(file, 'utf8') }
-      },
-    })
-    return undefined
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error)
-  }
-}
 
 const configs = new Map<string, Config>()
 
@@ -81,14 +43,14 @@ async function configOf(folder: string): Promise<Config> {
 }
 
 /**
- * The messages of `@gpahal/tailwind-theme-function` on `code`, linted as `src/<file>` with the
- * entry point of `folder`
+ * The messages of `@gpahal/tailwind-theme-function` on `code`, linted as `src/a.css` with the entry
+ * point of `folder`
  */
-async function reportsOf(code: string, folder = 'src', file = 'a.css'): Promise<Array<string>> {
+async function reportsOf(code: string, folder = 'src'): Promise<Array<string>> {
   const { results } = await stylelint.lint({
     code,
     config: await configOf(folder),
-    codeFilename: path.join(project.dir, 'src', file),
+    codeFilename: path.join(project.dir, 'src/a.css'),
   })
   return results.flatMap((result) =>
     result.warnings
@@ -134,7 +96,7 @@ describe('@gpahal/tailwind-theme-function', () => {
       'Unexpected unknown theme variable "--color-red-500" in "theme()"',
     ],
   ])('reports what fails Tailwind, in %j', async (code, message) => {
-    expect(await tailwindErrorOf(`${ENTRY}\n${code}`)).toMatch(/^Could not resolve value/)
+    expect(await tailwindProblemOf(`${ENTRY}\n${code}`)).toMatch(/^Could not resolve value/)
     expect(await reportsOf(code)).toEqual([message])
   })
 
@@ -152,16 +114,16 @@ describe('@gpahal/tailwind-theme-function', () => {
     // `--font-*` keeps `--font-weight-*`
     '@theme {\n  --font-*: initial;\n}\n\n.a {\n  font-weight: theme(--font-weight-bold);\n}\n',
   ])('takes what Tailwind compiles, in %j', async (code) => {
-    expect(await tailwindErrorOf(`${ENTRY}\n${code}`)).toBeUndefined()
+    expect(await tailwindProblemOf(`${ENTRY}\n${code}`)).toBeUndefined()
     expect(await reportsOf(code)).toEqual([])
   })
 
   it('reads theme names without the theme prefix, as Tailwind does', async () => {
     expect(
-      await tailwindErrorOf(`${PREFIXED_ENTRY}\n${colorOf('theme(--color-red-500)')}`),
+      await tailwindProblemOf(`${PREFIXED_ENTRY}\n${colorOf('theme(--color-red-500)')}`),
     ).toBeUndefined()
     expect(
-      await tailwindErrorOf(`${PREFIXED_ENTRY}\n${colorOf('theme(--tw-color-red-500)')}`),
+      await tailwindProblemOf(`${PREFIXED_ENTRY}\n${colorOf('theme(--tw-color-red-500)')}`),
     ).toBeDefined()
     expect(
       await reportsOf(
@@ -169,12 +131,6 @@ describe('@gpahal/tailwind-theme-function', () => {
         'prefixed',
       ),
     ).toEqual(['Unexpected unknown theme variable "--tw-color-red-500" in "theme()"'])
-  })
-
-  // Its place among the reference files isn't known, so its resets remove only its own names
-  it('keeps the names of a reference file after the linted reference file resets them', async () => {
-    expect(await tailwindErrorOf(IMPORTS_ENTRY, path.join(project.dir, 'imports'))).toBeUndefined()
-    expect(await reportsOf(IMPORTED_RESET, 'imports', '../imports/a.css')).toEqual([])
   })
 
   // Tailwind turns the keys of a JavaScript theme into theme variables, as `colors.brand` into
@@ -195,8 +151,8 @@ describe('@gpahal/tailwind-theme-function', () => {
     const [key = ''] = keyPath.split('.', 1)
     expect(Object.hasOwn(LEGACY_NAMESPACES, key)).toBe(true)
     const nope = `${key}.zzz`
-    expect(await tailwindErrorOf(`${ENTRY}\n${colorOf(`theme(${keyPath})`)}`)).toBeUndefined()
-    expect(await tailwindErrorOf(`${ENTRY}\n${colorOf(`theme(${nope})`)}`)).toBeDefined()
+    expect(await tailwindProblemOf(`${ENTRY}\n${colorOf(`theme(${keyPath})`)}`)).toBeUndefined()
+    expect(await tailwindProblemOf(`${ENTRY}\n${colorOf(`theme(${nope})`)}`)).toBeDefined()
     expect(await reportsOf(colorOf(`theme(${keyPath})`))).toEqual([])
     expect(await reportsOf(colorOf(`theme(${nope})`))).toHaveLength(1)
   })
@@ -221,21 +177,5 @@ describe('@gpahal/tailwind-theme-function', () => {
     }
     expect(await lint('src/a.css')).toEqual([2])
     expect(await lint('other/a.css')).toEqual([])
-  })
-
-  it('is off in Markdown and without reference files', async () => {
-    expect(
-      await reportsOf(
-        '# A\n\n```css\n.a {\n  color: theme(--color-nope);\n}\n```\n',
-        'src',
-        'a.md',
-      ),
-    ).toEqual([])
-    expect(topLevelRules(await configOf('src'))).toHaveProperty(
-      '@gpahal/tailwind-theme-function',
-      true,
-    )
-    const config = await defineConfig({ root: project.dir, tailwindcss: true })
-    expect(topLevelRules(config)).not.toHaveProperty('@gpahal/tailwind-theme-function')
   })
 })

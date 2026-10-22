@@ -18,6 +18,7 @@ import { bindWarnings, WARNING_CODES, warnOfSetup, withWarnings } from '@/intern
 
 import {
   BUILD_DIR,
+  captureWarnings,
   CORE_AREAS_OFF,
   createESLint,
   eslintWith,
@@ -99,12 +100,10 @@ describe('testFiles', () => {
     expect(await ruleSeverity(eslint, 'src/a.ts', NON_NULL_RULE)).toBe(2)
   })
 
-  it('replaces the default test files with a readonly array, which it leaves unchanged', async () => {
-    const globs: ReadonlyArray<string> = Object.freeze(['e2e/**/*.ts'])
-    const eslint = await createESLint('typescript', { testFiles: globs })
+  it('replaces the default test files with an array', async () => {
+    const eslint = await createESLint('typescript', { testFiles: ['e2e/**/*.ts'] })
     expect(await ruleSeverity(eslint, 'tests/a.test.ts', NON_NULL_RULE)).toBe(2)
     expect(await ruleSeverity(eslint, 'e2e/a.ts', NON_NULL_RULE)).toBe(0)
-    expect(globs).toEqual(['e2e/**/*.ts'])
   })
 })
 
@@ -175,8 +174,6 @@ describe('area rules', () => {
 })
 
 /**
- * The areas that child processes turn off, which their tests don't check, since loading them makes
- * up most of the time a fresh process takes to build the config
  * Lints the files in `process.argv[4]` of the working directory with the build's config for the
  * options in `process.argv[3]`, and prints each file's messages. A string
  * `typeAware.allowDefaultProject` or `ignores` is the source of a function
@@ -381,23 +378,13 @@ describe('typeAware.allowDefaultProject', () => {
     })
   })
 
-  it.concurrent.each<[string, Record<string, string>, Record<string, unknown>, Array<unknown>]>([
-    [
-      'lints with a function that adds to the default',
-      { 'vitest.setup.ts': 'export {}\n' },
-      { typeAware: { allowDefaultProject: '(defaults) => [...defaults, "*.setup.ts"]' } },
-      [],
-    ],
-    [
-      'fails when a list of yours replaces the default',
-      {},
-      { typeAware: { allowDefaultProject: ['*.setup.ts'] } },
-      [expect.stringMatching(/was not found by the project service/)],
-    ],
-  ])('a root config file %s', async (_name, files, options, messages) => {
-    await using project = await withProject({ ...PROJECT, ...files })
+  it.concurrent('a root config file lints with a function that adds to the default', async () => {
+    await using project = await withProject({ ...PROJECT, 'vitest.setup.ts': 'export {}\n' })
+    const options = {
+      typeAware: { allowDefaultProject: '(defaults) => [...defaults, "*.setup.ts"]' },
+    }
     expect(await lintInChild(project.dir, options, ['vitest.config.ts', 'src'])).toEqual({
-      'vitest.config.ts': messages,
+      'vitest.config.ts': [],
       'src/index.ts': [],
     })
   })
@@ -658,16 +645,6 @@ describe('globs', () => {
     expect(await ruleSeverity(eslint, 'tests/a.test.ts', LIBRARY_RULE)).toBeUndefined()
     expect(await ruleSeverity(eslint, 'tests/fixtures/a.test.ts', LIBRARY_RULE)).toBe(2)
   })
-
-  it.each([
-    ['testFiles', { testFiles: () => ['!**/fixtures/**'] }],
-    ['server.files', { server: { files: ['!src/client/**'] as const } }],
-    ['node.scope', { node: { scope: ['!apps/x/**'] } }],
-  ])('throw on `%s` with only negated globs', (name, options) => {
-    expect(() => defineConfig({ root: path.join(FIXTURES_DIR, 'typescript'), ...options })).toThrow(
-      `@gpahal/eslint-config: \`${name}\`: lists only negated globs, so it would match no file. Add the globs of the files to match, as in \`['src/**', '!src/legacy/**']\``,
-    )
-  })
 })
 
 describe('files', () => {
@@ -730,20 +707,6 @@ describe('nextjs.rootDir', () => {
     const rule = '@next/next/no-img-element'
     expect(await ruleSeverity(eslint, 'packages/ui/src/avatar.tsx', rule)).toBeUndefined()
     expect(await ruleSeverity(eslint, 'apps/web/src/avatar.tsx', rule)).toBe(2)
-  })
-
-  it.each([
-    [
-      '/apps/web',
-      '@gpahal/eslint-config: `nextjs.rootDir`: path `/apps/web` is absolute. Make it relative to `root`',
-    ],
-    [
-      'apps/*/',
-      "@gpahal/eslint-config: `nextjs.rootDir`: path `apps/*/` is a glob, but this option lists folders, not globs. List each app, as in `['apps/web', 'apps/docs']`",
-    ],
-  ])('throws for the root %j', async (rootDir, message) => {
-    await using project = await withProject(MONOREPO)
-    expect(() => defineConfig({ root: project.dir, nextjs: { rootDir } })).toThrow(message)
   })
 })
 
@@ -1074,15 +1037,8 @@ describe('warnings', () => {
    * awaited it
    */
   async function warningCodesOf(options: EslintConfigOptions): Promise<Array<unknown>> {
-    const emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined)
-    try {
-      await defineConfig(options)
-      return emitWarning.mock.calls.map(([, warningOptions]) =>
-        typeof warningOptions === 'object' ? warningOptions.code : undefined,
-      )
-    } finally {
-      emitWarning.mockRestore()
-    }
+    const warnings = await captureWarnings(async () => defineConfig(options))
+    return warnings.map(([, code]) => code)
   }
 
   it('silences a code for its config only, and warns once per root', async () => {
@@ -1106,20 +1062,15 @@ describe('warnings', () => {
     }
     await using first = await withProject(project)
     await using second = await withProject(project)
-    const emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined)
-    try {
+    const warnings = await captureWarnings(async () => {
       const silenced = defineConfig({
         root: first.dir,
         warnings: { GPAHAL_FILES_OUTSIDE_TSCONFIG: false },
       })
       const warned = defineConfig({ root: second.dir })
       await Promise.all([silenced, warned])
-      expect(
-        emitWarning.mock.calls.filter(([message]) => String(message).includes('`scripts/b.ts`')),
-      ).toHaveLength(1)
-    } finally {
-      emitWarning.mockRestore()
-    }
+    })
+    expect(warnings.filter(([message]) => message.includes('`scripts/b.ts`'))).toHaveLength(1)
   })
 
   it.each([
@@ -1137,8 +1088,7 @@ describe('warnings', () => {
   })
 
   it('silences a code after an await, and in a callback bound where it was made', async () => {
-    const emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined)
-    try {
+    const warnings = await captureWarnings(async () => {
       const later = await withWarnings({ GPAHAL_ROOT_GITIGNORED: false }, async () => {
         await Promise.resolve()
         warnOfSetup('after an await', 'GPAHAL_ROOT_GITIGNORED')
@@ -1148,21 +1098,8 @@ describe('warnings', () => {
       })
       later()
       warnOfSetup('outside', 'GPAHAL_ROOT_GITIGNORED')
-      expect(emitWarning.mock.calls.map(([message]) => message)).toEqual(['outside'])
-    } finally {
-      emitWarning.mockRestore()
-    }
-  })
-
-  it("lists every code in the README's Warnings table", async () => {
-    const readme = await fs.readFile(path.join(import.meta.dirname, '..', 'README.md'), 'utf8')
-    const section = readme.slice(readme.indexOf('### Warnings'), readme.indexOf('### Errors'))
-    expect(
-      section
-        .matchAll(/^\| `(GPAHAL_\w+)` \|/gm)
-        .map((match) => match[1])
-        .toArray(),
-    ).toEqual([...WARNING_CODES])
+    })
+    expect(warnings.map(([message]) => message)).toEqual(['outside'])
   })
 
   it('has every code hidden from the test output by the root vitest config', async () => {

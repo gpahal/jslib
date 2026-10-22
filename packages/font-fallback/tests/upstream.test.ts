@@ -1,21 +1,12 @@
 import { once } from 'node:events'
-import { readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 
 import { entireMetricsCollection } from '@capsizecss/metrics/entireMetricsCollection'
-import { create, type Font } from 'fontkitten'
+import { create } from 'fontkitten'
 
 import { CFF_PATH, FIGTREE_PATH } from './fixtures'
 import { getTable, readBytes, replaceTable, setTableRecord } from './helpers'
-
-async function readFont(name: string): Promise<Font> {
-  const font = create(await readFile(new URL(`fixtures/${name}`, import.meta.url)))
-  if (font.isCollection) {
-    throw new Error('Expected a font, not a collection')
-  }
-  return font
-}
 
 describe('fontkitten workarounds', () => {
   it('still overreads CFF maxp tables; remove padShortMaxp in parse.ts, which pads direct and WOFF2 input, when fixed', async () => {
@@ -28,7 +19,8 @@ describe('fontkitten workarounds', () => {
   })
 
   it('still maps code points to glyph ids by its private cmap processor; update readMetrics in parse.ts when this fails', async () => {
-    const font = await readFont('figtree-regular.ttf')
+    const font = create(Buffer.from(await readBytes(FIGTREE_PATH)))
+    assert(!font.isCollection)
     const cmap: unknown = Reflect.get(font, '_cmapProcessor')
     expect(cmap).toHaveProperty('lookup', expect.any(Function))
     const { lookup } = cmap as { lookup: (codePoint: number) => number }

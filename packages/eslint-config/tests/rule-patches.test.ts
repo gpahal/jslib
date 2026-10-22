@@ -5,11 +5,11 @@ import eslintPluginImportX from 'eslint-plugin-import-x'
 
 import { patchUnsafeFixes } from '@/internal/fixes'
 
-import { createESLint, FIXTURES_DIR, lintText, sharedESLint } from './helpers'
+import { FIXTURES_DIR, lintText, sharedESLint } from './helpers'
 
 describe('publishing rules', () => {
   it('say how an app skips the checks of a missing `type` and `description`', async () => {
-    const eslint = await createESLint('json')
+    const eslint = await sharedESLint('json')
     const manifest = '{\n  "name": "app",\n  "version": "1.0.0"\n}\n'
     const hint = 'An app, which isn\'t published, sets `"private": true`, which skips this check.'
     const messages = await lintText(eslint, 'app/package.json', manifest)
@@ -31,35 +31,34 @@ describe('`sonarjs/unverified-certificate`', () => {
     return messages.filter((text) => text.startsWith(`${rule}:`))
   }
 
-  it.each([
+  // A row reports once or not at all
+  it.each<['reports' | 'leaves', string, ...Array<string>]>([
     [
+      'reports',
       'x.js',
       "import { Agent as HttpsAgent } from 'https'",
       'export const a = new HttpsAgent({ rejectUnauthorized: false })',
     ],
     [
+      'reports',
       'x.js',
       "import { Agent } from 'undici'",
       'export const a = new Agent({ connect: { rejectUnauthorized: false } })',
     ],
     [
+      'reports',
       'x.js',
       "import tls from 'node:tls'",
       "export const s = tls.connect(443, 'a.dev', { rejectUnauthorized: false })",
     ],
     [
+      'reports',
       'x.cjs',
       "const { Agent: A } = require('https')",
       'module.exports = new A({ rejectUnauthorized: false })',
     ],
-  ])('reports %s: %s, once', async (file, ...lines) => {
-    expect(await reports(file, lines)).toEqual([
-      `${rule}: Enable server certificate validation on this SSL/TLS connection.`,
-    ])
-  })
-
-  it.each([
     [
+      'leaves',
       'x.cjs',
       'function require() {',
       '  return {}',
@@ -69,11 +68,13 @@ describe('`sonarjs/unverified-certificate`', () => {
     ],
     // undici ignores the option outside `connect`
     [
+      'leaves',
       'x.js',
       "import { Agent } from 'undici'",
       'export const a = new Agent({ rejectUnauthorized: false })',
     ],
     [
+      'leaves',
       'x.js',
       "import https from 'node:https'",
       'export function agent(secure) {',
@@ -82,8 +83,29 @@ describe('`sonarjs/unverified-certificate`', () => {
       '  return new https.Agent(options)',
       '}',
     ],
-  ])('leaves %s: %s', async (file, ...lines) => {
-    expect(await reports(file, lines)).toEqual([])
+  ])('%s %s: %s', async (verb, file, ...lines) => {
+    const message = `${rule}: Enable server certificate validation on this SSL/TLS connection.`
+    expect(await reports(file, lines)).toEqual(verb === 'reports' ? [message] : [])
+  })
+})
+
+describe("`@typescript-eslint/no-meaningless-void-operator`'s patch", () => {
+  it("doesn't report `void` of a value that isn't a call, which `no-unused-expressions` needs", async () => {
+    const eslint = await sharedESLint('rules')
+    const code = [
+      'export function run(record: () => void, el: { offsetHeight: number }): void {',
+      '  record()',
+      '  void (1 + 2)',
+      '  void el.offsetHeight',
+      // The one report, which shows that the rule runs with type information
+      '  void record()',
+      '}',
+      '',
+    ].join('\n')
+    const rule = '@typescript-eslint/no-meaningless-void-operator'
+    // In place of a file of the project, which the project service needs
+    const messages = await lintText(eslint, 'src/void-promise.ts', code)
+    expect(messages.filter((text) => text.startsWith(`${rule}:`))).toHaveLength(1)
   })
 })
 

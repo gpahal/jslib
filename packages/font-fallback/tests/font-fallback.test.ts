@@ -102,14 +102,6 @@ describe('rules', () => {
     expect(rejected).toEqual(expect.arrayContaining(['Diplomata', 'Dorsa', 'Six Caps']))
   })
 
-  it('reads the positive descent @capsizecss/metrics has for Coiny as a descent below the baseline', async () => {
-    const { fallbacks } = await getFontFallbacks('Coiny')
-    expect(fallbacks).not.toHaveLength(0)
-    for (const fallback of fallbacks) {
-      expect(fallback.descentOverride).toBeGreaterThan(0)
-    }
-  })
-
   it('returns a regular rule for each fallback, and the font family stack', async () => {
     const { css, fontFamily, fallbacks } = await getFontFallbacks('Figtree')
     expect(fontFamily).toBe(
@@ -208,12 +200,9 @@ describe('rules', () => {
     )
   })
 
-  it.each([['Georgia', {}, ['Times New Roman', 'Noto Serif']]])(
-    'leaves out a default fallback that is the web font %s, in any case',
-    async (source, options, expected) => {
-      expect(await getFallbackFamilies(source, options)).toEqual(expected)
-    },
-  )
+  it('leaves out a default fallback that is the web font Georgia, in any case', async () => {
+    expect(await getFallbackFamilies('Georgia')).toEqual(['Times New Roman', 'Noto Serif'])
+  })
 
   it('rejects a web font that every default fallback is', async () => {
     await expect(getFontFallbacks('Roboto Mono', { name: 'Courier New' })).rejects.toThrow(

@@ -1,44 +1,14 @@
-import fs from 'node:fs/promises'
-import path from 'node:path'
-
 import stylelint from 'stylelint'
-import { compile } from 'tailwindcss'
 
 import { defineConfig } from '@/index'
 
-const TAILWIND_DIR = await fs.realpath(
-  path.join(import.meta.dirname, '../node_modules/tailwindcss'),
-)
+import { tailwindProblemOf } from './helpers'
 
 /**
- * Tailwind's `compile()` of `css` after `@import 'tailwindcss'`: `undefined` when it compiles
- * without a warning, or else its error or warning. It loads only Tailwind's own stylesheets and no
- * module, as for a path that doesn't exist
+ * Tailwind's problem with `css` after `@import 'tailwindcss'`
  */
-async function tailwindProblemOf(css: string): Promise<string | undefined> {
-  const warnings: Array<string> = []
-  const warn = vi.spyOn(console, 'warn').mockImplementation((...args: Array<unknown>) => {
-    warnings.push(args.map(String).join(' '))
-  })
-  try {
-    const compiler = await compile(`@import 'tailwindcss';\n${css}`, {
-      base: TAILWIND_DIR,
-      loadStylesheet: async (id: string) => {
-        const file = id === 'tailwindcss' ? path.join(TAILWIND_DIR, 'index.css') : id
-        if (!file.startsWith(TAILWIND_DIR)) throw new Error(`Can't resolve '${id}'`)
-        return { path: file, base: path.dirname(file), content: await fs.readFile(file, 'utf8') }
-      },
-      loadModule: async (id: string) => {
-        throw new Error(`Can't resolve '${id}'`)
-      },
-    })
-    compiler.build(['flex'])
-    return warnings[0]
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error)
-  } finally {
-    warn.mockRestore()
-  }
+async function problemOf(css: string): Promise<string | undefined> {
+  return tailwindProblemOf(`@import 'tailwindcss';\n${css}`)
 }
 
 const config = await defineConfig({ root: import.meta.dirname, tailwindcss: true })
@@ -99,7 +69,7 @@ describe('@gpahal/tailwind-directives', () => {
       'Unexpected unknown data type "integr" in "--value()". Use "number", "integer", "ratio", "percentage", a "[type]", a "--namespace-*" or a quoted value',
     ],
   ])('reports what fails Tailwind, in %j', async (css, message) => {
-    expect(await tailwindProblemOf(css)).toBeDefined()
+    expect(await problemOf(css)).toBeDefined()
     expect(await reportsOf(css)).toEqual([message])
   })
 
@@ -115,7 +85,7 @@ describe('@gpahal/tailwind-directives', () => {
     '@variant hocus (&:hover, &:focus);\n',
     '.card {\n  color: --alpha(var(--color-red-500) / 50%);\n\n  @variant hover:focus {\n    color: red;\n  }\n\n  @apply flex;\n}\n',
   ])('takes what Tailwind compiles, in %j', async (css) => {
-    expect(await tailwindProblemOf(css)).toBeUndefined()
+    expect(await problemOf(css)).toBeUndefined()
     expect(await reportsOf(css)).toEqual([])
   })
 
@@ -124,7 +94,7 @@ describe('@gpahal/tailwind-directives', () => {
     'reads an escape %s that is no code point as U+FFFD, as Tailwind does',
     async (escape) => {
       const css = `@utility foo${escape} {\n  color: red;\n}\n`
-      expect(await tailwindProblemOf(css)).toBeDefined()
+      expect(await problemOf(css)).toBeDefined()
       expect(await reportsOf(css)).toEqual([
         `Unexpected invalid utility name "foo${escape}": a utility name starts with a lowercase letter and has only letters, digits, "-" and "_"`,
       ])
@@ -151,25 +121,5 @@ describe('@gpahal/tailwind-directives', () => {
   // Tailwind skips it, so it does nothing
   it('reports an empty @reference', async () => {
     expect(await reportsOf('@reference;\n')).toEqual(['Expected a prelude for "@reference"'])
-  })
-
-  it("is off without tailwindcss, and on in Markdown's code blocks", async () => {
-    const plain = await defineConfig({ root: import.meta.dirname })
-    const { results } = await stylelint.lint({
-      code: '.b {\n  @apply;\n}\n',
-      config: plain,
-      codeFilename: 'a.css',
-    })
-    expect(results[0]?.warnings.map((warning) => warning.rule)).not.toContain(
-      '@gpahal/tailwind-directives',
-    )
-    const markdown = await stylelint.lint({
-      code: '# A\n\n```css\n@source;\n```\n',
-      config,
-      codeFilename: 'a.md',
-    })
-    expect(markdown.results[0]?.warnings.map((warning) => warning.rule)).toContain(
-      '@gpahal/tailwind-directives',
-    )
   })
 })

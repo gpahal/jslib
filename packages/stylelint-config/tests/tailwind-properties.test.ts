@@ -9,9 +9,7 @@ import { withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 import { defineConfig } from '@/index'
 import { propertyNamesOf, TAILWIND_PROPERTY_CANDIDATES } from '@/internal/tailwindcss'
 
-const TAILWIND_DIR = await fs.realpath(
-  path.join(import.meta.dirname, '../node_modules/tailwindcss'),
-)
+import { linkTailwind, TAILWIND_DIR } from './helpers'
 
 const options = {
   base: TAILWIND_DIR,
@@ -42,8 +40,7 @@ describe("Tailwind's `--tw-*` properties", () => {
   let project: Awaited<ReturnType<typeof withTmpProject>>
   beforeAll(async () => {
     project = await withTmpProject('stylelint-config-tw-properties', {})
-    await fs.mkdir(path.join(project.dir, 'node_modules'))
-    await fs.symlink(TAILWIND_DIR, path.join(project.dir, 'node_modules/tailwindcss'))
+    await linkTailwind(project.dir)
   })
   afterAll(async () => {
     await project[Symbol.asyncDispose]()

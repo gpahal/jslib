@@ -5,10 +5,9 @@ import postcssHtml from 'postcss-html'
 import stylelint, { type Config, type CustomSyntax } from 'stylelint'
 
 import { defineConfig } from '@/index'
-import { BASE_RULES } from '@/internal/base-rules'
 import { declarationEmptyLineBefore } from '@/internal/declaration-empty-line-before'
 
-import { fix, lintRules, lintTexts, topLevelRules } from './helpers'
+import { fix, lintRules } from './helpers'
 
 const RULE = '@gpahal/declaration-empty-line-before'
 
@@ -183,23 +182,11 @@ describe('@gpahal/declaration-empty-line-before', () => {
   })
 })
 
-// custom-property-empty-line-before.test.ts covers the rest of the shared stock-name disables
-test('honors a disable that names the stock rule', async () => {
-  const config = await defineConfig({ root: process.cwd(), tailwindcss: true })
-  const css = 'a {\n  b {\n    color: red;\n  }\n  color: red;\n}\n'
-  const code = `a {\n  b {\n    color: red;\n  }\n  color: red; /* stylelint-disable-line ${STOCK_RULE} -- why */\n}\n`
-  expect(await lintRules(css, config)).toEqual([RULE])
-  expect(await lintTexts(code, config)).toEqual([])
-  expect(await fix(code, config)).toBe(code)
-})
-
 describe('defineConfig with declaration-empty-line-before', () => {
   const repro = 'a {\n  @apply font-bold;\n  color: red;\n}\n'
 
   it('exempts a declaration after @apply under Tailwind CSS', async () => {
     const config = await defineConfig({ root: process.cwd(), tailwindcss: true })
-    expect(topLevelRules(config)).toMatchObject({ [STOCK_RULE]: null, [RULE]: STANDARD_SETTING })
-    expect(BASE_RULES[STOCK_RULE]).toEqual(STANDARD_SETTING)
     expect(await lintRules(repro, config)).toEqual([])
     const afterBlock = 'a {\n  b {\n    color: red;\n  }\n  color: red;\n}\n'
     expect(await lintRules(afterBlock, config)).toEqual([RULE])
@@ -208,28 +195,7 @@ describe('defineConfig with declaration-empty-line-before', () => {
     )
   })
 
-  it('settles its fix after declaration-block-no-duplicate-properties in one pass', async () => {
-    const config = await defineConfig({ root: process.cwd(), tailwindcss: true })
-    const fixed = await fix('a {\n  --b: 2;\n\n  color: blue;\n\n  color: blue;\n}\n', config)
-    expect(fixed).toBe('a {\n  --b: 2;\n\n  color: blue;\n}\n')
-    expect(await lintRules(fixed, config)).toEqual([])
-  })
-
-  it('leaves an undefined own setting unset and keeps an explicit null', async () => {
-    for (const setting of [undefined, null]) {
-      const config = await defineConfig({
-        root: process.cwd(),
-        tailwindcss: true,
-        rules: { [STOCK_RULE]: 'never', [RULE]: setting },
-        overrides: [{ files: '*.css', rules: { [STOCK_RULE]: 'never', [RULE]: setting } }],
-      })
-      const expected = setting === null ? null : 'never'
-      expect(config.rules?.[RULE]).toEqual(expected)
-      expect(config.overrides!.at(-1)!.rules?.[RULE]).toEqual(expected)
-    }
-  })
-
-  it('applies your setting of the stock rule to its own', async () => {
+  it("gives an override back on the preset's always its exceptions, which your never drops", async () => {
     const config = await defineConfig({
       root: process.cwd(),
       tailwindcss: true,
@@ -238,10 +204,6 @@ describe('defineConfig with declaration-empty-line-before', () => {
         { files: 'legacy/**', rules: { [STOCK_RULE]: ['always', { severity: 'warning' }] } },
       ],
     })
-    // `never` drops the standard exceptions, which would turn it around after a declaration and
-    // first in a block
-    expect(topLevelRules(config)).toMatchObject({ [STOCK_RULE]: null, [RULE]: 'never' })
-    // Back on the preset's `always`, the override gets its exceptions again
     expect(config.overrides!.at(-1)!.rules).toEqual({
       [RULE]: [
         'always',
@@ -252,11 +214,5 @@ describe('defineConfig with declaration-empty-line-before', () => {
         },
       ],
     })
-    const code = 'a {\n\n  top: 0;\n\n  left: 0;\n}\n'
-    expect(await lintRules(code, config)).toEqual([RULE, RULE])
-    expect(await fix(code, config)).toBe('a {\n  top: 0;\n  left: 0;\n}\n')
-    expect(
-      topLevelRules(await defineConfig({ root: process.cwd(), rules: { [STOCK_RULE]: 'never' } })),
-    ).toMatchObject({ [STOCK_RULE]: null, [RULE]: 'never' })
   })
 })

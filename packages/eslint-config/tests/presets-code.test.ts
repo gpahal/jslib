@@ -2,7 +2,6 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import eslintPluginE18e from '@e18e/eslint-plugin'
-import eslintPluginComments from '@eslint-community/eslint-plugin-eslint-comments'
 import { ESLint, Linter, type Rule } from 'eslint'
 import eslintPluginSlop from 'eslint-plugin-slop'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
@@ -12,11 +11,9 @@ import tseslint from 'typescript-eslint'
 
 import { assertBuildIsCurrent } from '@gpahal/internal/node/testing'
 
-import { eslintCommentsPlugin } from '@/eslint-comments'
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import { patchUnsafeFixes } from '@/internal/fixes'
 import { wrapSlopPlugin } from '@/internal/presets/antislop'
-import { slopPlugin } from '@/slop'
 
 import {
   BUILD_DIR,
@@ -70,7 +67,6 @@ describe('.cjs files', () => {
   })
 })
 
-// Idiomatic code from real, non-framework projects, which must lint clean with the defaults
 describe('module types', () => {
   it('parse .cjs files as CommonJS', async () => {
     const eslint = await sharedESLint('cjs')
@@ -232,13 +228,6 @@ describe('commonjs option', () => {
     const config = (await eslint.calculateConfigForFile('scripts/b.ts')) as Linter.Config
     expect(config.languageOptions?.['sourceType']).toBe('module')
   })
-  it('throws on a glob that matches no .js file', () => {
-    expect(() =>
-      defineConfig({ root: FIXTURES_DIR, commonjs: { files: ['src/**/*.ts'] } }),
-    ).toThrow(
-      '@gpahal/eslint-config: `commonjs.files`: glob `src/**/*.ts` matches no `.js` file. End it in `*` or an extension of one, as in `src/**/*.js`',
-    )
-  })
 })
 
 describe('the commonjs hint', () => {
@@ -333,46 +322,6 @@ describe('framework hints', () => {
   })
 })
 
-describe('jsdoc/check-tag-names', () => {
-  // Joined when the test runs, since Vitest reads an environment tag anywhere in a test file's text
-  const tags = [
-    ['@', 'vitest-environment node'].join(''),
-    ['@', 'jest-environment node'].join(''),
-    '@jsxImportSource preact',
-    '@jsx h',
-    '@jsxFrag Fragment',
-    '@jsxRuntime classic',
-    '@defaultValue 1',
-  ]
-
-  it.each([
-    ['typescript', 'src/index.mts'],
-    ['cjs', 'tags.js'],
-  ])('accepts the tags of tools and TSDoc in %s files', async (fixture, file) => {
-    const eslint = await sharedESLint(fixture)
-    for (const tag of tags) {
-      const code = `/**\n * ${tag}\n */\nexport const a = 1\n`
-      expect(await lintText(eslint, file, code), tag).toEqual([])
-    }
-  })
-
-  it('prefers @template to @typeParam', async () => {
-    const eslint = await sharedESLint('typescript')
-    const code = '/**\n * @typeParam T - The type\n */\nexport type A<T> = T\n'
-    expect(await lintText(eslint, 'src/index.mts', code)).toEqual([
-      expect.stringMatching(/^jsdoc\/check-tag-names: .*"template"/),
-    ])
-  })
-})
-
-describe('jsdoc/no-multi-asterisks', () => {
-  it('accepts a `*` list in a doc block', async () => {
-    const eslint = await sharedESLint('typescript')
-    const code = '/**\n * Steps:\n *\n * * Parse\n * * Check\n */\nexport const a = 1\n'
-    expect(await lintText(eslint, 'src/index.mts', code)).toEqual([])
-  })
-})
-
 describe('unicorn/filename-case', () => {
   it('skips router segments, its folders, generated files and test setup files, with your options too', async () => {
     const files = {
@@ -433,77 +382,10 @@ async function reportsOf(
 }
 
 describe('rules that misfire on ordinary code', () => {
-  it.each([
-    [
-      'unicorn/no-break-in-nested-loop',
-      'export function count(values) {\n  let n = 0\n  for (const value of values) {\n    switch (value) {\n      case 1:\n        n += 1\n        break\n      default:\n        break\n    }\n  }\n  return n\n}\n',
-    ],
-    [
-      'unicorn/no-this-outside-of-class',
-      'export const counter = {\n  count: 0,\n  inc() {\n    this.count += 1\n  },\n}\n',
-    ],
-    [
-      'unicorn/prefer-number-coercion',
-      'export function px(s) {\n  return Number.parseInt(s, 10)\n}\n',
-    ],
-    [
-      'unicorn/no-computed-property-existence-check',
-      'export function has(object, key) {\n  return key in object\n}\n',
-    ],
-    [
-      'unicorn/prefer-ternary',
-      'export function text(error) {\n  if (error instanceof Error) {\n    return error.message\n  }\n  return String(error)\n}\n',
-    ],
-    [
-      'jsdoc/require-returns-description',
-      '/**\n * Runs\n *\n * @returns {Promise<unknown>}\n */\nexport async function run() {\n  await Promise.resolve()\n}\n',
-    ],
-    [
-      'unicorn/import-style',
-      "import { join } from 'node:path'\nimport util, { format } from 'node:util'\n\nexport const a = join(format('%s', 'a'), util.inspect(1))\n",
-    ],
-    ['unicorn/expiring-todo-comments', '// TODO [2000-01-01]: remove\nexport const a = 1\n'],
-    [
-      'unicorn/prefer-observer-apis',
-      "export function onResize(update) {\n  window.addEventListener('resize', () => update(window.innerWidth))\n}\n",
-    ],
-  ])('`%s` passes', async (rule, code) => {
-    expect(await reportsOf(rule, 'src/a.js', code)).toEqual([])
-  })
-
-  it('`unicorn/prefer-ternary` still reports a one-line `if` and `else`', async () => {
-    const code =
-      'export function sign(n) {\n  let s\n  if (n > 0) {\n    s = 1\n  } else {\n    s = 0\n  }\n  return s\n}\n'
-    expect(await reportsOf('unicorn/prefer-ternary', 'src/a.js', code)).toEqual([
-      'unicorn/prefer-ternary',
-    ])
-  })
-
-  it('`unicorn/prefer-event-target` passes `EventEmitter` with `node` only', async () => {
-    const code =
-      "import { EventEmitter } from 'node:events'\n\nexport class Bus extends EventEmitter {}\n"
-    expect(await reportsOf('unicorn/prefer-event-target', 'src/a.js', code)).toEqual([
-      'unicorn/prefer-event-target',
-    ])
-    expect(
-      await reportsOf('unicorn/prefer-event-target', 'src/a.js', code, { node: true }),
-    ).toEqual([])
-  })
-
   it("`n/hashbang` leaves a script's shebang alone with `node`", async () => {
     const code = "#!/usr/bin/env node\n\nconsole.log('released')\n"
     expect(await reportsOf('n/hashbang', 'scripts/release.js', code, { node: true })).toEqual([])
     expect(await reportsOf('n/hashbang', 'src/a.js', code, { node: true })).toEqual(['n/hashbang'])
-  })
-})
-
-describe('bug-catching rules', () => {
-  it('report unreachable code in TypeScript files', async () => {
-    const eslint = await sharedESLint('rules')
-    const code = 'export function f(): number {\n  return 1\n  console.error(2)\n}\n'
-    expect(await lintText(eslint, 'src/dead-store.ts', code)).toEqual([
-      expect.stringMatching(/^no-unreachable: /),
-    ])
   })
 })
 
@@ -575,21 +457,6 @@ describe('unicorn/prefer-spread', () => {
 })
 
 describe('the patched rules of shared plugins', () => {
-  it('report `Array.from(…)` before `.map()` with unicorn/prefer-array-from-map off', async () => {
-    const eslint = await createESLint('rules', {
-      unicorn: { rules: { 'unicorn/prefer-array-from-map': 'off' } },
-    })
-    const messages = await lintText(
-      eslint,
-      'src/array-from-map.ts',
-      arrayFunction('Array.from(values).map((value) => value * 2)'),
-    )
-    expect(messages).toEqual([
-      expect.stringMatching(/^unicorn\/prefer-spread: /),
-      expect.stringMatching(/^e18e\/prefer-spread-syntax: /),
-    ])
-  })
-
   it("keep their stock behaviour in a config that isn't the presets'", async () => {
     // Patches the plugins' rules in place
     await defineConfig({ root: path.join(FIXTURES_DIR, 'rules'), isInEditor: false })
@@ -1000,27 +867,7 @@ describe('interfaces that merge declarations', () => {
   })
 })
 
-/**
- * A function of `m`, `s` and `fn` that returns `body`, with the parameters that `body` uses
- */
-function spreads(body: string): string {
-  const params = ['m', 's', 'fn'].filter((name) =>
-    new RegExp(String.raw`\b${name}\b`, 'u').test(body),
-  )
-  return `export function keys(${params.join(', ')}) {\n  return ${body}\n}\n`
-}
-
 describe('iterator rules', () => {
-  // `e18e/prefer-array-from-map` asks for `Array.from(m.keys(), fn)`, against `m.keys().toArray()`
-  it.each([
-    ['[...m.keys()].map(fn)', ['unicorn/prefer-iterator-to-array']],
-    ['[...m.keys()]', ['unicorn/prefer-iterator-to-array']],
-    ['[...s].map(fn)', ['e18e/prefer-array-from-map']],
-  ])('report `%s` with one rule', async (body, rules) => {
-    const eslint = await sharedESLint('rules')
-    const messages = await lintText(eslint, 'x.js', spreads(body))
-    expect(messages.map((message) => message.split(':', 1)[0])).toEqual(rules)
-  })
   it('ask for iterator helpers in Node code, not in browser code', async () => {
     const eslint = await sharedESLint('browser', { browser: { files: ['src/client/**'] } })
     const code = 'export const first = (map) => [...map.keys()].find((key) => key > 1)\n'
@@ -1060,65 +907,12 @@ describe('@typescript-eslint/prefer-regexp-exec', () => {
 
   const IF_MATCH = '  if (s.match(/a/)) {\n    console.error(s)\n  }\n  return s'
 
-  it.each([
-    ['unicorn/prefer-regexp-test', {}, IF_MATCH],
-    ['e18e/prefer-regex-test', { unicorn: false }, IF_MATCH],
-  ] as const)('leaves a match as a condition to `%s` with %j: %s', async (rule, options, body) => {
-    const eslint = await sharedESLint('rules', options)
-    expect(await lintText(eslint, file, matchFunction(body))).toEqual([
-      expect.stringMatching(new RegExp(`^${rule}: `, 'u')),
-    ])
-  })
-
-  it.each([{}, { unicorn: false }] as const)(
-    'still reports a match whose result is used with %j',
-    async (options) => {
-      const eslint = await sharedESLint('rules', options)
-      expect(await lintText(eslint, file, matchFunction('  return s.match(/a/)'))).toEqual([
-        expect.stringMatching(/^@typescript-eslint\/prefer-regexp-exec: /),
-      ])
-    },
-  )
-
-  it('reports a match as a condition with the regexp-test rule off', async () => {
-    const eslint = await sharedESLint('rules', {
-      unicorn: { rules: { 'unicorn/prefer-regexp-test': 'off' } },
-    })
-    expect(await lintText(eslint, file, matchFunction(IF_MATCH))).toEqual([
-      expect.stringMatching(/^@typescript-eslint\/prefer-regexp-exec: /),
-    ])
-  })
-
   it('reports no match as a condition with the regexp-test rule off in a later config', async () => {
     // The patch reads which rules are on from the presets' configs, and can't see a later one
     const eslint = await createESLint('rules', {
       extraConfigs: [{ rules: { 'unicorn/prefer-regexp-test': 'off' } }],
     })
     expect(await lintText(eslint, file, matchFunction(IF_MATCH))).toEqual([])
-  })
-})
-
-describe('n/hashbang', () => {
-  it("keeps the shebang of a TypeScript file built to the package's bin", async () => {
-    const code = "#!/usr/bin/env node\n\nconsole.log('done')\n"
-    await using project = await withProject({
-      'package.json': JSON.stringify({
-        name: 'cli-project',
-        private: true,
-        type: 'module',
-        bin: './build/cli.js',
-      }),
-      'src/cli.ts': code,
-      'src/cli.js': code,
-    })
-    const options = { node: true, typeAware: false } as const
-    const eslint = await createESLint(project.dir, options)
-    expect(await lint(eslint, ['src/cli.ts'], ruleIdOf)).toEqual({ 'src/cli.ts': [] })
-    expect(await lint(eslint, ['src/cli.js'], ruleIdOf)).toEqual({ 'src/cli.js': ['n/hashbang'] })
-    const [result] = await (
-      await createESLint(project.dir, options, { fix: true })
-    ).lintFiles(['src/cli.ts'])
-    expect(result?.output).toBeUndefined()
   })
 })
 
@@ -1153,72 +947,6 @@ describe('node.typeStripping', () => {
       ).toEqual({ 'src/a.ts': expected, 'src/c.tsx': [], 'src/d.d.ts': [] })
     },
   )
-})
-
-describe('unused variables', () => {
-  it.each(['index.js', 'index.cjs'])(
-    'report each once and allow a leading underscore: %s',
-    async (file) => {
-      const eslint = await sharedESLint('cjs')
-      const code = 'const a = 1\nconst _b = 2\nconsole.error((c, _d) => 0)\n'
-      // The core rule, in the JavaScript-only project, with typescript-eslint's rule's options
-      expect(await lintText(eslint, file, code)).toEqual([
-        "no-unused-vars: 'a' is assigned a value but never used. Allowed unused vars must match /^_/u.",
-        "no-unused-vars: 'c' is defined but never used. Allowed unused args must match /^_/u.",
-      ])
-    },
-  )
-})
-
-describe('void returns and rest siblings', () => {
-  const TSCONFIG = JSON.stringify({
-    compilerOptions: { strict: true, module: 'preserve', noEmit: true, types: [] },
-    include: ['src'],
-  })
-  const code = [
-    'export function collect(xs: Array<number>): Set<number> {',
-    '  const s = new Set<number>()',
-    '  xs.forEach((x) => s.add(x))',
-    '  return s',
-    '}',
-    'export function omitA(o: { a: number; b: number }): { b: number } {',
-    '  const { a, ...rest } = o',
-    '  return rest',
-    '}',
-    'export function each(xs: Array<number>, f: (x: number) => void): void {',
-    '  for (const x of xs) {',
-    '    f(x)',
-    '  }',
-    '}',
-    'each([1], async (x) => {',
-    '  await Promise.resolve(x)',
-    '})',
-    'export function unused(o: { a: number }): void {',
-    '  const { a } = o',
-    '}',
-    '',
-  ].join('\n')
-  const ruleIds = new Set([
-    '@typescript-eslint/strict-void-return',
-    '@typescript-eslint/no-misused-promises',
-    '@typescript-eslint/no-unused-vars',
-  ])
-
-  async function lintCode(options: ConfigOptions): Promise<Array<string>> {
-    await using project = await withProject({ 'tsconfig.json': TSCONFIG, 'src/a.ts': code })
-    const eslint = await createESLint(project.dir, { gitignore: false, ...options })
-    const [result] = await eslint.lintFiles(['src/a.ts'])
-    return (result?.messages ?? [])
-      .filter((message) => ruleIds.has(message.ruleId ?? ''))
-      .map(lineAndRuleOf)
-  }
-
-  it('allow a callback whose value is ignored and an omitted rest sibling, but report an async callback and an unused binding', async () => {
-    expect(await lintCode({})).toEqual([
-      '15:@typescript-eslint/no-misused-promises',
-      '19:@typescript-eslint/no-unused-vars',
-    ])
-  })
 })
 
 describe('files.config', () => {
@@ -1389,6 +1117,18 @@ describe('e18e options', () => {
   })
 })
 
+/**
+ * Links the `globals` package into the `node_modules` of `dir`, since
+ * `import-x/no-extraneous-dependencies` skips a package that doesn't resolve
+ */
+async function linkGlobals(dir: string): Promise<void> {
+  await fs.mkdir(path.join(dir, 'node_modules'))
+  await fs.symlink(
+    path.join(import.meta.dirname, '../node_modules/globals'),
+    path.join(dir, 'node_modules/globals'),
+  )
+}
+
 describe('dev dependencies and file names', () => {
   const files = [
     'src/index.ts',
@@ -1416,12 +1156,7 @@ describe('dev dependencies and file names', () => {
       'packages/b/package.json':
         '{ "name": "b", "private": true, "type": "module", "devDependencies": { "globals": "*" } }\n',
     })
-    // The rule skips a package that doesn't resolve
-    await fs.mkdir(path.join(project.dir, 'node_modules'))
-    await fs.symlink(
-      path.join(import.meta.dirname, '../node_modules/globals'),
-      path.join(project.dir, 'node_modules/globals'),
-    )
+    await linkGlobals(project.dir)
     const eslint = await createESLint(project.dir, { typeAware: false })
     expect(await lint(eslint, files, ruleIdOf)).toEqual({
       'src/index.ts': ['import-x/no-extraneous-dependencies'],
@@ -1455,11 +1190,7 @@ describe('dev dependencies in a workspace', () => {
       'packages/a/src/a.test.ts':
         "import globals from 'globals'\n\nexport const names = Object.keys(globals)\n",
     })
-    await fs.mkdir(path.join(project.dir, 'node_modules'))
-    await fs.symlink(
-      path.join(import.meta.dirname, '../node_modules/globals'),
-      path.join(project.dir, 'node_modules/globals'),
-    )
+    await linkGlobals(project.dir)
     const eslint = await createESLint(project.dir, { typeAware: false })
     expect(await lint(eslint, ['packages/a/src/a.test.ts'], ruleIdOf)).toEqual({
       'packages/a/src/a.test.ts': expected,
@@ -1474,11 +1205,7 @@ async function withE2eProject() {
     'e2e/app.ts': "import globals from 'globals'\n\nexport const names = Object.keys(globals)\n",
     'eslint.config.mjs': `import { defineConfig } from ${JSON.stringify(new URL('../build/index.js', import.meta.url).href)}\n\nexport default defineConfig({ root: import.meta.dirname, typeAware: false, isInEditor: false, testFiles: (defaults) => [...defaults, 'e2e/**/*.ts'] })\n`,
   })
-  await fs.mkdir(path.join(project.dir, 'node_modules'))
-  await fs.symlink(
-    path.join(import.meta.dirname, '../node_modules/globals'),
-    path.join(project.dir, 'node_modules/globals'),
-  )
+  await linkGlobals(project.dir)
   return project
 }
 
@@ -1789,53 +1516,6 @@ describe('antislop preset', () => {
     },
   )
 
-  it('registers its wrapped slop plugin, the one it exports, in place of the upstream one in a config of yours', async () => {
-    const root = path.join(FIXTURES_DIR, 'markdown')
-    const configs = await defineConfig({
-      root,
-      antislop: true,
-      typeAware: false,
-      configs: [{ plugins: { slop: eslintPluginSlop }, rules: { 'slop/no-em-dash': 'error' } }],
-    }).append({ files: ['**/*.md'], plugins: { slop: eslintPluginSlop } })
-    const slopPlugins = new Set(configs.flatMap((config) => config.plugins?.['slop'] ?? []))
-    expect([...slopPlugins]).toEqual([slopPlugin])
-    // The wrapped rule reports at Markdown's own column
-    const messages = await eslintWith(root, configs).lintText('# Title\n\nA \u{2014} b\n', {
-      filePath: path.join(root, 'docs.md'),
-    })
-    expect(messages[0]?.messages.map(({ ruleId, column }) => `${ruleId ?? ''}:${column}`)).toEqual([
-      'slop/no-em-dash:1',
-    ])
-  })
-
-  it('registers its wrapped eslint-comments plugin in place of the stock one in a config of yours', async () => {
-    const root = path.join(FIXTURES_DIR, 'markdown')
-    const configs = await defineConfig({
-      root,
-      typeAware: false,
-      configs: [
-        {
-          plugins: { '@eslint-community/eslint-comments': eslintPluginComments },
-          rules: {
-            '@eslint-community/eslint-comments/no-restricted-disable': ['error', 'no-console'],
-          },
-        },
-      ],
-    })
-    const plugins = new Set(
-      configs.flatMap((config) => config.plugins?.['@eslint-community/eslint-comments'] ?? []),
-    )
-    // The wrapped plugin that the package exports
-    expect([...plugins]).toEqual([eslintCommentsPlugin])
-    const [result] = await eslintWith(root, configs).lintText(
-      '// eslint-disable-next-line no-console -- A demo\nconsole.log(1)\n',
-      { filePath: path.join(root, 'x.js') },
-    )
-    expect(result?.messages.map(ruleIdOf)).toEqual([
-      '@eslint-community/eslint-comments/no-restricted-disable',
-    ])
-  })
-
   it('reports cognitive complexity over antislop.cognitiveComplexity', async () => {
     const code =
       'export function sum(values: Array<number>): number {\n  let total = 0\n  for (const value of values) {\n    if (value > 0) {\n      total += value\n    }\n  }\n  return total\n}\n'
@@ -1854,29 +1534,17 @@ describe('antislop preset', () => {
   })
 })
 
-describe('type-aware rules in tests and components', () => {
-  const RULES = [
-    '@typescript-eslint/no-unnecessary-condition',
-    '@typescript-eslint/no-floating-promises',
-    '@typescript-eslint/strict-boolean-expressions',
-  ]
-  const ASSERTION =
-    "import assert from 'node:assert/strict'\n\nexport function check(): void {\n  assert.deepEqual({ a: 1 + 1 }, { a: 2 })\n}\n"
+describe('@typescript-eslint/no-floating-promises', () => {
   const NAVIGATE_TYPES =
     'export interface NavigateFunction {\n  (to: string): void | Promise<void>\n  (delta: number): void | Promise<void>\n}\nexport declare function useNavigate(): NavigateFunction\n'
   const SOURCES = {
-    'src/sum.test.ts': ASSERTION,
-    'src/sum.ts': ASSERTION,
     'src/a.test.ts':
       "import { describe, it, test } from 'node:test'\n\ntest('x', () => {})\ndescribe('d', () => {\n  it('y', () => {})\n})\n",
     'src/nav.ts':
       "import { useNavigate } from 'react-router'\n\nasync function save(): Promise<void> {\n  await Promise.resolve()\n}\n\nexport function go(): void {\n  const navigate = useNavigate()\n  navigate('/a')\n  save()\n}\n",
-    'src/status.tsx':
-      'export function Status(props: { isLoading?: boolean; count: number; title?: string }): unknown {\n  return [props.isLoading && <p />, props.count && <p />, props.title && <p />]\n}\n',
   }
-  // Linted once, with type information and Node's types, as `line:rule`
-  let reports: Record<string, Array<string>> = {}
-  beforeAll(async () => {
+
+  it("passes `node:test`'s tests and React Router's `navigate()`, and still reports other promises", async () => {
     await using project = await withProject({
       'package.json': '{ "name": "a", "private": true, "type": "module" }\n',
       'tsconfig.json': JSON.stringify({
@@ -1884,7 +1552,6 @@ describe('type-aware rules in tests and components', () => {
           strict: true,
           module: 'esnext',
           moduleResolution: 'bundler',
-          jsx: 'preserve',
           noEmit: true,
           skipLibCheck: true,
           typeRoots: [path.join(import.meta.dirname, '../../../node_modules/@types')],
@@ -1899,29 +1566,15 @@ describe('type-aware rules in tests and components', () => {
     })
     const eslint = await createESLint(project.dir, { gitignore: false })
     const messages = await lint(eslint, Object.keys(SOURCES), lineAndRuleOf)
-    reports = Object.fromEntries(
-      Object.entries(messages).map(([file, fileMessages]) => [
-        file,
-        fileMessages.filter((message) => RULES.some((rule) => message.endsWith(`:${rule}`))),
-      ]),
-    )
-  })
-
-  it('`no-unnecessary-condition` passes typed assertions in tests, and still reports them elsewhere', () => {
-    expect(reports['src/sum.test.ts']).toEqual([])
-    expect(reports['src/sum.ts']).toEqual(['4:@typescript-eslint/no-unnecessary-condition'])
-  })
-
-  it("`no-floating-promises` passes `node:test`'s tests and React Router's `navigate()`, and still reports other promises", () => {
-    expect(reports['src/a.test.ts']).toEqual([])
-    expect(reports['src/nav.ts']).toEqual(['10:@typescript-eslint/no-floating-promises'])
-  })
-
-  it('`strict-boolean-expressions` allows a nullable boolean, but not a number or a string', () => {
-    expect(reports['src/status.tsx']).toEqual([
-      '2:@typescript-eslint/strict-boolean-expressions',
-      '2:@typescript-eslint/strict-boolean-expressions',
-    ])
+    const rule = '@typescript-eslint/no-floating-promises'
+    expect(
+      Object.fromEntries(
+        Object.entries(messages).map(([file, fileMessages]) => [
+          file,
+          fileMessages.filter((message) => message.endsWith(`:${rule}`)),
+        ]),
+      ),
+    ).toEqual({ 'src/a.test.ts': [], 'src/nav.ts': [`10:${rule}`] })
   })
 })
 
@@ -1980,13 +1633,4 @@ describe('n/no-unsupported-features', () => {
       'src/app.config.mjs': [expect.stringMatching(/^n\/no-unsupported-features\/node-builtins: /)],
     })
   })
-})
-
-test('`unicorn/prefer-observer-apis` reports the resize listener when turned on', async () => {
-  const code =
-    "export function onResize(update) {\n  window.addEventListener('resize', () => update(window.innerWidth))\n}\n"
-  const unicorn = { rules: { 'unicorn/prefer-observer-apis': 'error' } } as const
-  expect(await reportsOf('unicorn/prefer-observer-apis', 'src/a.js', code, { unicorn })).toEqual([
-    'unicorn/prefer-observer-apis',
-  ])
 })

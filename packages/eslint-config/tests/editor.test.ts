@@ -23,8 +23,10 @@ const DISABLED_PREFER_CONST =
 const FIXED_PREFER_CONST = 'export function one() {\n  const a = 1\n  return a\n}\n'
 
 /**
- * The options that turn off the areas these tests' child processes don't check, since loading them
- * makes up most of the time a fresh process takes to build the config
+ * Lints `src/index.js` of the working directory with `--fix`, as an editor would, with the
+ * `defineConfig` of `CONFIG_URL` and the ESLint of `ESLINT_URL`, and prints the rules that report
+ * and the output. The config turns off the areas the test doesn't check, since loading them makes
+ * up most of the time a fresh process takes to build the config
  */
 const COPY_SCRIPT = `
 const { defineConfig } = await import(process.env.CONFIG_URL)

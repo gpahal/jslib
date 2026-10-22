@@ -3,23 +3,36 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { assertBuildIsCurrent, withTmpProject } from '@gpahal/internal/node/testing'
+import {
+  assertBuildIsCurrent,
+  readCodeBlocks,
+  readMarkdownSection,
+  withTmpProject,
+} from '@gpahal/internal/node/testing'
+import { describeValue, formatMessage } from '@gpahal/std/errors'
 
 const PACKAGE_DIR = path.join(import.meta.dirname, '..')
 
 const README_PATH = path.join(PACKAGE_DIR, '../../README.md')
 
+const FIXERS_HEADING = '### Running the fixers'
+
 /**
  * The scripts of the README's "Running the fixers" section
  */
 async function readScripts(): Promise<Record<string, string>> {
-  const readme = await fs.readFile(README_PATH, 'utf8')
-  const section = readme.slice(readme.indexOf('### Running the fixers'))
-  const json = /```json\n(?<json>[\s\S]*?)\n```/.exec(section)?.groups?.['json']
-  if (json === undefined) {
-    throw new Error('No JSON block in the README\'s "Running the fixers" section')
+  const section = readMarkdownSection(await fs.readFile(README_PATH, 'utf8'), FIXERS_HEADING)
+  const block = readCodeBlocks(section ?? '').find(({ language }) => language === 'json')
+  if (block === undefined) {
+    throw new Error(
+      formatMessage(
+        '@gpahal/stylelint-config',
+        ['README'],
+        `section ${describeValue(FIXERS_HEADING)} has no JSON block`,
+      ),
+    )
   }
-  return (JSON.parse(json) as { scripts: Record<string, string> }).scripts
+  return (JSON.parse(block.code) as { scripts: Record<string, string> }).scripts
 }
 
 /**
@@ -51,12 +64,14 @@ async function readStylelintScripts(): Promise<{
 }
 
 /**
- * Runs `pnpm run <script>` in `dir`
+ * Runs `pnpm run <script>` in `dir`, with `NODE_PATH` and `NODE_OPTIONS` emptied, as `runNode` does,
+ * so a missing link doesn't resolve through the test runner's `NODE_PATH`
  */
 function runScript(dir: string, script: string): { status: number | null; output: string } {
   const { status, stdout, stderr } = spawnSync('pnpm', ['run', script], {
     cwd: dir,
     encoding: 'utf8',
+    env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' },
   })
   return { status, output: `${stdout}${stderr}` }
 }

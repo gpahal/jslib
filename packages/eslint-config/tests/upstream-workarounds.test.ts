@@ -26,7 +26,7 @@ import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'
 import { DEFAULT_PROJECT_CONFLICT } from '@/internal/project-service'
 import { UNFLAGGED_TYPED_RULES } from '@/internal/rules'
 
-import { collator, createESLint, lint } from './helpers'
+import { collator } from './helpers'
 
 // Each test shows an upstream bug that a workaround in this package exists for, with the stock
 // plugin or language. It fails once upstream fixes the bug, and its message names the workaround
@@ -206,7 +206,7 @@ describe('upstream workarounds', () => {
 
   it.each<[string, Linter.Config | Array<Linter.Config>, string, string]>([
     [
-      'eslint/markdown#619 is fixed: drop the removal of the GFM `transforms` in src/internal/markdown/language.ts',
+      'eslint/markdown#619 or syntax-tree/mdast-util-gfm-autolink-literal#19 is fixed: drop the removal of the GFM `transforms` in src/internal/markdown/language.ts',
       md({ 'markdown/no-bare-urls': 'error' }),
       '# T\n\n[https://example.com]\n',
       'getRange',
@@ -468,7 +468,7 @@ describe('upstream workarounds', () => {
       ['@typescript-eslint/prefer-regexp-exec'],
     ],
     [
-      'no-meaningless-void-operator leaves `void` of a non-call, or guards its fix against ASI, now: delete `patchMeaninglessVoid` in src/internal/rule-patches.ts, and audit whether it can leave REPORT_ONLY_RULES in src/internal/fixes.ts',
+      'no-meaningless-void-operator leaves `void` of a non-call, or guards its fix against ASI, now: delete `patchMeaninglessVoid` in src/internal/rule-patches.ts, and audit whether it can leave REPORT_ONLY_RULES in src/internal/fix-policy.ts',
       { '@typescript-eslint': tseslint.plugin },
       '@typescript-eslint/no-meaningless-void-operator',
       'export function run(record: () => void): void {\n  record()\n  void (1 + 2)\n}\n',
@@ -583,17 +583,6 @@ console.log(JSON.stringify({ parser: base.languageOptions.parserOptions.parser ?
       files.map((file) => path.relative(project.dir, file)).toSorted(collator.compare),
       "tinyglobby finds a pattern's files from any working directory now: pass the resolver a `**/tsconfig.json` glob rather than the files the walk in src/internal/project-scan.ts finds",
     ).toEqual(['node_modules/dep/tsconfig.json', 'tsconfig.json'])
-  })
-
-  it("eslint-import-resolver-typescript still drops the tsconfig paths of several projects when ESLint's `cwd` isn't the working directory", async () => {
-    const eslint = await createESLint('monorepo', {
-      packageJson: false,
-      extraConfigs: [{ files: ['**/*.ts'], rules: { 'import-x/no-unresolved': 'error' } }],
-    })
-    expect(
-      Object.values(await lint(eslint, ['.'], (message) => message.ruleId ?? 'fatal')).flat(),
-      "eslint-import-resolver-typescript resolves each project's paths from any working directory now: remove the `process.chdir` of the `import resolver` tests in tests/presets-project.test.ts, and the note on it in its `import resolver tsconfig files` tests",
-    ).toContain('import-x/no-unresolved')
   })
 
   // In a process of their own: typescript-eslint's project service lives as long as the process

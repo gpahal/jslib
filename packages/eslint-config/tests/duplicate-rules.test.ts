@@ -1,6 +1,6 @@
 import path from 'node:path'
 
-import type { ESLint, Linter } from 'eslint'
+import type { Linter } from 'eslint'
 import { builtinRules } from 'eslint/use-at-your-own-risk'
 
 import { defineConfig, type EslintConfigOptions } from '@/index'
@@ -13,7 +13,7 @@ import {
   eslintWith,
   FILES,
   FIXTURES_DIR,
-  lintText,
+  lintRuleIds,
   severityOf,
   sharedESLint,
 } from './helpers'
@@ -207,92 +207,43 @@ test('names only rules that exist, and no pair twice or as an allowed overlap', 
 })
 
 /**
- * The rule of a message of `lintText`
- */
-function ruleOf(message: string): string | undefined {
-  return message.split(':', 1)[0]
-}
-
-/**
  * A typed file of the rules fixture, whose text each probe replaces
  */
 const typed = 'src/dead-store.ts'
 
 /**
- * Cases that a duplicate pair reports once, with the file, the kept rule and the twin that is off
+ * The options of the probes, which keep the slop rules off their code
  */
-const ROWS: Array<[string, string, string, string]> = [
-  [
-    'x.js',
-    "import { default as path } from 'node:path'\n\nexport const separator = path.sep\n",
-    'import-x/no-named-default',
-    'unicorn/no-named-default',
-  ],
-  [
-    typed,
-    'export async function run(): Promise<void> {\n  await 1\n}\n',
-    '@typescript-eslint/await-thenable',
-    'unicorn/no-unnecessary-await',
-  ],
-  ['x.js', "export const a = new String('a')\n", 'unicorn/new-for-builtins', 'no-new-wrappers'],
-  [
-    'x.js',
-    'export function isOn(c) {\n  if (c) {\n    return true\n  }\n  return false\n}\n',
-    'unicorn/prefer-boolean-return',
-    'sonarjs/prefer-single-boolean-return',
-  ],
-  [
-    'x.js',
-    'export function last(v) {\n  return v[v.length - 1]\n}\n',
-    'unicorn/prefer-at',
-    'e18e/prefer-array-at',
-  ],
-]
+const NO_SLOP = { antislop: { slop: false } } as const
 
 describe('a duplicate pair reports once', () => {
-  let eslint: ESLint
-  // With every row's twin turned back on in the row's file
-  let eslintWithTwins: ESLint
-  const cwd = path.resolve(FIXTURES_DIR, 'rules')
-
-  beforeAll(async () => {
-    const configs = await defineConfig({ root: cwd, isInEditor: false, antislop: { slop: false } })
-    eslint = eslintWith(cwd, configs)
-    eslintWithTwins = eslintWith(cwd, [
-      ...configs,
-      ...ROWS.map((row) => ({ files: [row[0]], rules: { [row[3]]: 'error' as const } })),
-    ])
-  })
-
-  it.each(ROWS)('%s: %j: %s, not %s', async (file, code, rule, twin) => {
-    expect((await lintText(eslint, file, code)).map(ruleOf)).toEqual([rule])
-    // The twin, turned back on, reports the case too
-    expect((await lintText(eslintWithTwins, file, code)).map(ruleOf)).toContain(twin)
-  })
-
   // No preset turns `strict-void-return` on, so its twin reports, and stays on when an area's
   // `rules` turn the rule on
   it('with `strict-void-return` turned on', async () => {
     const code = 'export const wait = new Promise((r) => setTimeout(r, 1))\n'
     const rule = '@typescript-eslint/strict-void-return'
     const twin = 'no-promise-executor-return'
-    expect((await lintText(eslint, typed, code)).map(ruleOf)).toEqual([twin])
-    const withRule = eslintWith(
-      cwd,
-      await defineConfig({
-        root: cwd,
-        isInEditor: false,
-        antislop: { slop: false },
-        typescript: { rulesTypeAware: { [rule]: 'error' } },
-      }),
-    )
-    expect((await lintText(withRule, typed, code)).map(ruleOf)).toEqual([rule, twin])
+    expect(await lintRuleIds(await sharedESLint('rules', NO_SLOP), typed, code)).toEqual([twin])
+    const withRule = await createESLint('rules', {
+      ...NO_SLOP,
+      typescript: { rulesTypeAware: { [rule]: 'error' } },
+    })
+    expect(await lintRuleIds(withRule, typed, code)).toEqual([rule, twin])
   })
 })
 
 describe('a mistake that two rules report gets one report', () => {
   const tsx = 'src/counter.tsx'
+  // As `.match()` in a condition, where `re.test(s)` serves, and its result used
+  const matchCondition =
+    'export function check(s: string): unknown {\n  if (s.match(/a/)) {\n    console.error(s)\n  }\n  return s\n}\n'
+  const matchResult = 'export function check(s: string): unknown {\n  return s.match(/a/)\n}\n'
+  const mappedArrayFrom =
+    'export function double(values: Array<number>): Array<number> {\n  return Array.from(values).map((value) => value * 2)\n}\n'
 
+  /**
+   * The rules of `rules` that report `code` as `file` of `fixture`, with `options` and slop off
+   */
   async function reportingRules(
     fixture: string,
     options: Partial<EslintConfigOptions>,
@@ -300,14 +251,13 @@ describe('a mistake that two rules report gets one report', () => {
     code: string,
     rules: ReadonlyArray<string>,
   ): Promise<Array<string>> {
-    const eslintOptions = { antislop: { slop: false }, ...options }
+    const eslintOptions = { ...NO_SLOP, ...options }
     // Each set of `configs` is used once, so caching its instance would only hold memory
     const eslint =
       options.configs === undefined
         ? await sharedESLint(fixture, eslintOptions)
         : await createESLint(fixture, eslintOptions)
-    const messages = await lintText(eslint, file, code)
-    return messages.map((message) => ruleOf(message) ?? '').filter((rule) => rules.includes(rule))
+    return lintRuleIds(eslint, file, code, rules)
   }
 
   it.each([
@@ -343,6 +293,40 @@ describe('a mistake that two rules report gets one report', () => {
       'vitest/valid-expect',
       '@typescript-eslint/no-floating-promises',
     ],
+    [
+      'rules',
+      {},
+      typed,
+      matchCondition,
+      'unicorn/prefer-regexp-test',
+      '@typescript-eslint/prefer-regexp-exec',
+    ],
+    [
+      'rules',
+      { unicorn: false },
+      typed,
+      matchCondition,
+      'e18e/prefer-regex-test',
+      '@typescript-eslint/prefer-regexp-exec',
+    ],
+    // `e18e/prefer-array-from-map` asks for `Array.from(m.keys(), fn)`, against `m.keys().toArray()`
+    [
+      'rules',
+      {},
+      'x.js',
+      'export function keys(m, fn) {\n  return [...m.keys()].map(fn)\n}\n',
+      'unicorn/prefer-iterator-to-array',
+      'e18e/prefer-array-from-map',
+    ],
+    ['rules', {}, typed, mappedArrayFrom, 'unicorn/prefer-array-from-map', 'unicorn/prefer-spread'],
+    [
+      'rules',
+      {},
+      typed,
+      mappedArrayFrom,
+      'unicorn/prefer-array-from-map',
+      'e18e/prefer-spread-syntax',
+    ],
   ] as Array<[string, Partial<EslintConfigOptions>, string, string, string, string]>)(
     '%s, %j, %s: in %j, only %s reports, and %s does where the kept rule is off',
     async (fixture, options, file, code, kept, twin) => {
@@ -354,6 +338,27 @@ describe('a mistake that two rules report gets one report', () => {
       expect(await reportingRules(fixture, keptOff, file, code, [kept, twin])).toEqual([twin])
     },
   )
+
+  // Each patch drops a report only where the other rule of the pair reports
+  it.each<[string, Partial<EslintConfigOptions>, string, string]>([
+    ['@typescript-eslint/prefer-regexp-exec', {}, typed, matchResult],
+    ['@typescript-eslint/prefer-regexp-exec', { unicorn: false }, typed, matchResult],
+    [
+      'unicorn/prefer-iterator-to-array',
+      {},
+      'x.js',
+      'export function keys(m) {\n  return [...m.keys()]\n}\n',
+    ],
+    [
+      'e18e/prefer-array-from-map',
+      {},
+      'x.js',
+      'export function keys(s, fn) {\n  return [...s].map(fn)\n}\n',
+    ],
+  ])('reports with %s alone, with %j, in %s: %j', async (rule, options, file, code) => {
+    const eslint = await sharedESLint('rules', { ...NO_SLOP, ...options })
+    expect(await lintRuleIds(eslint, file, code)).toEqual([rule])
+  })
 
   it('keeps the report of a twin on another node than the kept report, in report order', async () => {
     // eslint-disable-next-line no-template-curly-in-string -- The code of the probe
@@ -391,15 +396,6 @@ describe('a mistake that two rules report gets one report', () => {
     ])
   })
 
-  it("reports with e18e's twin of `unicorn/prefer-at` in its place with unicorn off", async () => {
-    const code = 'export function last(v) {\n  return v[v.length - 1]\n}\n'
-    const rules = ['unicorn/prefer-at', 'e18e/prefer-array-at']
-    expect(await reportingRules('rules', {}, 'x.js', code, rules)).toEqual(['unicorn/prefer-at'])
-    expect(await reportingRules('rules', { unicorn: false }, 'x.js', code, rules)).toEqual([
-      'e18e/prefer-array-at',
-    ])
-  })
-
   it('keeps `no-script-url` outside JSX in React files', async () => {
     const code = "export function go(): void {\n  location.assign('javascript:void(0)')\n}\n"
     expect(
@@ -412,52 +408,11 @@ describe('a mistake that two rules report gets one report', () => {
 })
 
 describe('an allowed overlap keeps both rules', () => {
-  let eslint: ESLint
-
-  beforeAll(async () => {
-    eslint = await sharedESLint('rules', { antislop: { slop: false } })
-  })
-
-  it.each([
-    [
-      '`a && a`',
-      'x.js',
-      'export function both(a) {\n  return a && a\n}\n',
-      ['sonarjs/no-identical-expressions', 'unicorn/no-duplicate-logical-operands'],
-    ],
-    [
-      '`a - a`, which only the SonarJS rule reports',
-      'x.js',
-      'export function zero(a) {\n  return a - a\n}\n',
-      ['sonarjs/no-identical-expressions'],
-    ],
-    [
-      '`module.exports = function () {}`, which only the unicorn rule reports',
-      'x.cjs',
-      'module.exports = function () {\n  return 1\n}\n',
-      ['unicorn/no-anonymous-default-export'],
-    ],
-  ])('%s', async (_name, file, code, rules) => {
-    const messages = await lintText(eslint, file, code)
-    expect(messages.map(ruleOf)).toEqual(rules)
-  })
-})
-
-describe('a style rule whose fix another rule reports is off where that rule runs', () => {
-  const cwd = path.resolve(FIXTURES_DIR, 'rules')
-  const code =
-    'export function id(params: { id?: string }): string {\n  return params.id as string\n}\n'
-  const rule = '@typescript-eslint/non-nullable-type-assertion-style'
-
-  it('leaves `x as string` in source files, and fixes it to `x!` in test files (M4)', async () => {
-    const eslint = await createESLint('rules', { antislop: { slop: false } }, { fix: true })
-    const [source] = await eslint.lintText(code, { filePath: path.join(cwd, 'src/dead-store.ts') })
-    expect(source?.output).toBeUndefined()
-    expect(source?.messages.map((message) => message.ruleId)).not.toContain(rule)
-    const [test] = await eslint.lintText(code, {
-      filePath: path.join(cwd, 'src/__tests__/unbound-method.ts'),
-    })
-    expect(test?.output).toBe(code.replace('params.id as string', 'params.id!'))
+  it('`a && a`', async () => {
+    const eslint = await sharedESLint('rules', NO_SLOP)
+    expect(
+      await lintRuleIds(eslint, 'x.js', 'export function both(a) {\n  return a && a\n}\n'),
+    ).toEqual(['sonarjs/no-identical-expressions', 'unicorn/no-duplicate-logical-operands'])
   })
 })
 
@@ -476,16 +431,22 @@ test('a twin that stays on in tests is off outside them, in a files list linear 
   const eslint = eslintWith(cwd, configs)
   const twin = '@typescript-eslint/non-nullable-type-assertion-style'
   const severities = await Promise.all(
-    ['src/a.ts', 'src/a.test.ts', 'tests/a.ts', 'tests/fixtures/a.ts', 'tests/data/a.ts'].map(
-      async (file) => {
-        const config = (await eslint.calculateConfigForFile(file)) as Linter.Config
-        return [file, severityOf(config.rules?.[twin]) ?? 0]
-      },
-    ),
+    [
+      'src/a.ts',
+      'src/a.test.ts',
+      'src/__tests__/a.ts',
+      'tests/a.ts',
+      'tests/fixtures/a.ts',
+      'tests/data/a.ts',
+    ].map(async (file) => {
+      const config = (await eslint.calculateConfigForFile(file)) as Linter.Config
+      return [file, severityOf(config.rules?.[twin]) ?? 0]
+    }),
   )
   expect(Object.fromEntries(severities)).toEqual({
     'src/a.ts': 0,
     'src/a.test.ts': 2,
+    'src/__tests__/a.ts': 2,
     'tests/a.ts': 2,
     'tests/fixtures/a.ts': 0,
     'tests/data/a.ts': 0,

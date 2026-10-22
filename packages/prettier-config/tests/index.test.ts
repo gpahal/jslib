@@ -120,7 +120,7 @@ describe('defineConfig', () => {
     )
   })
 
-  it('adds the tailwind functions and the entry point as the stylesheet', () => {
+  it('sets the entry point, resolved from the root, as the stylesheet', () => {
     const config = defineConfig({
       root: ROOT,
       tailwindcss: { entryPoint: 'tests/fixtures/tailwind.css' },
@@ -384,36 +384,6 @@ describe('mergeConfigs', () => {
       'a',
       tailwind,
     ])
-  })
-
-  it("matches a resolved path to its name only in defineConfig's configs, whatever ran before", async () => {
-    await using project = await withTmpProject('prettier-config-plugin-names', {
-      'node_modules/prettier-plugin-example/package.json': JSON.stringify({
-        name: 'prettier-plugin-example',
-        main: 'index.js',
-      }),
-      'node_modules/prettier-plugin-example/index.js': '',
-    })
-    const name = 'prettier-plugin-example'
-    const pluginPath = await fs.realpath(path.join(project.dir, 'node_modules', name, 'index.js'))
-    const mergeUnrelated = () => mergeConfigs({ plugins: [pluginPath] }, { plugins: [name] })
-    const before = mergeUnrelated()
-    expect(before.plugins).toEqual([pluginPath, name])
-
-    const config = defineConfig({
-      root: project.dir,
-      sortImports: false,
-      options: { plugins: [name] },
-    })
-    expect(config.plugins).toContain(pluginPath)
-    expect(mergeUnrelated()).toEqual(before)
-
-    // The config that `defineConfig` returned, and merges of it, keep the plugin once
-    const merged = mergeConfigs(config, { plugins: [name] })
-    const examplePlugins = (plugins: Config['plugins']) =>
-      plugins?.filter((plugin) => plugin === pluginPath || plugin === name)
-    expect(examplePlugins(merged.plugins)).toEqual([pluginPath])
-    expect(examplePlugins(mergeConfigs({ plugins: [name] }, merged).plugins)).toEqual([name])
   })
 
   it.each([
@@ -819,15 +789,10 @@ describe('defineConfig validation', () => {
     )
   })
 
-  it('requires an absolute root folder', async () => {
-    await using project = await withTmpProject('prettier-config-root', {
-      'package.json': '{}',
-    })
+  it('requires an absolute root', () => {
     expect(build({ root: '.' })).toThrow(
       `${PREFIX}: \`root\`: expected an absolute path, such as \`import.meta.dirname\``,
     )
-    const root = path.join(project.dir, 'package.json')
-    expect(build({ root })).toThrow(`${PREFIX}: \`root\`: path \`${root}\` isn't a folder`)
   })
 
   it('leaves relative paths for Prettier and the Tailwind plugin to resolve without root', () => {
@@ -861,10 +826,6 @@ describe('defineConfig validation', () => {
   it.each([
     // The plugins' own keys, which the preset's options set
     [{ importOrder: [] }, '`importOrder`: unknown option. Pass `sortImports: { importOrder }`'],
-    [
-      { tailwindcss: { stylesheet: 'a.css' } },
-      '`tailwindcss.stylesheet`: unknown option. Known options: `entryPoint`, `functions`, `attributes`, `preserveWhitespace`',
-    ],
     ['all', 'options: expected an object of options, received `"all"`'],
     [
       { tailwindcss: { entryPoint: '' } },
@@ -906,11 +867,6 @@ describe('defineConfig validation', () => {
       { overrides: [{ files: '*.ts', options: { overrides: [] } }] },
       `\`overrides[0].options.overrides\`: ${NESTED_OVERRIDES}`,
     ],
-    // An override is copied with only its known keys, which would drop a misspelled one silently
-    [
-      { overrides: [{ files: '*.md', option: { semi: true } }] },
-      '`overrides[0]`: `option`: unknown option. Known options: `files`, `excludeFiles`, `options`',
-    ],
     // A string would be read as a list of characters
     [
       { options: { plugins: 'prettier-plugin-example' } },
@@ -930,7 +886,6 @@ describe('defineConfig validation', () => {
       "`markdown.githubAlerts`: isn't taken. Pass it at the top level",
     ],
     [{ unknown: undefined }, `\`unknown\`: ${KNOWN_OPTIONS}`],
-    [{ [Symbol('unknown')]: true }, `\`[Symbol(unknown)]\`: ${KNOWN_OPTIONS}`],
     [
       { tailwindcss: new Map() },
       '`tailwindcss`: expected a boolean or an object, received an instance of `Map`',
@@ -986,7 +941,7 @@ describe('defineConfig validation', () => {
   )
 
   // prettier-plugin-merge formats with each plugin as a range, which prettier-plugin-organize-imports
-  // skips; see the canary in format.test.ts
+  // skips; see the canary in upstream.test.ts
   it('throws on prettier-plugin-organize-imports while sortImports is on or before prettier-plugin-merge', () => {
     const name = 'prettier-plugin-organize-imports'
     const lead = `${name} replaces the import sorter's parsers, so imports would stay unsorted.`

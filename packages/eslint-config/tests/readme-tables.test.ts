@@ -6,6 +6,7 @@ import { AREAS } from '@/internal/areas'
 import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
 import type { EslintConfigOptions } from '@/internal/types'
+import { WARNING_CODES } from '@/internal/utils'
 
 import { collator } from './helpers'
 
@@ -96,6 +97,13 @@ test('the Markdown rules table lists every rule of `@gpahal/markdown`, in order'
   expect(listed).toEqual(
     sorted(Object.keys(MARKDOWN_PLUGIN.rules ?? {})).map((rule) => `@gpahal/markdown/${rule}`),
   )
+})
+
+test('the Warnings table lists every code, in order', () => {
+  const listed = tableRows('### Warnings', '| Code | Cause | Fix |').flatMap(([code = '']) =>
+    codeSpans(code),
+  )
+  expect(listed).toEqual([...WARNING_CODES])
 })
 
 /**

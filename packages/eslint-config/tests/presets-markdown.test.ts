@@ -125,29 +125,6 @@ describe('markdown linting', () => {
     ])
   })
 
-  it('parses front matter, braces, `<`, HTML comments, math, alerts and task lists as Markdown', async () => {
-    const eslint = await sharedESLint('markdown')
-    const markdown = [
-      '---',
-      'description: Docs',
-      '---',
-      '',
-      '# Title',
-      '',
-      '<!-- a comment -->',
-      '',
-      'Use {braces}, a < b and $x^2$ math.',
-      '',
-      '> [!NOTE]',
-      '> An alert.',
-      '',
-      '- [ ] Todo',
-      '- [x] Done',
-      '',
-    ].join('\n')
-    expect(await lintText(eslint, 'docs.md', markdown)).toEqual([])
-  })
-
   it('fixes a code-block problem and a Markdown problem in one run, but not bare URLs', async () => {
     const eslint = await createESLint('markdown', {}, { fix: true })
     const markdown = [
@@ -185,31 +162,6 @@ describe('markdown linting', () => {
     const eslint = await sharedESLint('markdown')
     const html = `${'<div>'.repeat(3000)}x${'</div>'.repeat(3000)}`
     expect(await problemsOf(eslint, 'docs.md', `# Title\n\n${html}\n`)).toEqual([])
-  })
-})
-
-describe('markdown code block languages', () => {
-  it('keep `console` and SQL dialects, and rename `shell` to `sh`', async () => {
-    const eslint = await sharedESLint('markdown')
-    const markdown = [
-      '# Title',
-      '',
-      '```console',
-      '$ npm install',
-      '```',
-      '',
-      '```postgresql',
-      'SELECT 1;',
-      '```',
-      '',
-      '```shell',
-      'ls',
-      '```',
-      '',
-    ].join('\n')
-    expect(await problemsOf(eslint, 'docs.md', markdown)).toEqual([
-      '11:4 @gpahal/markdown/canonical-code-block-language 2 fix',
-    ])
   })
 })
 
@@ -310,26 +262,6 @@ describe('markdown processor', () => {
       '6:1 markdown/no-empty-links 2',
     ])
     expect(await problemsOf(eslint, 'docs.md', nestedMarkdown(4))).toEqual([])
-  })
-
-  it('names a block after its `filename` meta', async () => {
-    const eslint = await sharedESLint('markdown')
-    const markdown = [
-      '# Title',
-      '',
-      '```js filename="tool.cjs"',
-      'export const a = 1',
-      '```',
-      '',
-      '```js',
-      'export const a = 1',
-      '```',
-      '',
-    ].join('\n')
-    // `.cjs` files are CommonJS, so only the first block, `docs.md/tool.cjs`, reports `export`
-    const rule = '@gpahal/no-esm-in-commonjs'
-    expect(await problemsOf(eslint, 'docs.md', markdown)).toEqual([`4:1 ${rule} 2`])
-    expect(await ruleSeverity(eslint, 'docs.md/tool.cjs', rule)).toBe(2)
   })
 
   it('leaves the `package-json` rules off in a block named package.json', async () => {
@@ -477,7 +409,7 @@ describe('the language columns of a rule that reports JavaScript columns', () =>
   })
 })
 
-describe('markdown code block fixes (H2)', () => {
+describe('markdown code block fixes', () => {
   it('leaves an object-literal excerpt, which parses as a labelled block', async () => {
     const eslint = await createESLint('markdown', {}, { fix: true })
     const code =

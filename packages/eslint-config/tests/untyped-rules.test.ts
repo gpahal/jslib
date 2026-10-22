@@ -14,8 +14,12 @@ const root = path.join(FIXTURES_DIR, 'rules')
 
 const RULE = '@typescript-eslint/no-floating-promises'
 
-function typedRuleConfig(filesGlobs: NonNullable<TypedConfig['files']>): TypedConfig {
-  return { files: filesGlobs, rules: { [RULE]: 'error' } }
+function typedRuleConfig(
+  filesGlobs: NonNullable<TypedConfig['files']>,
+  basePath?: string,
+): TypedConfig {
+  const config: TypedConfig = { files: filesGlobs, rules: { [RULE]: 'error' } }
+  return basePath === undefined ? config : { ...config, basePath }
 }
 
 async function build(
@@ -28,7 +32,7 @@ async function build(
 const JAVASCRIPT_FIX = 'Set `typeAware: { javascript: true }` or remove the rule'
 
 describe('a type-aware rule in a config whose files get no type information', () => {
-  it.each<[NonNullable<TypedConfig['files']>, Partial<EslintConfigOptions>, string]>([
+  it.each<[NonNullable<TypedConfig['files']>, Partial<EslintConfigOptions>, string, string?]>([
     [['src/x.cjs'], {}, `\`src/x.cjs\` files don't get. ${JAVASCRIPT_FIX}`],
     [
       [...files.codeBlock],
@@ -50,23 +54,20 @@ describe('a type-aware rule in a config whose files get no type information', ()
       { typeAware: { ignores: ['generated/**'] } },
       `\`generated/**\`, \`**/*.js\`, ${files.codeBlock.map((glob) => `\`${glob}\``).join(' and ')} files don't get, as code blocks never get type information. Take the files out of \`typeAware.ignores\`, set \`typeAware: { javascript: true }\` or remove the rule`,
     ],
-  ])('throws for %j', async (globs, options, message) => {
-    await expect(build(typedRuleConfig(globs), options)).rejects.toThrow(
+    // Read relative to the config's `basePath`
+    [
+      ['gen/**'],
+      { typeAware: { ignores: ['packages/app/gen/**'] } },
+      "`gen/**` files don't get. Take the files out of `typeAware.ignores` or remove the rule",
+      'packages/app',
+    ],
+  ])('throws for %j', async (globs, options, message, basePath) => {
+    await expect(build(typedRuleConfig(globs, basePath), options)).rejects.toThrow(
       `@gpahal/eslint-config: \`configs[0]\`: \`${RULE}\`: needs type information, which ${message}`,
     )
   })
 
-  it('reads the globs of a config with a `basePath` relative to it', async () => {
-    const ignores = { typeAware: { ignores: ['packages/app/gen/**'] } }
-    await expect(
-      build({ ...typedRuleConfig(['gen/**']), basePath: 'packages/app' }, ignores),
-    ).rejects.toThrow("`gen/**` files don't get")
-    await expect(
-      build({ ...typedRuleConfig(['packages/app/gen/**']), basePath: 'packages/app' }, ignores),
-    ).resolves.toBeInstanceOf(Array)
-  })
-
-  it.each<[string, NonNullable<TypedConfig['files']>, Partial<EslintConfigOptions>]>([
+  it.each<[string, NonNullable<TypedConfig['files']>, Partial<EslintConfigOptions>, string?]>([
     ['JavaScript with `typeAware.javascript`', ['**/*.js'], { typeAware: { javascript: true } }],
     [
       'JavaScript the default project types',
@@ -85,8 +86,14 @@ describe('a type-aware rule in a config whose files get no type information', ()
       ['generated/**/*.ts'],
       { typeAware: { ignores: ['generated/**', '!generated/typed/**'] } },
     ],
-  ])('keeps the rule for %s', async (_name, globs, options) => {
-    await expect(build(typedRuleConfig(globs), options)).resolves.toBeInstanceOf(Array)
+    [
+      "a glob that `typeAware.ignores` covers only when it isn't read relative to its config's `basePath`",
+      ['packages/app/gen/**'],
+      { typeAware: { ignores: ['packages/app/gen/**'] } },
+      'packages/app',
+    ],
+  ])('keeps the rule for %s', async (_name, globs, options, basePath) => {
+    await expect(build(typedRuleConfig(globs, basePath), options)).resolves.toBeInstanceOf(Array)
   })
 
   it.each<[string, (composer: ReturnType<typeof defineConfig>) => unknown]>([

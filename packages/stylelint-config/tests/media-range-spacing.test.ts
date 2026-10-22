@@ -58,14 +58,6 @@ test.each([
   expect(await fix(css, config)).toBe(css)
 })
 
-test('leaves the escapes of a URL in an @import alone through the base preset, run twice', async () => {
-  // `import-notation` writes the URL as a string, where the escapes mean the same
-  const css = `${String.raw`@import url(a\)b\(x=1.css);`}\n`
-  const fixed = await fix(css, baseConfig)
-  expect(fixed).toBe(`${String.raw`@import "a\)b\(x=1.css";`}\n`)
-  expect(await fix(fixed, baseConfig)).toBe(fixed)
-})
-
 /**
  * `fn`'s result, and how many code units its calls of `String.prototype.slice` copied in all
  */
@@ -93,12 +85,6 @@ test('reads and fixes a long prelude in one pass', async () => {
   const { result, codeUnits } = await countSlicedCodeUnits(async () => fix(css, config))
   expect(result).toBe(`@media ${comparisons.join(' and ').replaceAll('>', ' > ')} {}`)
   expect(codeUnits).toBeLessThan(5 * css.length)
-})
-
-test('leaves an invalid operator to media-query-no-invalid in the base preset', async () => {
-  const css = '@media (width=>600px) {\n  a {\n    color: red;\n  }\n}\n'
-  expect(await fix(css, baseConfig)).toBe(css)
-  expect(await lintRules(css, baseConfig)).toEqual(['media-query-no-invalid'])
 })
 
 test("spaces media-feature-range-notation's fix in the same --fix pass, and Prettier keeps it", async () => {

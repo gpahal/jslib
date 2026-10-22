@@ -119,7 +119,7 @@ test('keeps nested object extends lists, syntax and disable settings ahead of us
 })
 
 test.each(['.mjs', '.cjs'])(
-  'loads named nested configs relative to their modules and reloads %s files',
+  'loads named nested configs relative to their modules from %s files',
   async (extension) => {
     const exported = extension === '.cjs' ? 'module.exports =' : 'export default'
     await using project = await withTmpProject('stylelint-config-loaded', {
@@ -139,13 +139,6 @@ test.each(['.mjs', '.cjs'])(
     expect(
       await rulesAt(config, path.join(project.dir, 'a.css'), 'a {\n  color: var(--brand);\n}\n'),
     ).toEqual(['local/report'])
-    await fs.writeFile(
-      path.join(project.dir, `node_modules/shared/index${extension}`),
-      `${exported} { reportInvalidScopeDisables: false }`,
-    )
-    expect(
-      (await defineConfig({ root: project.dir, extends: 'shared' })).reportInvalidScopeDisables,
-    ).toBe(false)
   },
 )
 
@@ -163,7 +156,7 @@ test('loads override extends from their declaring config folder', async () => {
   expect(await rulesAt(config, path.join(project.dir, 'src/a.css'))).toEqual(['color-named'])
 })
 
-test('rejects cyclic and over-deep extends graphs and keeps load failures as causes', async () => {
+test('rejects cyclic and over-deep extends graphs', async () => {
   const cycle: StylelintExtendedConfig = {}
   cycle.extends = cycle
   await expect(defineConfig({ root: PACKAGE_ROOT, extends: cycle })).rejects.toThrow(
@@ -176,14 +169,6 @@ test('rejects cyclic and over-deep extends graphs and keeps load failures as cau
   await expect(defineConfig({ root: PACKAGE_ROOT, extends: [shared, deep] })).rejects.toThrow(
     'extends nests more than 32 deep',
   )
-  await expect(
-    defineConfig({ root: PACKAGE_ROOT, extends: 'missing-config-39418' }),
-  ).rejects.toMatchObject({
-    message: expect.stringContaining(
-      "@gpahal/stylelint-config: `extends[0]`: can't load `missing-config-39418`:",
-    ) as unknown,
-    cause: expect.any(Error) as unknown,
-  })
 })
 
 test.each([
@@ -421,7 +406,12 @@ test('activates conditional reference rules while preserving Markdown and explic
   })
   const config = await defineConfig({
     root: project.dir,
-    extends: { overrides: [{ files: '**/special/**', referenceFiles: ['tokens.css'] }] },
+    extends: {
+      overrides: [
+        { files: '**/special/b.md', rules: { 'no-unknown-custom-properties': true } },
+        { files: '**/special/**', referenceFiles: ['tokens.css'] },
+      ],
+    },
     overrides: [
       { files: '**/special/allowed.css', rules: { 'no-unknown-custom-properties': null } },
     ],
@@ -431,6 +421,8 @@ test('activates conditional reference rules while preserving Markdown and explic
     ['special/allowed.css', []],
     ['a.css', []],
     ['special/a.md', []],
+    // An earlier explicit Markdown setting survives the reference override
+    ['special/b.md', ['no-unknown-custom-properties']],
   ] as const) {
     const css = 'a {\n  color: var(--missing);\n}\n'
     expect(

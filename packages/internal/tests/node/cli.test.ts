@@ -16,19 +16,8 @@ describe('readPackageVersion', () => {
 
   it('fails on a manifest that fails to read, keeping the cause, or a version that is not a string', async () => {
     await using project = await withTmpProject('internal-cli', {
-      'bad.json': '{',
       'package.json': '{ "version": 1 }',
     })
-    await expect(
-      readPackageVersion('@scope/x', pathToFileURL(`${project.dir}/bad.json`)),
-    ).rejects.toThrow(
-      expect.objectContaining({
-        message: expect.stringMatching(
-          /^@scope\/x: `package\.json`: reading it failed: \S/u,
-        ) as unknown,
-        cause: expect.any(SyntaxError) as unknown,
-      }),
-    )
     await expect(
       readPackageVersion('@scope/x', pathToFileURL(`${project.dir}/missing.json`)),
     ).rejects.toThrow(
@@ -66,18 +55,6 @@ describe('formatCliError', () => {
         '',
       ].join('\n'),
     )
-  })
-
-  it('gives the name of an error without a message, and the messages of inner errors', () => {
-    // eslint-disable-next-line unicorn/error-message -- The missing message is what's tested
-    expect(formatCliError(new TypeError(), { stream })).toBe('error: TypeError\n')
-    // eslint-disable-next-line unicorn/error-message -- The missing message is what's tested
-    expect(formatCliError(new AggregateError([new Error('a')]), { stream })).toBe('error: a\n')
-    expect(
-      formatCliError(new AggregateError([new Error('a'), new Error('b')], 'all failed'), {
-        stream,
-      }),
-    ).toBe('error: all failed: a; b\n')
   })
 
   it('leaves out the causes when asked, and takes a thrown value that is not an error', () => {

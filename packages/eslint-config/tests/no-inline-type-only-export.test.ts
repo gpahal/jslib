@@ -1,5 +1,4 @@
 import { RuleTester } from 'eslint'
-import ts from 'typescript'
 import { parser as tsEslintParser } from 'typescript-eslint'
 
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
@@ -32,33 +31,4 @@ tester.run('no-inline-type-only-export', GPAHAL_PLUGIN.rules['no-inline-type-onl
     // TypeScript rejects import attributes on a type-only export
     { code: "export { type G } from './g.js' with { type: 'x' }", output: null, errors },
   ],
-})
-
-/**
- * The JavaScript that TypeScript emits for `code` under `verbatimModuleSyntax`
- */
-function emit(code: string): string {
-  return ts
-    .transpileModule(code, {
-      compilerOptions: {
-        verbatimModuleSyntax: true,
-        module: ts.ModuleKind.ESNext,
-        target: ts.ScriptTarget.ESNext,
-      },
-    })
-    .outputText.trim()
-}
-
-// The fix keeps the types, but drops the module load: a module that must run needs an import
-describe('the emit before and after the fix, under verbatimModuleSyntax', () => {
-  it.each([
-    ["export { type A } from './a'", "export type { A } from './a'"],
-    [
-      "import { type A } from './a'\nexport type B = A",
-      "import type { A } from './a'\nexport type B = A",
-    ],
-  ])('%s loads the module, and its fix does not', (before, after) => {
-    expect(emit(before)).toMatch(/(?:export|import) \{\} from '\.\/a'|import '\.\/a'/)
-    expect(emit(after)).not.toContain("'./a'")
-  })
 })

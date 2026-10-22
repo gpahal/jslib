@@ -5,7 +5,8 @@ import process from 'node:process'
 
 // Compiled by `typecheck` with `exactOptionalPropertyTypes`: every optional option also takes
 // `undefined`, as code that forwards an optional value of its own passes it. `undefined` means not
-// set, which `tests/rules.test.ts` checks on these configs
+// set. `tests/rules.test.ts` imports this module, so every config here must build, but it checks
+// only `withUndefinedOptions` and the copies of `withReadonlyArrays`
 
 import { defineConfig, replace } from '@gpahal/stylelint-config'
 

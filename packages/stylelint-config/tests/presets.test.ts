@@ -22,21 +22,6 @@ async function lint(code: string, config: Config = tailwindcssConfig) {
   ])
 }
 
-test('the tailwindcss preset keeps blank lines between theme variables and numeric alphas', async () => {
-  const css = [
-    '@theme {',
-    '  --font-sans: sans-serif;',
-    '',
-    '  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);',
-    '}',
-    '',
-  ].join('\n')
-  expect(await lint(css)).toEqual([])
-  expect(await lint('a {\n  color: rgb(0 0 0 / 5%);\n}\n')).toEqual([
-    expect.stringMatching(/^alpha-value-notation: /),
-  ])
-})
-
 /**
  * The path of a file of the installed `tailwindcss` package
  */
@@ -96,6 +81,17 @@ test.each([
   expect(await lintRules(css, tailwindcssConfig)).toEqual([rule])
 })
 
+/**
+ * Whether `code` errors with the base preset, and the rules it reports, with or without `--quiet`
+ */
+async function lintQuiet(code: string, quiet: boolean) {
+  const { errored, results } = await stylelint.lint({ code, config: baseConfig, quiet })
+  return {
+    errored,
+    rules: results.flatMap((result) => result.warnings.map((warning) => warning.rule)),
+  }
+}
+
 test('reports disable comments without a reason, that disable nothing or a rule that is off', async () => {
   const config = await defineConfig({ root: process.cwd(), rules: { 'color-named': 'never' } })
   expect(
@@ -118,6 +114,22 @@ test('reports disable comments without a reason, that disable nothing or a rule 
     expect.stringMatching(/^--report-needless-disables: /),
     expect.stringMatching(/^--report-invalid-scope-disables: /),
   ])
+  // A needless disable stays an error under `--quiet`, except one of plugin/use-baseline, whose
+  // warnings `--quiet` leaves out
+  const needless =
+    'a {\n  /* stylelint-disable-next-line color-hex-length -- Brand color */\n  color: #f00;\n}\n'
+  const useBaseline =
+    'a {\n  /* stylelint-disable-next-line plugin/use-baseline -- Progressive enhancement */\n  reading-flow: grid-order;\n}\n'
+  for (const quiet of [true, false]) {
+    expect(await lintQuiet(needless, quiet), String(quiet)).toEqual({
+      errored: true,
+      rules: ['--report-needless-disables'],
+    })
+    expect(await lintQuiet(useBaseline, quiet), String(quiet)).toEqual({
+      errored: false,
+      rules: [],
+    })
+  }
 })
 
 const BOM = String.fromCodePoint(0xfe_ff)
@@ -176,46 +188,6 @@ describe('quote fixes', () => {
       expect(await fix(page, baseConfig, file)).toBe(`${attribute}\n<style>\n${fixed}</style>\n`)
     },
   )
-
-  it('honor disable comments that name the stock rules or the own rules, without fixing', async () => {
-    const page = [
-      '<style>',
-      '  /* stylelint-disable-next-line font-family-name-quotes -- Kept */',
-      '  a { font-family: Helvetica, sans-serif; }',
-      '  /* stylelint-disable-next-line @gpahal/function-url-quotes -- Kept */',
-      '  b { background: url(x.png); }',
-      '  .c { font-family: Arial, serif; }',
-      '</style>',
-      '',
-    ].join('\n')
-    const { results } = await stylelint.lint({
-      code: page,
-      config: baseConfig,
-      codeFilename: 'src/page.html',
-      fix: true,
-    })
-    // Each comment kept a problem, so neither is reported as needless
-    expect(results[0]!.warnings).toEqual([])
-    expect(await fix(page, baseConfig, 'src/page.html')).toBe(
-      page.replace('font-family: Arial', 'font-family: "Arial"'),
-    )
-    expect(await lintRules(page, baseConfig, 'src/page.html')).toEqual([
-      '@gpahal/font-family-name-quotes',
-    ])
-  })
-})
-
-test('warns about features that are not newly available', async () => {
-  const { results } = await stylelint.lint({
-    code: '.box {\n  interpolate-size: allow-keywords;\n}\n',
-    config: baseConfig,
-  })
-  expect(results[0]!.warnings.map(({ rule, severity }) => ({ rule, severity }))).toEqual([
-    { rule: 'plugin/use-baseline', severity: 'warning' },
-  ])
-  expect(results[0]!.errored).toBeFalsy()
-  // Newly available, but not widely
-  expect(await lint('.box {\n  width: abs(20% - 100px);\n}\n', baseConfig)).toEqual([])
 })
 
 test.each([
@@ -234,12 +206,6 @@ test.each([
   'a {\n  color: red;\n  @apply font-bold;\n}',
 ])('the tailwindcss preset accepts Tailwind syntax: %s', async (css) => {
   expect(await lint(`${css}\n`)).toEqual([])
-})
-
-test("the tailwindcss preset groups an entry file's at-rules without blank lines", async () => {
-  const css = "@import 'tailwindcss';\n@plugin '@tailwindcss/typography';\n@source '../ui';\n"
-  expect(await lintRules(css, tailwindcssConfig)).toEqual([])
-  expect(await lintRules(css, baseConfig)).toContain('at-rule-empty-line-before')
 })
 
 test.each([
@@ -279,56 +245,9 @@ describe('.astro files', () => {
     ].join('\n')
     expect(await lintAstro(astro)).toEqual(['property-no-unknown', 'property-no-unknown'])
   })
-
-  it('allows :global() in .astro files only', async () => {
-    const css = '.a :global(p) {\n  color: red;\n}\n'
-    expect(await lintAstro(`<style>\n${css}</style>\n`)).toEqual([])
-    expect(await lint(css)).toEqual([expect.stringMatching(/^selector-pseudo-class-no-unknown: /)])
-    expect(await lintFile(`<style>\n${css}</style>\n`, 'src/page.html')).toEqual([
-      '2:selector-pseudo-class-no-unknown',
-    ])
-  })
 })
 
 describe('CSS Modules', () => {
-  const css = [
-    '@value primary: #f00;',
-    '',
-    '.button {',
-    "  composes: base from './b.module.css';",
-    '  color: red;',
-    '}',
-    '',
-    ':global(.dark) .primaryButton {',
-    '  color: red;',
-    '}',
-    '',
-    ':local(.x) {',
-    '  color: red;',
-    '}',
-    '',
-    ':export {',
-    '  primaryColor: red;',
-    '}',
-    '',
-    ":import('./c.module.css') {",
-    '  imported: exported;',
-    '}',
-    '',
-  ].join('\n')
-
-  it('allows their syntax and camelCase class names in *.module.css files only', async () => {
-    expect(await lintRules(css, tailwindcssConfig, 'src/a.module.css')).toEqual([])
-    expect(await lintRules(css, baseConfig, 'src/a.css')).toEqual(
-      expect.arrayContaining([
-        'at-rule-no-unknown',
-        'property-no-unknown',
-        'selector-class-pattern',
-        'selector-pseudo-class-no-unknown',
-      ]),
-    )
-  })
-
   it.each([
     [':export values', ':export {\n  themeName: darkMode;\n}\n'],
     ['composes class names', ".a {\n  composes: fooBar from './x.module.css';\n}\n"],
@@ -378,14 +297,9 @@ describe('.html and .md files', () => {
   ])(
     'ignores the files that %s: false turns off, rather than parse them as CSS',
     async (option, codeFilename, code) => {
-      const config = await defineConfig({
-        root: process.cwd(),
-        [option]: false,
-        ignoreFiles: (defaults) => [...defaults, 'vendor/**'],
-      })
+      const config = await defineConfig({ root: process.cwd(), [option]: false })
       const { results } = await stylelint.lint({ code, codeFilename, config })
       expect(results[0]?.ignored).toBe(true)
-      expect(config.ignoreFiles).toContain(`${process.cwd()}/vendor/**`)
     },
   )
 

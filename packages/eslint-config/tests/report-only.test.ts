@@ -4,7 +4,7 @@ import path from 'node:path'
 import type { Linter } from 'eslint'
 import { builtinRules } from 'eslint/use-at-your-own-risk'
 
-import { withTmpProject } from '@gpahal/internal/node/testing'
+import { withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import {
@@ -16,7 +16,7 @@ import {
 import { isRuleOn, parseRuleId } from '@/internal/rules'
 
 import { ALL_ON_OPTIONS } from '../scripts/typegen'
-import { fixFiles, reportFiles, type FixResult, type ReportResult } from './fix-helpers'
+import { fixFiles, reportFiles, type ReportResult } from './fix-helpers'
 import { collator, FIXTURES_DIR } from './helpers'
 
 // Each file of the `report-only` fixture holds code that a report-only rule's fix would change, with
@@ -203,23 +203,6 @@ async function reportCases(
 }
 
 /**
- * `--fix` of `files`, written into `dir` first, with only `ruleIds` running
- */
-async function writeAndFix(
-  dir: string,
-  files: Record<string, string>,
-  options: Partial<EslintConfigOptions>,
-  ruleIds: ReadonlyArray<string>,
-): Promise<Record<string, FixResult>> {
-  for (const [file, text] of Object.entries(files)) {
-    await fs.mkdir(path.dirname(path.join(dir, file)), { recursive: true })
-    await fs.writeFile(path.join(dir, file), text)
-  }
-  const configs = await defineConfig({ root: dir, isInEditor: false, gitignore: false, ...options })
-  return fixFiles({ dir, configs, files: Object.keys(files), ruleIds })
-}
-
-/**
  * The rule names in the paragraph after the README's `<summary>summary</summary>` line
  */
 function listedRules(readme: string, summary: string): Array<string> {
@@ -277,24 +260,10 @@ describe('report-only fixes', () => {
     },
   )
 
-  it("doesn't report `void` of a value that isn't a call, which `no-unused-expressions` needs (H1)", async () => {
-    const file = 'src/fix-safety/void-non-call.ts'
-    const text =
-      'export function run(record: () => void, el: { offsetHeight: number }): void {\n  record()\n  void (1 + 2)\n  void el.offsetHeight\n}\n'
-    const rules = ['@typescript-eslint/no-meaningless-void-operator']
-    expect((await writeAndFix(dir, { [file]: text }, OPTIONS, rules))[file]).toEqual({
-      output: undefined,
-      rules: [],
-    })
-  })
-
-  it("reports the library config's method signatures without fixing them, following an `.override()` of its files (M3)", async () => {
+  it("reports the library config's method signatures without fixing them, following an `.override()` of its files", async () => {
     const text = 'export interface Server {\n  close(callback: () => void): void\n}\n'
     const files = { 'src/fix-safety/lib/server.ts': text, 'src/fix-safety/app/server.ts': text }
-    for (const [file, content] of Object.entries(files)) {
-      await fs.mkdir(path.dirname(path.join(dir, file)), { recursive: true })
-      await fs.writeFile(path.join(dir, file), content)
-    }
+    await writeFiles(dir, files)
     const configs = await defineConfig({
       root: dir,
       isInEditor: false,

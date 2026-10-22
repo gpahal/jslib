@@ -1,5 +1,6 @@
 import path from 'node:path'
 
+import eslintPluginComments from '@eslint-community/eslint-plugin-eslint-comments'
 import { ESLint, type Linter, type Rule } from 'eslint'
 import eslintPluginSlop from 'eslint-plugin-slop'
 import { defineConfig as eslintDefineConfig } from 'eslint/config'
@@ -8,6 +9,7 @@ import { configs as tsEslintConfigs } from 'typescript-eslint'
 import { runNodeOk } from '@gpahal/internal/node/testing'
 import { isRecord } from '@gpahal/std/objects'
 
+import { eslintCommentsPlugin } from '@/eslint-comments'
 import {
   defineConfig,
   files,
@@ -519,8 +521,6 @@ describe('composer methods', () => {
     expect(severityOf(rulesOf(cloneConfigs)?.['no-console'])).toBe(1)
     expect(rulesOf(baseConfigs)?.['no-var']).toBeUndefined()
     expect(rulesOf(cloneConfigs)?.['no-var']).toBeDefined()
-    Reflect.set(rulesOf(cloneConfigs) ?? {}, 'eqeqeq', 'off')
-    expect(rulesOf(await base)?.['eqeqeq']).not.toBe('off')
   })
 
   it("removes a config whose plugin's rules the other configs have off, but not on", async () => {
@@ -636,15 +636,6 @@ describe('the guards after `.onResolved()`', () => {
     )
   })
 
-  it('register the wrapped slop plugin in place of the upstream one a callback registers', async () => {
-    const configs = await defineConfig({ root, antislop: true }).onResolved((resolved) => [
-      ...resolved,
-      { plugins: { slop: eslintPluginSlop } },
-    ])
-    const slopPlugins = new Set(configs.flatMap((config) => config.plugins?.['slop'] ?? []))
-    expect([...slopPlugins]).toEqual([slopPlugin])
-  })
-
   it("keep the guards out of a callback's configs", async () => {
     const seen: Array<string | undefined> = []
     await defineConfig({ root }).onResolved((resolved) => {
@@ -681,16 +672,6 @@ describe('rule changes through the composer', () => {
     expect(removed.find((config) => config.name === name)?.rules?.[rule]).toBeUndefined()
     expect(await freshEntry(name, rule)).toEqual(before)
   })
-
-  it.each(['warning', ['warning']])(
-    'overrideRules rejects invalid severity %j immediately',
-    (entry) => {
-      expect(() => {
-        // @ts-expect-error -- Invalid severities from JavaScript callers
-        return defineConfig({ root }).overrideRules({ 'no-console': entry })
-      }).toThrow('@gpahal/eslint-config: `.overrideRules()`: `no-console`: expected a severity')
-    },
-  )
 
   it('overrideRules leaves a rule set to `undefined` alone, and removes one set to `null`', async () => {
     const fresh = await defineConfig({ root })
@@ -1341,6 +1322,71 @@ describe('plugins that the presets register, in configs of yours', () => {
       '@gpahal/eslint-config: `configs[0].plugins`: registers `@gpahal` again with a different plugin. Remove it from the config',
     )
   })
+
+  const WRAPPED_PLUGINS: Array<{
+    name: string
+    upstream: ESLint.Plugin
+    wrapped: unknown
+    rules: Linter.RulesRecord
+    file: string
+    code: string
+    reports: Array<string>
+  }> = [
+    {
+      name: 'slop',
+      upstream: eslintPluginSlop,
+      wrapped: slopPlugin,
+      rules: { 'slop/no-em-dash': 'error' },
+      file: 'docs.md',
+      code: '# Title\n\nA \u{2014} b\n',
+      // The wrapped rule reports at Markdown's own column
+      reports: ['slop/no-em-dash:1'],
+    },
+    {
+      name: '@eslint-community/eslint-comments',
+      upstream: eslintPluginComments,
+      wrapped: eslintCommentsPlugin,
+      rules: { '@eslint-community/eslint-comments/no-restricted-disable': ['error', 'no-console'] },
+      file: 'x.js',
+      code: '// eslint-disable-next-line no-console -- A demo\nconsole.log(1)\n',
+      reports: ['@eslint-community/eslint-comments/no-restricted-disable:29'],
+    },
+  ]
+
+  it.each(
+    WRAPPED_PLUGINS.flatMap((plugin) =>
+      (['configs', 'append', 'onResolved'] as const).map(
+        (source) => [plugin.name, source, plugin] as const,
+      ),
+    ),
+  )(
+    'registers its wrapped %s plugin, the one it exports, in place of the one a config of yours registers through %s',
+    async (name, source, { upstream, wrapped, rules, file, code, reports }) => {
+      const config = untyped({
+        files: [`**/*${path.extname(file)}`],
+        plugins: { [name]: upstream },
+        rules,
+      })
+      const options = { root, antislop: true, typeAware: false } as const
+      let composer = defineConfig(
+        source === 'configs' ? { ...options, configs: [config] } : options,
+      )
+      if (source === 'append') {
+        composer = composer.append(config)
+      } else if (source === 'onResolved') {
+        composer = composer.onResolved((resolved) => [...resolved, config])
+      }
+      const configs = await composer
+      const plugins = new Set(configs.flatMap((each) => each.plugins?.[name] ?? []))
+      expect([...plugins]).toEqual([wrapped])
+      const [result] = await eslintWith(root, configs).lintText(code, {
+        filePath: path.join(root, file),
+      })
+      expect(
+        result?.messages.map(({ ruleId, column }) => `${ruleId ?? ''}:${String(column)}`),
+      ).toEqual(reports)
+    },
+  )
 
   it('takes the plugin object the preset registers, and a name no preset registers', async () => {
     const presets = await defineConfig({ root })

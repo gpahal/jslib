@@ -1,25 +1,17 @@
-import { execFile } from 'node:child_process'
-import { readdirSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import fs from 'node:fs/promises'
-import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
-import { promisify } from 'node:util'
 
 import { publint } from 'publint'
+import ts from 'typescript'
 
-const PACKAGE_DIR = path.join(import.meta.dirname, '..')
+import { PACKAGE_DIR, PRESETS } from './helpers'
 
 const PACKAGE_JSON = JSON.parse(readFileSync(path.join(PACKAGE_DIR, 'package.json'), 'utf8')) as {
   files: Array<string>
   exports: Record<string, string>
 }
-
-const require = createRequire(import.meta.url)
-
-const TSC_BIN = path.join(path.dirname(require.resolve('typescript/package.json')), 'bin/tsc')
-
-const execFileAsync = promisify(execFile)
 
 // The package has no `typecheck-release` script, where the other packages run publint
 test('publint finds no problems in the packed package', async () => {
@@ -28,10 +20,7 @@ test('publint finds no problems in the packed package', async () => {
 })
 
 test('every preset is published and exported by its name, with base as the root', () => {
-  const presets = readdirSync(PACKAGE_DIR).filter(
-    (name) => name.endsWith('.json') && name !== 'package.json' && name !== 'tsconfig.json',
-  )
-  expect(new Set(PACKAGE_JSON.files)).toEqual(new Set(presets))
+  expect(new Set(PACKAGE_JSON.files)).toEqual(new Set(PRESETS))
   expect(PACKAGE_JSON.exports).toEqual({
     '.': './base.json',
     ...Object.fromEntries(
@@ -42,6 +31,7 @@ test('every preset is published and exported by its name, with base as the root'
   })
 })
 
+// In process, `tsc` resolves a package's `extends` through its `exports` as it does from the CLI
 test.each(['@gpahal/tsconfig/base', '@gpahal/tsconfig/base.json', '@gpahal/tsconfig'])(
   'an installed project extends base as %s',
   async (preset) => {
@@ -54,15 +44,19 @@ test.each(['@gpahal/tsconfig/base', '@gpahal/tsconfig/base.json', '@gpahal/tscon
       path.join(dir.path, 'tsconfig.json'),
       JSON.stringify({ extends: preset, files: ['a.ts'] }),
     )
-    const { stdout } = await execFileAsync(process.execPath, [
-      TSC_BIN,
-      '--showConfig',
-      '-p',
-      dir.path,
-    ])
-    const config = JSON.parse(stdout) as { compilerOptions: Record<string, unknown> }
-    expect(config.compilerOptions).toMatchObject({
-      moduleResolution: 'bundler',
+    const parsed = ts.getParsedCommandLineOfConfigFile(
+      path.join(dir.path, 'tsconfig.json'),
+      {},
+      {
+        ...ts.sys,
+        onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+          throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))
+        },
+      },
+    )!
+    expect(parsed.errors).toEqual([])
+    expect(parsed.options).toMatchObject({
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
       noEmit: true,
       noUncheckedIndexedAccess: true,
     })

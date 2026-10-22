@@ -1,4 +1,4 @@
-import type { ESLint, Linter, Rule } from 'eslint'
+import type { Linter, Rule } from 'eslint'
 import type { Nodes } from 'mdast'
 import { fromMarkdown } from 'mdast-util-from-markdown'
 import { gfmFromMarkdown } from 'mdast-util-gfm'
@@ -12,26 +12,11 @@ import { createMarkdownProcessor } from '@/internal/markdown/processor'
 
 import { createESLint, sharedESLint, type ConfigOptions } from './helpers'
 
-const FIXING_ESLINTS = new Map<string, Promise<ESLint>>()
-
-/**
- * ESLint with `--fix` on the `markdown` fixture, made once per set of `options`, which must be JSON
- */
-async function fixingESLint(options: ConfigOptions = {}): Promise<ESLint> {
-  const key = JSON.stringify(options)
-  let eslint = FIXING_ESLINTS.get(key)
-  if (eslint === undefined) {
-    eslint = createESLint('markdown', options, { fix: true })
-    FIXING_ESLINTS.set(key, eslint)
-  }
-  return eslint
-}
-
 /**
  * `markdown` after `eslint --fix` as `docs.md`. Throws when a second pass changes it again
  */
 async function fix(markdown: string, options: ConfigOptions = {}): Promise<string> {
-  const eslint = await fixingESLint(options)
+  const eslint = await sharedESLint('markdown', options, { fix: true })
   const [first] = await eslint.lintText(markdown, { filePath: 'docs.md' })
   const output = first?.output ?? markdown
   const [second] = await eslint.lintText(output, { filePath: 'docs.md' })
@@ -45,7 +30,7 @@ async function fix(markdown: string, options: ConfigOptions = {}): Promise<strin
  * `code` after `eslint --fix` as a code block's virtual file of its own
  */
 async function fixCode(code: string): Promise<string> {
-  const eslint = await fixingESLint()
+  const eslint = await sharedESLint('markdown', {}, { fix: true })
   const [result] = await eslint.lintText(code, { filePath: 'docs.md/0.js' })
   return result?.output ?? code
 }
@@ -84,32 +69,21 @@ function createProcessor(frontmatter: Array<'yaml' | 'toml'> = []) {
 }
 
 /**
- * An unused-directive message for `markdown/no-html` at `offset` of `markdown`, whose fix replaces
- * `length` characters with `text`
- */
-function unusedAt(
-  markdown: string,
-  offset: number,
-  length: number,
-  text = ' ',
-): Linter.LintMessage {
-  return {
-    ruleId: null,
-    severity: 2,
-    message: "Unused eslint-disable directive (no problems were reported from 'markdown/no-html').",
-    line: markdown.slice(0, offset).split('\n').length,
-    column: offset - markdown.lastIndexOf('\n', offset - 1),
-    fix: { range: [offset, offset + length], text },
-  }
-}
-
-/**
- * Unused-directive messages for each `directive` in `markdown`
+ * Unused-directive messages for `markdown/no-html` for each `directive` in `markdown`, whose fixes
+ * replace the directive with a space
  */
 function unusedEach(markdown: string, directive: string): Array<Linter.LintMessage> {
   const messages: Array<Linter.LintMessage> = []
   for (let start = markdown.indexOf(directive); start !== -1;) {
-    messages.push(unusedAt(markdown, start, directive.length))
+    messages.push({
+      ruleId: null,
+      severity: 2,
+      message:
+        "Unused eslint-disable directive (no problems were reported from 'markdown/no-html').",
+      line: markdown.slice(0, start).split('\n').length,
+      column: start - markdown.lastIndexOf('\n', start - 1),
+      fix: { range: [start, start + directive.length], text: ' ' },
+    })
     start = markdown.indexOf(directive, start + directive.length)
   }
   return messages
@@ -240,24 +214,21 @@ describe('markdown processor offsets', () => {
     expect(await fix(markdown)).toBe(toMarkdown(fixedCode.slice(0, -1)))
   })
 
-  it.each([['before the first line', 0]])(
-    'report a fatal message %s of a block on its opening fence',
-    (_name, line) => {
-      const processor = createProcessor()
-      processor.preprocess?.('# Title\n\n<!-- global Foo -->\n> ```js\n> foo()\n> ```\n', 'docs.md')
-      const message: Linter.LintMessage = {
-        ruleId: null,
-        fatal: true,
-        severity: 2,
-        message: 'Parsing error',
-        line,
-        column: 1,
-      }
-      expect(processor.postprocess?.([[], [message]], 'docs.md')).toEqual([
-        { ...message, line: 4, column: 3 },
-      ])
-    },
-  )
+  it('report a fatal message before the first line of a block on its opening fence', () => {
+    const processor = createProcessor()
+    processor.preprocess?.('# Title\n\n<!-- global Foo -->\n> ```js\n> foo()\n> ```\n', 'docs.md')
+    const message: Linter.LintMessage = {
+      ruleId: null,
+      fatal: true,
+      severity: 2,
+      message: 'Parsing error',
+      line: 0,
+      column: 1,
+    }
+    expect(processor.postprocess?.([[], [message]], 'docs.md')).toEqual([
+      { ...message, line: 4, column: 3 },
+    ])
+  })
 })
 
 /**
@@ -393,49 +364,33 @@ describe('markdown processor fixes', () => {
     },
   )
 
-  it.each([['a blockquote', '> ```js', '> ', '>', '> ```']])(
-    'leave no trailing whitespace on the empty lines a fix adds in %s',
-    async (_name, opening, prefix, emptyLine, closing) => {
-      const markdown = (code: Array<string>) =>
-        [
-          opening,
-          ...code.map((line) => (line === '' ? emptyLine : `${prefix}${line}`)),
-          closing,
-          '',
-        ].join('\n')
-      expect(await fix(markdown(["import a from 'a'", 'a()']))).toBe(
-        markdown(["import a from 'a'", '', 'a()']),
-      )
-    },
-  )
+  it('leave no trailing whitespace on the empty lines a fix adds in a blockquote', async () => {
+    const markdown = (code: Array<string>) =>
+      ['> ```js', ...code.map((line) => (line === '' ? '>' : `> ${line}`)), '> ```', ''].join('\n')
+    expect(await fix(markdown(["import a from 'a'", 'a()']))).toBe(
+      markdown(["import a from 'a'", '', 'a()']),
+    )
+  })
 
-  it.each([
-    [
-      'a removed unused directive in a blockquote',
-      '> ```js\n> // eslint-disable-next-line no-console\n> export const a = 1\n> ```\n',
-      '> ```js\n>\n> export const a = 1\n> ```\n',
-    ],
-  ])('leave no whitespace on the line of %s', async (_name, block, expected) => {
-    expect(await fix(`# T\n\n${block}`)).toBe(`# T\n\n${expected}`)
+  it('leave no whitespace on the line of a removed unused directive in a blockquote', async () => {
+    const block = '> ```js\n> // eslint-disable-next-line no-console\n> export const a = 1\n> ```\n'
+    expect(await fix(`# T\n\n${block}`)).toBe('# T\n\n> ```js\n>\n> export const a = 1\n> ```\n')
   })
 
   // `import-x/newline-after-import`'s fix writes `\n`, which the block's line ending replaces
-  it.each([['a CRLF blockquote', '\r\n', '> ']])(
-    'write the line ending of %s in fixes',
-    async (_name, eol, prefix) => {
-      const markdown = (body: Array<string>) =>
-        ['# T', '', ...body.map((line) => `${prefix}${line}`.trimEnd()), ''].join(eol)
-      const [open, imports, code, close] = [
-        '```js',
-        "import path from 'node:path'",
-        'export const sep = path.sep',
-        '```',
-      ]
-      expect(await fix(markdown([open, imports, code, close]))).toBe(
-        markdown([open, imports, '', code, close]),
-      )
-    },
-  )
+  it('write the line ending of a CRLF blockquote in fixes', async () => {
+    const markdown = (body: Array<string>) =>
+      ['# T', '', ...body.map((line) => `> ${line}`.trimEnd()), ''].join('\r\n')
+    const [open, imports, code, close] = [
+      '```js',
+      "import path from 'node:path'",
+      'export const sep = path.sep',
+      '```',
+    ]
+    expect(await fix(markdown([open, imports, code, close]))).toBe(
+      markdown([open, imports, '', code, close]),
+    )
+  })
 
   it('settle in one run: repeated inline links become sorted collapsed references', async () => {
     // ESLint repeats fix passes within a run, so the shortcut references that
@@ -495,15 +450,6 @@ describe('markdown processor blocks', () => {
     const [, block] =
       createProcessor().preprocess?.(`${opening}\nconst a = 1\n\`\`\`\n`, 'docs.md') ?? []
     expect(typeof block === 'object' ? block.filename : block).toBe(filename)
-  })
-
-  it("maps a file's code blocks after `no-missing-atx-heading-space` checked a tag in another", async () => {
-    const eslint = await createESLint('markdown', {}, { fix: true })
-    await eslint.lintText('> first line\n> #heading\n> third line\n', { filePath: 'a.md' })
-    const [second] = await eslint.lintText('# B\n\nText\n\n```js\nvar a = 1\n```\n', {
-      filePath: 'b.md',
-    })
-    expect(second?.output).toBe('# B\n\nText\n\n```js\nconst a = 1\n```\n')
   })
 })
 
@@ -587,64 +533,64 @@ describe('markdown processor directives before a code block', () => {
     ])
   })
 
-  it.each([['<!-- eslint-skip -->', ['```', 'plain output', '```']]])(
-    'apply %s only to the block right after it',
-    async (comment, between) => {
-      const problems = await problemsOf(
-        lines(comment, '', ...between, '', '```js', 'var a = 1', 'a()', '```'),
-      )
-      expect(problems.filter((problem) => problem.endsWith(' no-var fix'))).toHaveLength(1)
-    },
-  )
-
-  it.each([
-    [
-      'no-var, no-console, markdown/no-html, markdown/no-empty-links',
-      "3:1 Unused eslint-disable directive (no problems were reported from 'no-console', 'markdown/no-html', or 'markdown/no-empty-links').",
-    ],
-  ])(
-    'report the rules of `%s` that neither lint uses, once, without a fix',
-    async (rules, problem) => {
-      const markdown = lines(
-        `<!-- eslint-disable ${rules} -- reason -->`,
+  it('apply `<!-- eslint-skip -->` only to the block right after it', async () => {
+    const problems = await problemsOf(
+      lines(
+        '<!-- eslint-skip -->',
+        '',
+        '```',
+        'plain output',
+        '```',
+        '',
         '```js',
         'var a = 1',
+        'a()',
         '```',
-      )
-      expect(await problemsOf(markdown)).toEqual([problem])
-      expect(await fix(markdown)).toBe(markdown)
-    },
-  )
-
-  it.each([
-    [
-      'markdown/no-html: "off"',
-      "3:1 Unused inline config ('markdown/no-html' is not enabled so can't be turned off).",
-    ],
-  ])('report the inline config `%s` once', async (config, problem) => {
-    expect(
-      await problemsOf(lines(`<!-- eslint ${config} -- reason -->`, '```js', 'const a = 1', '```')),
-    ).toEqual([problem])
+      ),
+    )
+    expect(problems.filter((problem) => problem.endsWith(' no-var fix'))).toHaveLength(1)
   })
 
-  it.each(['global foo'])('forward `%s` to the block', (directive) => {
+  it('report the rules that neither lint uses, once, without a fix', async () => {
+    const markdown = lines(
+      '<!-- eslint-disable no-var, no-console, markdown/no-html, markdown/no-empty-links -- reason -->',
+      '```js',
+      'var a = 1',
+      '```',
+    )
+    expect(await problemsOf(markdown)).toEqual([
+      "3:1 Unused eslint-disable directive (no problems were reported from 'no-console', 'markdown/no-html', or 'markdown/no-empty-links').",
+    ])
+    expect(await fix(markdown)).toBe(markdown)
+  })
+
+  it('report the inline config `markdown/no-html: "off"` once', async () => {
+    expect(
+      await problemsOf(
+        lines('<!-- eslint markdown/no-html: "off" -- reason -->', '```js', 'const a = 1', '```'),
+      ),
+    ).toEqual([
+      "3:1 Unused inline config ('markdown/no-html' is not enabled so can't be turned off).",
+    ])
+  })
+
+  it('forward `global foo` to the block', () => {
     const [, block] =
       createProcessor().preprocess?.(
-        lines(`<!-- ${directive} -->`, '```js', 'foo()', '```'),
+        lines('<!-- global foo -->', '```js', 'foo()', '```'),
         'docs.md',
       ) ?? []
-    expect(block).toEqual({ filename: '0.js', text: `/* ${directive} */\nfoo()\n` })
+    expect(block).toEqual({ filename: '0.js', text: '/* global foo */\nfoo()\n' })
   })
 
-  it.each([
-    [
-      'two next-line directives in one HTML comment line',
-      [
-        '<!-- eslint-disable-next-line no-var -- reason --> <!-- eslint-disable-next-line eqeqeq -- reason -->',
-      ],
-    ],
-  ])('apply %s to the first line of code', async (_name, directives) => {
-    const markdown = lines(...directives, '```js', 'var a = a == 1', 'a()', '```')
+  it('apply two next-line directives in one HTML comment line to the first line of code', async () => {
+    const markdown = lines(
+      '<!-- eslint-disable-next-line no-var -- reason --> <!-- eslint-disable-next-line eqeqeq -- reason -->',
+      '```js',
+      'var a = a == 1',
+      'a()',
+      '```',
+    )
     expect(await problemsOf(markdown)).toEqual([])
   })
 })
@@ -725,6 +671,12 @@ describe('markdown processor unused directive removal', () => {
     ['between no-break spaces', `a\u{A0}${LINE_DIRECTIVE}\u{A0}b\n`, 'a\u{A0}\u{A0}b\n'],
     ['after a quote, before lazy text', `> quote\n${DIRECTIVE}\nmore\n`, '> quote\n\nmore\n'],
     ['in a loose list item', `- item\n\n  ${DIRECTIVE}\n\n  text\n`, '- item\n\n  text\n'],
+    // Without deleting the text after it
+    [
+      'in a tab-indented list item',
+      '# T\n\n- item\n\n\t<!-- eslint-disable markdown/no-html -- reason -->\n\n  more text\n',
+      '# T\n\n- item\n\n  more text\n',
+    ],
     [
       // The first pass removes the disable directive, which leaves the enable directive unused
       'a disable and enable pair around a region without problems',
@@ -744,30 +696,24 @@ describe('markdown processor unused directive removal', () => {
       '2:3',
     ],
     ['between same-marker lists', `- one\n\n${DIRECTIVE}\n\n- two\n`, '3:1'],
-  ])('reports one %s without a fix', async (_name, markdown, position) => {
-    expect(await fix(markdown)).toBe(markdown)
-    expect(
-      (await problemsOf(markdown)).filter((problem) => problem.includes('Unused eslint-disable')),
-    ).toEqual([
-      `${position} Unused eslint-disable directive (no problems were reported from 'markdown/no-html').`,
-    ])
-  })
-
-  it.each([
+    // As a reparse finds
     [
       'after a table, which would take the next line as a row',
       '# T\n\n| a | b |\n| - | - |\n| 1 | 2 |\n<!-- eslint-disable no-alert -- r -->\nAfter text\n',
+      '6:1',
+      'no-alert',
     ],
-  ])('reports one %s without a fix, as a reparse finds', async (_name, markdown) => {
-    expect(await fix(markdown)).toBe(markdown)
-    expect(
-      (await problemsOf(markdown)).filter((problem) => problem.includes('Unused eslint-disable')),
-    ).toEqual([
-      expect.stringMatching(
-        /^\d+:1 Unused eslint-disable directive \(no problems were reported from 'no-alert'\)\.$/u,
-      ),
-    ])
-  })
+  ])(
+    'reports one %s without a fix',
+    async (_name, markdown, position, rule = 'markdown/no-html') => {
+      expect(await fix(markdown)).toBe(markdown)
+      expect(
+        (await problemsOf(markdown)).filter((problem) => problem.includes('Unused eslint-disable')),
+      ).toEqual([
+        `${position} Unused eslint-disable directive (no problems were reported from '${rule}').`,
+      ])
+    },
+  )
 
   it('keeps a used directive under its public rule name', async () => {
     const markdown =
@@ -776,19 +722,17 @@ describe('markdown processor unused directive removal', () => {
     expect(await fix(markdown)).toBe(markdown)
   })
 
-  it.each([['YAML', '---']])(
-    "doesn't turn the text after a thematic break at the start into %s front matter",
-    async (_name, fence) => {
-      const markdown = `<!-- eslint-disable no-var -- reason -->\n\n${fence}\n\n# Title\n\nSome intro paragraph.\n\n${fence}\n\nMore.\n`
-      const typesOf = (text: string) => {
-        const result = parseUncached(text, ['yaml', 'toml'], false)
-        return result.ok && result.root.children.map((node) => node.type)
-      }
-      const types = typesOf(await fix(markdown))
-      expect(types).toEqual(typesOf(markdown))
-      expect(types).not.toContain(fence === '---' ? 'yaml' : 'toml')
-    },
-  )
+  it("doesn't turn the text after a thematic break at the start into YAML front matter", async () => {
+    const markdown =
+      '<!-- eslint-disable no-var -- reason -->\n\n---\n\n# Title\n\nSome intro paragraph.\n\n---\n\nMore.\n'
+    const typesOf = (text: string) => {
+      const result = parseUncached(text, ['yaml', 'toml'], false)
+      return result.ok && result.root.children.map((node) => node.type)
+    }
+    const types = typesOf(await fix(markdown))
+    expect(types).toEqual(typesOf(markdown))
+    expect(types).not.toContain('yaml')
+  })
 
   it('keeps the removals that pass alone when one fails, checking no more than 50 alone', () => {
     const directive = '<!-- eslint-disable markdown/no-html -- reason -->'
@@ -802,17 +746,6 @@ describe('markdown processor unused directive removal', () => {
     const head = `${directive}\n\n---\n\n# T\n\n---\n\n`
     expect(removalsOf(`${head}Text\n\n${directive}\n\nMore\n`)).toEqual(['11:1'])
     expect(removalsOf(`${head}${`Text\n\n${directive}\n\n`.repeat(60)}`)).toHaveLength(49)
-  })
-})
-
-describe('markdown processor directives in tab-indented containers', () => {
-  const DIRECTIVE = '<!-- eslint-disable markdown/no-html -- reason -->'
-
-  it('remove an unused one without deleting the text after it', async () => {
-    const markdown = `# T\n\n- item\n\n\t${DIRECTIVE}\n\n  more text\n`
-    const output = await fix(markdown)
-    expect(output).toBe('# T\n\n- item\n\n  more text\n')
-    expect(structureOf(output)).toEqual(structureOf(markdown))
   })
 })
 

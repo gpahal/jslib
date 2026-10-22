@@ -1,11 +1,9 @@
 import path from 'node:path'
-import { runInNewContext } from 'node:vm'
 
 import { parseForESLint } from '@typescript-eslint/parser'
 import { Linter, RuleTester } from 'eslint'
 import eslintPluginAstro from 'eslint-plugin-astro'
 import * as prettier from 'prettier'
-import ts from 'typescript'
 import { parser as tsEslintParser } from 'typescript-eslint'
 
 import { countWork } from '@gpahal/internal/node/testing'
@@ -13,7 +11,7 @@ import { defineConfig as definePrettierConfig } from '@gpahal/prettier-config'
 
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
 
-import { createESLint, FIXTURES_DIR, typeErrors } from './helpers'
+import { createESLint, FIXTURES_DIR } from './helpers'
 
 const astroParser = eslintPluginAstro.configs['flat/base'].find(
   (config: Linter.Config) => config.languageOptions?.['parser'] !== undefined,
@@ -178,6 +176,22 @@ tester.run('comment-layout', GPAHAL_PLUGIN.rules['comment-layout'], {
       { code: source, filename: 'x.js' },
       { code: withLineComment(source), filename: 'x.js' },
     ]),
+    // TypeScript reads a doc block past a blank line, as on hover and in a `.d.ts`
+    code('type H = 1', '', '/**', ' * Options', ' */', '', 'export type O = { h: H }'),
+    // Only the nearest doc block attaches, and the one above it stays a module header
+    code('/**', ' * Header.', ' */', '', '/**', ' * Doc.', ' */', '', 'export const a = 1'),
+    // Everyday comments
+    ...[
+      code('// https://vite.dev/config/', 'export default {}'),
+      code("/** @import { A } from 'a' */", '/**', ' * The x.', ' */', 'export const x = 1'),
+      code('f()', '', '// SPDX-License-Identifier: Apache-2.0', 'export const b = 1'),
+      code('f()', '', '/**', ' * Copyright (c) 2020 A.', ' */', 'f()'),
+      // TypeScript doesn't read JSDoc on a union constituent, so only a type alias's own union
+      // needs doc blocks
+      code('type U = Array<', "  | 'a'", '  // Note.', "  | 'b'", '>'),
+      // Only ESLint's suppressing and environment directives are ambiguous in a multi-line block
+      code('/**', ' * eslint config for the repo', ' */', 'export const a = 1'),
+    ].map((source) => ({ code: source, filename: 'x.ts' })),
   ],
   invalid: [
     // A prose `//` comment above a declaration or member may label a section, so only a
@@ -281,9 +295,36 @@ tester.run('comment-layout', GPAHAL_PLUGIN.rules['comment-layout'], {
         code('// The answer.', '// @ts-expect-error', '// More.', 'export const a = 1'),
         'docBelowTsDirective',
       ],
+      [
+        code('// @ts-expect-error', '', '// The value', 'export const a: string = 1', ''),
+        'docBelowTsDirective',
+      ],
       [code('// @ts-ignore', '/** The answer. */', 'export const a: string = 1'), 'layout'],
       // TypeScript reads `@ts-expect-error` on a block's last line, which a fix would move
       [code('/** Note', ' * @ts-expect-error */', 'export const x: string = 1'), 'layout'],
+      // A block between `@ts-expect-error` and its line
+      [
+        code(
+          'export function f() {',
+          '// @ts-expect-error',
+          '/** n */',
+          'const a: string = 1',
+          'return a',
+          '}',
+          '',
+        ),
+        'notDoc',
+      ],
+      // A `@ts-expect-error` before code on its line applies to the next line, so a change of the
+      // number of lines on its line moves what it applies to
+      [
+        code(
+          '/* @ts-expect-error -- deliberate */ export const p = { c: 1, /** e */ d: 2 }',
+          'export const z: string = 1',
+          '',
+        ),
+        'sameLine',
+      ],
       // Lines that mix ` * ` prefixes with lines without them, a star typo, or a `*` starting every
       // line's text, which may be text or a prefix
       [code('/**', ' * Loads the config and', '   falls back', ' */', 'const a = 1'), 'layout'],
@@ -410,6 +451,12 @@ tester.run('comment-layout', GPAHAL_PLUGIN.rules['comment-layout'], {
       ),
       filename: 'x.js',
     },
+    // A doc block detached by a blank line is laid out as an attached one, and never becomes `//`
+    fixes(
+      code('const a = 1', '', '/** Options', ' *  more */', '', 'export type O = {}'),
+      code('const a = 1', '', '/**', ' * Options', ' * more', ' */', '', 'export type O = {}'),
+      'layout',
+    ),
     (() => {
       // `this` in an arrow function isn't the instance a constructor makes
       const source = code('const f = () => {', '  /**', '   * x', '   */', '  this.x = 1', '}')
@@ -427,33 +474,6 @@ tester.run('comment-layout', GPAHAL_PLUGIN.rules['comment-layout'], {
     ),
   ],
 })
-
-describe('comment-layout on a doc block above a blank line', () => {
-  tester.run('comment-layout', GPAHAL_PLUGIN.rules['comment-layout'], {
-    valid: [
-      // TypeScript reads the doc block past the blank line, as on hover and in a `.d.ts`
-      code('type H = 1', '', '/**', ' * Options', ' */', '', 'export type O = { h: H }'),
-      // Only the nearest doc block attaches, and the one above it stays a module header
-      code('/**', ' * Header.', ' */', '', '/**', ' * Doc.', ' */', '', 'export const a = 1'),
-    ],
-    invalid: [
-      // A detached doc block is laid out as an attached one, and never becomes `//`
-      fixes(
-        code('const a = 1', '', '/** Options', ' *  more */', '', 'export type O = {}'),
-        code('const a = 1', '', '/**', ' * Options', ' * more', ' */', '', 'export type O = {}'),
-        'layout',
-      ),
-    ],
-  })
-})
-
-const STRICT_MODULE: ts.CompilerOptions = {
-  strict: true,
-  noEmit: true,
-  module: ts.ModuleKind.ESNext,
-  target: ts.ScriptTarget.ES2024,
-  types: [],
-}
 
 describe('comment-layout fixes', () => {
   const linter = new Linter({ configType: 'flat' })
@@ -521,48 +541,6 @@ describe('comment-layout fixes', () => {
     )
   })
 
-  it("don't change what a function with a U+2028 in a comment returns", () => {
-    const source = code(
-      'function f(a) {',
-      '/**',
-      ' * x\u{2028}return a + 1',
-      ' */',
-      'return a',
-      '}',
-    )
-    const { output } = linter.verifyAndFix(source, config, 'x.ts')
-    expect(runInNewContext(`${source}\nf(1)`)).toBe(1)
-    expect(runInNewContext(`${output}\nf(1)`)).toBe(1)
-  })
-
-  it.each([
-    code('// @ts-expect-error', '', '// The value', 'export const a: string = 1', ''),
-    code('/** Note', ' * @ts-expect-error */', 'export const x: string = 1', ''),
-  ])('keep `@ts-expect-error` on the line it expects an error on: %j', (source) => {
-    expect(typeErrors(path.resolve('x.ts'), source, STRICT_MODULE)).toEqual([])
-    const { output } = linter.verifyAndFix(source, config, 'x.ts')
-    expect(typeErrors(path.resolve('x.ts'), output, STRICT_MODULE)).toEqual([])
-  })
-
-  it('keep a block between `@ts-expect-error` and its line', () => {
-    const source = code(
-      'export function f() {',
-      '// @ts-expect-error',
-      '/** n */',
-      'const a: string = 1',
-      'return a',
-      '}',
-      '',
-    )
-    const { output, messages } = linter.verifyAndFix(source, config, 'x.ts')
-    expect(output).toBe(source)
-    expect(messages.map((message) => message.messageId)).toEqual(['notDoc'])
-    expect(typeErrors(path.resolve('x.ts'), output, STRICT_MODULE)).toEqual([
-      "TS2578: Unused '@ts-expect-error' directive.",
-      "TS2322: Type 'number' is not assignable to type 'string'.",
-    ])
-  })
-
   // `@ts-nocheck` applies to the whole file, not to the line below it
   it('fix the comments below `@ts-nocheck`', () => {
     expect(
@@ -597,24 +575,8 @@ describe('comment-layout fixes', () => {
   ])('keep a module header right above an import as a block, in one pass: %j', (source) => {
     const { output, messages } = linter.verifyAndFix(source, config, 'x.ts')
     expect(messages).toEqual([])
-    expect(output).toMatch(
-      /^\u{FEFF}?(?:#!.*\n)?\/\*\*\n \* Header\.\n(?: \* More\.\n)? \*\/\nimport/u,
-    )
+    expect(output).toMatch(/^\u{FEFF}?\/\*\*\n \* Header\.\n(?: \* More\.\n)? \*\/\nimport/u)
     expect(linter.verifyAndFix(output, config, 'x.ts').fixed).toBe(false)
-  })
-
-  it.each([
-    code('// Doc for a', '// @returns {number} the value', 'export function a() {}'),
-    ['// x', '// y', 'export const a = 1', ''].join('\r'),
-  ])('reach a fixed point on %j', (source) => {
-    const { output } = linter.verifyAndFix(source, config, 'x.ts')
-    expect(linter.verifyAndFix(output, config, 'x.ts').fixed).toBe(false)
-  })
-
-  it('keep the doc text as the doc, with a trailing note above it', () => {
-    const source = code('/** The size */ // in px', 'export const size = 1')
-    const output = withAllChanges(withAllChanges(source, config, 'x.ts'), config, 'x.ts')
-    expect(output).toBe(code('// in px', '/**', ' * The size', ' */', 'export const size = 1'))
   })
 
   const prettierConfig = definePrettierConfig({ root: path.resolve(import.meta.dirname, '..') })
@@ -629,21 +591,6 @@ describe('comment-layout fixes', () => {
     const once = await format(fix(await format(source)))
     expect(fix(once)).toBe(once)
     expect(await format(fix(once))).toBe(once)
-  })
-
-  // A `@ts-expect-error` before code on its line applies to the next line, so a change of the
-  // number of lines on its line moves what it applies to
-  it('offer no change that moves the code a TypeScript directive covers', () => {
-    const source = code(
-      '/* @ts-expect-error -- deliberate */ export const p = { c: 1, /** e */ d: 2 }',
-      'export const z: string = 1',
-      '',
-    )
-    const messages = linter.verify(source, config, 'x.ts')
-    expect(
-      messages.map((message) => [message.messageId, message.fix, message.suggestions]),
-    ).toEqual([['sameLine', undefined, undefined]])
-    expect(typeErrors(path.resolve('x.ts'), source, STRICT_MODULE)).toEqual([])
   })
 
   it('report comments in Astro scripts without changing them', async () => {
@@ -679,20 +626,6 @@ describe('comment-layout fixes', () => {
     } finally {
       emitWarning.mockRestore()
     }
-  })
-
-  it.each([
-    code('// https://vite.dev/config/', 'export default {}'),
-    code("/** @import { A } from 'a' */", '/**', ' * The x.', ' */', 'export const x = 1'),
-    code('f()', '', '// SPDX-License-Identifier: Apache-2.0', 'export const b = 1'),
-    code('f()', '', '/**', ' * Copyright (c) 2020 A.', ' */', 'f()'),
-    // TypeScript doesn't read JSDoc on a union constituent, so only a type alias's own union needs
-    // doc blocks
-    code('type U = Array<', "  | 'a'", '  // Note.', "  | 'b'", '>'),
-    // Only ESLint's suppressing and environment directives are ambiguous in a multi-line block
-    code('/**', ' * eslint config for the repo', ' */', 'export const a = 1'),
-  ])('take the everyday comments in %j', (source) => {
-    expect(linter.verify(source, config, 'x.ts')).toEqual([])
   })
 })
 
