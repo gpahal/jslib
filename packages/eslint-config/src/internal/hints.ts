@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { formatNames } from '@gpahal/std/errors'
-import { isRecord } from '@gpahal/std/objects'
 import { trimEnd } from '@gpahal/std/strings'
 
 import { AREAS } from '@/internal/areas'
@@ -11,12 +10,7 @@ import { findListingManifest, getListedPackages, type ProjectManifest } from '@/
 import type { AreaName } from '@/internal/names'
 import { formatPeersInstallCommand, isInstalledIn } from '@/internal/peers'
 import type { EslintConfigOptions } from '@/internal/types'
-import {
-  formatErrorMessage,
-  getDocsUrl,
-  warnOfSetupOnce,
-  type GpahalWarningCode,
-} from '@/internal/utils'
+import { formatErrorMessage, warnOfSetupOnce, type GpahalWarningCode } from '@/internal/utils'
 
 /**
  * As `<root>\0<option>`, so each warns once per process, as editors reload the config
@@ -75,88 +69,6 @@ function describeFrameworkHint(
   return `\`${file}\` lists ${packageName}, but the \`${option}\` option isn't set, so its rules are off. Set ${turnOn}${install}, or set \`${option}: false\` to turn this warning off`
 }
 
-/**
- * With the names and `meta.name`s of their ESLint plugins, any of which a config of yours may register
- */
-const UNSUPPORTED_FRAMEWORKS: ReadonlyArray<[packageName: string, plugins: ReadonlyArray<string>]> =
-  [
-    ['vue', ['vue', 'eslint-plugin-vue']],
-    ['svelte', ['svelte', 'eslint-plugin-svelte']],
-    ['@sveltejs/kit', ['svelte', 'eslint-plugin-svelte']],
-    [
-      '@angular/core',
-      [
-        '@angular-eslint',
-        '@angular-eslint/template',
-        '@angular-eslint/eslint-plugin',
-        '@angular-eslint/eslint-plugin-template',
-      ],
-    ],
-    ['solid-js', ['solid', 'eslint-plugin-solid']],
-  ]
-
-function addConfigPluginNames(plugins: Record<string, unknown>, names: Set<string>): void {
-  for (const [name, plugin] of Object.entries(plugins)) {
-    names.add(name)
-    const meta = isRecord(plugin) ? plugin['meta'] : undefined
-    const metaName = isRecord(meta) ? meta['name'] : undefined
-    if (typeof metaName === 'string') {
-      names.add(metaName)
-    }
-  }
-}
-
-/**
- * In nested arrays and `extends` too
- */
-function addPluginNames(items: ReadonlyArray<unknown>, names: Set<string>): Set<string> {
-  for (const item of items) {
-    if (Array.isArray(item)) {
-      addPluginNames(item, names)
-    } else if (isRecord(item)) {
-      const { plugins, extends: extended } = item
-      if (isRecord(plugins)) {
-        addConfigPluginNames(plugins, names)
-      }
-      if (Array.isArray(extended)) {
-        addPluginNames(extended, names)
-      }
-    }
-  }
-  return names
-}
-
-/**
- * ESLint skips `.vue` files without a message, unless your `configs` register the plugin
- */
-function warnOfUnsupportedFrameworks(
-  root: string,
-  manifests: ReadonlyArray<ProjectManifest>,
-  configs: ReadonlyArray<unknown>,
-): void {
-  const pluginNames = addPluginNames(configs, new Set())
-  const found = UNSUPPORTED_FRAMEWORKS.flatMap(([packageName, plugins]) => {
-    if (plugins.some((plugin) => pluginNames.has(plugin))) {
-      return []
-    }
-    const listing = findListingManifest(manifests, packageName)
-    return listing === undefined ? [] : { packageName, file: listing.file }
-  })
-  const [first] = found
-  if (first === undefined) {
-    return
-  }
-  hint(
-    root,
-    '',
-    `${formatNames([first.file])} lists ${formatNames(
-      found.filter(({ file }) => file === first.file).map(({ packageName }) => packageName),
-      { conjunction: 'and' },
-    )}, which no preset supports, so component files such as \`.vue\` and \`.svelte\` files and Angular templates aren't linted, and nothing gets the framework's rules. Add its ESLint plugin through \`configs\`, as ${getDocsUrl('unsupported-frameworks')} shows`,
-    'GPAHAL_UNSUPPORTED_FRAMEWORK',
-  )
-}
-
 const TYPE_DEPENDENT_EXTNS: ReadonlyArray<string> = ['.js', '.jsx']
 
 /**
@@ -206,7 +118,6 @@ export function warnOfOptionHints(
       'GPAHAL_FRAMEWORK_OPTION_UNSET',
     )
   }
-  warnOfUnsupportedFrameworks(root, manifests, options.configs ?? [])
 }
 
 const REACT_COMPILER_PACKAGES: ReadonlyArray<string> = [

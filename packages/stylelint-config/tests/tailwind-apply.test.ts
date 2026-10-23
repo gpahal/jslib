@@ -58,6 +58,13 @@ const project = await withTmpProject('stylelint-config-tailwind-apply', {
   'node_modules/esm-plugin/package.json':
     '{ "name": "esm-plugin", "type": "module", "exports": { ".": { "import": "./index.js" } } }\n',
   'node_modules/esm-plugin/index.js': plugin('esm-util'),
+  // Ordinary rules after the last design at-rule, which has no block
+  'trailing-plugin/global.css':
+    "@import 'tailwindcss';\n@plugin './plugin.js';\n\n.a {\n  color: red;\n}\n",
+  'trailing-plugin/plugin.js': plugin('trailing-plugin-util'),
+  'trailing-import/global.css':
+    "@import 'tailwindcss';\n@import './utils.css';\n\n.a {\n  color: red;\n}\n",
+  'trailing-import/utils.css': '@utility trailing-import-util {\n  color: red;\n}\n',
   // Tailwind would read `.env` as CSS, and its parse error would print the secret
   'secret/global.css': "@import 'tailwindcss';\n@import './secret.env';\n",
   'secret/secret.env': 'API_KEY={ topsecret\n',
@@ -147,6 +154,8 @@ describe('tailwindcss.validateApply', () => {
   it.each([
     ['a symlinked entry point', 'linked-entry', 'shared-util'],
     ['extensionless, folder and ESM-only package plugins', 'modules', 'ext-util dir-util esm-util'],
+    ['a @plugin that a rule follows', 'trailing-plugin', 'trailing-plugin-util'],
+    ['an @import that a rule follows', 'trailing-import', 'trailing-import-util'],
   ])('loads %s as Tailwind does', async (_name, folder, classes) => {
     const loaded = await defineConfig({
       root: project.dir,

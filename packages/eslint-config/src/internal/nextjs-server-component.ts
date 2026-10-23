@@ -38,6 +38,14 @@ const CLIENT_HOOKS: ReadonlySet<string> = new Set([
   'useOptimistic',
   'useActionState',
   'useFormStatus',
+  // From `next/navigation`
+  'useRouter',
+  'usePathname',
+  'useSearchParams',
+  'useParams',
+  'useSelectedLayoutSegment',
+  'useSelectedLayoutSegments',
+  'useServerInsertedHTML',
 ])
 
 const BROWSER_GLOBALS: ReadonlySet<string> = new Set(BROWSER_ONLY_GLOBALS)

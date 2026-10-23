@@ -125,3 +125,25 @@ test('leaves directives under a custom `configurationComment` alone', async () =
   expect(await fix(css, customConfig)).toBe(css)
   expect(await lintRules(css, customConfig)).toEqual([])
 })
+
+test.each([
+  ['a.html', code('<style>', '  /* One', '     two. */', '  a {}', '</style>', '')],
+  ['a.md', code('# Title', '', '```css', '/* One', '   two. */', 'a {}', '```', '')],
+])(
+  'reports the first comment of an embedded stylesheet in %s with LF and CRLF alike',
+  async (file, source) => {
+    const embeddedConfig = {
+      ...config,
+      overrides: [
+        { files: ['**/*.html'], customSyntax: 'postcss-html' },
+        { files: ['**/*.md'], customSyntax: 'postcss-markdown' },
+      ],
+    }
+    const crlf = source.replaceAll('\n', '\r\n')
+    expect(await lintRules(source, embeddedConfig, file)).toEqual(['@gpahal/comment-layout'])
+    expect(await lintRules(crlf, embeddedConfig, file)).toEqual(['@gpahal/comment-layout'])
+    expect(await fix(crlf, embeddedConfig, file)).toBe(
+      (await fix(source, embeddedConfig, file)).replaceAll('\n', '\r\n'),
+    )
+  },
+)

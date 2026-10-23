@@ -132,6 +132,14 @@ export type StylelintReferenceFiles =
 export type StylelintPlugins = string | Plugin | ReadonlyArray<string | Plugin>
 
 /**
+ * Stylelint's `Config`, which the configs of this package are. Declared here, so TypeScript can
+ * name the type of a config file that never imports Stylelint, as when it emits the declarations of
+ * a pnpm project's `stylelint.config.mjs`
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- An interface has a name of its own, which a type alias of `Config` wouldn't give the declarations
+export interface StylelintConfig extends Config {}
+
+/**
  * A shared Stylelint config, with object entries and readonly lists in `extends`
  */
 export type StylelintExtendedConfig = WithUndefined<Omit<Config, 'extends'>> & {

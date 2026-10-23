@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
@@ -21,6 +22,11 @@ import {
   withUndefinedOptions,
 } from './exact-optional/options'
 import { fix, lintRules, topLevelRules } from './helpers'
+
+// Vitest ends its workers without Node's `exit` event, so a handler there would leave the folder
+afterAll(() => {
+  fs.rmSync(readonlyArraysRoot, { recursive: true, force: true })
+})
 
 /**
  * Compares rule names

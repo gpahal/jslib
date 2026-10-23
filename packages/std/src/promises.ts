@@ -815,8 +815,8 @@ async function* runMapLimitIterable<T, R>(
 
 export type RetryOptions = {
   /**
-   * How many times to call `fn` again after it fails, a non-negative integer or `Infinity`. Default
-   * is 3. With `Infinity`, pass a `signal` too, so the retries can stop
+   * How many times to call `fn` again after it fails, a non-negative safe integer or `Infinity`.
+   * Default is 3. With `Infinity`, pass a `signal` too, so the retries can stop
    */
   retries?: number | undefined
   /**
@@ -829,7 +829,7 @@ export type RetryOptions = {
    */
   maxDelayMs?: number | undefined
   /**
-   * What each wait is multiplied by for the next, at least 1. Default is 2
+   * What each wait is multiplied by for the next, a finite number of at least 1. Default is 2
    */
   factor?: number | undefined
   /**
@@ -862,7 +862,7 @@ function checkRetryNumber(
     throw new RangeError(
       stdMessage(
         ['`retry`', subject],
-        `expected a number ${max === Infinity ? `of at least ${min}` : `between ${min} and ${max}`}, received ${describeValue(value)}`,
+        `expected ${max === Infinity ? `a finite number of at least ${min}` : `a number between ${min} and ${max}`}, received ${describeValue(value)}`,
       ),
     )
   }
@@ -882,7 +882,7 @@ function checkRetries(untypedRetries: unknown): void {
     throw new RangeError(
       stdMessage(
         ['`retry`', '`options.retries`'],
-        `expected an integer of at least 0 or \`Infinity\`, received ${describeValue(retries)}`,
+        `expected a safe integer of at least 0 or \`Infinity\`, received ${describeValue(retries)}`,
       ),
     )
   }

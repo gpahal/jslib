@@ -969,7 +969,12 @@ describe('retry', () => {
     [
       { retries: 1.5 },
       RangeError,
-      '`options.retries`: expected an integer of at least 0 or `Infinity`, received `1.5`',
+      '`options.retries`: expected a safe integer of at least 0 or `Infinity`, received `1.5`',
+    ],
+    [
+      { retries: 2 ** 53 },
+      RangeError,
+      '`options.retries`: expected a safe integer of at least 0 or `Infinity`, received `9007199254740992`',
     ],
     [
       { minDelayMs: 200, maxDelayMs: 100 },
@@ -979,7 +984,12 @@ describe('retry', () => {
     [
       { factor: 0.5 },
       RangeError,
-      '`options.factor`: expected a number of at least 1, received `0.5`',
+      '`options.factor`: expected a finite number of at least 1, received `0.5`',
+    ],
+    [
+      { factor: Infinity },
+      RangeError,
+      '`options.factor`: expected a finite number of at least 1, received `Infinity`',
     ],
     [
       { retries: '2' },

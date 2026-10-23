@@ -56,6 +56,16 @@ tester.run('nextjs-server-component', GPAHAL_PLUGIN.rules['nextjs-server-compone
         { messageId: 'browserGlobal', data: { name: 'globalThis.localStorage' }, line: 4 },
       ],
     },
+    // Next's client-only hooks
+    {
+      filename: 'app/page.tsx',
+      code: "import { usePathname, useRouter, useSearchParams } from 'next/navigation'\n\nexport default function Page() {\n  const pathname = usePathname()\n  const router = useRouter()\n  const params = useSearchParams()\n  return <p>{pathname}{router ? params.size : 0}</p>\n}\n",
+      errors: [
+        { messageId: 'clientHook', data: { name: 'usePathname' }, line: 4 },
+        { messageId: 'clientHook', data: { name: 'useRouter' }, line: 5 },
+        { messageId: 'clientHook', data: { name: 'useSearchParams' }, line: 6 },
+      ],
+    },
     {
       filename: 'app/api/route.ts',
       code: ROUTE,

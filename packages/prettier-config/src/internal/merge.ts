@@ -374,14 +374,14 @@ const MERGE_PLUGIN = 'prettier-plugin-merge'
 const OXC_PLUGIN = '@prettier/plugin-oxc'
 const ORGANIZE_IMPORTS_PLUGIN = 'prettier-plugin-organize-imports'
 
-export const TAILWIND_PLUGIN_TAKEN: string = `${TAILWIND_PLUGIN} isn't taken in \`options\` or overrides. Turn it on with \`tailwindcss\`, which checks that it can load the import sorter`
+export const TAILWIND_PLUGIN_TAKEN: string = `\`${TAILWIND_PLUGIN}\` isn't taken in \`options\` or overrides. Turn it on with \`tailwindcss\`, which checks that it can load the import sorter`
 
 function tailwindWithWrapper(wrapperConfig: number, config: number): string {
   const fix =
     'Turn the Tailwind plugin on with `tailwindcss` in the `defineConfig` call that sorts imports'
   return wrapperConfig === config
-    ? `this config's import sorter is the wrapper that \`defineConfig\` adds without \`tailwindcss\`, which ${TAILWIND_PLUGIN} can't compose, so imports would stay unsorted. ${fix}`
-    : `${TAILWIND_PLUGIN} can't compose the import sorter's wrapper of config ${wrapperConfig + 1}, which \`defineConfig\` built without \`tailwindcss\`, so imports would stay unsorted. ${fix}`
+    ? `this config's import sorter is the wrapper that \`defineConfig\` adds without \`tailwindcss\`, which \`${TAILWIND_PLUGIN}\` can't compose, so imports would stay unsorted. ${fix}`
+    : `\`${TAILWIND_PLUGIN}\` can't compose the import sorter's wrapper of config ${wrapperConfig + 1}, which \`defineConfig\` built without \`tailwindcss\`, so imports would stay unsorted. ${fix}`
 }
 
 /**
@@ -529,20 +529,20 @@ function conflictOf(
             "leave it out of `plugins` and set `parser: 'oxc-ts'` in an override for the sorter to load it",
           ]
         : []),
-      ...(sorter === 'wrapper' ? [`add ${MERGE_PLUGIN} after it to run both`] : []),
+      ...(sorter === 'wrapper' ? [`add \`${MERGE_PLUGIN}\` after it to run both`] : []),
       'set `sortImports: false`',
     ]
     const fix =
       fixes.length === 1
         ? 'Set `sortImports: false` to use it'
         : `To use it, ${new Intl.ListFormat('en', { type: 'disjunction' }).format(fixes)}`
-    return `${name} replaces the import sorter's parsers, so imports would stay unsorted. ${fix}`
+    return `\`${name}\` replaces the import sorter's parsers, so imports would stay unsorted. ${fix}`
   }
   if (hasTailwind && name === CLASSNAMES_PLUGIN && !hasMerge) {
-    return `${CLASSNAMES_PLUGIN} replaces ${TAILWIND_PLUGIN}'s parsers, so classes would stay unsorted. Add ${MERGE_PLUGIN}, which runs both`
+    return `\`${CLASSNAMES_PLUGIN}\` replaces \`${TAILWIND_PLUGIN}\`'s parsers, so classes would stay unsorted. Add \`${MERGE_PLUGIN}\`, which runs both`
   }
   if (sorter === 'sorter' && name === MERGE_PLUGIN) {
-    return `${MERGE_PLUGIN} fails with the import sorter that ${TAILWIND_PLUGIN} loads, which has parsers for plugins that may not be installed. Set \`sortImports: false\` to use it`
+    return `\`${MERGE_PLUGIN}\` fails with the import sorter that \`${TAILWIND_PLUGIN}\` loads, which has parsers for plugins that may not be installed. Set \`sortImports: false\` to use it`
   }
   return undefined
 }
@@ -555,11 +555,11 @@ function organizeImportsConflict({
   hasMergeAfter: boolean
 }): string | undefined {
   if (sorter !== 'none') {
-    const fix = `Set \`sortImports: false\` to use ${ORGANIZE_IMPORTS_PLUGIN}`
-    return `${ORGANIZE_IMPORTS_PLUGIN} replaces the import sorter's parsers, so imports would stay unsorted. ${hasMergeAfter ? `${fix}, without ${MERGE_PLUGIN} after it, which keeps it from running` : fix}`
+    const fix = `Set \`sortImports: false\` to use \`${ORGANIZE_IMPORTS_PLUGIN}\``
+    return `\`${ORGANIZE_IMPORTS_PLUGIN}\` replaces the import sorter's parsers, so imports would stay unsorted. ${hasMergeAfter ? `${fix}, without \`${MERGE_PLUGIN}\` after it, which keeps it from running` : fix}`
   }
   return hasMergeAfter
-    ? `${MERGE_PLUGIN}, after it, formats with it as a range, which it skips, so imports would stay as they are. Remove ${MERGE_PLUGIN} to use ${ORGANIZE_IMPORTS_PLUGIN}`
+    ? `\`${MERGE_PLUGIN}\`, after it, formats with it as a range, which it skips, so imports would stay as they are. Remove \`${MERGE_PLUGIN}\` to use \`${ORGANIZE_IMPORTS_PLUGIN}\``
     : undefined
 }
 

@@ -394,6 +394,24 @@ test('accepts every documented option', async () => {
   expect(configs.length).toBeGreaterThan(0)
 })
 
+test.each([
+  ['html', '@html-eslint/indent'],
+  ['astro', 'astro/semi'],
+] as const)(
+  "rejects the `%s` preset plugin's layout rule `%s`, which Prettier owns",
+  async (area, rule) => {
+    expect(build({ typeAware: false, [area]: { rules: { [rule]: 'error' } } })).toThrow(
+      `@gpahal/eslint-config: \`${area}.rules\`: \`${rule}\`: is a layout rule for files that Prettier formats, so it conflicts with Prettier or is only safe with some options. Turn it off, or list it in \`allowFormattingRules\``,
+    )
+    const configs = await build({
+      typeAware: false,
+      allowFormattingRules: [rule],
+      [area]: { rules: { [rule]: 'error' } },
+    })()
+    expect(configs.some((config) => config.rules?.[rule] === 'error')).toBe(true)
+  },
+)
+
 test('rejects a rule that no plugin has, turned off too', async () => {
   await expect(build({ unicorn: { rules: { 'unicorn/no-nul': 'off' } } })()).rejects.toThrow(
     "@gpahal/eslint-config: `unicorn.rules`: `unicorn/no-nul`: isn't a rule that the `unicorn` plugin this config loads has",
@@ -446,7 +464,7 @@ test('names the option that turns off the plugin of a rule', async () => {
 })
 
 test.each<[string, keyof typeof files, string, string]>([
-  ['package-json/require-license', 'json', 'JSON', "`files: ['**/package.json']`"],
+  ['package-json/require-license', 'json', '`package.json`', "`files: ['**/package.json']`"],
   ['yml/no-empty-key', 'yaml', 'YAML', ''],
   ['markdown/no-html', 'markdown', 'Markdown', ''],
   ['@html-eslint/require-img-alt', 'html', 'HTML', ''],
@@ -691,6 +709,31 @@ test('keeps the JavaScript rules of a config of yours out of the files another c
   }
 })
 
+test('keeps JSONC with trailing commas for `tsconfig.json` under a config of yours with `json/json`', async () => {
+  await using project = await withTmpProject('eslint-config', {
+    'tsconfig.json': '{\n  // options\n  "compilerOptions": { "strict": true, },\n}\n',
+    'data.json': '{ "a": 1, "a": 2 }\n',
+  })
+  const configs = await defineConfig({
+    root: project.dir,
+    typeAware: false,
+    isInEditor: false,
+    // @eslint/json's README example
+    configs: [
+      { files: ['**/*.json'], language: 'json/json', rules: { 'json/no-duplicate-keys': 'error' } },
+    ],
+  })
+  const results = await eslintWith(project.dir, configs).lintFiles(['tsconfig.json', 'data.json'])
+  expect(
+    Object.fromEntries(
+      results.map((result) => [
+        path.relative(project.dir, result.filePath),
+        result.messages.map((message) => message.ruleId),
+      ]),
+    ),
+  ).toEqual({ 'data.json': ['json/no-duplicate-keys'], 'tsconfig.json': [] })
+})
+
 test("rejects a config of yours whose `files` can match only files where a rule can't run", async () => {
   // `\{a,b}.json` is the name `{a,b}.json`, not `a.json` or `b.json`
   const config = untyped({
@@ -712,6 +755,10 @@ test.each<[Linter.Config, string]>([
   [
     { files: ['**/*.tsx'], rules: { 'markdown/no-bare-urls': 'error' } },
     'Limit it to Markdown files',
+  ],
+  [
+    { files: ['**/*.json'], rules: { 'package-json/require-version': 'error' } },
+    "Limit it to `package.json` files, as in `files: ['**/package.json']`",
   ],
 ])(
   'rejects a rule for other files than code with a hint of its files: %j',
@@ -962,18 +1009,22 @@ test('throws on an AND entry of brace patterns with more than 1000 combinations'
 })
 
 describe('a plugin preset with formatting rules', () => {
-  const FORMATTING_RULES = ['vue/html-indent', 'vue/html-quotes', 'vue/max-attributes-per-line']
+  const FORMATTING_RULES = [
+    'react/jsx-indent',
+    'react/jsx-curly-spacing',
+    'react/jsx-max-props-per-line',
+  ]
 
-  // A preset in the shape of eslint-plugin-vue's: a config that registers the plugin, then configs
-  // of rules without `plugins`
-  const vuePreset = [
+  // A preset in a common shape: a config that registers the plugin, then configs of rules without
+  // `plugins`
+  const preset = [
     {
-      name: 'vue/base/setup',
+      name: 'react/base/setup',
       plugins: {
-        vue: {
+        react: {
           rules: Object.fromEntries(
-            [...FORMATTING_RULES, 'vue/no-unused-vars'].map((rule) => [
-              rule.slice('vue/'.length),
+            [...FORMATTING_RULES, 'react/no-danger'].map((rule) => [
+              rule.slice('react/'.length),
               { create: () => ({}) },
             ]),
           ),
@@ -981,18 +1032,18 @@ describe('a plugin preset with formatting rules', () => {
       },
     },
     {
-      name: 'vue/recommended/rules',
-      files: ['**/*.vue'],
+      name: 'react/recommended/rules',
+      files: ['**/*.jsx'],
       rules: Object.fromEntries(
-        [...FORMATTING_RULES, 'vue/no-unused-vars'].map((rule) => [rule, 'warn']),
+        [...FORMATTING_RULES, 'react/no-danger'].map((rule) => [rule, 'warn']),
       ),
     },
   ]
 
   it('lists every formatting rule in one error', () => {
-    expect(build({ configs: vuePreset })).toThrow(
+    expect(build({ configs: preset })).toThrow(
       [
-        '@gpahal/eslint-config: `configs[1]` (`vue/recommended/rules`): 3 issues',
+        '@gpahal/eslint-config: `configs[1]` (`react/recommended/rules`): 3 issues',
         ...FORMATTING_RULES.map(
           (rule) =>
             `  \`${rule}\`: is a rule that eslint-config-prettier turns off, since it conflicts with Prettier or is only safe with some options`,
@@ -1007,15 +1058,15 @@ describe('a plugin preset with formatting rules', () => {
       root,
       typeAware: false,
       configs: [
-        withoutFormattingRules(vuePreset),
-        withoutFormattingRules({ name: 'user/vue', files: ['**/*.vue'], extends: [vuePreset] }),
+        withoutFormattingRules(preset),
+        withoutFormattingRules({ name: 'user/react', files: ['**/*.jsx'], extends: [preset] }),
       ],
     })
-    for (const name of ['vue/recommended/rules', 'user/vue > vue/recommended/rules']) {
+    for (const name of ['react/recommended/rules', 'user/react > react/recommended/rules']) {
       const rules = configs.find((config) => config.name === name)?.rules
-      expect(Object.keys(rules ?? {})).toEqual(['vue/no-unused-vars'])
+      expect(Object.keys(rules ?? {})).toEqual(['react/no-danger'])
     }
-    expect(vuePreset[1]?.rules).toHaveProperty('vue/html-indent')
+    expect(preset[1]?.rules).toHaveProperty('react/jsx-indent')
   })
 })
 

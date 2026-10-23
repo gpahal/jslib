@@ -178,9 +178,14 @@ export type AssertValidContext = {
   subject?: string | undefined
   /**
    * The subject of an issue of the value itself, after `subject`, such as `options`. An issue of a
-   * key has its path instead
+   * key has its path instead. Without `subject`, it heads a list of several issues
    */
   rootSubject?: string | undefined
+  /**
+   * Where the value is, such as `['overrides', 0]`. One issue's path continues it, as in
+   * `overrides[0].files`; several issues are listed under it
+   */
+  path?: ReadonlyArray<PropertyKey> | undefined
 }
 
 /**
@@ -217,14 +222,32 @@ export function assertValid<T>(
   if (result.success) {
     return result.data
   }
-  const { prefix, subject, rootSubject } = context
+  const { prefix, subject, rootSubject, path = [] } = context
   const subjects = subject === undefined ? [] : [subject]
   const items = toMessageItems(result.error.issues, []).map((item) =>
     rootSubject !== undefined && item.subjects.length === 0
       ? { ...item, subjects: [rootSubject] }
       : item,
   )
-  throw new TypeError(formatIssues(prefix, subjects, items), { cause: result.error })
+  const isSingle = uniqueIssues(items).length === 1
+  if (path.length > 0) {
+    if (isSingle) {
+      return failWith(prefix, subjects, toMessageItems(result.error.issues, path), result.error)
+    }
+    subjects.push(inBackticks(formatPath(path)))
+  } else if (!isSingle && rootSubject !== undefined && subjects.length === 0) {
+    subjects.push(rootSubject)
+  }
+  return failWith(prefix, subjects, items, result.error)
+}
+
+function failWith(
+  prefix: string,
+  subjects: ReadonlyArray<string>,
+  items: ReadonlyArray<IssueMessageItem>,
+  cause: z.core.$ZodError,
+): never {
+  throw new TypeError(formatIssues(prefix, subjects, items), { cause })
 }
 
 /**
@@ -247,8 +270,22 @@ function formatIssues(
   subjects: ReadonlyArray<string>,
   items: ReadonlyArray<IssueMessageItem>,
 ): string {
+  const unique = uniqueIssues(items)
+  const message = formatMessageList(prefix, subjects, unique.slice(0, MAX_ISSUES))
+  if (unique.length <= MAX_ISSUES) {
+    return message
+  }
+  // Only the count line differs: `formatMessageList` counts the issues it lists
+  const header = formatMessage(prefix, subjects, `${MAX_ISSUES} issues`)
+  return `${formatMessage(prefix, subjects, `${unique.length} issues, the first ${MAX_ISSUES} shown`)}${message.slice(header.length)}`
+}
+
+/**
+ * Each issue once, by its path and description
+ */
+function uniqueIssues(items: ReadonlyArray<IssueMessageItem>): Array<IssueMessageItem> {
   const symbols = new Map<symbol, number>()
-  const unique = new Map(
+  return new Map(
     items.map((item) => {
       const path = item.path.map((key) => {
         if (typeof key !== 'symbol') {
@@ -266,13 +303,6 @@ function formatIssues(
   )
     .values()
     .toArray()
-  const message = formatMessageList(prefix, subjects, unique.slice(0, MAX_ISSUES))
-  if (unique.length <= MAX_ISSUES) {
-    return message
-  }
-  // Only the count line differs: `formatMessageList` counts the issues it lists
-  const header = formatMessage(prefix, subjects, `${MAX_ISSUES} issues`)
-  return `${formatMessage(prefix, subjects, `${unique.length} issues, the first ${MAX_ISSUES} shown`)}${message.slice(header.length)}`
 }
 
 function codeName(text: string): string {

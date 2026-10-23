@@ -451,8 +451,18 @@ function hasNameEndingChar(segment: string): boolean {
  * getPathExtension('a/b/c.tar.gz') // 'gz'
  * getPathExtension(String.raw`C:\a\b.txt`) // 'txt'
  * ```
+ *
+ * @throws TypeError if `path` isn't a string.
  */
 export function getPathExtension(path: string): string {
+  if (typeof path !== 'string') {
+    throw new TypeError(
+      stdMessage(
+        ['`getPathExtension`', '`path`'],
+        `expected a string, received ${describeValue(path)}`,
+      ),
+    )
+  }
   const basename = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1)
   const pos = basename.lastIndexOf('.')
   return pos < 1 ? '' : basename.slice(pos + 1)

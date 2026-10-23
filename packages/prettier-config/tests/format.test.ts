@@ -245,8 +245,8 @@ export const c: A | typeof b = b
     )
   })
 
-  // Prettier's own parser formats a `.vue` file, since the sorter's `vue` parser needs
-  // `@vue/compiler-sfc`, which a project without Vue lacks
+  // Prettier's own parser formats a `.vue` file, since the wrapper leaves out the sorter's `vue`
+  // parser, and the one the Tailwind plugin loads needs `@vue/compiler-sfc`
   it('formats a .vue file without @vue/compiler-sfc', async () => {
     expect(() => createRequire(import.meta.url).resolve('@vue/compiler-sfc')).toThrow(
       /Cannot find module/,

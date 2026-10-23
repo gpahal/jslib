@@ -189,7 +189,10 @@ export function readFontFile(
   extension: FontExtension | undefined,
 ): FontMetrics {
   const fail: Fail = (description, cause) =>
-    new FontRejection(formatMessage(PREFIX, [label], description), { cause })
+    new FontRejection(
+      formatMessage(PREFIX, [label], description),
+      cause === undefined ? undefined : { cause },
+    )
   try {
     const buffer = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
     const signature = checkSignature(buffer, extension, fail)

@@ -166,8 +166,8 @@ export async function node({
         'n/hashbang': 'off',
       },
     },
-    // Config files and scripts in a source folder, such as Angular's `src/app/app.config.ts`, often
-    // run in the app
+    // Config files and scripts in a source folder, such as `src/app/app.config.ts`, often run in the
+    // app
     {
       name: 'gpahal/node/dev-version',
       files: intersectFiles(files, [...CONFIG_FILES, ...REPO_SCRIPT_FILES]),

@@ -236,13 +236,14 @@ function withAggregatedMessage(
   aggregates: AggregatesState,
   depth: number,
 ): string {
-  if (getInnerErrors(error) === undefined) {
+  const errors = getInnerErrors(error)
+  if (errors === undefined || errors.length === 0) {
     return message
   }
   if (depth >= MAX_AGGREGATE_DEPTH) {
     // Counted as a cut, so an error containing this one isn't reused at a shallower depth
     aggregates.cuts++
-    return message
+    return `${message}: …`
   }
   const aggregated = getAggregatedMessage(error, aggregates, depth, message)
   return aggregated === undefined || aggregated === '' ? message : `${message}: ${aggregated}`

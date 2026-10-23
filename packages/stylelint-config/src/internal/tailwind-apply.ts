@@ -78,6 +78,9 @@ function designOnly(css: string, file: string): string {
       node.remove()
     }
   })
+  // Ends the last kept at-rule with `;`, which the file leaves out when a rule came last, so the
+  // CSS appended after it stays a statement of its own
+  root.raws.semicolon = true
   return root.toString()
 }
 

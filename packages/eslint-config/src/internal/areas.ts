@@ -564,6 +564,7 @@ export const AREAS: { readonly [A in AreaName]: TypedAreaDefinition<A> } = {
       commonjs,
       reactCompiler,
       serverIgnores,
+      untyped,
     }) => {
       const { refresh, rules = {} } = resolveSubOptions(options.react) ?? {}
       return {
@@ -574,6 +575,7 @@ export const AREAS: { readonly [A in AreaName]: TypedAreaDefinition<A> } = {
           refresh,
           nextjsFiles: isOn.nextjs ? presetFiles.nextjs : undefined,
           typeAware,
+          untyped,
           compiler: reactCompiler,
         }),
         codeBlockRules: reactCodeBlockRules(refresh !== false),
@@ -602,8 +604,8 @@ export const AREAS: { readonly [A in AreaName]: TypedAreaDefinition<A> } = {
     kind: 'preset',
     isOnByDefault: false,
     peers: ASTRO_PEERS,
-    build: async ({ options }) => ({
-      configs: await astro(),
+    build: async ({ options, untyped }) => ({
+      configs: await astro({ untyped }),
       userRules: rulesConfig('astro', { files: ASTRO_FILES }, getRules(options.astro)),
     }),
   },
@@ -757,10 +759,10 @@ export const AREAS: { readonly [A in AreaName]: TypedAreaDefinition<A> } = {
     isFalseAllowed: true,
     expected: 'an object with `files`, or `false`',
     keys: { files: deferred(GLOB_LIST) },
-    build: ({ options, browserFiles, serverIgnores }) => {
+    build: ({ options, browserFiles, serverIgnores, untyped }) => {
       const ignores = serverIgnores.length > 0 ? serverIgnores : undefined
       return {
-        configs: browser({ files: browserFiles, ignores }),
+        configs: browser({ files: browserFiles, ignores, untyped }),
         userRules: rulesConfig(
           'browser',
           { files: browserFiles, ...(ignores && { ignores }) },

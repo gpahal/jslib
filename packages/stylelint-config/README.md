@@ -76,7 +76,7 @@ Stylelint lints only the files it's given and doesn't read `.gitignore`, so pass
 stylelint --ignore-path .gitignore "**/*.{css,astro,html,md,markdown}"
 ```
 
-Leave other style files out of that glob. Stylelint parses a `.scss`, `.less`, `.vue` or `.svelte` file as CSS unless a `customSyntax` says otherwise, giving errors such as `Unknown at-rule "@use"` or `CssSyntaxError`. [Lint SCSS files][] shows the override that gives one a syntax.
+Leave other style files out of that glob. Stylelint parses a `.scss` or `.less` file as CSS unless a `customSyntax` says otherwise, giving errors such as `Unknown at-rule "@use"` or `CssSyntaxError`. [Lint SCSS files][] shows the override that gives one a syntax.
 
 Adopting the preset in an existing codebase, Stylelint's `--suppress` records the current reports in `stylelint-suppressions.json`, so later runs report only new ones. While that file exists, Stylelint prints an `ExperimentalWarning` that the suppressions feature is experimental on every run.
 
@@ -441,11 +441,11 @@ Stylelint's `--cache` doesn't track the reference files: after renaming a custom
 
 `declaration-property-value-no-unknown` reports `sibling-index()` and `sibling-count()` as a whole value, as in `z-index: sibling-index()`, since the CSS syntax data it reads, css-tree's, doesn't know them yet. Inside `calc()` they pass. Use a disable comment until css-tree adds them.
 
-In Markdown, code blocks can be partial snippets, and one-line blocks are allowed in the HTML; ` ```vue ` and ` ```svelte ` code blocks aren't linted.
+In Markdown, code blocks can be partial snippets, and one-line blocks are allowed in the HTML.
 
 Code blocks and `<style>` blocks in another style language, such as ` ```scss ` or `<style lang="scss">`, aren't linted, in `.astro`, `.html` and Markdown files alike, whether or not a syntax such as `postcss-scss` is installed. Neither are code blocks fenced with `~~~`.
 
-`.vue`, `.svelte`, `.scss`, `.less`, `.htm`, `.mdx` and CSS-in-JS files aren't supported. Leave them out of the files you pass Stylelint, or give them a syntax with an override, as [Lint SCSS files][] does.
+`.scss`, `.less`, `.htm`, `.mdx` and CSS-in-JS files aren't supported. Leave them out of the files you pass Stylelint, or give them a syntax with an override, as [Lint SCSS files][] does.
 
 After `stylelint --fix`, Stylelint's summary still counts the problems of the report-only rules above as fixable with `--fix`: its formatter reads whether a rule can fix, not the preset's `disableFix`.
 

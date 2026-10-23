@@ -11,7 +11,6 @@ Composable flat ESLint config for TypeScript, React, Next.js, Astro, Tailwind CS
   - [Vite with React, Vitest and Tailwind CSS](#vite-with-react-vitest-and-tailwind-css)
   - [A static site](#a-static-site)
   - [Storybook and Playwright](#storybook-and-playwright)
-  - [Unsupported frameworks](#unsupported-frameworks)
 - [Migrating](#migrating)
 - [Troubleshooting](#troubleshooting)
   - [Warnings](#warnings)
@@ -243,7 +242,7 @@ export default defineConfig({
 })
 ```
 
-A config that registers `plugins` takes any rule name, and `untyped` lets a config name a rule newer than the generated types, such as `unicorn/newer-rule` here. The rule must exist in the loaded plugin. A plugin's preset that turns on formatting rules throws with every such rule in one error; pass it through `withoutFormattingRules`, as [Unsupported frameworks](#unsupported-frameworks) shows.
+A config that registers `plugins` takes any rule name, and `untyped` lets a config name a rule newer than the generated types, such as `unicorn/newer-rule` here. The rule must exist in the loaded plugin. A plugin's preset that turns on formatting rules throws with every such rule in one error; pass it through `withoutFormattingRules`, which returns copies without the formatting rules that `allowFormattingRules` describes, as in `configs: withoutFormattingRules(somePlugin.configs.recommended)`.
 
 ### Speed up startup
 
@@ -280,7 +279,7 @@ export default defineConfig({
 { "compilerOptions": { "types": ["node"] }, "include": ["src"] }
 ```
 
-Config files that no tsconfig includes get type information from a default project with the compiler options of `root`'s `tsconfig.json`. List `node` in its `types` and install `@types/node`; otherwise `defineConfig` warns, and type-checked rules report on the config files. A `types` list replaces the inherited one, so keep inherited entries, as in SvelteKit's `"types": ["$app/types", "node"]`. A solution-style `tsconfig.json` with `"files": []` and `references`, as in Vite's templates, needs the same `compilerOptions`.
+Config files that no tsconfig includes get type information from a default project with the compiler options of `root`'s `tsconfig.json`. List `node` in its `types` and install `@types/node`; otherwise `defineConfig` warns, and type-checked rules report on the config files. A `types` list replaces the inherited one, so keep inherited entries, as in `"types": ["vite/client", "node"]`. A solution-style `tsconfig.json` with `"files": []` and `references`, as in Vite's templates, needs the same `compilerOptions`.
 
 ### Lint a JavaScript project
 
@@ -492,33 +491,6 @@ Add the new files to the template's projects: `"include": ["src", ".storybook"]`
 
 The default `playwright.files` are the code files in `e2e` and `playwright` folders, so create-playwright's `testDir: './tests'` needs `files: ['tests/**']`, or `GPAHAL_PLAYWRIGHT_FILES_UNMATCHED` warns. Vitest's rules leave out Playwright's files. create-playwright's `playwright.config.ts` gets `strict-boolean-expressions` on `process.env.CI`: compare with `undefined`, as in `retries: process.env.CI === undefined ? 0 : 2`.
 
-### Unsupported frameworks
-
-No preset lints Vue, Svelte, Angular or Solid. `eslint .` skips `.vue` and `.svelte` files silently, so `defineConfig` warns with `GPAHAL_UNSUPPORTED_FRAMEWORK` when `root`'s or a workspace package's `package.json` lists `vue`, `svelte`, `@sveltejs/kit`, `@angular/core` or `solid-js`. Their `.ts` and `.js` files are linted as usual.
-
-To lint component files, add the framework's ESLint plugin through `configs`. A plugin's preset often turns on formatting rules, which `configs` rejects, so pass it through `withoutFormattingRules`, which returns copies without the rules that eslint-config-prettier turns off:
-
-```js
-// eslint.config.mjs
-import pluginVue from 'eslint-plugin-vue'
-import { parser } from 'typescript-eslint'
-
-import { defineConfig, withoutFormattingRules } from '@gpahal/eslint-config'
-
-export default defineConfig({
-  root: import.meta.dirname,
-  configs: [
-    ...withoutFormattingRules(pluginVue.configs['flat/recommended']),
-    // Parses `<script lang="ts">`, which vue-eslint-parser's default parser rejects
-    { files: ['**/*.vue'], languageOptions: { parserOptions: { parser } } },
-  ],
-})
-```
-
-Svelte works the same way, with `svelte.configs.recommended` from `eslint-plugin-svelte` and the `parser` config for `**/*.svelte`. Only the plugin's rules reach the component files. Once `configs` registers the framework's plugin, by its usual name or its `meta.name`, the warning stops for that framework. A plugin added with a composer method comes too late for the check, so silence the warning with `warnings: { GPAHAL_UNSUPPORTED_FRAMEWORK: false }`.
-
-SvelteKit's generated tsconfig sets `"types": ["$app/types"]`, so write `"types": ["$app/types", "node"]`. SvelteKit lists every package in `devDependencies`, so allow them with `imports: { rules: { 'import-x/no-extraneous-dependencies': ['error', { devDependencies: true }] } }`.
-
 ## Migrating
 
 ### From @antfu/eslint-config
@@ -547,7 +519,6 @@ Replace `tseslint.config(...)`, `parserOptions.projectService` and `tsconfigRoot
 | Code | Cause | Fix |
 | --- | --- | --- |
 | `GPAHAL_FRAMEWORK_OPTION_UNSET` | A `package.json` lists a framework or tool, such as `next` or `vitest`, whose option isn't set | Set the option, and install its plugins, or set it to `false` |
-| `GPAHAL_UNSUPPORTED_FRAMEWORK` | A `package.json` lists Vue, Svelte, SvelteKit, Angular or Solid, whose component files no preset lints | Add the framework's plugin through `configs`, as [Unsupported frameworks](#unsupported-frameworks) shows |
 | `GPAHAL_COMMONJS_PACKAGE` | `root`'s `package.json` has `"type": "commonjs"` or no `"type"`, so Node runs `.js` files as CommonJS | Set `"type": "module"`, `commonjs: true`, or `commonjs: false` |
 | `GPAHAL_NO_TSCONFIG` | No `tsconfig.json` at or under `root`, so the project service reports each TypeScript file as not found, and config files get no Node types | Add a `tsconfig.json` at `root` with `"types": ["node"]`, or set `typeAware: false` |
 | `GPAHAL_FILES_OUTSIDE_TSCONFIG` | TypeScript files, such as `scripts/*.ts`, that no tsconfig includes and the default project doesn't take, so the project service reports each as not found. It names up to 10 | Add them to a tsconfig's `include`, or to `typeAware.allowDefaultProject` |
@@ -572,7 +543,7 @@ Replace `tseslint.config(...)`, `parserOptions.projectService` and `tsconfigRoot
 - **`the config of <root> sets … in the config of <other root>, whose project service this process already uses`**: one run loads configs of several packages whose project services differ. Use one config at the workspace root, as [Set up a monorepo][] explains.
 - **`ESLint reaches <file> through <path>, another path to <root>`**: ESLint runs through a symbolic link or another case of `root`'s path. Lint through `root`, as in `eslint src`, pass the real path, `import.meta.dirname`, as `root`, and in an editor open the folder at the path `root` names.
 - **`Unexpected undescribed directive comment`** at column 0: `require-description` reports a directive without a reason at column 0 on purpose, so no directive on that line can hide the report. Add the reason, as in `// eslint-disable-next-line no-console -- CLI output`.
-- **`is a rule that eslint-config-prettier turns off`**: your config turns on a formatting rule. Turn it off, list it in `allowFormattingRules`, or pass a plugin's preset through `withoutFormattingRules`.
+- **`is a rule that eslint-config-prettier turns off`** or **`is a layout rule for files that Prettier formats`**: your config turns on a formatting rule. Turn it off, list it in `allowFormattingRules`, or pass a plugin's preset through `withoutFormattingRules`.
 - **`is a rule that needs type information`**, with `typeAware: false`: remove the rule or `typeAware: false`.
 - **`needs type information, which <glob> files don't get`**: your config turns on a type-aware rule only for files without type information. Apply the fix the error names, or remove the rule.
 - **`returns a composer, which ESLint reads as a config object`**: await the composer before putting it in an array or `extends`, as in `...(await defineConfig({ … }))`.
@@ -611,7 +582,7 @@ Globs are relative to `root`. An empty glob, a lone `!`, a glob that starts with
 | `gitignore` | `true` | Ignore what the repository's `info/exclude` and `.gitignore` files ignore, and its submodule folders, but not git's global `core.excludesFile`. `{ files }` adds ignore files |
 | `browser`, `server` | Off | `{ files, rules }` for browser or server code, or `false` |
 | `configs` | `[]` | Your own configs, after the presets and exemptions |
-| `allowFormattingRules` | `[]` | Formatting rules, those eslint-config-prettier turns off, that `configs`, the composer's methods and areas' `rules` may turn on. Listing one that a preset leaves out, such as `unicorn/empty-brace-spaces`, keeps it on |
+| `allowFormattingRules` | `[]` | Formatting rules, those eslint-config-prettier turns off and the layout rules of html-eslint and eslint-plugin-astro, such as `@html-eslint/indent` and `astro/semi`, that `configs`, the composer's methods and areas' `rules` may turn on. Listing one that a preset leaves out, such as `unicorn/empty-brace-spaces`, keeps it on |
 | `warnings` | `{}` | The [setup warnings](#warnings) to silence, by code, as in `{ GPAHAL_COMMONJS_PACKAGE: false }`. An unknown code or a non-boolean value throws |
 | `isInEditor` | Detected | In an editor, `prefer-const` reports without fixing. Detection reads the variables that VS Code, JetBrains IDEs, Vim, Neovim, Zed and Emacs's shells set. For editors it misses, such as Emacs's eglot and lsp-mode, Sublime Text's LSP and Helix, set it from a variable of the editor's ESLint server settings, as in `isInEditor: process.env.ESLINT_IN_EDITOR === '1'` |
 | `javascript`, `typescript` | Always on | Core and typescript-eslint rules, `{ rules }`. `typescript` also takes `rulesTypeAware`, `library`, `exhaustiveSwitch` and `strictBooleanExpressions`, as [Presets at a glance](#presets-at-a-glance) describes |
@@ -779,7 +750,7 @@ In a full config, `sonarjs: false` saves about 150 ms and 5 MiB of a small TypeS
 ### What's on by default
 
 - `@eslint/js` recommended and bug-catching core rules, such as `eqeqeq` in `smart` mode and `no-console` with `console.warn` and `console.error` allowed. `guard-for-in`, `grouped-accessor-pairs`, `no-alert`, `no-loop-func`, `no-object-constructor`, `prefer-object-spread` and `no-unneeded-ternary` are on, and typescript-eslint's `default-param-last` replaces the core one.
-- typescript-eslint's strict and stylistic type-checked configs, with `no-unnecessary-condition`, `unbound-method`, and `switch-exhaustiveness-check` with `default` cases checked. `no-unreachable` is on in TypeScript files too, since framework templates' tsconfigs don't set `allowUnreachableCode: false`. `require-await` is off, since `promise-function-async` makes every function that returns a promise async.
+- typescript-eslint's strict and stylistic type-checked configs, with `no-unnecessary-condition`, `unbound-method`, and `switch-exhaustiveness-check` with `default` cases checked. `no-unreachable` is on in TypeScript files too, since framework templates' tsconfigs don't set `allowUnreachableCode: false`. `require-await` is off, since `promise-function-async` makes every function that returns a promise async. `promise-function-async` leaves alone a function without a return type that returns React's `ReactNode`, as a component that returns `children` does: React awaits the promise in `ReactNode`, and `async` would make every render a promise.
   - `strict-boolean-expressions` reports numbers, nullable strings and nullable numbers in conditions. A nullable boolean passes, as in `{isOpen && <Menu />}`.
   - `no-floating-promises` doesn't take `void` as handling a promise. `node:test`'s `test`, `describe` and hooks, and React Router's `navigate()`, pass as statements.
   - `no-misused-promises` reports a promise returned where `void` is expected, such as an async JSX event handler. To start async work from a synchronous callback, write `run().catch(report)`.
@@ -788,11 +759,11 @@ In a full config, `sonarjs: false` saves about 150 ms and 5 MiB of a small TypeS
 - eslint-plugin-sonarjs's bug rules and its TLS and crypto rules, such as `unverified-certificate` and `hashing`, the recommended configs of eslint-plugin-unicorn, eslint-plugin-regexp and eslint-plugin-import-x, `@e18e/eslint-plugin`, eslint-comments, which requires a reason after `--` in an `eslint-disable`, and eslint-plugin-jsdoc.
   - `import-x/no-extraneous-dependencies` allows dev dependencies in tests, scripts, stories, benchmarks, declaration files, mocks, `.storybook`, `.vitepress` and config files outside a package's `src` folder. It reads the `package.json` nearest the file.
   - `import-x/no-relative-packages` reports a relative import of another package's file, which skips its `exports`, except in those dev files. `import-x/named` and `import-x/namespace` run only in JavaScript files without type information, since TypeScript checks the others.
-- In browser code, `no-restricted-globals` reports the confusing-browser-globals names that read like local variables, such as `top`, `parent` and `length`, and asks for `globalThis.top`, so `unicorn/no-unnecessary-global-this` is off there. `self`, the usual global in workers, is allowed. In the `react` and `nextjs` scopes, config files, CommonJS files and `server` files are left out.
+- In browser code, `no-restricted-globals` reports the confusing-browser-globals names that read like local variables, such as `top`, `parent` and `length`, and asks for `globalThis.top`, so `unicorn/no-unnecessary-global-this` is off there. In files without type information, it also reports those that `@typescript-eslint/no-deprecated` reports in typed files: `blur`, `event`, `external`, `name`, `onunload` and `status`. `self`, the usual global in workers, is allowed. In the `react` and `nextjs` scopes, config files, CommonJS files and `server` files are left out.
 - eslint-plugin-sonarjs's security rules, such as `insecure-jwt-token`, `xml-parser-xxe`, `cookie-no-httponly` and `insecure-cookie`. `pseudo-random`, `no-hardcoded-ip`, `publicly-writable-directories`, `file-permissions`, `no-os-command-from-path` and `sql-queries` stay off, since they report ordinary code such as `Math.random()` and `/tmp`, and so does the deprecated `os-command`. Turn any of them on in `sonarjs.rules`.
 - `@gpahal/no-bidi-characters` in every file the config lints, for the bidirectional control characters of Trojan Source.
 - Unicorn's recommended rules, without `prefer-await`, `no-break-in-nested-loop`, `no-this-outside-of-class`, `prefer-number-coercion`, `no-computed-property-existence-check` and `prefer-observer-apis`, which report ordinary code, and without `expiring-todo-comments`, whose reports depend on the date, so a clean commit can fail later. `import-style` takes any import style of `node:path` and `node:util`. `prefer-ternary` leaves guard clauses and multi-line branches alone. `prefer-event-target` is off in the `node` preset's files.
-- JSON, JSONC and JSON5, YAML, TOML, `package.json`, and Markdown files with their code blocks. TOML files and ` ```toml ` blocks get eslint-plugin-toml's recommended and layout rules, since Prettier doesn't format TOML. `.jsonc` files, ` ```jsonc ` blocks, `tsconfig.json` and VS Code's settings allow trailing commas. A `package.json` without `"private": true` must have the metadata a published package needs, such as `exports`, `files`, `license` and `repository`, so an app should set `"private": true`.
+- JSON, JSONC and JSON5, YAML, TOML, `package.json`, and Markdown files with their code blocks. TOML files and ` ```toml ` blocks get eslint-plugin-toml's recommended and layout rules, since Prettier doesn't format TOML. `.jsonc` files, ` ```jsonc ` blocks, `tsconfig.json` and VS Code's settings allow trailing commas, and stay JSONC when a config of yours gives them another language, as `{ files: ['**/*.json'], language: 'json/json' }` does, since ESLint rejects trailing commas in it. A `package.json` without `"private": true` must have the metadata a published package needs, such as `exports`, `files`, `license` and `repository`, so an app should set `"private": true`.
 - With the presets that are off by default: `html` turns on html-eslint's recommended rules without the layout ones, with `no-target-blank`, `require-button-type` and accessibility rules such as `require-input-label`; inline `<script>` in `.html` files isn't linted.
 - `@gpahal/comment-layout` for comments in JS and TS files. `jsdoc/require-returns-description` runs in TypeScript files only, since a JavaScript file's `@returns {T}` may only give `checkJs` its type.
 - Import order and `package.json` key order aren't lint rules: `@gpahal/prettier-config` sorts them.
@@ -861,6 +832,7 @@ Where neither rule covers the other, both stay on, and in the files where the ke
 | `a?.b!` | `no-non-null-asserted-optional-chain` | `no-non-null-assertion` |
 | `new Buffer(10)`, with `node` | `unicorn/no-new-buffer` | `n/no-deprecated-api` |
 | `localStorage` in `server` files, with `node` | `@gpahal/no-browser-globals` | `n/no-unsupported-features/node-builtins` |
+| `window` and `self` in `server` files | `@gpahal/no-browser-globals` | `unicorn/prefer-global-this` |
 | `expect(p).resolves.toBe(1)` without `await` | `vitest/valid-expect` | `no-floating-promises` |
 
 `unicorn/explicit-length-check` runs only in files without type information, where `strict-boolean-expressions` doesn't.
@@ -870,7 +842,7 @@ Where neither rule covers the other, both stay on, and in the files where the ke
 | Rule | Reports |
 | --- | --- |
 | `@gpahal/comment-layout` | A comment laid out against its place: a `/**` doc block where TypeScript reads one, and `//` lines elsewhere, as [comment layout](#comment-layout) describes |
-| `@gpahal/nextjs-server-component` | With `nextjs`, in a route entry file of an `app` or `src/app` folder without `'use client'`: a browser global that Node lacks, such as `window` or `globalThis.window`, except under `typeof`, and a client-only React hook, such as `useState()`. The entry files are `page`, `layout`, `template`, `loading`, `not-found`, `default` and `route`; an `error` or `global-error` file without `'use client'` is reported too, since error boundaries must be client components. Imported components aren't checked. No fix |
+| `@gpahal/nextjs-server-component` | With `nextjs`, in a route entry file of an `app` or `src/app` folder without `'use client'`: a browser global that Node lacks, such as `window` or `globalThis.window`, except under `typeof`, and a client-only hook of React or `next/navigation`, such as `useState()` or `usePathname()`, matched by name. The entry files are `page`, `layout`, `template`, `loading`, `not-found`, `default` and `route`; an `error` or `global-error` file without `'use client'` is reported too, since error boundaries must be client components. Imported components aren't checked. No fix |
 | `@gpahal/no-bidi-characters` | A Unicode bidirectional control character, U+202A–U+202E or U+2066–U+2069, anywhere in a file of any language, which can make text display in another order than it runs, as in Trojan Source (CVE-2021-42574). The implicit marks, such as U+200F, aren't reported. No fix; in a string, write the escape, such as `\u202E` |
 | `@gpahal/no-inline-type-only-export` | `export { type A }`, fixed to `export type { A }` |
 | `@gpahal/no-js-specifier-for-ts` | With `node: { typeStripping: true }`, a relative `./b.js`, `./b.mjs` or `./b.cjs` specifier of an import, `require()`, `require.resolve()` or `import.meta.resolve()`, where no such file exists but `./b.ts`, `./b.mts` or `./b.cts` does, fixed to the TypeScript file |

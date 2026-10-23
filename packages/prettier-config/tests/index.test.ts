@@ -58,8 +58,7 @@ const GITHUB_ALERTS_PLUGIN = path.join(import.meta.dirname, '../src/internal/git
 
 /**
  * Without the Tailwind plugin, the config names the import sorter by the path of its wrapper, which
- * leaves out the sorter's parsers whose plugins don't resolve, keeping `vue` when
- * `@vue/compiler-sfc` resolves
+ * leaves out the sorter's Vue and Ember parsers, and its parsers whose plugins don't resolve
  */
 const SORT_IMPORTS_WRAPPER = path.join(import.meta.dirname, '../src/internal/sort-imports.ts')
 
@@ -479,7 +478,7 @@ describe('plugin resolution', () => {
     )
     expect(() => resolveSortImportsPlugin(tailwindPath)).toThrow(
       new TypeError(
-        `${PREFIX}: \`sortImports\`: prettier-plugin-tailwindcss can't load @ianvs/prettier-plugin-sort-imports from where it's installed, so imports would stay unsorted. Install it in your project, as in \`pnpm add -D @ianvs/prettier-plugin-sort-imports\`, or set \`sortImports: false\``,
+        `${PREFIX}: \`sortImports\`: \`prettier-plugin-tailwindcss\` can't load \`@ianvs/prettier-plugin-sort-imports\` from where it's installed, so imports would stay unsorted. Install it in your project, as in \`pnpm add -D @ianvs/prettier-plugin-sort-imports\`, or set \`sortImports: false\``,
       ),
     )
   })
@@ -507,7 +506,7 @@ describe('plugin resolution', () => {
     )
     expect(() => resolveSortImportsPlugin(tailwindPath)).toThrow(
       new TypeError(
-        `${PREFIX}: \`sortImports\`: prettier-plugin-tailwindcss loads @ianvs/prettier-plugin-sort-imports from where it's installed, and @ianvs/prettier-plugin-sort-imports 3.7.2 is older than the 4.7 this config needs. Install it in your project, as in \`pnpm add -D @ianvs/prettier-plugin-sort-imports\`, or set \`sortImports: false\``,
+        `${PREFIX}: \`sortImports\`: \`prettier-plugin-tailwindcss\` loads \`@ianvs/prettier-plugin-sort-imports\` from where it's installed, and \`@ianvs/prettier-plugin-sort-imports\` 3.7.2 is older than the 4.7 this config needs. Install a newer version, as in \`pnpm add -D @ianvs/prettier-plugin-sort-imports@^4.7\`, or set \`sortImports: false\``,
       ),
     )
   })
@@ -516,7 +515,7 @@ describe('plugin resolution', () => {
     await using tailwind = await installTailwind('0.7.2')
     expect(() => resolveTailwindPlugin(tailwind.environment)).toThrow(
       new TypeError(
-        `${PREFIX}: \`tailwindcss\`: prettier-plugin-tailwindcss 0.7.2 is older than the 0.8 this config needs. Install a newer version, as in \`pnpm add -D prettier-plugin-tailwindcss@^0.8\``,
+        `${PREFIX}: \`tailwindcss\`: \`prettier-plugin-tailwindcss\` 0.7.2 is older than the 0.8 this config needs. Install a newer version, as in \`pnpm add -D prettier-plugin-tailwindcss@^0.8\``,
       ),
     )
   })
@@ -705,7 +704,7 @@ function build(options: unknown) {
 }
 
 const TAILWIND_PLUGIN_TAKEN =
-  "prettier-plugin-tailwindcss isn't taken in `options` or overrides. Turn it on with `tailwindcss`, which checks that it can load the import sorter"
+  "`prettier-plugin-tailwindcss` isn't taken in `options` or overrides. Turn it on with `tailwindcss`, which checks that it can load the import sorter"
 
 const NESTED_OVERRIDES =
   "isn't taken, since Prettier ignores an override's own overrides. Add them to the list this override is in"
@@ -814,7 +813,7 @@ describe('defineConfig validation', () => {
     expect(build({ semi: false, tailwindcsss: true, githubAlerts: 1 })).toThrow(
       new TypeError(
         [
-          `${PREFIX}: 3 issues`,
+          `${PREFIX}: options: 3 issues`,
           '  `semi`: unknown option. Prettier options go under `options`',
           '  `tailwindcsss`: unknown option. Did you mean `tailwindcss`?',
           '  `githubAlerts`: expected a boolean, received `1`',
@@ -919,8 +918,8 @@ describe('defineConfig validation', () => {
         plugin === '@prettier/plugin-oxc'
           ? "leave it out of `plugins` and set `parser: 'oxc-ts'` in an override for the sorter to load it, "
           : ''
-      const lead = `${plugin} replaces the import sorter's parsers, so imports would stay unsorted.`
-      const description = `${lead} To use it, ${oxcFix}add prettier-plugin-merge after it to run both${oxcFix === '' ? '' : ','} or set \`sortImports: false\``
+      const lead = `\`${plugin}\` replaces the import sorter's parsers, so imports would stay unsorted.`
+      const description = `${lead} To use it, ${oxcFix}add \`prettier-plugin-merge\` after it to run both${oxcFix === '' ? '' : ','} or set \`sortImports: false\``
       const override = { overrides: [{ files: '*.ts', options: { plugins: [plugin] } }] }
       expect(build(override)).toThrow(
         new TypeError(`${PREFIX}: \`overrides[0].options.plugins[0]\`: ${description}`),
@@ -944,21 +943,21 @@ describe('defineConfig validation', () => {
   // skips; see the canary in upstream.test.ts
   it('throws on prettier-plugin-organize-imports while sortImports is on or before prettier-plugin-merge', () => {
     const name = 'prettier-plugin-organize-imports'
-    const lead = `${name} replaces the import sorter's parsers, so imports would stay unsorted.`
-    const fix = `Set \`sortImports: false\` to use ${name}`
+    const lead = `\`${name}\` replaces the import sorter's parsers, so imports would stay unsorted.`
+    const fix = `Set \`sortImports: false\` to use \`${name}\``
     expect(build({ options: { plugins: ['a', name] } })).toThrow(
       new TypeError(`${PREFIX}: \`options.plugins[1]\`: ${lead} ${fix}`),
     )
     expect(build({ options: { plugins: [name, 'prettier-plugin-merge'] } })).toThrow(
       new TypeError(
-        `${PREFIX}: \`options.plugins[0]\`: ${lead} ${fix}, without prettier-plugin-merge after it, which keeps it from running`,
+        `${PREFIX}: \`options.plugins[0]\`: ${lead} ${fix}, without \`prettier-plugin-merge\` after it, which keeps it from running`,
       ),
     )
     expect(
       build({ sortImports: false, options: { plugins: [name, 'prettier-plugin-merge'] } }),
     ).toThrow(
       new TypeError(
-        `${PREFIX}: \`options.plugins[0]\`: prettier-plugin-merge, after it, formats with it as a range, which it skips, so imports would stay as they are. Remove prettier-plugin-merge to use ${name}`,
+        `${PREFIX}: \`options.plugins[0]\`: \`prettier-plugin-merge\`, after it, formats with it as a range, which it skips, so imports would stay as they are. Remove \`prettier-plugin-merge\` to use \`${name}\``,
       ),
     )
     expect(
@@ -971,7 +970,7 @@ describe('defineConfig validation', () => {
     const plugins = ['prettier-plugin-jsdoc', 'prettier-plugin-merge']
     expect(build({ options: { plugins } })).not.toThrow()
     expect(build({ options: { plugins: plugins.toReversed() } })).toThrow(
-      `${PREFIX}: \`options.plugins[1]\`: prettier-plugin-jsdoc replaces`,
+      `${PREFIX}: \`options.plugins[1]\`: \`prettier-plugin-jsdoc\` replaces`,
     )
   })
 
@@ -981,7 +980,7 @@ describe('defineConfig validation', () => {
     expect(() =>
       mergeConfigs({ plugins: [wrapper] }, { plugins: ['prettier-plugin-jsdoc'] }),
     ).toThrow(
-      `${PREFIX}: config 2 given to \`mergeConfigs\`: \`plugins[0]\`: prettier-plugin-jsdoc replaces the import sorter`,
+      `${PREFIX}: config 2 given to \`mergeConfigs\`: \`plugins[0]\`: \`prettier-plugin-jsdoc\` replaces the import sorter`,
     )
   })
 
@@ -990,7 +989,7 @@ describe('defineConfig validation', () => {
       mergeConfigs(baseConfig, defineConfig({ root: ROOT, tailwindcss: true, sortImports: false })),
     ).toThrow(
       new TypeError(
-        `${PREFIX}: config 2 given to \`mergeConfigs\`: \`plugins[2]\`: prettier-plugin-tailwindcss can't compose the import sorter's wrapper of config 1, which \`defineConfig\` built without \`tailwindcss\`, so imports would stay unsorted. Turn the Tailwind plugin on with \`tailwindcss\` in the \`defineConfig\` call that sorts imports`,
+        `${PREFIX}: config 2 given to \`mergeConfigs\`: \`plugins[2]\`: \`prettier-plugin-tailwindcss\` can't compose the import sorter's wrapper of config 1, which \`defineConfig\` built without \`tailwindcss\`, so imports would stay unsorted. Turn the Tailwind plugin on with \`tailwindcss\` in the \`defineConfig\` call that sorts imports`,
       ),
     )
   })
@@ -1000,7 +999,7 @@ describe('defineConfig validation', () => {
     const options = { tailwindcss: true, sortImports: false }
     expect(build({ ...options, options: { plugins: ['prettier-plugin-classnames'] } })).toThrow(
       new TypeError(
-        `${PREFIX}: \`options.plugins[0]\`: prettier-plugin-classnames replaces prettier-plugin-tailwindcss's parsers, so classes would stay unsorted. Add prettier-plugin-merge, which runs both`,
+        `${PREFIX}: \`options.plugins[0]\`: \`prettier-plugin-classnames\` replaces \`prettier-plugin-tailwindcss\`'s parsers, so classes would stay unsorted. Add \`prettier-plugin-merge\`, which runs both`,
       ),
     )
     // An override's plugins add to those of `options`
@@ -1019,7 +1018,7 @@ describe('defineConfig validation', () => {
     const options = { options: { plugins: ['prettier-plugin-merge'] } }
     expect(build({ tailwindcss: true, ...options })).toThrow(
       new TypeError(
-        `${PREFIX}: \`options.plugins[0]\`: prettier-plugin-merge fails with the import sorter that prettier-plugin-tailwindcss loads, which has parsers for plugins that may not be installed. Set \`sortImports: false\` to use it`,
+        `${PREFIX}: \`options.plugins[0]\`: \`prettier-plugin-merge\` fails with the import sorter that \`prettier-plugin-tailwindcss\` loads, which has parsers for plugins that may not be installed. Set \`sortImports: false\` to use it`,
       ),
     )
     expect(build({ tailwindcss: true, sortImports: false, ...options })).not.toThrow()
@@ -1078,14 +1077,19 @@ describe('defineConfig validation', () => {
 })
 
 describe('the import sorter wrapper', () => {
-  // The sorter's `ember-template-tag` parser needs prettier-plugin-ember-template-tag, and the
-  // sorter's own optional peer `content-tag` too
+  // The sorter's `oxc` parser needs `@prettier/plugin-oxc`. The Vue and Ember parsers stay out
+  // with their plugins installed
   it.each([
     [
-      ['prettier-plugin-ember-template-tag', 'content-tag'],
-      ['babel', 'ember-template-tag'],
+      [
+        '@prettier/plugin-oxc',
+        'prettier-plugin-ember-template-tag',
+        'content-tag',
+        '@vue/compiler-sfc',
+      ],
+      ['babel', 'oxc'],
     ],
-    [['content-tag'], ['babel']],
+    [['prettier-plugin-ember-template-tag', 'content-tag', '@vue/compiler-sfc'], ['babel']],
   ])('with %j installed, keeps the parsers %j', async (installed, parsers) => {
     const stub = (name: string) => ({
       [`node_modules/${name}/package.json`]: JSON.stringify({ name, main: 'index.cjs' }),
@@ -1096,7 +1100,7 @@ describe('the import sorter wrapper', () => {
       ...stub('@ianvs/prettier-plugin-sort-imports'),
       'node_modules/@ianvs/prettier-plugin-sort-imports/index.cjs': [
         'const parser = (name) => ({ get [name]() { return {} } })',
-        "module.exports = { parsers: { ...parser('babel'), ...parser('ember-template-tag') } }",
+        "module.exports = { parsers: { ...parser('babel'), ...parser('ember-template-tag'), ...parser('oxc'), ...parser('vue') } }",
       ].join('\n'),
       ...Object.fromEntries(installed.flatMap((name) => Object.entries(stub(name)))),
     })

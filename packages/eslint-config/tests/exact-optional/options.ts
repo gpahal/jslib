@@ -87,6 +87,6 @@ export const withListOptions = defineConfig({
 })
 
 export const withoutFormattingRulesUndefined = withoutFormattingRules({
-  files: ['**/*.vue'],
+  files: ['**/*.jsx'],
   rules: undefined,
 })

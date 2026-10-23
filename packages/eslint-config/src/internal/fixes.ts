@@ -807,7 +807,7 @@ function isScriptFile(sourceCode: SourceCode, filename: string): boolean {
   return !MODULE_FILE_REGEX.test(filename) && !sourceCode.ast.body.some(isModuleIndicator)
 }
 
-type TypeServices = {
+export type TypeServices = {
   program: TypeScriptModule.Program
   esTreeNodeToTSNodeMap: {
     get: (
@@ -816,7 +816,7 @@ type TypeServices = {
   }
 }
 
-function isTypeServices(value: unknown): value is TypeServices {
+export function isTypeServices(value: unknown): value is TypeServices {
   if (!isRecord(value)) {
     return false
   }

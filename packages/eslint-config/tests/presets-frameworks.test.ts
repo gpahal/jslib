@@ -612,4 +612,35 @@ describe('confusing browser globals', () => {
       ])
     },
   )
+
+  it.each([
+    ['react', 'react', { react: true, typeAware: false }, 'src/counter.tsx'],
+    [
+      'browser',
+      'browser',
+      { browser: { files: ['src/client/**'] }, typeAware: false },
+      'src/client/app.ts',
+    ],
+  ] as const)(
+    'report the ones `no-deprecated` reports, such as `name`, without type information (%s)',
+    async (_name, fixture, options, file) => {
+      const eslint = await sharedESLint(fixture, options)
+      const text = 'export const title = name\nexport const kind = event?.type\n'
+      expect(await restrictedGlobals(eslint, file, text)).toEqual([
+        expect.stringContaining('Use `globalThis.name`'),
+        expect.stringContaining('Use `globalThis.event`'),
+      ])
+    },
+  )
+
+  it('leave `name` to `no-deprecated` in files with type information', async () => {
+    const eslint = await sharedESLint('browser', { browser: { files: ['src/client/**'] } })
+    const text = 'export const title = name\n'
+    expect(await lintText(eslint, 'src/client/app.ts', text)).toEqual([
+      expect.stringMatching(/^@typescript-eslint\/no-deprecated: /),
+    ])
+    expect(await restrictedGlobals(eslint, 'src/client/app.js', text)).toEqual([
+      expect.stringContaining('Use `globalThis.name`'),
+    ])
+  })
 })

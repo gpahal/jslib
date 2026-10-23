@@ -486,7 +486,10 @@ function createFailures(
   failTo: (verb: 'read' | 'fetch', error: unknown) => Error
 } {
   const fail = (description: string, cause?: unknown): Error =>
-    new Error(formatMessage(PREFIX, [subject], description), { cause })
+    new Error(
+      formatMessage(PREFIX, [subject], description),
+      cause === undefined ? undefined : { cause },
+    )
   return {
     fail,
     // The error of a failure to read or fetch, or the signal's reason once it's aborted, so the
@@ -551,7 +554,7 @@ async function fetchFile(
   let addresses: Array<{ address: string; family: number }>
   try {
     addresses = await untilAborted(
-      dns.lookup(url.hostname, { all: true, verbatim: true }),
+      dns.lookup(url.hostname, { all: true, order: 'verbatim' }),
       fetchSignal,
     )
   } catch (error) {

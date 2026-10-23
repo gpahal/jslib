@@ -1,6 +1,7 @@
 /**
  * Object predicates, copies and the types of copies. Contract: trusted values from the developer's
- * own code, without hostile getters or iterators. The predicates give `false` for a revoked proxy
+ * own code, without hostile getters or iterators. `isRecord` and `isPlainObject` give `false` for a
+ * revoked proxy, which `isObject` counts as an object
  */
 
 import { copyArrayItems, copyItemsInPlace, sliceArray } from '@/internal/array-index'

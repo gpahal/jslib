@@ -399,9 +399,9 @@ export function findDefaultProjectFiles(
  * `allowDefaultProject` that a project includes.
  *
  * A project also includes what its files import. Imports are followed only for `sourceFiles` that
- * no project lists, so a tsconfig that lists only an entry file, as Angular's does, costs a read
- * of that project's files. A candidate that a project includes only through an import stays, and
- * fails with a message that names the fix. Without a file to check, TypeScript isn't loaded
+ * no project lists, so a tsconfig that lists only an entry file costs a read of that project's
+ * files. A candidate that a project includes only through an import stays, and fails with a
+ * message that names the fix. Without a file to check, TypeScript isn't loaded
  */
 export function discoverProjects(
   root: string,

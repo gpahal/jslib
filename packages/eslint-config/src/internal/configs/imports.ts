@@ -37,6 +37,8 @@ export function importsSettings({
       }),
       'import-x/extensions': CODE_EXTNS_WITH_DOT,
       'import-x/external-module-folders': ['node_modules', 'node_modules/@types'],
+      // Both skip `NODE_PATH`, which pnpm's bin shims set to the store's hoisted packages, so a
+      // package the project doesn't depend on would resolve
       'import-x/resolver-next': [
         createTypeScriptImportResolver({
           alwaysTryTypes: true,
@@ -44,9 +46,10 @@ export function importsSettings({
           // The warning is about many projects' cost, which one tsconfig with `references` would
           // avoid, but listing each package's resolves the same `@/*` paths more simply
           noWarnOnMultipleProjects: true,
+          nodePath: false,
         }),
         // The TypeScript resolver doesn't try extensionless imports of `.mjs`, `.cjs`, `.mts` and `.cts`
-        createNodeResolver({ extensions: CODE_EXTNS_WITH_DOT }),
+        createNodeResolver({ extensions: CODE_EXTNS_WITH_DOT, nodePath: false }),
       ],
     },
   }
@@ -159,9 +162,8 @@ export function imports({
         ...DEV_IMPORT_RULES,
       },
     },
-    // Outside a package's `src` folder, where a config file, such as Angular's
-    // `src/app/app.config.ts`, is often app code. Its own config, since the rule's globs can't leave
-    // out a folder
+    // Outside a package's `src` folder, where a config file, such as `src/app/app.config.ts`, is
+    // often app code. Its own config, since the rule's globs can't leave out a folder
     {
       name: 'gpahal/imports/config-files',
       files: CONFIG_FILES,

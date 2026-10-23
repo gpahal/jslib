@@ -11,6 +11,7 @@ import { configFilesExemptions } from '@/internal/configs/config-files'
 import { disableTypeChecked } from '@/internal/configs/disable-type-checked'
 import { ignores, rootSpellingConfigs } from '@/internal/configs/ignores'
 import { javascriptLanguageOptions, linterOptions } from '@/internal/configs/javascript'
+import { jsoncLanguageConfig } from '@/internal/configs/json'
 import {
   resolveTypescriptParserPath,
   withoutTypescriptEslintRules,
@@ -90,8 +91,8 @@ export type {
 export type { GpahalWarningCode } from '@/internal/utils'
 
 /**
- * Copies of `configs` without the rules that eslint-config-prettier turns off, also in their
- * `extends`, for a plugin's preset that `configs` would reject, such as eslint-plugin-vue's. A
+ * Copies of `configs` without the formatting rules that `allowFormattingRules` takes, also in their
+ * `extends`, for a plugin's preset that turns on formatting rules, which `configs` would reject. A
  * string in `extends` stays. `no-unexpected-multiline` stays, as in the presets
  *
  * @throws TypeError when `configs` isn't a config object or an array of them
@@ -389,6 +390,7 @@ function defineConfigWith(options: EslintConfigOptions): Composer {
       const withPlugins = withLibraryReportOnlyScope(await withPresetPlugins(configs, resolved))
       const rooted = withRulesOn([
         ...withPlugins,
+        ...(resolved.isOn.json ? [jsoncLanguageConfig()] : []),
         formattingOffConfig(
           [...resolved.codeFiles, ...CODE_BLOCK_FILES],
           validOptions.allowFormattingRules ?? [],

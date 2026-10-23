@@ -70,7 +70,7 @@ The `*-app` presets leave `allowJs` off, so importing a local `.js` module fails
 
 `base` has every check of [@tsconfig/strictest](https://github.com/tsconfig/bases/blob/main/bases/strictest.json) except `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature`, `noUnusedLocals` and `noUnusedParameters`. `strictest` adds the first two, and leaves unused variables to ESLint.
 
-`noPropertyAccessFromIndexSignature` rejects dotted access to a key that only an index signature declares, with TS4111. create-next-app's starter fails `next build` with it. Use bracket access or declare the keys:
+`noPropertyAccessFromIndexSignature` rejects dotted access to a key that only an index signature declares, with TS4111. A create-next-app starter that uses CSS Modules, as `--no-tailwind` gives, fails `next build` with it. Use bracket access or declare the keys:
 
 - CSS Modules: write `styles['page']`.
 - `import.meta.env`: declare your `VITE_*` keys in a `.d.ts` file.
@@ -325,6 +325,17 @@ TypeScript 6 needs `rootDir` with `outDir` when the sources are in a folder. The
 ```
 
 `tsc -b` then checks the packages in dependency order and skips unchanged ones. `a`'s `package.json` points its `types` into the `outDir`, so TypeScript takes them for the referenced project's output. A bundler still builds the JavaScript.
+
+A package's `rootDir` of `src` rejects its tests with TS6059, so its tests' tsconfig widens `rootDir` to cover `src` and `tests`, as for [a library built by `tsc`](#a-library-built-by-tsc):
+
+```jsonc
+// packages/b/tests/tsconfig.json
+{
+  "extends": ["../tsconfig.json", "@gpahal/tsconfig/library-tests"],
+  "compilerOptions": { "rootDir": ".." },
+  "include": ["**/*"],
+}
+```
 
 ## Reference
 

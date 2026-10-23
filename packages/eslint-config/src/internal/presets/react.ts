@@ -3,7 +3,10 @@ import globals from 'globals'
 
 import { isRecord } from '@gpahal/std/objects'
 
-import { confusingBrowserGlobalsRules } from '@/internal/configs/browser'
+import {
+  confusingBrowserGlobalsRules,
+  untypedConfusingBrowserGlobalsConfig,
+} from '@/internal/configs/browser'
 import { COMMONJS_FILES, CONFIG_FILES, JSX_FILES } from '@/internal/files'
 import {
   intersectFiles,
@@ -89,6 +92,7 @@ export async function react({
   refresh = true,
   nextjsFiles,
   typeAware,
+  untyped,
   compiler = false,
 }: {
   files: FileSpecs
@@ -103,6 +107,7 @@ export async function react({
    */
   nextjsFiles?: FileSpecs | undefined
   typeAware: Required<Scope> | undefined
+  untyped: Scope
   compiler?: boolean | undefined
 }): Promise<Array<TypedConfig>> {
   const [eslintPluginReact, eslintPluginReactHooks, eslintPluginJsxA11y, eslintPluginReactRefresh] =
@@ -117,6 +122,12 @@ export async function react({
           refresh ? interopDefault(import('eslint-plugin-react-refresh')) : undefined,
         ]),
     )
+  const confusingGlobalsIgnores = [
+    ...commonjsIgnores,
+    ...CONFIG_FILES,
+    ...COMMONJS_FILES,
+    ...serverIgnores,
+  ]
   return withSetup('react', [
     // Config and CommonJS files run in Node
     {
@@ -131,9 +142,14 @@ export async function react({
     {
       name: 'gpahal/react/confusing-globals',
       files,
-      ignores: [...commonjsIgnores, ...CONFIG_FILES, ...COMMONJS_FILES, ...serverIgnores],
+      ignores: confusingGlobalsIgnores,
       rules: confusingBrowserGlobalsRules(),
     },
+    untypedConfusingBrowserGlobalsConfig(
+      'gpahal/react/untyped-confusing-globals',
+      { files, ignores: confusingGlobalsIgnores },
+      untyped,
+    ),
     ...named('react', { files }, [eslintPluginReact.configs.recommended]),
     ...(typeAware
       ? [

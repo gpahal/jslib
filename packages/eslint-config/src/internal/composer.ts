@@ -198,7 +198,7 @@ const TYPE_AWARE_NAME_REGEX =
   /\/(?:type-aware(?:[/-]|$)|typecheck$|strict-boolean-expressions$)|-type-checked$/
 
 const FINAL_GUARD_NAME_REGEX =
-  /^gpahal\/(?:formatting\/off|disable-type-checked\/.+|root-spelling(?:\/[^/]+)?)$/
+  /^gpahal\/(?:formatting\/off|json\/jsonc-language|disable-type-checked\/.+|root-spelling(?:\/[^/]+)?)$/
 
 /**
  * Why a name this package can add is missing: removed, its option off, needing type information or
