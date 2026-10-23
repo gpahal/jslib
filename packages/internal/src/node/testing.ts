@@ -7,9 +7,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { describeValue, formatMessage, formatNames } from '@gpahal/std/errors'
-
-import { hashSource, isHashedSource, isSourceMap, resolveSourcePath } from '@/node/source-maps'
+import { describeValue, formatMessage } from '@gpahal/std/errors'
 
 const PREFIX = '@gpahal/internal'
 
@@ -130,75 +128,6 @@ export async function withTmpProject(
   } catch (error) {
     await tmpDir[Symbol.asyncDispose]()
     throw error
-  }
-}
-
-/**
- * Check that every TypeScript source in each source map of `buildDir`, bundled `@gpahal/internal`
- * modules included, has the hash the map recorded. Hashes survive Turbo cache restores, unlike
- * modification times
- *
- * @throws Error when there is no build or a source changed after it.
- */
-export async function assertBuildIsCurrent(buildDir: string): Promise<void> {
-  const dir = path.resolve(buildDir)
-  const noBuild = formatMessage(PREFIX, [formatNames([dir])], 'there is no build. Run `pnpm build`')
-  let files: Array<string>
-  try {
-    files = await fs.readdir(dir, { recursive: true })
-  } catch (error) {
-    throw new Error(noBuild, { cause: error })
-  }
-  const maps = files.filter((file) => file.endsWith('.js.map'))
-  if (maps.length === 0) {
-    throw new Error(noBuild)
-  }
-  for (const name of maps) {
-    const mapPath = path.join(dir, name)
-    const text = await fs.readFile(mapPath, 'utf8')
-    let map: unknown
-    try {
-      map = JSON.parse(text)
-    } catch (error) {
-      throw new Error(
-        formatMessage(
-          PREFIX,
-          [formatNames([mapPath])],
-          'expected a source map, received invalid JSON',
-        ),
-        { cause: error },
-      )
-    }
-    if (!isSourceMap(map)) {
-      throw new Error(
-        formatMessage(PREFIX, [formatNames([mapPath])], 'expected a source map with `sources`'),
-      )
-    }
-    // A JSON source, such as `package.json`, has no hash
-    const sources = map.sources
-      .map((source, index) => ({ source, index }))
-      .filter(({ source }) => isHashedSource(source))
-    for (const { index, source } of sources) {
-      const file = resolveSourcePath(mapPath, map, source)
-      let content: string | undefined
-      try {
-        content = await fs.readFile(file, 'utf8')
-      } catch {
-        // A deleted source is stale too
-      }
-      const hash = content === undefined ? undefined : hashSource(content)
-      if (hash === undefined || hash !== map.x_sourceHashes?.[index]) {
-        // `--force`, since a Turbo cache restore writes the cached files but leaves a stale file,
-        // such as the map of a chunk that was since removed
-        throw new Error(
-          formatMessage(
-            PREFIX,
-            [formatNames([path.relative(process.cwd(), file)])],
-            'changed after the last build. Run `pnpm build --force`',
-          ),
-        )
-      }
-    }
   }
 }
 

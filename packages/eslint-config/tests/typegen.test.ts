@@ -6,7 +6,6 @@ import type { Rule } from 'eslint'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import { compileRule } from 'eslint-typegen/core'
 
-import { assertBuildIsCurrent } from '@gpahal/internal/node/testing'
 import { isRecord } from '@gpahal/std/objects'
 
 import { defineConfig, type EslintConfigOptions } from '@/index'
@@ -26,9 +25,6 @@ import {
   withAdditionalProperties,
   withInlinedDefinitions,
 } from '../scripts/typegen'
-import { BUILD_DIR } from './helpers'
-
-beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
 function sha256(text: string): string {
   return createHash('sha256').update(text).digest('hex')

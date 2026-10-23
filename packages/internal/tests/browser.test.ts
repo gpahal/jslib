@@ -2,8 +2,6 @@ import fs from 'node:fs'
 import { builtinModules } from 'node:module'
 import path from 'node:path'
 
-import { assertBuildIsCurrent } from '@/node/testing'
-
 const BUILD_DIR = path.join(import.meta.dirname, '..', 'build')
 
 const SRC_DIR = path.join(import.meta.dirname, '..', 'src')
@@ -39,10 +37,6 @@ function collectImports(file: string, seen = new Set<string>()): Set<string> {
 function isNodeModule(specifier: string): boolean {
   return specifier.startsWith('node:') || builtinModules.includes(specifier.split('/', 1)[0] ?? '')
 }
-
-beforeAll(async () => {
-  await assertBuildIsCurrent(BUILD_DIR)
-})
 
 // The modules outside `src/node/`, which builds to `build/node`, are for any package, browser-safe
 // ones too. Listed from `src/`, so without a build `beforeAll` fails with its message

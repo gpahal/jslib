@@ -1,6 +1,47 @@
+import { readFileSync } from 'node:fs'
+
 import { configDefaults, defineConfig, type ViteUserConfig } from 'vitest/config'
 
 const resolve: NonNullable<ViteUserConfig['resolve']> = { tsconfigPaths: true }
+
+/**
+ * The canaries, which fail once upstream fixes a bug that a workaround exists for. They run in the
+ * `test-canaries` task, which sets `VITEST_CANARIES=1`, instead of `test`
+ */
+const CANARIES = 'tests/**/*.canary.test.ts'
+
+const { VITEST_CANARIES } = process.env
+
+const isCanaryRun = VITEST_CANARIES === '1'
+
+function isCanary(file: string): boolean {
+  return file.endsWith('.canary.test.ts')
+}
+
+const UTILS_PATH = 'packages/eslint-config/src/internal/utils.ts'
+
+/**
+ * eslint-config's `WARNING_CODES`, read from its source: importing the module would load
+ * `@gpahal/std`'s build, which a package's tests don't wait for, and moving the list to a module
+ * of its own would change eslint-config's declarations
+ *
+ * @throws Error when the source has no `WARNING_CODES` array of codes.
+ */
+function readWarningCodes(): Array<string> {
+  const source = readFileSync(new URL(UTILS_PATH, import.meta.url), 'utf8')
+  const [, list = ''] = /^export const WARNING_CODES = \[([^\]]*)\] as const$/m.exec(source) ?? []
+  const codes = list
+    .matchAll(/'(GPAHAL_\w+)'/g)
+    .map(([, code = '']) => code)
+    .toArray()
+  if (codes.length === 0) {
+    // The repo's error shape, written by hand, since a root config imports no workspace package
+    throw new Error(
+      `jslib: \`vitest.config.ts\`: \`${UTILS_PATH}\`: expected an \`export const WARNING_CODES = [...] as const\` of codes`,
+    )
+  }
+  return codes
+}
 
 const config: ViteUserConfig = defineConfig({
   resolve,
@@ -8,8 +49,8 @@ const config: ViteUserConfig = defineConfig({
     globals: true,
     // Turbo hashes only the files git tracks, so a test in a gitignored folder could fail while
     // turbo replays a cached pass
-    include: ['tests/**/*.test.ts'],
-    exclude: [...configDefaults.exclude, 'tests/tmp/**'],
+    include: [isCanaryRun ? CANARIES : 'tests/**/*.test.ts'],
+    exclude: [...configDefaults.exclude, 'tests/tmp/**', ...(isCanaryRun ? [] : [CANARIES])],
     // Fails on a missing snapshot instead of writing it, so `pnpm check` can't pass by writing
     // files
     update: 'none',
@@ -22,22 +63,8 @@ const config: ViteUserConfig = defineConfig({
     hookTimeout: 120_000,
     // Tests that build configs for fixture projects trigger eslint-config's setup warnings without
     // checking them. This stops only the printing: spies on `process.emitWarning` still see them,
-    // and processes the tests spawn still print them. The codes are its `WARNING_CODES`
-    execArgv: [
-      'GPAHAL_FRAMEWORK_OPTION_UNSET',
-      'GPAHAL_COMMONJS_PACKAGE',
-      'GPAHAL_NO_TSCONFIG',
-      'GPAHAL_FILES_OUTSIDE_TSCONFIG',
-      'GPAHAL_DEFAULT_PROJECT_NODE_TYPES',
-      'GPAHAL_LARGE_DEFAULT_PROJECT',
-      'GPAHAL_ASTRO_TYPES_MISSING',
-      'GPAHAL_ASTRO_JSX_A11Y_MISSING',
-      'GPAHAL_PLAYWRIGHT_FILES_UNMATCHED',
-      'GPAHAL_GITIGNORE_WILDCARDS',
-      'GPAHAL_ROOT_GITIGNORED',
-      'GPAHAL_PEER_NEWER_THAN_RANGE',
-      'GPAHAL_SONARJS_TYPESCRIPT_COPY',
-    ].map((code) => `--disable-warning=${code}`),
+    // and processes the tests spawn still print them
+    execArgv: readWarningCodes().map((code) => `--disable-warning=${code}`),
   },
 })
 
@@ -58,13 +85,15 @@ export function withSharedModules(isolated: Array<string>): ViteUserConfig {
     resolve,
     test: { ...options, name, include, exclude, ...test },
   })
+  // Only the isolated files of this run, the canaries or the others
+  const isolatedFiles = isolated.filter((file) => isCanary(file) === isCanaryRun)
   return {
     ...config,
     test: {
       ...options,
       projects: [
-        project('shared', { isolate: false, exclude: [...exclude, ...isolated] }),
-        project('isolated', { include: isolated }),
+        project('shared', { isolate: false, exclude: [...exclude, ...isolatedFiles] }),
+        ...(isolatedFiles.length > 0 ? [project('isolated', { include: isolatedFiles })] : []),
       ],
     },
   }

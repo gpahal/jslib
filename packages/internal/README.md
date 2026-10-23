@@ -18,13 +18,12 @@ Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.brow
 | `node/paths` | `resolvePathOrFileUrl`, `isRelativePath`, the `PATH_OR_FILE_URL_*` messages | Node |
 | `node/resolve` | `resolvePath`, `isResolvable`, `resolveFromNodeModules`, `resolveFile`, `findInstalledPackage`, `missingPeersError`, `formatPeerSpecifier` | Node |
 | `node/root` | `checkRoot` | Node |
-| `node/source-maps` | `isSourceMap`, `resolveSourcePath`, `isHashedSource`, `hashSource`, `isPublishedFile`, `dropSources` | Node, builds and tests only |
-| `node/testing` | `runNode`, `runNodeOk`, `withTmpProject`, `writeFiles`, `assertBuildIsCurrent`, `countCalls`, `countWork`, `minCpuMs`, `readMarkdownSection`, `readCodeBlocks`, `splitFileNameComment` | Node, tests only |
+| `node/source-maps` | `isSourceMap`, `resolveSourcePath`, `isPublishedFile`, `dropSources` | Node, builds and tests only |
+| `node/testing` | `runNode`, `runNodeOk`, `withTmpProject`, `writeFiles`, `countCalls`, `countWork`, `minCpuMs`, `readMarkdownSection`, `readCodeBlocks`, `splitFileNameComment` | Node, tests only |
 
 The JSDoc gives the details. The rules that span modules:
 
 - `node/resolve`'s functions take the caller's `import.meta.resolve`, as `(specifier) => import.meta.resolve(specifier)`, so a package resolves from itself. `resolveFromNodeModules` and `findInstalledPackage` resolve from a user's file through the `node_modules` folders above it, never `NODE_PATH`, which pnpm sets for package scripts.
-- `assertBuildIsCurrent(buildDir)` checks a build against the SHA-256 source hashes that the root `tsdown.config.ts` records in each source map, which survive Turbo cache restores.
 - Only tests import `node/testing`. The root ESLint config forbids importing it in `packages/*/src`.
 
 ## node/options and node/zod

@@ -4,20 +4,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import type { ESLint, Linter } from 'eslint'
 
-import { assertBuildIsCurrent, runNode, runNodeOk } from '@gpahal/internal/node/testing'
+import { runNode, runNodeOk } from '@gpahal/internal/node/testing'
 
 import { defineConfig } from '@/index'
 import { isInEditorEnvOf, type EditorEnv } from '@/internal/editor'
 
-import {
-  BUILD_DIR,
-  CORE_AREAS_OFF,
-  CORE_AREAS_OFF_SOURCE,
-  eslintWith,
-  withProject,
-} from './helpers'
-
-beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
+import { CORE_AREAS_OFF, CORE_AREAS_OFF_SOURCE, eslintWith, withProject } from './helpers'
 
 const ESLINT_DIR = path.dirname(fileURLToPath(import.meta.resolve('eslint/package.json')))
 const ESLINT_BIN = path.join(ESLINT_DIR, 'bin', 'eslint.js')

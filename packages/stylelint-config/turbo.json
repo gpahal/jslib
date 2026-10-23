@@ -20,6 +20,7 @@
         "tests/setup-recipes.test.ts",
         "$TURBO_ROOT$/README.md",
         "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/packages/eslint-config/src/internal/utils.ts",
         "$TURBO_ROOT$/packages/tsconfig/*.json"
       ]
     }

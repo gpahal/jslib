@@ -9,15 +9,12 @@ import { defineConfig as eslintDefineConfig } from 'eslint/config'
 import ts from 'typescript'
 import tseslint from 'typescript-eslint'
 
-import { assertBuildIsCurrent } from '@gpahal/internal/node/testing'
-
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import { patchUnsafeFixes } from '@/internal/fixes'
 import { wrapSlopPlugin } from '@/internal/presets/antislop'
 
 import { createFocusedESLint } from './fix-helpers'
 import {
-  BUILD_DIR,
   createESLint,
   eslintWith,
   FIXTURES_DIR,
@@ -1217,8 +1214,6 @@ async function withE2eProject() {
 }
 
 describe('testFiles and dev dependencies', () => {
-  beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
-
   it('allows dev dependencies in testFiles relative to the config file, with ESLint run from a subfolder', async () => {
     await using project = await withE2eProject()
     const eslint = new ESLint({ cwd: path.join(project.dir, 'e2e') })

@@ -168,8 +168,8 @@ const collator = new Intl.Collator('en')
 
 /**
  * eslint-typegen's `pluginsToRulesDTS` without the module augmentation, sorting by `collator`.
- * `tests/upstream-workarounds.test.ts` fails once upstream sorts the same in every locale: then use
- * `pluginsToRulesDTS` and remove this fork
+ * `tests/upstream-workarounds.canary.test.ts` fails once upstream sorts the same in every
+ * locale: then use `pluginsToRulesDTS` and remove this fork
  */
 export async function pluginsToRulesDts(plugins: Record<string, ESLint.Plugin>): Promise<string> {
   const rules = Object.entries(plugins)

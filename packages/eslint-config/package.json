@@ -50,6 +50,7 @@
     "lint-check": "eslint . --max-warnings 0",
     "prepublishOnly": "../../scripts/verify-publish-tool.sh",
     "test": "vitest run",
+    "test-canaries": "VITEST_CANARIES=1 vitest run",
     "typecheck": "tsc && tsc -p tests",
     "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
   },

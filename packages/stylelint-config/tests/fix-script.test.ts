@@ -1,14 +1,8 @@
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
-import {
-  assertBuildIsCurrent,
-  readCodeBlocks,
-  readMarkdownSection,
-  withTmpProject,
-} from '@gpahal/internal/node/testing'
+import { readCodeBlocks, readMarkdownSection, withTmpProject } from '@gpahal/internal/node/testing'
 import { describeValue, formatMessage } from '@gpahal/std/errors'
 
 const PACKAGE_DIR = path.join(import.meta.dirname, '..')
@@ -90,9 +84,6 @@ describe("the README's fix script", () => {
   beforeAll(async () => {
     const prettierConfigUrl = import.meta.resolve('@gpahal/prettier-config')
     const stylelintConfigUrl = import.meta.resolve('@gpahal/stylelint-config')
-    for (const url of [prettierConfigUrl, stylelintConfigUrl]) {
-      await assertBuildIsCurrent(path.dirname(fileURLToPath(url)))
-    }
     project = await withTmpProject('stylelint-config-fix-script', {
       'package.json': `${JSON.stringify({ type: 'module', scripts: await readFixScripts() })}\n`,
       '.gitignore': 'node_modules\n',

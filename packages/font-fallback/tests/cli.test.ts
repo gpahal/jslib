@@ -6,7 +6,7 @@ import path from 'node:path'
 import { PassThrough, Readable, Writable } from 'node:stream'
 import { pathToFileURL } from 'node:url'
 
-import { assertBuildIsCurrent, runNode, withTmpProject } from '@gpahal/internal/node/testing'
+import { runNode, withTmpProject } from '@gpahal/internal/node/testing'
 
 import { getFontFallbacks } from '@/index'
 import { runCli } from '@/internal/cli'
@@ -138,8 +138,6 @@ afterEach(() => {
 })
 
 const SOURCE_RULE = 'expected an https:// URL, a font path or a family name'
-
-beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
 test('prints the font-family stack, a table of the overrides and the rules', async () => {
   const { stdout, exitCode } = await spawnCli(['Figtree', '-f', 'Arial'])

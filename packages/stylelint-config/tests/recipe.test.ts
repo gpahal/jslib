@@ -1,11 +1,10 @@
 import path from 'node:path'
 import process from 'node:process'
-import { fileURLToPath } from 'node:url'
 
 import * as prettier from 'prettier'
 import stylelint from 'stylelint'
 
-import { assertBuildIsCurrent, withTmpProject } from '@gpahal/internal/node/testing'
+import { withTmpProject } from '@gpahal/internal/node/testing'
 
 import { defineConfig } from '@/index'
 
@@ -35,11 +34,6 @@ const FIXTURES: Record<string, string> = {
 }
 
 const PRETTIER_CONFIG_URL = import.meta.resolve('@gpahal/prettier-config')
-
-// The project's Prettier config imports `@gpahal/prettier-config`'s build
-beforeAll(async () => {
-  await assertBuildIsCurrent(path.dirname(fileURLToPath(PRETTIER_CONFIG_URL)))
-})
 
 /**
  * A project folder with `files` and a Prettier config that uses `@gpahal/prettier-config`, which

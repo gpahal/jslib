@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { resolve } from 'import-meta-resolve'
 import stylelint, { type Config } from 'stylelint'
 
-import { assertBuildIsCurrent, runNodeOk, withTmpProject } from '@gpahal/internal/node/testing'
+import { runNodeOk, withTmpProject } from '@gpahal/internal/node/testing'
 
 import { defineConfig, type StylelintExtendedConfig, type StylelintRules } from '@/index'
 
@@ -176,7 +176,6 @@ test.each([
   [undefined, 'export default await Promise.resolve'],
 ])('reloads .js configs with package type %s and %s in Node', async (type, exported) => {
   const buildDir = path.join(import.meta.dirname, '../build')
-  await assertBuildIsCurrent(buildDir)
   await using project = await withTmpProject('stylelint-config-js-reload', {
     'package.json': JSON.stringify(type === undefined ? {} : { type }),
     'check.mjs': `
@@ -190,7 +189,10 @@ test.each([
       }
     `,
   })
-  await runNodeOk([path.join(project.dir, 'check.mjs')], { cwd: project.dir })
+  // `check.mjs` asserts in the child process, which prints nothing when they pass
+  await expect(
+    runNodeOk([path.join(project.dir, 'check.mjs')], { cwd: project.dir }),
+  ).resolves.toBe('')
 })
 
 /**

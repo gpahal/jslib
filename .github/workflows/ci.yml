@@ -40,6 +40,8 @@ jobs:
             tasks: lint-check lint-check-root fmt-check knip
           - name: test
             tasks: test
+          - name: test-canaries
+            tasks: test-canaries
           - name: test-recipes
             tasks: test-recipes
     steps:
@@ -58,7 +60,7 @@ jobs:
         name: Check that the jobs run the tasks of `pnpm check`
         run: |
           check="$(node -p "require('./package.json').scripts.check.split(' ').filter((word) => /^[a-z]/.test(word)).slice(2).sort().join(' ')")"
-          jobs="build fmt-check knip lint-check lint-check-root test test-recipes typecheck typecheck-release typecheck-root"
+          jobs="build fmt-check knip lint-check lint-check-root test test-canaries test-recipes typecheck typecheck-release typecheck-root"
           if [ "$check" != "$jobs" ]; then
             echo "pnpm check runs '$check', but the CI jobs run '$jobs'. Update the matrix in ci.yml"
             exit 1

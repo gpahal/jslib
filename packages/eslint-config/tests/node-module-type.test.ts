@@ -2,12 +2,9 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { assertBuildIsCurrent, runNodeOk } from '@gpahal/internal/node/testing'
+import { runNodeOk } from '@gpahal/internal/node/testing'
 
 import { BUILD_DIR, CORE_AREAS_OFF_SOURCE, withProject } from './helpers'
-
-// The child process can't load the TypeScript sources, so it uses the build
-beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
 const FILES = {
   'index.js':

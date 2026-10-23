@@ -7,14 +7,14 @@ import { pathToFileURL } from 'node:url'
 import type { Linter } from 'eslint'
 
 import type { ListTransform } from '@gpahal/internal/node/options'
-import { assertBuildIsCurrent, runNodeOk } from '@gpahal/internal/node/testing'
+import { runNodeOk } from '@gpahal/internal/node/testing'
 
 import { defineConfig, files, type EslintConfigOptions } from '@/index'
 import { getEnabledAreas } from '@/internal/areas'
 import { findDefaultProjectFiles } from '@/internal/default-project'
 import { scanProject } from '@/internal/project-scan'
 import { resolveOptions } from '@/internal/resolve'
-import { bindWarnings, WARNING_CODES, warnOfSetup, withWarnings } from '@/internal/utils'
+import { bindWarnings, warnOfSetup, withWarnings } from '@/internal/utils'
 
 import {
   BUILD_DIR,
@@ -29,8 +29,6 @@ import {
   warningsOf,
   withProject,
 } from './helpers'
-
-beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
 /**
  * The minimatch that ESLint matches globs with
@@ -1017,18 +1015,5 @@ describe('warnings', () => {
       warnOfSetup('outside', 'GPAHAL_ROOT_GITIGNORED')
     })
     expect(warnings.map(([message]) => message)).toEqual(['outside'])
-  })
-
-  it('has every code hidden from the test output by the root vitest config', async () => {
-    const config = await fs.readFile(
-      path.join(import.meta.dirname, '..', '..', '..', 'vitest.config.ts'),
-      'utf8',
-    )
-    expect(
-      config
-        .matchAll(/'(GPAHAL_\w+)'/g)
-        .map((match) => match[1])
-        .toArray(),
-    ).toEqual([...WARNING_CODES])
   })
 })

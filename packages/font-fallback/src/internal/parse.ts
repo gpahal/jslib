@@ -439,7 +439,7 @@ const MAXP_READ_LENGTH = 32
  * 0.5 table too, so one that ends less than 32 bytes before the end of the file fails to decode.
  * Copies it with zeros after its end to cover the overread, leaving the table's declared length,
  * and so what's validated, unchanged; a table of another length isn't padded, so a truncated one
- * still fails. `sfnt` has a checked directory. tests/upstream.test.ts tracks the overread
+ * still fails. `sfnt` has a checked directory. tests/upstream.canary.test.ts tracks the overread
  */
 function padShortMaxp(sfnt: Buffer): Buffer {
   const numTables = sfnt.readUInt16BE(4)
