@@ -560,8 +560,9 @@ export type EslintConfigOptions = {
   storybook?: boolean | StorybookOptions | undefined
   /**
    * Browser code. Node's globals and built-in modules are reported, except as the operand of
-   * `typeof`, `process.env`, which bundlers replace, and built-ins whose browser port
-   * `package.json` declares. A file that `server` also matches is server code. Off by default
+   * `typeof` and `process.env`, which bundlers replace. A built-in's name is reported even when
+   * `package.json` declares a browser port of it. A file that `server` also matches is server
+   * code. Off by default
    */
   browser?: CodeFilesOptions<'browser'> | false | undefined
   /**

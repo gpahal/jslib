@@ -10,6 +10,7 @@ Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.brow
 | --- | --- | --- |
 | `comments` | `getBlockCommentLines`, `hasMixedStarPrefixes`, `hasTextStar`, `hasUnusualLineTerminator`, `isStarredCommentLine` | Anywhere |
 | `globs` | `expandBraces`, `scanBraces` | Anywhere |
+| `lists` | `joinList`, `formatSomeNames` | Anywhere |
 | `node/options` | `optionsObject`, `required`, `deferred`, `booleanOr`, `listOption`, `resolveListOption`, `resolveSubOptions`, `isStringOrStrings` | Node |
 | `node/zod` | `assertValid`, `strictObject`, `plainObject`, `typeCheck`, `stringOrStrings`, `expectedError`, `loadZod` | Node |
 | `node/cli` | `readPackageVersion`, `formatCliError`, `getCauses` | Node |

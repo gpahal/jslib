@@ -499,6 +499,21 @@ const GUARD_RAILS: Array<[string, () => unknown]> = [
     build({ configs: [{ files: ['docs/*.{md,ts}'], languageOptions: { math: true } }] }),
   ],
   [
+    'an `.override()` that changes `languageOptions.math` of a Markdown config',
+    () =>
+      defineConfig({ root, markdown: true }).override('gpahal/markdown/rules', {
+        languageOptions: { math: true },
+      }),
+  ],
+  [
+    'an `.onResolved()` callback that changes `languageOptions.math` of a Markdown config in place',
+    () =>
+      defineConfig({ root, markdown: true }).onResolved((configs) => {
+        const config = configs.find((found) => found.name === 'gpahal/markdown/rules')
+        Reflect.set(config?.languageOptions ?? {}, 'math', true)
+      }),
+  ],
+  [
     'the project service in a config of yours',
     build({
       configs: [

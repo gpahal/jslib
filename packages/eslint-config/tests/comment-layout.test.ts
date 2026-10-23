@@ -263,10 +263,25 @@ tester.run('comment-layout', GPAHAL_PLUGIN.rules['comment-layout'], {
         'public API: the exports',
         'parse(): returns the tree',
         'x = 0 means none',
+        'see: https://example.com/spec',
       ].map((note) => [
         code('interface I {', `  // ${note}`, '  a: string', '}'),
         code('interface I {', '  /**', `   * ${note}`, '   */', '  a: string', '}'),
       ]),
+      [
+        code(
+          '// Parses the header',
+          '// see: https://example.com/spec',
+          'export function parse() {}',
+        ),
+        code(
+          '/**',
+          ' * Parses the header',
+          ' * see: https://example.com/spec',
+          ' */',
+          'export function parse() {}',
+        ),
+      ],
       [
         code('interface I {', '  // See', '  // https://example.com', '  a: string', '}'),
         code(

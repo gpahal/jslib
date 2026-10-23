@@ -7,6 +7,7 @@ import type { Rule } from 'eslint'
 import eslintPluginSlop from 'eslint-plugin-slop'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import { defineConfig as eslintDefineConfig } from 'eslint/config'
+import ts from 'typescript'
 import tseslint from 'typescript-eslint'
 
 import { defineConfig } from '@/index'
@@ -433,6 +434,33 @@ describe('the patched rules of shared plugins', () => {
           'Array.from(s).map((x) => x)\n',
           config({ 'unicorn/prefer-spread': 'error' }),
           'x.js',
+        )
+        .map((message) => message.ruleId),
+    ).toEqual(['unicorn/prefer-spread'])
+    // With type information, where the presets' patch drops the report
+    const filePath = path.join(FIXTURES_DIR, 'rules', 'src', 'copy.ts')
+    const text =
+      'export function copy(list: ArrayLike<number>): Array<number> {\n  return Array.from(list)\n}\n'
+    const host = ts.createCompilerHost({ strict: true, noEmit: true, types: [] })
+    const getSourceFile = host.getSourceFile.bind(host)
+    host.getSourceFile = (name, ...rest) =>
+      path.resolve(name) === filePath
+        ? ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true)
+        : getSourceFile(name, ...rest)
+    const program = ts.createProgram({
+      rootNames: [filePath],
+      options: { strict: true, noEmit: true, types: [] },
+      host,
+    })
+    expect(
+      linter
+        .verify(
+          text,
+          {
+            ...config({ 'unicorn/prefer-spread': 'error' }),
+            languageOptions: { parser: tseslint.parser, parserOptions: { programs: [program] } },
+          },
+          filePath,
         )
         .map((message) => message.ruleId),
     ).toEqual(['unicorn/prefer-spread'])

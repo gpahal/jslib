@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { formatSomeNames, joinList } from '@gpahal/internal/lists'
 import { resolveListOption, resolveSubOptions } from '@gpahal/internal/node/options'
 import type { ListOption } from '@gpahal/internal/node/options'
 import { toArray, unique, uniqueBy } from '@gpahal/std/arrays'
@@ -57,7 +58,6 @@ import {
 } from '@/internal/globs'
 import type { FileSpecs, Scope } from '@/internal/globs'
 import { usesReactCompiler, warnOfOptionHints, warnOfPlaywrightTestDir } from '@/internal/hints'
-import { formatSomeNames, joinList } from '@/internal/lists'
 import { readProjectManifests } from '@/internal/manifests'
 import { GITIGNORE_CONFIG_NAMES } from '@/internal/names'
 import type { AreaName } from '@/internal/names'

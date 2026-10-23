@@ -4,6 +4,7 @@ import path from 'node:path'
 
 import type { ConfigObject, includeIgnoreFile as IncludeIgnoreFile } from 'eslint/config'
 
+import { joinList } from '@gpahal/internal/lists'
 import { resolveSubOptions } from '@gpahal/internal/node/options'
 import { formatNames, getErrorReason } from '@gpahal/std/errors'
 
@@ -23,7 +24,6 @@ import {
   readIgnoreCase,
 } from '@/internal/git'
 import { createGlobMatcher, isInside, posixRelative, rebaseGlob } from '@/internal/globs'
-import { joinList } from '@/internal/lists'
 import { GITIGNORE_CONFIG_NAMES } from '@/internal/names'
 import type { EslintConfigOptions } from '@/internal/types'
 import { fail, formatErrorMessage, warnOfSetupOnce } from '@/internal/utils'

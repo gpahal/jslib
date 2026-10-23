@@ -285,10 +285,11 @@ const UNION_OR_ENUM_MEMBER_LINE = /^(?:\|(?!.*\|$)\s*\S|[A-Z][\w$]*(?:\s*=\s*\S.
 
 /**
  * A class or type member without a semicolon, as `private b = 2`, `b?: number` or
- * `async load(id: string): Promise<void>`. Not a URL, as `https://example.com`
+ * `async load(id: string): Promise<void>`. Not a URL, as `https://example.com`, or a label
+ * before one, as `see: https://example.com`
  */
 const MEMBER_LINE =
-  /^(?:(?:private|protected|public|readonly|static|abstract|declare|override|async|get|set|accessor)\s+)*#?[\w$]+[?!]?(?:\s*[:=](?!\/\/)\s*\S|\(.*\)(?:\s*:\s*\S.*)?$)/
+  /^(?:(?:private|protected|public|readonly|static|abstract|declare|override|async|get|set|accessor)\s+)*#?[\w$]+[?!]?(?:\s*[:=](?!\/\/)\s*(?![a-z][\w+.-]*:\/\/)\S|\(.*\)(?:\s*:\s*\S.*)?$)/
 
 /**
  * Prose that {@link MEMBER_LINE} matches: a capitalized label, as `Note: x` or `Example: z`, or two

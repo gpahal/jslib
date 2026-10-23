@@ -10,6 +10,7 @@
   "exports": {
     "./comments": "./build/comments.js",
     "./globs": "./build/globs.js",
+    "./lists": "./build/lists.js",
     "./node/cli": "./build/node/cli.js",
     "./node/json": "./build/node/json.js",
     "./node/options": "./build/node/options.js",

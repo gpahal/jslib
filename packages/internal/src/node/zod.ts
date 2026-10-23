@@ -16,6 +16,8 @@ import { once } from '@gpahal/std/functions'
 import { isPlainObject } from '@gpahal/std/objects'
 import { escapeControls, shorten } from '@gpahal/std/strings'
 
+import { joinList } from '@/lists'
+
 /**
  * Zod Mini, loaded on the first call rather than on import, so a package whose import builds no
  * schema, such as a preset's default config, doesn't pay Zod's load time. Build schemas only inside
@@ -324,12 +326,6 @@ function getTypeName(type: string): string {
   return (Object.hasOwn(TYPE_NAMES, type) ? TYPE_NAMES[type] : undefined) ?? codeName(type)
 }
 
-function joinOr(items: ReadonlyArray<string>): string {
-  return items.length < 2
-    ? items.join('')
-    : `${items.slice(0, -1).join(', ')} or ${items.at(-1) ?? ''}`
-}
-
 /**
  * Zod's issues in the repo's error shape, for the schemas without their own error. Other issues,
  * such as `invalid_format`, keep Zod's English message, lowercased, and a format issue names the
@@ -337,7 +333,7 @@ function joinOr(items: ReadonlyArray<string>): string {
  */
 const ERROR_MAP: z.core.$ZodErrorMap = (issue) => {
   if (issue.code === 'invalid_type' || issue.code === 'invalid_value') {
-    return `expected ${joinOr(getExpected(issue))}, received ${describeValue(issue.input)}`
+    return `expected ${joinList(getExpected(issue), 'or')}, received ${describeValue(issue.input)}`
   }
   if (issue.code === 'invalid_union') {
     return describeUnion(issue)
@@ -378,7 +374,7 @@ function getExpected(issue: z.core.$ZodRawIssue | z.core.$ZodIssue): Array<strin
 function describeUnion(issue: z.core.$ZodRawIssue<z.core.$ZodIssueInvalidUnion>): string {
   const received = describeValue(issue.input)
   const expected = [...new Set(getExpected(issue))]
-  return `expected ${expected.length === 0 ? 'a valid value' : joinOr(expected)}, received ${received}`
+  return `expected ${expected.length === 0 ? 'a valid value' : joinList(expected, 'or')}, received ${received}`
 }
 
 /**

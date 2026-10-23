@@ -45,8 +45,8 @@ export type KindLanguage = Pick<LanguageSource, 'kind' | 'language'>
 
 /**
  * Names of every kind, which a segment that matches them all, such as `**` or `*`, matches. A
- * segment that matches every one but not every name, such as `!(zzz)`, counts too, which keeps the
- * entry out of scoping, as before the last-segment rule
+ * folder glob whose last segment matches them all, even one that misses some names, such as
+ * `!(zzz)`, gives no name pattern, so its entry stays out of scoping
  */
 const ANY_NAME_PROBES: ReadonlyArray<string> = ['a', '.a', 'a.ts', 'A-b_1.d.ts', 'a b(1).json']
 

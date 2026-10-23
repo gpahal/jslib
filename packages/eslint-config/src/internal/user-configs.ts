@@ -5,6 +5,7 @@ import type { ESLint, Linter } from 'eslint'
 import { defineConfig } from 'eslint/config'
 
 import { expandBraces } from '@gpahal/internal/globs'
+import { joinList } from '@gpahal/internal/lists'
 import { toArray } from '@gpahal/std/arrays'
 import { describeValue, formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
 import { clonePlain, isPlainObject, isRecord } from '@gpahal/std/objects'
@@ -31,7 +32,6 @@ import {
   unescapeGlob,
   withoutLeadingDotSlash,
 } from '@/internal/globs'
-import { joinList } from '@/internal/lists'
 import { AREA_RULE_PREFIXES, PLUGIN_AREAS } from '@/internal/names'
 import type { AreaName } from '@/internal/names'
 import {

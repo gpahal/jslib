@@ -1,12 +1,19 @@
 /**
  * Lists in messages, joined as `formatNames` from `@gpahal/std/errors` joins them: "a, b and c",
- * without a comma before the conjunction
+ * without a comma before the conjunction. Contract: trusted strings from the packages' own code
  */
 
 import { formatNames } from '@gpahal/std/errors'
 
 /**
- * The items as they are, as in "a, b or c". One item is itself, and none is `''`
+ * Join the items as they are, as in "a, b or c". One item is itself, and none is `''`.
+ *
+ * @example
+ * ```ts
+ * import { joinList } from '@gpahal/internal/lists'
+ *
+ * joinList(['a', 'b', 'c'], 'or') // 'a, b or c'
+ * ```
  */
 export function joinList(items: ReadonlyArray<string>, conjunction: 'and' | 'or'): string {
   if (items.length < 2) {
@@ -16,7 +23,15 @@ export function joinList(items: ReadonlyArray<string>, conjunction: 'and' | 'or'
 }
 
 /**
- * The first `max` names quoted, as in "`a`, `b` and 3 more", or all of them, as in "`a` and `b`"
+ * Format the first `max` names quoted, as in "`a`, `b` and 3 more", or all of them, as in "`a` and
+ * `b`".
+ *
+ * @example
+ * ```ts
+ * import { formatSomeNames } from '@gpahal/internal/lists'
+ *
+ * formatSomeNames(['a', 'b', 'c'], 2) // '`a`, `b` and 1 more'
+ * ```
  */
 export function formatSomeNames(names: ReadonlyArray<string>, max: number): string {
   return names.length > max
