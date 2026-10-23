@@ -1,6 +1,0 @@
----
-// `Astro.glob` returns a promise of modules, where `fetchContent` returned their front matter
-const posts = Astro.fetchContent('../posts/*.md')
----
-
-<ul>{posts.map((post) => <li>{post.title}</li>)}</ul>

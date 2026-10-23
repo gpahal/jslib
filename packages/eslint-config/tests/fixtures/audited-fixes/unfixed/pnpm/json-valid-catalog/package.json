@@ -1,7 +1,0 @@
-{
-  "name": "valid-catalog",
-  "private": true,
-  "dependencies": {
-    "react": "catalog:react19"
-  }
-}

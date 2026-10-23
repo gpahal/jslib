@@ -8,7 +8,6 @@ TypeScript libraries and config presets that I use in my projects, published to 
   - [Options the config packages share](#options-the-config-packages-share)
 - [Setup recipes](#setup-recipes)
   - [A minimal project](#a-minimal-project)
-  - [A Node library](#a-node-library)
   - [A pnpm monorepo](#a-pnpm-monorepo)
   - [Vite with React](#vite-with-react)
   - [Next.js with Tailwind CSS](#nextjs-with-tailwind-css)
@@ -139,100 +138,17 @@ export default defineConfig({ root: import.meta.dirname })
 }
 ```
 
-The tsconfig includes the root config files, such as `vitest.config.ts`, so `tsc` checks them too. ESLint's `node` preset stays off; turn it on with `node: true` when Node runs the code, as in [A Node library](#a-node-library).
+The tsconfig includes the root config files, such as `vitest.config.ts`, so `tsc` checks them too. ESLint's `node` preset stays off; turn it on with `node: true` when Node runs the code, or limit it to some files with `scope`, as in [A pnpm monorepo](#a-pnpm-monorepo).
 
 The static configs take no options, and each tool merges your settings over them its own way, as the last rows of [Lists and merging][] say. Switch to the package's `defineConfig` for options with paths, such as a Tailwind entry stylesheet or Stylelint's reference files, and for the Astro and Tailwind integrations. ESLint has no static config, since it needs `root`.
 
-### A Node library
-
-A TypeScript library that runs in Node, bundled by tsdown. It has no styles, so it leaves out Stylelint:
-
-```sh
-pnpm add -D @gpahal/eslint-config @gpahal/prettier-config @gpahal/tsconfig \
-  eslint prettier typescript@~6.0.3 @types/node@24 tsdown
-```
-
-```yaml
-# pnpm-workspace.yaml
-allowBuilds:
-  unrs-resolver: false
-```
-
-```json
-// package.json
-{
-  "name": "my-library",
-  "version": "0.1.0",
-  "description": "Sums numbers",
-  "license": "MIT",
-  "author": "Your Name <you@example.com>",
-  "repository": { "type": "git", "url": "git+https://github.com/you/my-library.git" },
-  "type": "module",
-  "sideEffects": false,
-  "exports": { ".": "./dist/index.mjs", "./package.json": "./package.json" },
-  "files": ["dist"],
-  "engines": { "node": ">=24.22.0" },
-  "prettier": "@gpahal/prettier-config",
-  "scripts": {
-    "build": "tsdown",
-    "fix": "pnpm fix:eslint; e=$?; pnpm fix:prettier; p=$?; exit $((e || p))",
-    "check": "pnpm check:eslint && prettier --check . && pnpm check:types",
-    "check:types": "tsc --noEmit"
-  }
-}
-```
-
-```text
-# .gitignore
-node_modules
-dist
-*.tsbuildinfo
-```
-
-```js
-// eslint.config.mjs
-import { defineConfig } from '@gpahal/eslint-config'
-
-export default defineConfig({
-  root: import.meta.dirname,
-  node: true,
-  typescript: { library: true },
-})
-```
-
-```json
-// tsconfig.json
-{
-  "extends": [
-    "@gpahal/tsconfig/base",
-    "@gpahal/tsconfig/node",
-    "@gpahal/tsconfig/library",
-    "@gpahal/tsconfig/erasable"
-  ],
-  "include": ["src", "*.config.ts"]
-}
-```
-
-```ts
-// tsdown.config.ts
-import { defineConfig, type UserConfig } from 'tsdown'
-
-const config: UserConfig = defineConfig({ entry: ['src/index.ts'] })
-
-export default config
-```
-
-Its `fix` and `check` scripts replace those of [Running the fixers][], without Stylelint's steps. A package without `"private": true` gets eslint-plugin-package-json's publishing checks, which require `description`, `license`, `author`, `repository` and `sideEffects`.
-
-`node: true` checks the Node APIs the code uses against `engines.node`, and `typescript.library` reports exports without declared types. The tsconfig's `library` turns on `isolatedDeclarations`, which needs the declared type of `tsdown.config.ts`'s default export, and `erasable` rejects syntax that Node's type stripping can't erase, such as enums. Install the `@types/node` of the Node version that `engines` names. [tsconfig's library recipes](packages/tsconfig/README.md#a-library-built-by-a-bundler) add tests and other hosts.
-
 ### A pnpm monorepo
 
-One ESLint config at the workspace root lints every package, as eslint-config's [Set up a monorepo](packages/eslint-config/README.md#set-up-a-monorepo) explains. Here `packages/core` is a library without Node's APIs, and `packages/cli` a Node command line tool. With npm, leave out `-w`, and list the packages in `package.json`'s `workspaces` instead of `pnpm-workspace.yaml`:
+One ESLint config at the workspace root lints every package, as eslint-config's [Set up a monorepo](packages/eslint-config/README.md#set-up-a-monorepo) explains. Here `packages/core` is a published library without Node's APIs, bundled by tsdown, and `packages/cli` a Node command line tool. With npm, leave out `-w`, and list the packages in `package.json`'s `workspaces` instead of `pnpm-workspace.yaml`:
 
 ```sh
 pnpm add -D -w @gpahal/eslint-config @gpahal/prettier-config @gpahal/stylelint-config @gpahal/tsconfig \
-  eslint prettier stylelint typescript@~6.0.3 @types/node@24
+  eslint prettier stylelint typescript@~6.0.3 @types/node@24 tsdown
 ```
 
 ```yaml
@@ -272,8 +188,9 @@ import { defineConfig } from '@gpahal/eslint-config'
 export default defineConfig({
   root: import.meta.dirname,
   node: { scope: ['packages/cli/**'] },
+  typescript: { library: true },
   configs: [{ files: ['packages/cli/**'], rules: { 'no-console': 'off' } }],
-})
+}).override('gpahal/typescript/library', { files: ['packages/core/src/**/*.ts'] })
 ```
 
 ```json
@@ -299,21 +216,52 @@ export default defineConfig({
 
 ```json
 // packages/core/package.json
-{ "name": "@acme/core", "version": "0.0.0", "private": true, "type": "module" }
+{
+  "name": "@acme/core",
+  "version": "0.1.0",
+  "description": "Sums numbers",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/you/acme.git",
+    "directory": "packages/core"
+  },
+  "license": "MIT",
+  "author": "Your Name <you@example.com>",
+  "sideEffects": false,
+  "type": "module",
+  "exports": { ".": "./dist/index.mjs", "./package.json": "./package.json" },
+  "files": ["dist"],
+  "scripts": { "build": "tsdown" }
+}
 ```
 
 ```json
 // packages/core/tsconfig.json
 {
-  "extends": "@gpahal/tsconfig/base",
+  "extends": ["@gpahal/tsconfig/base", "@gpahal/tsconfig/library", "@gpahal/tsconfig/erasable"],
   "compilerOptions": { "incremental": true },
-  "include": ["src"]
+  "include": ["src", "tsdown.config.ts"]
 }
+```
+
+```ts
+// packages/core/tsdown.config.ts
+import type { UserConfig } from 'tsdown'
+
+const config: UserConfig = { entry: ['src/index.ts'] }
+
+export default config
 ```
 
 ```json
 // packages/cli/package.json
-{ "name": "@acme/cli", "version": "0.0.0", "private": true, "type": "module" }
+{
+  "name": "@acme/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24.22.0" }
+}
 ```
 
 ```json
@@ -325,7 +273,9 @@ export default defineConfig({
 }
 ```
 
-The root `tsconfig.json` is a solution: `"files": []` keeps it from checking files itself, and `tsc -b`, ESLint and editors follow its `references`. `tsconfig.node.json` types the config files with Node's types, and only `packages/cli` gets Node's types and eslint-plugin-n's rules. For packages that import each other, make them composite projects, as [tsconfig's monorepo recipe](packages/tsconfig/README.md#a-monorepo-of-composite-projects) shows.
+The root `tsconfig.json` is a solution: `"files": []` keeps it from checking files itself, and `tsc -b`, ESLint and editors follow its `references`. `tsconfig.node.json` types the config files with Node's types, and only `packages/cli` gets Node's types and eslint-plugin-n's rules, which check the Node APIs it uses against its `engines.node`. Install the `@types/node` of that Node version. For packages that import each other, make them composite projects, as [tsconfig's monorepo recipe](packages/tsconfig/README.md#a-monorepo-of-composite-projects) shows.
+
+Without `"private": true`, `packages/core/package.json` gets eslint-plugin-package-json's publishing checks, which require `description`, `license`, `author`, `repository` and `sideEffects`. `typescript.library` reports exports without declared types, and the `.override()` limits it to core's sources. Core's tsconfig adds `library`, whose `isolatedDeclarations` needs the declared type of `tsdown.config.ts`'s default export, and `erasable`, which rejects syntax that Node's type stripping can't erase, such as enums. The config imports only tsdown's types, since `import-x/no-extraneous-dependencies` reads core's `package.json`, which doesn't list the root's tsdown. [tsconfig's library recipes](packages/tsconfig/README.md#a-library-built-by-a-bundler) add tests and other hosts.
 
 ### Vite with React
 
@@ -882,7 +832,7 @@ pnpm build
 pnpm check
 ```
 
-Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate. [CI](.github/workflows/ci.yml) runs the same tasks split across parallel jobs, with eslint-config's tests in Vitest shards, and `pnpm audit --prod`, on Linux with read-only access and no secrets; a `check` job passes when they all do. `main` takes only squash-merged pull requests with signed commits and a passing `check`. A PR doesn't have to be up to date with `main`, but on a push to `main`, CI skips the checks only when a passing run on the merged PR's head tested the same files, which requires the PR to contain the latest `main`; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
+Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate. [CI](.github/workflows/ci.yml) runs the same tasks in four parallel jobs, typecheck, lint, test and test-recipes, and `pnpm audit --prod`, on Linux with read-only access and no secrets; a `check` job passes when they all do. `main` takes only squash-merged pull requests with signed commits and a passing `check`. A PR doesn't have to be up to date with `main`, but on a push to `main`, CI skips the checks only when a passing run on the merged PR's head tested the same files, which requires the PR to contain the latest `main`; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
 
 ## Releasing
 

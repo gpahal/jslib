@@ -1,8 +1,0 @@
----
-// renaming `open` renames the shorthand attribute `{open}`, which passes the prop `isOpen`
-/* eslint unicorn/consistent-boolean-name: "error" */
-import Panel from './panel.astro'
-const open = Astro.props.count > 0
----
-
-<Panel {open} />

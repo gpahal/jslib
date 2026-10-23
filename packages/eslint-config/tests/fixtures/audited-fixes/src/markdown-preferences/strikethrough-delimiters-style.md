@@ -1,3 +1,0 @@
-# Changes
-
-The ~old~ value.

@@ -1,6 +1,0 @@
-{
-  "name": "relative-target",
-  "private": true,
-  "type": "module",
-  "exports": "./index.js"
-}
