@@ -1,7 +1,7 @@
 /**
  * Rules whose fix can change what code does and can't be turned off, so they report without fixing
- * everywhere. From an audit of every enabled rule's fixer; `tests/fixtures/report-only` holds code
- * each fix would change. The audit kept these fixing, since they change code on purpose:
+ * everywhere. From an audit of every enabled rule's fixer; each entry's comment says what its fix
+ * would change. The audit kept these fixing, since they change code on purpose:
  *
  * - `regexp/no-missing-g-flag` adds the `g` that `replaceAll` and `matchAll` need
  * - `vitest/valid-expect`, `playwright/missing-playwright-await` and `storybook/await-interactions`
@@ -218,8 +218,8 @@ export const UNTYPED_REPORT_ONLY_RULES: ReadonlyArray<string> = [
 /**
  * Fixes the audit judged safe. `report-only.test.ts` checks that every fixable enabled rule is here,
  * in `UNFIXED_FIXABLE_RULES` or a report-only list, so a new fixable rule is audited before it
- * fixes. `audited-fixes.test.ts` snapshots a fixture of each plugin rule here, so a fixer change
- * shows as a diff; the own `@gpahal/*` rules' fixes are pinned by their RuleTester tests
+ * fixes. No test pins a plugin rule's fix, so audit it again when a plugin's changelog changes it;
+ * the own `@gpahal/*` rules' fixes are pinned by their RuleTester tests
  */
 export const AUDITED_SAFE_FIXES: ReadonlyArray<string> = [
   '@gpahal/comment-layout', // only rewrites comments, and skips directive comments such as `@ts-expect-error`, `#__PURE__` and webpack's

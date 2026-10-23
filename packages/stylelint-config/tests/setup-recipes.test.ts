@@ -2,6 +2,9 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import * as prettier from 'prettier'
+import type { ExpectStatic } from 'vitest'
+
 import {
   assertBuildIsCurrent,
   readCodeBlocks,
@@ -10,11 +13,12 @@ import {
   withTmpProject,
   writeFiles,
 } from '@gpahal/internal/node/testing'
+import prettierConfig from '@gpahal/prettier-config'
 import { describeValue, formatMessage } from '@gpahal/std/errors'
 
-// Writes each setup recipe of the repository README into a project laid out as pnpm installs it,
-// runs the README's fixers and then each recipe's check script, which shows that a second fix run
-// would change nothing
+// Writes each setup recipe of the README into a project laid out as pnpm installs it and runs its
+// check script. `FIXER_CASES` run the README's fixers first, and the check shows a second run
+// would change nothing. `CHECK_CASES` start from sources as the fixers leave them
 
 const PACKAGE_DIR = path.join(import.meta.dirname, '..')
 const REPO_DIR = path.join(PACKAGE_DIR, '../..')
@@ -278,6 +282,22 @@ const BINS = new Set(['eslint', 'prettier', 'stylelint', 'tsc', 'astro', 'next',
 const CSS = '@media (max-width:100px){a{color:red}}\n'
 
 /**
+ * `CSS` as the fixers leave it
+ */
+const FIXED_CSS = '@media (width <= 100px) {\n  a {\n    color: red;\n  }\n}\n'
+
+/**
+ * The Astro case's `shout.ts` as the fixers leave it
+ */
+const FIXED_SHOUT = [
+  'export function shout(name: string): string {',
+  '  const text = name.toUpperCase()',
+  '  return text',
+  '}',
+  '',
+].join('\n')
+
+/**
  * A lockfile as pnpm writes it, whose flow mappings and blank lines Prettier would rewrite
  */
 const PNPM_LOCK = `lockfileVersion: '9.0'
@@ -303,7 +323,6 @@ packages:
 `
 
 const MINIMAL = '### A minimal project'
-const LIBRARY = '### A Node library'
 const MONOREPO = '### A pnpm monorepo'
 const VITE = '### Vite with React'
 const NEXTJS = '### Next.js with Tailwind CSS'
@@ -368,28 +387,6 @@ const REACT_STUB = {
 }
 
 /**
- * The sources of an app as `pnpm create astro --template minimal` starts it, which has no TypeScript
- * file until `astro sync` writes `.astro/types.d.ts`. They're as the fixers leave them, since the
- * Astro case runs the fixers on the recipe
- */
-const ASTRO_ONLY_SOURCES = {
-  'src/pages/index.astro': [
-    '---',
-    "const title = 'Home'",
-    '---',
-    '',
-    '<h1 class="p-4 text-brand">{title}</h1>',
-    '<style>',
-    '  h1 {',
-    '    margin: var(--space);',
-    '  }',
-    '</style>',
-    '',
-  ].join('\n'),
-  'src/styles/global.css': "@import 'tailwindcss';\n\n@theme {\n  --color-brand: #f00;\n}\n",
-}
-
-/**
  * A global that a project's code doesn't get: its file, its source and the error of `check:types`
  */
 type MissingGlobal = { file: string; source: string; error: string }
@@ -433,10 +430,6 @@ type Project = {
 type Case = Project & {
   name: string
   /**
-   * Its sources, unformatted, with a `let` for `prefer-const` to fix
-   */
-  sources: Record<string, string>
-  /**
    * A source file with a type error, by name
    */
   invalidSource: Record<string, string>
@@ -457,7 +450,11 @@ const ASTRO_APP = {
   appFiles: { '.gitignore': 'node_modules\n.astro\ndist\n', ...REACT_STUB },
 }
 
-const CASES: Array<Case> = [
+/**
+ * The cases that run the fixers before the checks, with sources unformatted and with a `let` for
+ * `prefer-const` to fix
+ */
+const FIXER_CASES: Array<Case> = [
   {
     name: 'minimal',
     heading: MINIMAL,
@@ -470,74 +467,6 @@ const CASES: Array<Case> = [
         '# Setup\n\n```jsonc\n{\n  "compilerOptions": {\n    "types": ["node"]\n  }\n}\n```\n',
     },
     invalidSource: { 'src/index.ts': 'export const title: string = 123\n' },
-  },
-  {
-    name: 'Node library',
-    heading: LIBRARY,
-    sources: {
-      'src/sum.ts': 'export function sum(a:number,b:number):number{let total=a+b\nreturn total}\n',
-      'src/index.ts': "export {sum} from './sum'\n",
-    },
-    invalidSource: { 'src/index.ts': 'export const title: string = 123\n' },
-  },
-  {
-    name: 'pnpm monorepo',
-    heading: MONOREPO,
-    // No styled files, for the Stylelint commands' `--allow-empty-input`
-    sources: {
-      'packages/core/src/sum.ts':
-        'export function sum(a:number,b:number):number{let total=a+b\nreturn total}\n',
-      'packages/cli/src/index.ts': "const name=process.argv[2] ?? 'world'\nconsole.log(name)\n",
-      // A package's config file, which the root `tsconfig.node.json` types
-      'packages/cli/tsdown.config.ts': "export default {entry:['src/index.ts']}\n",
-    },
-    invalidSource: { 'packages/core/src/sum.ts': 'export const title: string = 123\n' },
-    missingGlobals: [nodeGlobal('packages/core/src/env.ts')],
-  },
-  {
-    name: 'Vite with React',
-    heading: VITE,
-    appDependencies: REACT_PACKAGES,
-    appDevDependencies: ['vite', '@vitejs/plugin-react', ...REACT_TYPES],
-    appFiles: { '.gitignore': APP_GITIGNORE },
-    sources: {
-      'vite.config.ts':
-        "import react from '@vitejs/plugin-react'\nimport {defineConfig} from 'vite'\n\nexport default defineConfig({plugins:[react()]})\n",
-      'index.html':
-        '<!doctype html>\n<html lang="en">\n<head><meta charset="UTF-8" /><title>App</title></head>\n<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>\n</html>\n',
-      'src/main.tsx':
-        "import {StrictMode} from 'react'\nimport {createRoot} from 'react-dom/client'\nimport './index.css'\nimport App from './app'\n\nconst root=document.querySelector('#root')\nif (root) {createRoot(root).render(<StrictMode><App /></StrictMode>)}\n",
-      'src/app.tsx':
-        "import {useState} from 'react'\n\nimport {shout} from './shout'\n\nexport default function App(){const [count,setCount]=useState(0)\nreturn <button type='button' onClick={()=>{setCount((value)=>value+1)}}>{shout('count')}: {count}</button>}\n",
-      'src/shout.ts':
-        'export function shout(name:string):string{let text=name.toUpperCase()\nreturn text}\n',
-      'src/index.css': CSS,
-    },
-    invalidSource: { 'src/shout.ts': 'export const title: string = 123\n' },
-    missingGlobals: [nodeGlobal('src/env.ts')],
-  },
-  {
-    name: 'Next.js',
-    heading: NEXTJS,
-    appDependencies: ['next', ...REACT_PACKAGES],
-    appDevDependencies: ['tailwindcss', ...REACT_TYPES],
-    appFiles: { '.gitignore': 'node_modules\n.next\nnext-env.d.ts\n*.tsbuildinfo\n' },
-    sources: {
-      'next.config.ts':
-        "import type {NextConfig} from 'next'\n\nconst nextConfig:NextConfig={}\n\nexport default nextConfig\n",
-      'postcss.config.mjs':
-        "const config={plugins:{'@tailwindcss/postcss':{}}}\n\nexport default config\n",
-      'app/globals.css': `@import 'tailwindcss';\n\n@theme inline{--font-sans:var(--font-geist-sans);--font-mono:var(--font-geist-mono)}\n\n${CSS}`,
-      'app/layout.tsx':
-        "import type {Metadata} from 'next'\nimport type {ReactNode} from 'react'\n\nimport './globals.css'\n\nexport const metadata:Metadata={title:'App'}\n\nexport default function RootLayout({children}:Readonly<{children:ReactNode}>){return <html lang='en'><body className='font-sans antialiased'>{children}</body></html>}\n",
-      'app/page.tsx':
-        "import {shout} from '@/lib/shout'\n\nexport default function Home(){return <main className='p-4'><h1>{shout('home')}</h1></main>}\n",
-      'app/error.tsx':
-        "'use client'\n\nexport default function ErrorPage({error,reset}:Readonly<{error:Error;reset:()=>void}>){return <div><p>{error.message}</p><button type='button' onClick={reset}>Try again</button></div>}\n",
-      'lib/shout.ts':
-        'export function shout(name:string):string{let text=name.toUpperCase()\nreturn text}\n',
-    },
-    invalidSource: { 'lib/shout.ts': 'export const title: string = 123\n' },
   },
   {
     name: 'Astro',
@@ -569,11 +498,206 @@ const CASES: Array<Case> = [
 ]
 
 /**
+ * The cases that run only the checks, with sources as the fixers leave them
+ */
+const CHECK_CASES: Array<Case> = [
+  {
+    name: 'pnpm monorepo',
+    heading: MONOREPO,
+    // No styled files, for the Stylelint commands' `--allow-empty-input`
+    sources: {
+      'packages/core/src/sum.ts': [
+        'export function sum(a: number, b: number): number {',
+        '  const total = a + b',
+        '  return total',
+        '}',
+        '',
+      ].join('\n'),
+      'packages/core/src/index.ts': "export { sum } from './sum'\n",
+      'packages/cli/src/index.ts': "const name = process.argv[2] ?? 'world'\nconsole.log(name)\n",
+      // A package's config file, which the root `tsconfig.node.json` types
+      'packages/cli/tsdown.config.ts': "export default { entry: ['src/index.ts'] }\n",
+    },
+    invalidSource: { 'packages/core/src/sum.ts': 'export const title: string = 123\n' },
+    missingGlobals: [nodeGlobal('packages/core/src/env.ts')],
+  },
+  {
+    name: 'Vite with React',
+    heading: VITE,
+    appDependencies: REACT_PACKAGES,
+    appDevDependencies: ['vite', '@vitejs/plugin-react', ...REACT_TYPES],
+    appFiles: { '.gitignore': APP_GITIGNORE },
+    sources: {
+      'vite.config.ts': [
+        "import react from '@vitejs/plugin-react'",
+        "import { defineConfig } from 'vite'",
+        '',
+        'export default defineConfig({ plugins: [react()] })',
+        '',
+      ].join('\n'),
+      'index.html': [
+        '<!doctype html>',
+        '<html lang="en">',
+        '  <head>',
+        '    <meta charset="UTF-8" />',
+        '    <title>App</title>',
+        '  </head>',
+        '  <body>',
+        '    <div id="root"></div>',
+        '    <script type="module" src="/src/main.tsx"></script>',
+        '  </body>',
+        '</html>',
+        '',
+      ].join('\n'),
+      'src/main.tsx': [
+        "import { StrictMode } from 'react'",
+        "import { createRoot } from 'react-dom/client'",
+        '',
+        "import './index.css'",
+        '',
+        "import App from './app'",
+        '',
+        "const root = document.querySelector('#root')",
+        'if (root) {',
+        '  createRoot(root).render(',
+        '    <StrictMode>',
+        '      <App />',
+        '    </StrictMode>,',
+        '  )',
+        '}',
+        '',
+      ].join('\n'),
+      'src/app.tsx': [
+        "import { useState } from 'react'",
+        '',
+        "import { shout } from './shout'",
+        '',
+        'export default function App() {',
+        '  const [count, setCount] = useState(0)',
+        '  return (',
+        '    <button',
+        '      type="button"',
+        '      onClick={() => {',
+        '        setCount((value) => value + 1)',
+        '      }}',
+        '    >',
+        "      {shout('count')}: {count}",
+        '    </button>',
+        '  )',
+        '}',
+        '',
+      ].join('\n'),
+      'src/shout.ts': FIXED_SHOUT,
+      'src/index.css': FIXED_CSS,
+    },
+    invalidSource: { 'src/shout.ts': 'export const title: string = 123\n' },
+    missingGlobals: [nodeGlobal('src/env.ts')],
+  },
+  {
+    name: 'Next.js',
+    heading: NEXTJS,
+    appDependencies: ['next', ...REACT_PACKAGES],
+    appDevDependencies: ['tailwindcss', ...REACT_TYPES],
+    appFiles: { '.gitignore': 'node_modules\n.next\nnext-env.d.ts\n*.tsbuildinfo\n' },
+    sources: {
+      'next.config.ts': [
+        "import type { NextConfig } from 'next'",
+        '',
+        'const nextConfig: NextConfig = {}',
+        '',
+        'export default nextConfig',
+        '',
+      ].join('\n'),
+      'postcss.config.mjs': [
+        "const config = { plugins: { '@tailwindcss/postcss': {} } }",
+        '',
+        'export default config',
+        '',
+      ].join('\n'),
+      'app/globals.css': [
+        "@import 'tailwindcss';",
+        '',
+        '@theme inline {',
+        '  --font-sans: var(--font-geist-sans);',
+        '  --font-mono: var(--font-geist-mono);',
+        '}',
+        '',
+        FIXED_CSS,
+      ].join('\n'),
+      'app/layout.tsx': [
+        "import type { ReactNode } from 'react'",
+        "import type { Metadata } from 'next'",
+        '',
+        "import './globals.css'",
+        '',
+        "export const metadata: Metadata = { title: 'App' }",
+        '',
+        'export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {',
+        '  return (',
+        '    <html lang="en">',
+        '      <body className="font-sans antialiased">{children}</body>',
+        '    </html>',
+        '  )',
+        '}',
+        '',
+      ].join('\n'),
+      'app/page.tsx': [
+        "import { shout } from '@/lib/shout'",
+        '',
+        'export default function Home() {',
+        '  return (',
+        '    <main className="p-4">',
+        "      <h1>{shout('home')}</h1>",
+        '    </main>',
+        '  )',
+        '}',
+        '',
+      ].join('\n'),
+      'app/error.tsx': [
+        "'use client'",
+        '',
+        'export default function ErrorPage({ error, reset }: Readonly<{ error: Error; reset: () => void }>) {',
+        '  return (',
+        '    <div>',
+        '      <p>{error.message}</p>',
+        '      <button type="button" onClick={reset}>',
+        '        Try again',
+        '      </button>',
+        '    </div>',
+        '  )',
+        '}',
+        '',
+      ].join('\n'),
+      'lib/shout.ts': FIXED_SHOUT,
+    },
+    invalidSource: { 'lib/shout.ts': 'export const title: string = 123\n' },
+  },
+]
+
+/**
  * A root TypeScript config file with a type error, which the recipes' `check:types` checks too
  */
 const INVALID_CONFIG = { 'a.config.ts': 'export const title: string = 123\n' }
 
 const TYPE_ERROR = "Type 'number' is not assignable to type 'string'"
+
+/**
+ * `files`, with each `package.json` as the fixers lay it out, so that the cases without them pass
+ * Prettier's check. Prettier sorts its keys and expands every object and array, unlike the README's
+ * JSON blocks and the root one that `setUpRecipe` writes
+ */
+async function layOutManifests(
+  dir: string,
+  files: Record<string, string>,
+): Promise<Record<string, string>> {
+  const entries = Object.entries(files).map(async ([file, text]): Promise<[string, string]> => [
+    file,
+    path.basename(file) === 'package.json'
+      ? await prettier.format(text, { ...prettierConfig, filepath: path.join(dir, file) })
+      : text,
+  ])
+  return Object.fromEntries(await Promise.all(entries))
+}
 
 /**
  * A project with the app, its recipe and its sources, in a temporary folder of its own, so cases can
@@ -627,9 +751,11 @@ async function setUpRecipe({
     }
     await writeFiles(dir, {
       ...appFiles,
-      ...files,
-      ...sources,
-      'package.json': `${JSON.stringify(packageJson, undefined, 2)}\n`,
+      ...(await layOutManifests(dir, {
+        ...files,
+        ...sources,
+        'package.json': JSON.stringify(packageJson),
+      })),
       'pnpm-lock.yaml': PNPM_LOCK,
     })
   } catch (error) {
@@ -637,30 +763,6 @@ async function setUpRecipe({
     throw error
   }
   return project
-}
-
-/**
- * Whether the test at `index` runs: every one, or with `RECIPE_SHARD=<k>/<n>`, which CI sets to
- * split the recipes across jobs, every `n`th from the `k`th
- */
-function isInShard(index: number): boolean {
-  const value = process.env['RECIPE_SHARD']
-  if (value === undefined || value === '') {
-    return true
-  }
-  const match = /^(?<k>[1-9]\d*)\/(?<n>[1-9]\d*)$/.exec(value)
-  const k = Number(match?.groups?.['k'])
-  const n = Number(match?.groups?.['n'])
-  if (match === null || k > n) {
-    throw new Error(
-      formatMessage(
-        '@gpahal/stylelint-config',
-        ['`RECIPE_SHARD`'],
-        `expected <k>/<n> with k from 1 to n, received ${describeValue(value)}`,
-      ),
-    )
-  }
-  return index % n === k - 1
 }
 
 beforeAll(async () => {
@@ -674,8 +776,36 @@ test('the minimal recipe writes a .gitignore', () => {
   expect(readRecipe(MINIMAL).files['.gitignore']).toBe('node_modules\n*.tsbuildinfo\n')
 })
 
+/**
+ * Runs the strict `check`, then `check:types` on files with type errors, which must report each
+ */
+async function expectChecks(dir: string, testCase: Case, expect: ExpectStatic): Promise<void> {
+  // Fails on anything a fix run would change, as `strictCheck` explains
+  const checked = await runScript(dir, 'check')
+  expect(checked.status, checked.output).toBe(0)
+  // Such as `GPAHAL_DEFAULT_PROJECT_NODE_TYPES`, when the config files lack Node's types
+  expect(checked.output).not.toContain('GPAHAL_')
+
+  // One run reports every type error: a root config file's, each missing global's and a source's
+  const missingGlobals = testCase.missingGlobals ?? []
+  await writeFiles(dir, {
+    ...INVALID_CONFIG,
+    ...Object.fromEntries(missingGlobals.map(({ file, source }) => [file, source])),
+    ...testCase.invalidSource,
+  })
+  const invalid = await runScript(dir, 'check:types')
+  expect(invalid.status, invalid.output).not.toBe(0)
+  expect(invalid.output).toContain('a.config.ts')
+  for (const { error } of missingGlobals) {
+    expect(invalid.output).toContain(error)
+  }
+  const [invalidFile] = Object.keys(testCase.invalidSource)
+  expect(invalid.output).toContain(path.basename(invalidFile!))
+  expect(invalid.output.split(TYPE_ERROR).length - 1).toBeGreaterThanOrEqual(2)
+}
+
 // Each case runs in a temporary project of its own, whose child processes dominate its time
-test.concurrent.for(CASES.filter((_, index) => isInShard(index)))(
+test.concurrent.for(FIXER_CASES)(
   'the README recipe for $name passes the fixers and then its checks',
   async (testCase, { expect }) => {
     await using project = await setUpRecipe(testCase)
@@ -690,52 +820,20 @@ test.concurrent.for(CASES.filter((_, index) => isInShard(index)))(
     const files = Object.entries(once)
     const styled = files.filter(([file]) => /\.(?:css|astro)$/.test(file))
     expect(styled.filter(([, code]) => code.includes('max-width'))).toEqual([])
-    // Outside dot folders, such as the route types that `next typegen` writes into `.next`
+    // Outside dot folders, which hold generated files, such as the types `astro sync` writes
     const scripts = files.filter(
       ([file]) => file.endsWith('.ts') && file.split('/').every((part) => !part.startsWith('.')),
     )
     expect(scripts.filter(([, code]) => code.includes('let '))).toEqual([])
 
-    // Fails on anything a second fix run would change, as `strictCheck` explains
-    const checked = await runScript(dir, 'check')
-    expect(checked.status, checked.output).toBe(0)
-    // Such as `GPAHAL_DEFAULT_PROJECT_NODE_TYPES`, when the config files lack Node's types
-    expect(checked.output).not.toContain('GPAHAL_')
-
-    // One run reports every type error: a root config file's, each missing global's and a source's
-    const missingGlobals = testCase.missingGlobals ?? []
-    await writeFiles(dir, {
-      ...INVALID_CONFIG,
-      ...Object.fromEntries(missingGlobals.map(({ file, source }) => [file, source])),
-      ...testCase.invalidSource,
-    })
-    const invalid = await runScript(dir, 'check:types')
-    expect(invalid.status, invalid.output).not.toBe(0)
-    expect(invalid.output).toContain('a.config.ts')
-    for (const { error } of missingGlobals) {
-      expect(invalid.output).toContain(error)
-    }
-    const [invalidFile] = Object.keys(testCase.invalidSource)
-    expect(invalid.output).toContain(path.basename(invalidFile!))
-    expect(invalid.output.split(TYPE_ERROR).length - 1).toBeGreaterThanOrEqual(2)
+    await expectChecks(dir, testCase, expect)
   },
 )
 
-test
-  .skipIf(!isInShard(CASES.length))
-  .concurrent(
-    'the README recipe for Astro passes its checks with only .astro sources',
-    async ({ expect }) => {
-      await using project = await setUpRecipe({
-        heading: ASTRO,
-        ...ASTRO_APP,
-        sources: ASTRO_ONLY_SOURCES,
-      })
-      // Lays out the `package.json` that the test writes
-      const formatted = await runScript(project.dir, 'fix:prettier')
-      expect(formatted.status, formatted.output).toBe(0)
-      const checked = await runScript(project.dir, 'check')
-      expect(checked.status, checked.output).toBe(0)
-      expect(checked.output).not.toContain('GPAHAL_')
-    },
-  )
+test.concurrent.for(CHECK_CASES)(
+  'the README recipe for $name passes its checks',
+  async (testCase, { expect }) => {
+    await using project = await setUpRecipe(testCase)
+    await expectChecks(project.dir, testCase, expect)
+  },
+)

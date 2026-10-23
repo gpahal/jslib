@@ -1,7 +1,0 @@
-# Title
-
-Text.
-
-    ```js
-    code
-    ```

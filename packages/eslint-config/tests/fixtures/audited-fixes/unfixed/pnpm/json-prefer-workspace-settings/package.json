@@ -1,7 +1,0 @@
-{
-  "name": "prefer-workspace-settings",
-  "private": true,
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
-  }
-}

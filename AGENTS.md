@@ -38,6 +38,7 @@ Run commands from the repository root. Read [README.md](README.md) for setup, pa
 - Each std module needs an input contract in its header. Its README examples run through [readme.test.ts](packages/std/tests/readme.test.ts); use the supported literal/error result comments. JSDoc examples must be self-contained and compile against the public declarations.
 - Tests must pass under the CPU contention of `pnpm check`. Don't give a test or hook its own timeout; the root `vitest.config.ts` limit only stops hangs, and the `test-recipes` task's script raises it for the recipes' child processes. Assert on counted work with `countWork`, or on CPU time with `minCpuMs`, never on wall-clock time. Wait on an event rather than a fixed delay, unless the code gives none.
 - A child process that doesn't test a core area's rules or loading turns them off with `CORE_AREAS_OFF` from eslint-config's `tests/helpers.ts`, which loads the config about four times as fast.
+- eslint-config's test files share modules within a worker, as its `vitest.config.ts` sets up. Add a file that uses `vi.mock`, sets typescript-eslint's project service options in-process, or expects a once-per-process warning to the isolated files there.
 - An upstream workaround needs a canary that fails when the bug is fixed and names what to remove, like the existing `tests/upstream*.test.ts` and `tests/markdown-forks.test.ts`.
 
 ## Config packages

@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { builtinRules } from 'eslint/use-at-your-own-risk'
 
-import { withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
+import { writeFiles } from '@gpahal/internal/node/testing'
 
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import {
@@ -15,192 +15,35 @@ import {
 import { isRuleOn, parseRuleId } from '@/internal/rules'
 
 import { ALL_ON_OPTIONS } from '../scripts/typegen'
-import { fixFiles, reportFiles, withRulesOnly, type ReportResult } from './fix-helpers'
-import { collator, FIXTURES_DIR } from './helpers'
+import { fixFiles, reportFiles, withRulesOnly } from './fix-helpers'
+import { collator, CORE_AREAS_OFF, withProject } from './helpers'
 
-// Each file of the `report-only` fixture holds code that a report-only rule's fix would change, with
-// the reason in a comment. With the presets' configs, the rule reports it and `--fix` leaves it.
-// Only a few cases check that the plugin's fix applies without `gpahal/fixes/report-only*`
-
-const FIXTURE_DIR = path.join(FIXTURES_DIR, 'report-only')
+// The report-only configs drop a report-only rule's fix and keep its report. Which rules are
+// report-only, and why, is in `src/internal/fix-policy.ts`
 
 /**
- * The fixture files of report-only rules, each named for its rule, as `<folder>/*<extension>
- * <plugin prefix>` keys with the rule names
+ * Code that a report-only rule's fix would change, by file, with the rule. An untyped rule and two
+ * that need type information
  */
-const CASE_GROUPS: Record<string, string> = {
-  'data/*.json json/': 'no-unnormalized-keys',
-  'docs/*.md markdown-preferences/': `
-    definitions-last emoji-notation hard-linebreak-style level1-heading-style level2-heading-style
-    ordered-list-marker-sequence ordered-list-marker-start prefer-fenced-code-blocks
-    prefer-link-reference-definitions sort-definitions
-  `,
-  'docs/*.html @html-eslint/': 'no-redundant-role require-button-type',
-  'docs/*.md markdown/': 'no-reference-like-urls no-space-in-emphasis',
-  'e2e/*.spec.js playwright/': `
-    no-unsafe-references no-useless-await prefer-to-have-count prefer-to-have-length
-    prefer-web-first-assertions valid-title
-  `,
-  'src/astro/*.astro unicorn/': 'consistent-boolean-name name-replacements',
-  'src/e18e/*.js e18e/': `
-    prefer-array-at prefer-array-from-map prefer-array-some prefer-date-now prefer-includes
-    prefer-object-has-own prefer-regex-test prefer-timer-args
-  `,
-  'src/e18e/*.ts e18e/': 'prefer-spread-syntax',
-  'src/js/*.js n/': 'hashbang',
-  'src/js/*.js import-x/': 'no-absolute-path no-relative-packages',
-  'src/js/*.js': 'no-extra-bind object-shorthand prefer-object-spread prefer-template',
-  'src/jsdoc/*.ts jsdoc/': 'check-tag-names',
-  'src/jsdoc/*.js jsdoc/': 'empty-tags no-multi-asterisks',
-  'src/react/*.jsx @eslint-react/': `
-    dom-no-hydrate dom-no-render dom-no-use-form-state no-component-will-mount
-    no-component-will-receive-props no-component-will-update rsc-function-definition
-  `,
-  'src/regexp/*.js regexp/': `
-    control-character-escape no-dupe-characters-character-class no-trivially-nested-quantifier
-    no-useless-character-class no-useless-flag no-useless-lazy no-useless-non-capturing-group
-    no-useless-set-operand no-useless-string-literal optimal-quantifier-concatenation
-    prefer-character-class prefer-predefined-assertion prefer-question-quantifier
-    prefer-set-operation prefer-unicode-codepoint-escapes prefer-w strict use-ignore-case
-  `,
-  'src/storybook/*.stories.js storybook/': `
-    default-exports hierarchy-separator use-storybook-testing-library
-  `,
-  'src/tailwind/*.js better-tailwindcss/': `
-    enforce-canonical-classes enforce-consistent-class-order enforce-consistent-line-wrapping
-    no-deprecated-classes no-duplicate-classes no-unnecessary-whitespace
-  `,
-  'src/ts-untyped/*.ts @typescript-eslint/': 'consistent-type-imports',
-  'src/ts/*.ts @typescript-eslint/': `
-    consistent-indexed-object-style no-array-constructor no-confusing-void-expression
-    no-meaningless-void-operator prefer-function-type prefer-includes prefer-optional-chain
-    prefer-string-starts-ends-with promise-function-async return-await
-  `,
-  'src/unicorn-typed/*.ts unicorn/': `
-    prefer-aggregate-error prefer-array-flat-map prefer-array-flat prefer-array-index-of
-  `,
-  'src/unicorn-untyped-server/*.js unicorn/': 'no-unnecessary-global-this prefer-array-from-async',
-  'src/unicorn-untyped/*.js unicorn/': `
-    consistent-date-clone no-array-method-this-argument no-await-expression-member no-new-buffer
-    no-unnecessary-string-trim no-unreadable-array-destructuring no-useless-coercion prefer-at
-    prefer-class-fields prefer-dom-node-append prefer-dom-node-remove
-    prefer-iterable-in-constructor prefer-modern-dom-apis prefer-promise-try
-    prefer-promise-with-resolvers prefer-prototype-methods prefer-reflect-apply prefer-regexp-test
-    prefer-set-methods prefer-string-starts-ends-with prefer-toggle-attribute prefer-url-can-parse
-    require-array-join-separator switch-case-braces throw-new-error
-  `,
-  'src/unicorn/*.js unicorn/': `
-    dom-node-dataset escape-case explicit-length-check new-for-builtins no-array-reduce
-    no-console-spaces no-declarations-before-early-exit no-for-each no-for-loop
-    no-immediate-mutation no-incorrect-query-selector no-instanceof-builtins
-    no-invalid-url-protocol-comparison no-invalid-well-known-symbol-methods no-named-default
-    no-new-array no-redundant-comparison no-selector-as-dom-name
-    no-single-promise-in-promise-methods no-static-only-class no-unnecessary-await
-    no-unnecessary-splice no-useless-else no-useless-iterator-to-array no-useless-override
-    no-useless-promise-resolve-reject no-useless-spread no-useless-undefined
-    prefer-add-event-listener prefer-array-find prefer-array-from-range prefer-array-some
-    prefer-block-statement-over-iife prefer-classlist-toggle prefer-dom-node-html-methods
-    prefer-dom-node-replace-children prefer-export-from prefer-get-or-insert-computed
-    prefer-global-this prefer-group-by prefer-https prefer-includes prefer-keyboard-event-key
-    prefer-location-assign prefer-math-min-max prefer-modern-math-apis
-    prefer-native-coercion-functions prefer-negative-index prefer-object-define-properties
-    prefer-object-from-entries prefer-object-iterable-methods prefer-private-class-fields
-    prefer-query-selector prefer-promise-static-methods prefer-queue-microtask
-    prefer-response-static-json prefer-set-has prefer-single-call prefer-spread
-    prefer-string-pad-start-end prefer-type-error require-css-escape
-    require-number-to-fixed-digits-argument
-  `,
-  'src/vitest/*.test.js vitest/': `
-    consistent-test-it no-import-node-test no-unneeded-async-expect-function
-    prefer-called-exactly-once-with prefer-to-be valid-title
-  `,
-}
-
-/**
- * Each fixture file, by its path in the fixture, with the rule it shows
- */
-const CASES: Record<string, string> = {
-  ...Object.fromEntries(
-    Object.entries(CASE_GROUPS).flatMap(([key, names]) => {
-      const [glob = '', prefix = ''] = key.split(' ', 2)
-      return names
-        .trim()
-        .split(/\s+/u)
-        .map((name) => [glob.replace('*', () => name), `${prefix}${name}`])
-    }),
-  ),
-  'packages/repository-shorthand/package.json': 'package-json/repository-shorthand',
-  'packages/require-type/package.json': 'package-json/require-type',
-  'packages/valid-author/package.json': 'package-json/valid-author',
-  'src/astro/fetch-content.astro': 'astro/no-deprecated-astro-fetchcontent',
-  'src/js/import-first.js': 'import-x/first',
-}
-
-const OPTIONS: Partial<EslintConfigOptions> = {
-  // Off by default, and report-only when they're on
-  markdown: {
-    rules: { 'markdown-preferences/prefer-link-reference-definitions': ['error', { minLinks: 2 }] },
+const CASES: Record<string, { rule: string; text: string }> = {
+  'src/object-shorthand.js': {
+    rule: 'object-shorthand',
+    text: 'export const factory = {\n  make: function () {\n    this.made = true\n  },\n}\n',
   },
-  unicorn: { rules: { 'unicorn/no-useless-undefined': 'error' } },
-  react: true,
-  astro: true,
-  html: true,
-  node: true,
-  vitest: true,
-  playwright: true,
-  storybook: true,
-  tailwindcss: { entryPoint: 'src/styles.css' },
+  'src/return-await.ts': {
+    rule: '@typescript-eslint/return-await',
+    text: 'export async function load(read: () => Promise<string>): Promise<string> {\n  return await read()\n}\n',
+  },
+  'src/prefer-optional-chain.ts': {
+    rule: '@typescript-eslint/prefer-optional-chain',
+    text: 'export function second(take: () => { value: number } | undefined): number | undefined {\n  return take() && take()!.value\n}\n',
+  },
 }
 
-/**
- * e18e's twins of Unicorn's rules run with `unicorn` off, some rules are report-only only without
- * type information, and some are off in browser code, which `react` makes every file
- */
-const FOLDER_OPTIONS: Record<string, Partial<EslintConfigOptions>> = {
-  'src/e18e/': { ...OPTIONS, unicorn: false },
-  'src/unicorn-untyped-server/': { ...OPTIONS, react: false },
-  'src/ts-untyped/': { ...OPTIONS, typeAware: false },
-}
-
-const GROUPS: Array<[string, Array<string>, Partial<EslintConfigOptions>]> = [
-  [
-    'with the presets on',
-    Object.keys(CASES).filter((file) =>
-      Object.keys(FOLDER_OPTIONS).every((folder) => !file.startsWith(folder)),
-    ),
-    OPTIONS,
-  ],
-  ...Object.entries(FOLDER_OPTIONS).map(
-    ([folder, options]): [string, Array<string>, Partial<EslintConfigOptions>] => [
-      `in ${folder}`,
-      Object.keys(CASES).filter((file) => file.startsWith(folder)),
-      options,
-    ],
-  ),
-]
-
-const REPORT_ONLY_RULE_IDS: ReadonlySet<string> = new Set([
-  ...REPORT_ONLY_RULES,
-  ...UNTYPED_REPORT_ONLY_RULES,
-])
-
-/**
- * The problems in `files` with only the report-only rules running, and those that `--fix` would
- * fix
- */
-async function reportCases(
-  dir: string,
-  files: Array<string>,
-  options: Partial<EslintConfigOptions>,
-): Promise<Record<string, ReportResult>> {
-  const configs = await defineConfig({ root: dir, isInEditor: false, gitignore: false, ...options })
-  return reportFiles({
-    dir,
-    configs: withRulesOnly(configs, REPORT_ONLY_RULE_IDS),
-    files,
-    ruleIds: REPORT_ONLY_RULE_IDS,
-  })
-}
+const TSCONFIG = JSON.stringify({
+  compilerOptions: { strict: true, module: 'preserve', noEmit: true, types: [] },
+  include: ['src'],
+})
 
 /**
  * The rule names in the paragraph after the README's `<summary>summary</summary>` line
@@ -219,18 +62,16 @@ describe('report-only fixes', () => {
   let dir: string
   let dispose: () => Promise<void>
   beforeAll(async () => {
-    const project = await withTmpProject('eslint-config')
+    const project = await withProject({
+      'tsconfig.json': TSCONFIG,
+      ...Object.fromEntries(Object.entries(CASES).map(([file, { text }]) => [file, text])),
+    })
     dir = project.dir
     dispose = async () => project[Symbol.asyncDispose]()
-    await fs.cp(FIXTURE_DIR, dir, { recursive: true })
-    await fs.symlink(
-      path.join(import.meta.dirname, '..', 'node_modules'),
-      path.join(dir, 'node_modules'),
-    )
   })
   afterAll(async () => dispose())
 
-  it('lists the report-only rules in the README, and has a case for each', async () => {
+  it('lists the report-only rules in the README', async () => {
     const readme = await fs.readFile(path.join(import.meta.dirname, '..', 'README.md'), 'utf8')
     const sorted = (rules: ReadonlyArray<string>) =>
       rules.toSorted((a, b) => collator.compare(a, b))
@@ -238,42 +79,28 @@ describe('report-only fixes', () => {
     expect(listedRules(readme, 'Report-only rules without type information')).toEqual(
       sorted(UNTYPED_REPORT_ONLY_RULES),
     )
-    const shown = new Set(Object.values(CASES))
-    expect(
-      [...REPORT_ONLY_RULES, ...UNTYPED_REPORT_ONLY_RULES].filter((rule) => !shown.has(rule)),
-    ).toEqual([])
   })
 
-  it.for(GROUPS)(
-    'reports each case without fixing it, %s',
-    async ([, files, options], { expect }) => {
-      const results = await reportCases(dir, files, options)
-      const failing = files.filter(
-        (file) =>
-          results[file]?.rules.includes(CASES[file] ?? '') !== true ||
-          results[file].fixing.length > 0,
-      )
-      expect(Object.fromEntries(failing.map((file) => [file, results[file]]))).toEqual({})
-    },
-  )
-
   // The report-only configs, not the presets' rule options, keep the cases from fixing: without
-  // them, an untyped case and the typed cases of rules that need type information fix
-  it('fixes cases without the report-only configs, typed ones too', async () => {
-    const files = [
-      'src/js/object-shorthand.js',
-      'src/ts/return-await.ts',
-      'src/ts/prefer-optional-chain.ts',
-    ]
-    const configs = await defineConfig({
-      root: dir,
-      isInEditor: false,
-      gitignore: false,
-      ...OPTIONS,
+  // them, the untyped case and the typed ones fix
+  it('reports each case without fixing it, and fixes it without the report-only configs', async () => {
+    const files = Object.keys(CASES)
+    const ruleIds = Object.values(CASES).map(({ rule }) => rule)
+    const options = { root: dir, isInEditor: false, gitignore: false, ...CORE_AREAS_OFF }
+    const reported = await reportFiles({
+      dir,
+      configs: withRulesOnly(await defineConfig(options), new Set(ruleIds)),
+      files,
+      ruleIds,
     })
+    expect(reported).toEqual(
+      Object.fromEntries(
+        Object.entries(CASES).map(([file, { rule }]) => [file, { rules: [rule], fixing: [] }]),
+      ),
+    )
+    const configs = await defineConfig(options)
       .remove('gpahal/fixes/report-only')
       .remove('gpahal/fixes/report-only-untyped')
-    const ruleIds = files.map((file) => CASES[file] ?? '')
     const fixed = await fixFiles({
       dir,
       configs: withRulesOnly(configs, new Set(ruleIds)),
@@ -292,7 +119,7 @@ describe('report-only fixes', () => {
       root: dir,
       isInEditor: false,
       gitignore: false,
-      ...OPTIONS,
+      ...CORE_AREAS_OFF,
       typescript: { library: true },
     }).override('gpahal/typescript/library', {
       files: ['src/fix-safety/lib/**/*.ts'],

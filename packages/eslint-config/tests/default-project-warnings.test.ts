@@ -128,7 +128,7 @@ describe('the large default project warning', () => {
 
 describe('GPAHAL_ASTRO_TYPES_MISSING', () => {
   const ASTRO_TSCONFIG = Object.fromEntries(
-    ['package.json', 'base.json', 'astro.json', 'astro-app.json'].map((name) => [
+    ['package.json', 'base.json', 'node.json', 'astro.json', 'astro-app.json'].map((name) => [
       `node_modules/@gpahal/tsconfig/${name}`,
       syncFs.readFileSync(path.join(TSCONFIG_DIR, name), 'utf8'),
     ]),
@@ -147,6 +147,28 @@ describe('GPAHAL_ASTRO_TYPES_MISSING', () => {
     expect(messages).toEqual([
       expect.stringContaining("includes `.astro/types.d.ts`, which doesn't exist"),
     ])
+  })
+
+  // As `pnpm create astro --template minimal` starts: no TypeScript file until `astro sync` writes
+  // `.astro/types.d.ts`, which the Astro recipe's tsconfig includes
+  it("doesn't warn of a project with only .astro sources once `astro sync` writes its types", async () => {
+    await using project = await withProject({
+      'package.json': '{ "private": true, "type": "module", "dependencies": { "astro": "*" } }\n',
+      '.gitignore': 'node_modules\n.astro\ndist\n',
+      '.astro/types.d.ts': '/// <reference types="astro/client" />\n',
+      'astro.config.mjs': 'export default {}\n',
+      'src/pages/index.astro': '---\nconst title = "Home"\n---\n\n<h1>{title}</h1>\n',
+      'tsconfig.json':
+        '{ "extends": "@gpahal/tsconfig/astro-app", "references": [{ "path": "./tsconfig.node.json" }] }\n',
+      'tsconfig.node.json':
+        '{ "extends": ["@gpahal/tsconfig/base", "@gpahal/tsconfig/node"], "compilerOptions": { "composite": true, "allowJs": true, "checkJs": true }, "include": ["*.config.*"] }\n',
+      ...ASTRO_TSCONFIG,
+      ...TYPES_NODE,
+    })
+    const warnings = await captureWarnings(async () => {
+      await defineConfig({ root: project.dir, astro: true })
+    })
+    expect(warnings).toEqual([])
   })
 })
 

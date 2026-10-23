@@ -1,9 +1,9 @@
-import { configDefaults, defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig, type ViteUserConfig } from 'vitest/config'
 
-export default defineConfig({
-  resolve: {
-    tsconfigPaths: true,
-  },
+const resolve: NonNullable<ViteUserConfig['resolve']> = { tsconfigPaths: true }
+
+const config: ViteUserConfig = defineConfig({
+  resolve,
   test: {
     globals: true,
     // Turbo hashes only the files git tracks, so a test in a gitignored folder could fail while
@@ -40,3 +40,37 @@ export default defineConfig({
     ].map((code) => `--disable-warning=${code}`),
   },
 })
+
+export default config
+
+const { include = [], exclude = [], ...options } = config.test ?? {}
+
+/**
+ * The config of a package whose test files share a worker's modules, so modules that every file
+ * imports load once per worker. The files of `isolated` get modules of their own
+ */
+export function withSharedModules(isolated: Array<string>): ViteUserConfig {
+  // A project's `include` adds to the root level's, so only the projects have one
+  const project = (
+    name: string,
+    test: { isolate?: boolean; include?: Array<string>; exclude?: Array<string> },
+  ) => ({
+    resolve,
+    test: { ...options, name, include, exclude, ...test },
+  })
+  return {
+    ...config,
+    test: {
+      ...options,
+      projects: [
+        project('shared', { isolate: false, exclude: [...exclude, ...isolated] }),
+        project('isolated', { include: isolated }),
+      ],
+    },
+  }
+}
+
+/**
+ * The type of a Vitest config, for a package's config file without its own Vitest dependency
+ */
+export type VitestConfig = ViteUserConfig
