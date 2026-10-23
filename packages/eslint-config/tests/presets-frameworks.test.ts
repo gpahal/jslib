@@ -4,9 +4,9 @@ import type { ESLint, Linter } from 'eslint'
 
 import { defineConfig } from '@/index'
 
-import { createFocusedESLint } from './fix-helpers'
 import {
   createESLint,
+  createFocusedESLint,
   eslintWith,
   FIXTURES_DIR,
   lint,

@@ -25,8 +25,7 @@ import { defineConfig } from '@/index'
 import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'
 import { UNFLAGGED_TYPED_RULES } from '@/internal/rules'
 
-import { withRulesOnly } from './fix-helpers'
-import { collator } from './helpers'
+import { collator, withRulesOnly } from './helpers'
 import { parseWithProjectService } from './project-service-parse'
 
 // Each test shows an upstream bug that a workaround in this package exists for, with the stock

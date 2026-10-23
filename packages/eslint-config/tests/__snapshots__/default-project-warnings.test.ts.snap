@@ -1,0 +1,64 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`warns of each setup problem once per root 1`] = `
+{
+  "TypeScript files without a tsconfig": [
+    [
+      "GPAHAL_NO_TSCONFIG",
+      "@gpahal/eslint-config: \`typeAware\`: no tsconfig.json was found at or under \`<project>\`, so typescript-eslint's project service can't type TypeScript files and reports each as not found by the project service. Config files such as \`eslint.config.mjs\` get no Node types either, so type-checked rules report on them. Add a tsconfig.json at \`root\` with \`"compilerOptions": { "types": ["node"] }\`, which fixes both, or set \`typeAware: false\`",
+    ],
+  ],
+  "TypeScript files without a tsconfig, in a folder a parent .gitignore of \`*\` ignores": [
+    [
+      "GPAHAL_ROOT_GITIGNORED",
+      "@gpahal/eslint-config: \`gitignore\`: \`../.gitignore\`: the rule on line 1 ignores \`app\`, the folder of \`root\`, so git ignores every file in the project, and ESLint does too. Un-ignore the folder in that file, as with a \`!\` rule, or set \`gitignore: false\`",
+    ],
+  ],
+  "a package without a root tsconfig, a Playwright testDir its files miss, and a slow .gitignore rule, in a folder a parent .gitignore ignores": [
+    [
+      "GPAHAL_ROOT_GITIGNORED",
+      "@gpahal/eslint-config: \`gitignore\`: \`../.gitignore\`: the rule on line 1 ignores \`app\`, the folder of \`root\`, so git ignores every file in the project, though ESLint still lints them. Un-ignore the folder in that file, as with a \`!\` rule, or set \`gitignore: false\`",
+    ],
+    [
+      "GPAHAL_GITIGNORE_WILDCARDS",
+      "@gpahal/eslint-config: \`gitignore\`: \`src/.gitignore\`: the rules on lines 2 and 5 have more than 3 \`*\` wildcards in one path segment, which can take ESLint seconds per path to match, so they're skipped. Use at most 3, as in \`*.log\`",
+    ],
+    [
+      "GPAHAL_PLAYWRIGHT_FILES_UNMATCHED",
+      "@gpahal/eslint-config: \`playwright.files\`: \`playwright.config.ts\` sets \`testDir\` to \`./tests\`, but \`playwright.files\` doesn't match its tests, such as \`tests/example.spec.ts\`, so they get no Playwright rules. Set \`playwright: { files: ['tests/**'] }\`",
+    ],
+    [
+      "GPAHAL_DEFAULT_PROJECT_NODE_TYPES",
+      "@gpahal/eslint-config: \`typeAware\`: config files that no tsconfig includes, such as \`eslint.config.mjs\` and \`playwright.config.ts\`, get type information from the compiler options of \`<project>/app/tsconfig.json\`, which doesn't exist, so they're checked without Node's types. Add a tsconfig.json at \`root\` with \`"compilerOptions": { "types": ["node"] }\`, or list those files in a tsconfig, and install @types/node",
+    ],
+    [
+      "GPAHAL_FILES_OUTSIDE_TSCONFIG",
+      "@gpahal/eslint-config: \`typeAware\`: 1 TypeScript file in the project, \`tests/example.spec.ts\`, is in no tsconfig's project, so typescript-eslint's project service reports it as not found when it lints it. Add it to a tsconfig's \`include\`, or to \`typeAware.allowDefaultProject\`",
+    ],
+  ],
+  "a root tsconfig without Node's types, and many files outside it": [
+    [
+      "GPAHAL_DEFAULT_PROJECT_NODE_TYPES",
+      "@gpahal/eslint-config: \`typeAware\`: config files that no tsconfig includes, such as \`c00.config.ts\`, \`c01.config.ts\`, \`c02.config.ts\` and 14 more, get type information from the compiler options of \`<project>/tsconfig.json\`, whose "types" doesn't list "node", so they're checked without Node's types. Add "node" to its "types", or list those files in a tsconfig that does, and install @types/node",
+    ],
+    [
+      "GPAHAL_LARGE_DEFAULT_PROJECT",
+      "@gpahal/eslint-config: \`typeAware.allowDefaultProject\`: 17 files, such as \`c00.config.ts\`, \`c01.config.ts\`, \`c02.config.ts\` and 14 more, get type information from typescript-eslint's default project, which takes about 8 times as long per file as a tsconfig's. Include them in a tsconfig, list the ones to type in \`typeAware.allowDefaultProject\`, or ignore folders such as fixtures with \`ignores\`",
+    ],
+    [
+      "GPAHAL_FILES_OUTSIDE_TSCONFIG",
+      "@gpahal/eslint-config: \`typeAware\`: 12 TypeScript files in the project, \`scripts/s00.ts\`, \`scripts/s01.ts\`, \`scripts/s02.ts\`, \`scripts/s03.ts\`, \`scripts/s04.ts\`, \`scripts/s05.ts\`, \`scripts/s06.ts\`, \`scripts/s07.ts\`, \`scripts/s08.ts\`, \`scripts/s09.ts\` and 2 more, are in no tsconfig's project, so typescript-eslint's project service reports each as not found when it lints them. Add them to a tsconfig's \`include\`, or to \`typeAware.allowDefaultProject\`",
+    ],
+  ],
+  "an Astro project with the recipe's tsconfig before \`astro sync\`": [
+    [
+      "GPAHAL_ASTRO_TYPES_MISSING",
+      "@gpahal/eslint-config: \`astro\`: \`<project>/tsconfig.json\` includes \`.astro/types.d.ts\`, which doesn't exist, so the type-aware rules read Astro's types, such as those of \`astro:content\`, as error types and report them. Run \`astro sync\` before ESLint, as in \`astro sync && eslint .\`",
+    ],
+    [
+      "GPAHAL_DEFAULT_PROJECT_NODE_TYPES",
+      "@gpahal/eslint-config: \`typeAware\`: config files that no tsconfig includes, such as \`eslint.config.mjs\`, get type information from the compiler options of \`<project>/tsconfig.json\`, which typescript-eslint ignores, since it includes no files, so they're checked without Node's types. Include a TypeScript file in it, or generate the types it includes, as \`astro sync\` does in an Astro project, and install @types/node",
+    ],
+  ],
+}
+`;

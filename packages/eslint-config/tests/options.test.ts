@@ -1,4 +1,3 @@
-import syncFs from 'node:fs'
 import fs from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
@@ -87,78 +86,6 @@ describe('pnpm', () => {
   ])('is detected for %s: %s', async (_, files, dir, isOn) => {
     await using project = await withProject({ ...files, [`${dir}/package.json`]: '{}' })
     expect(getEnabledAreas({ root: path.join(project.dir, dir) }).pnpm).toBe(isOn)
-  })
-})
-
-describe('testFiles', () => {
-  it('adds to the default test files with a function', async () => {
-    const eslint = await createESLint('typescript', {
-      testFiles: (defaults) => [...defaults, 'e2e/**/*.ts'],
-    })
-    expect(await ruleSeverity(eslint, 'tests/a.test.ts', NON_NULL_RULE)).toBe(0)
-    expect(await ruleSeverity(eslint, 'e2e/a.ts', NON_NULL_RULE)).toBe(0)
-    expect(await ruleSeverity(eslint, 'src/a.ts', NON_NULL_RULE)).toBe(2)
-  })
-
-  it('replaces the default test files with an array', async () => {
-    const eslint = await createESLint('typescript', { testFiles: ['e2e/**/*.ts'] })
-    expect(await ruleSeverity(eslint, 'tests/a.test.ts', NON_NULL_RULE)).toBe(2)
-    expect(await ruleSeverity(eslint, 'e2e/a.ts', NON_NULL_RULE)).toBe(0)
-  })
-})
-
-describe('vitest', () => {
-  it('treats type tests as test files, with Vitest globals', async () => {
-    const eslint = await createESLint('typescript', { vitest: true })
-    expect(await ruleSeverity(eslint, 'src/a.test-d.ts', NON_NULL_RULE)).toBe(0)
-    expect(await ruleSeverity(eslint, 'src/a.test-d.ts', VITEST_RULE)).toBe(2)
-    const config = (await eslint.calculateConfigForFile('src/a.test-d.ts')) as Linter.Config
-    expect(config.languageOptions?.['globals']).toHaveProperty('expectTypeOf')
-  })
-
-  it('gives all test exemptions to the independent union of testFiles and vitest.files', async () => {
-    const transform = vi.fn(() => ['e2e/**/*.ts', 'tests/fixtures/**', '!tests/**/a.test.ts'])
-    const eslint = await createESLint('typescript', {
-      testFiles: (defaults) => [...defaults, '!tests/fixtures/**'],
-      vitest: { files: transform },
-      typescript: { library: true },
-      antislop: { slop: false },
-    })
-    const libraryRule = '@typescript-eslint/explicit-module-boundary-types'
-    for (const file of ['e2e/a.ts', 'tests/a.test.ts', 'tests/fixtures/b.ts']) {
-      expect(await ruleSeverity(eslint, file, NON_NULL_RULE), file).toBe(0)
-      expect(await ruleSeverity(eslint, file, libraryRule), file).toBeUndefined()
-      const config = (await eslint.calculateConfigForFile(file)) as Linter.Config
-      expect(config.rules?.['import-x/no-extraneous-dependencies']).toEqual([
-        2,
-        { devDependencies: true, peerDependencies: true, optionalDependencies: true },
-      ])
-    }
-    expect(await ruleSeverity(eslint, 'tests/fixtures/a.test.ts', NON_NULL_RULE)).toBe(2)
-    expect(await ruleSeverity(eslint, 'tests/fixtures/a.test.ts', libraryRule)).toBe(2)
-    expect(transform).toHaveBeenCalledTimes(1)
-  })
-
-  it('replaces the Vitest files with an array or what a function of the resolved testFiles returns', async () => {
-    const byArray = await createESLint('typescript', { vitest: { files: ['tests/unit/**/*.ts'] } })
-    expect(await ruleSeverity(byArray, 'tests/unit/a.test.ts', VITEST_RULE)).toBe(2)
-    expect(await ruleSeverity(byArray, 'tests/e2e/a.test.ts', VITEST_RULE)).toBeUndefined()
-    // Still test files, with the test files' looser rules
-    expect(await ruleSeverity(byArray, 'tests/e2e/a.test.ts', NON_NULL_RULE)).toBe(0)
-
-    let defaults: Array<string> = []
-    const byFunction = await createESLint('typescript', {
-      testFiles: (testFiles) => [...testFiles, 'spec/**/*.ts'],
-      vitest: {
-        files: (testFiles) => {
-          defaults = testFiles
-          return ['e2e/**/*.ts']
-        },
-      },
-    })
-    expect(defaults).toContain('spec/**/*.ts')
-    expect(await ruleSeverity(byFunction, 'tests/a.test.ts', VITEST_RULE)).toBeUndefined()
-    expect(await ruleSeverity(byFunction, 'e2e/a.ts', VITEST_RULE)).toBe(2)
   })
 })
 
@@ -634,150 +561,8 @@ describe('nextjs.rootDir', () => {
   })
 })
 
-describe('a second root in the same process', () => {
-  /**
-   * Roots with equal compiler options and a default-project `tool.config.ts` that calls `check()`,
-   * which each root's `@types/node` declares to return its `returnType`, at its `version`
-   */
-  function ambientTypesProject(
-    types: Record<string, { returnType: string; version: string }>,
-  ): Record<string, string> {
-    return Object.fromEntries(
-      Object.entries(types).flatMap(([name, { returnType, version }]) => [
-        [
-          `${name}/tsconfig.json`,
-          JSON.stringify({
-            compilerOptions: { strict: true, target: 'ES2024', types: ['node'] },
-            include: ['src'],
-          }),
-        ],
-        [`${name}/src/index.ts`, 'export {}\n'],
-        [`${name}/tool.config.ts`, 'check()\n'],
-        [
-          `${name}/node_modules/@types/node/package.json`,
-          JSON.stringify({ name: '@types/node', version, types: 'index.d.ts' }),
-        ],
-        [
-          `${name}/node_modules/@types/node/index.d.ts`,
-          `declare function check(): ${returnType}\n`,
-        ],
-      ]),
-    )
-  }
-
-  /**
-   * The `no-floating-promises` reports and fatal messages of each root's `tool.config.ts`, linted
-   * in order by one child process, since typescript-eslint keeps one project service for it
-   */
-  async function lintRootsInChild(
-    dir: string,
-    roots: Array<string>,
-  ): Promise<Record<string, { floating: number; fatal: Array<string> }>> {
-    const stdout = await runNodeOk([
-      '--input-type=module',
-      '--eval',
-      `
-      import path from 'node:path'
-      const [indexUrl, eslintUrl, dir, areasJson, rootsJson] = process.argv.slice(1)
-      const { defineConfig } = await import(indexUrl)
-      const { ESLint } = await import(eslintUrl)
-      const output = {}
-      for (const name of JSON.parse(rootsJson)) {
-        const root = path.join(dir, name)
-        const config = await defineConfig({ root, isInEditor: false, ...JSON.parse(areasJson), typeAware: { allowDefaultProject: ['tool.config.ts'] } })
-        const eslint = new ESLint({ cwd: root, overrideConfigFile: true, overrideConfig: config })
-        const [result] = await eslint.lintFiles([path.join(root, 'tool.config.ts')])
-        output[name] = {
-          floating: result.messages.filter((message) => message.ruleId === '@typescript-eslint/no-floating-promises').length,
-          fatal: result.messages.filter((message) => message.fatal).map((message) => message.message),
-        }
-      }
-      console.log(JSON.stringify(output))
-      `,
-      pathToFileURL(path.join(BUILD_DIR, 'index.js')).href,
-      pathToFileURL(createRequire(import.meta.url).resolve('eslint')).href,
-      dir,
-      JSON.stringify(CORE_AREAS_OFF),
-      JSON.stringify(roots),
-    ])
-    return JSON.parse(stdout) as Record<string, { floating: number; fatal: Array<string> }>
-  }
-
-  it('lints one whose default project loads the same type packages through links, and rejects one that loads another version', async () => {
-    await using project = await withProject(
-      ambientTypesProject({
-        a: { returnType: 'Promise<void>', version: '1.0.0' },
-        b: { returnType: 'Promise<void>', version: '1.0.0' },
-        c: { returnType: 'void', version: '2.0.0' },
-      }),
-    )
-    // As pnpm links each package's `@types/node` to one folder in its store
-    const types = path.join(project.dir, 'b/node_modules/@types/node')
-    await fs.rm(types, { recursive: true })
-    await fs.symlink(path.join(project.dir, 'a/node_modules/@types/node'), types, 'junction')
-    const file = path.join(project.dir, 'c', 'tool.config.ts')
-    expect(await lintRootsInChild(project.dir, ['a', 'b', 'c'])).toEqual({
-      a: { floating: 1, fatal: [] },
-      b: { floating: 1, fatal: [] },
-      c: {
-        floating: 0,
-        fatal: [
-          `Parsing error: @gpahal/eslint-config: project service: \`${file}\`: the config of \`${path.join(project.dir, 'c')}\` sets the type packages that \`${path.join(project.dir, 'c', 'tsconfig.json')}\` loads for the default project, against those of \`${path.join(project.dir, 'a', 'tsconfig.json')}\` in the config of \`${path.join(project.dir, 'a')}\`, whose project service this process already uses. typescript-eslint keeps one project service per process, with the options of the first config that uses it. Lint the packages with one config at their common root, limiting presets with \`scope\` and settings with \`files\`, or run ESLint once per package`,
-        ],
-      },
-    })
-  })
-})
-
 describe('the parsing of tsconfigs for the default project', () => {
   const options = { module: 'NodeNext', moduleResolution: 'NodeNext', types: [] }
-
-  /**
-   * A workspace of `count` packages, each with a `tsconfig.json` that extends the root's, a source
-   * folder and a `vitest.config.ts` that no project includes
-   */
-  function packagesProject(count: number): Record<string, string> {
-    return {
-      'package.json': '{"type":"module"}',
-      'tsconfig.json': JSON.stringify({ compilerOptions: options, files: [] }),
-      ...Object.fromEntries(
-        Array.from({ length: count }, (_, index) => index).flatMap(
-          (index): Array<[string, string]> => [
-            [
-              `packages/p${index}/tsconfig.json`,
-              '{"extends":"../../tsconfig.json","include":["src"]}',
-            ],
-            [`packages/p${index}/vitest.config.ts`, 'export default {}\n'],
-            [`packages/p${index}/src/a.ts`, 'export const a = 1\n'],
-          ],
-        ),
-      ),
-    }
-  }
-
-  it('reads a tsconfig that the projects extend once, and none again for a second config', async () => {
-    await using project = await withProject(packagesProject(4))
-    const rootTsconfig = path.join(project.dir, 'tsconfig.json')
-    const readFileSync = vi.spyOn(syncFs, 'readFileSync')
-    try {
-      expect(findDefaults(project.dir)).toHaveLength(5)
-      // Once as a project and once as the config the others extend
-      expect(readFileSync.mock.calls.filter(([file]) => file === rootTsconfig)).toHaveLength(2)
-    } finally {
-      readFileSync.mockRestore()
-    }
-
-    await defineConfig({ root: project.dir, isInEditor: false })
-    const secondRead = vi.spyOn(syncFs, 'readFileSync')
-    try {
-      await defineConfig({ root: project.dir, isInEditor: false })
-      expect(secondRead.mock.calls.map(([file]) => file)).not.toContain(
-        path.join(project.dir, 'packages', 'p0', 'tsconfig.json'),
-      )
-    } finally {
-      secondRead.mockRestore()
-    }
-  })
 
   it('sees a config file added after an earlier discovery', async () => {
     await using project = await withProject({
@@ -856,7 +641,9 @@ describe('react.compiler', () => {
 })
 
 describe("Playwright's testDir", () => {
-  it("warns only when `playwright.files` misses a literal testDir's tests", async () => {
+  // The warning of a `playwright: true` that misses the tests is in `default-project-warnings`'
+  // snapshot
+  it("doesn't warn when `playwright.files` matches a literal testDir's tests, or of a testDir set at runtime", async () => {
     const createPlaywright = {
       'package.json': '{ "type": "module", "devDependencies": { "@playwright/test": "*" } }',
       'playwright.config.ts':
@@ -867,13 +654,6 @@ describe("Playwright's testDir", () => {
       warningsOf(root, { typeAware: false, ...options }).filter(
         ([, code]) => code === 'GPAHAL_PLAYWRIGHT_FILES_UNMATCHED',
       )
-    await using project = await withProject(createPlaywright)
-    expect(testDirWarnings(project.dir, { playwright: true })).toEqual([
-      [
-        "@gpahal/eslint-config: `playwright.files`: `playwright.config.ts` sets `testDir` to `./tests`, but `playwright.files` doesn't match its tests, such as `tests/example.spec.ts`, so they get no Playwright rules. Set `playwright: { files: ['tests/**'] }`",
-        'GPAHAL_PLAYWRIGHT_FILES_UNMATCHED',
-      ],
-    ])
     // A fresh project for each, since a hint is given once per root
     for (const files of [['tests/**'], ['./tests/**']]) {
       await using matched = await withProject(createPlaywright)
@@ -927,12 +707,8 @@ describe('GPAHAL_ROOT_GITIGNORED', () => {
       const warnings = warningsOf(root, { typeAware: false }).filter(
         ([, code]) => code === 'GPAHAL_ROOT_GITIGNORED',
       )
+      // Its wording for each case is in `default-project-warnings`' snapshot
       expect(warnings).toHaveLength(1)
-      expect(warnings[0]?.[0]).toContain(
-        isIgnoredByESLint
-          ? 'so git ignores every file in the project, and ESLint does too.'
-          : 'so git ignores every file in the project, though ESLint still lints them.',
-      )
       const configs = await defineConfig({ root, typeAware: false, isInEditor: false })
       expect(await eslintWith(root, configs).isPathIgnored(path.join(root, 'a.js'))).toBe(
         isIgnoredByESLint,

@@ -2,3 +2,5 @@ pnpm-lock.yaml
 **/*.gen.*
 # The import sorter would merge the duplicate imports the eslint-config fix-output test needs
 packages/eslint-config/tests/fixtures/fix-output/src/merged-imports.ts
+# Prettier would move the line comment that keeps `imports.removeUnused` from fixing the import
+packages/eslint-config/tests/fixtures/fix-output/src/remove-unused/line-comment.ts

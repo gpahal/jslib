@@ -12,6 +12,7 @@ import { runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/tes
 
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import { IGNORES } from '@/internal/configs/ignores'
+import { findDefaultProjectFiles } from '@/internal/default-project'
 import { findGitCommonDir, readGitModules } from '@/internal/git'
 import { scanProject } from '@/internal/project-scan'
 import { resolveOptions } from '@/internal/resolve'
@@ -116,32 +117,6 @@ function gitIgnoredFiles(dir: string): Set<string> {
     git(dir, 'ls-files', '--others', '--ignored', '--exclude-standard', '-z')
       .split('\0')
       .filter((file) => file !== ''),
-  )
-}
-
-/**
- * Whether git and ESLint ignore each of `checked`, in a new repository with `files`, with ESLint's
- * root at `root`
- */
-async function compare(files: Record<string, string>, root: string, checked: Array<string>) {
-  await using project = await withProject()
-  git(project.dir, 'init', '--quiet')
-  await writeFiles(project.dir, { [`${root}/eslint.config.mjs`]: 'export default []\n', ...files })
-  const eslint = await createESLint(path.join(project.dir, root))
-  return await Promise.all(
-    checked.map(async (file) => {
-      let isGitIgnored = true
-      try {
-        git(project.dir, 'check-ignore', '--quiet', file)
-      } catch {
-        isGitIgnored = false
-      }
-      return {
-        file,
-        git: isGitIgnored,
-        eslint: await eslint.isPathIgnored(path.join(project.dir, file)),
-      }
-    }),
   )
 }
 
@@ -275,21 +250,6 @@ describe('ignores', () => {
     expect(await replaced.isPathIgnored('dist/index.js')).toBe(false)
   })
 
-  it("read the repository's .gitignore files and info/exclude, but none above its root", async () => {
-    await using project = await withProject({
-      '.gitignore': '*\n',
-      'repo/.git/info/exclude': 'local.js\n',
-      'repo/.gitignore': 'secret.js\n',
-      'repo/eslint.config.mjs': 'export default []\n',
-      'repo/app/.gitignore': 'out/\n',
-    })
-    const eslint = await createESLint(path.join(project.dir, 'repo'))
-    expect(await eslint.isPathIgnored('index.js')).toBe(false)
-    expect(await eslint.isPathIgnored('secret.js')).toBe(true)
-    expect(await eslint.isPathIgnored('local.js')).toBe(true)
-    expect(await eslint.isPathIgnored('app/out/index.js')).toBe(true)
-  })
-
   it('skip a folder it cannot read', async () => {
     await using project = await withProject({ '.git/HEAD': '', 'pgdata/.gitignore': 'x\n' })
     using _failure = failReads('readdirSync', path.join(project.dir, 'pgdata'))
@@ -311,31 +271,137 @@ describe('ignores', () => {
   )
 })
 
+/**
+ * The packages of the repository that `GIT_REPO` builds, named with glob characters that git reads
+ * literally in a path
+ */
+const PACKAGE_NAMES = ['a', 'b', 'c', '[id]', '#h', 'a b', 'q,r', '{z}', '!n', 'a|b']
+
+/**
+ * The files whose ignoring ESLint and git must agree on, each a file of `GIT_REPO`
+ */
+const GIT_CHECKED_FILES = [
+  'index.js',
+  'secret.js',
+  'local.js',
+  'lib/out/index.js',
+  'scratch/index.js',
+  'build/index.js',
+  'root-only/index.js',
+  'apps/web/generated/index.js',
+  'generated/index.js',
+  'scripts/index.js',
+  'apps/web/scripts/index.js',
+  'src/index.js',
+  'x5y.js',
+  'b.js',
+  'keep.js',
+  'shared.js',
+  'app/shared.js',
+  'dir/x.js',
+  'app/out/a.js',
+  'app/gen.js',
+  'app/src/gen.js',
+  'app/tmp/a.js',
+  'app/top.js',
+  'app/generated/a.js',
+  'merged/a/x.js',
+  'merged/b/x.js',
+  'merged/a/sub/x.js',
+  'merged/c/x.js',
+  ...PACKAGE_NAMES.flatMap((name) =>
+    ['dist2/x.js', 'a.cache', 'keep.cache', 'a.log', 'out/x.js', 'sub/a.log'].map(
+      (file) => `packages/${name}/${file}`,
+    ),
+  ),
+]
+
+/**
+ * A repository with every ignore pattern the tests compare with git, by kind:
+ * - `info/exclude`, which a `.gitignore` negates, and nested `.gitignore` files, whose patterns
+ *   apply only under their folder and negate one above it, as in `apps/web`, `app` and `lib`;
+ * - a negated file in an ignored folder, `dir`, which stays ignored;
+ * - patterns of a `.gitignore` above a root below it, `app`, which ESLint rebases;
+ * - braces, which git reads literally, so a huge range or deep nesting expands to nothing;
+ * - sibling `.gitignore` files that merge into one config, with the negations of a deeper one after
+ *   it, in `merged`;
+ * - package names with glob characters, whose `.gitignore` files merge.
+ *
+ * Its parent folder's `.gitignore` ignores everything, which neither git nor ESLint reads
+ */
+const GIT_REPO: Record<string, string> = {
+  '.gitignore': [
+    'build',
+    '/root-only',
+    'scripts',
+    'secret.js',
+    '!keep.js',
+    'shared.js',
+    'dir/',
+    'app/out/',
+    '*/gen.js',
+    '**/app/tmp/',
+    '/top.js',
+    '**/**/app/generated/**',
+    'x{1..2000000}y',
+    `${'{a,'.repeat(5000)}b${'}'.repeat(5000)}`,
+    '*.log',
+    '/packages/*/out/',
+    '',
+  ].join('\n'),
+  'apps/web/.gitignore': 'generated/\n!scripts\n',
+  'lib/.gitignore': 'out/\n',
+  'app/.gitignore': '!shared.js\n',
+  'dir/.gitignore': '!x.js\n',
+  'merged/a/.gitignore': 'x.js\n',
+  'merged/b/.gitignore': 'x.js\n',
+  'merged/a/sub/.gitignore': '!x.js\n',
+  'merged/c/.gitignore': '!x.js\n',
+  ...Object.fromEntries(
+    PACKAGE_NAMES.map((name) => [
+      `packages/${name}/.gitignore`,
+      name === 'c' ? 'dist2/\n*.cache\n' : 'dist2/\n*.cache\n!keep.cache\n',
+    ]),
+  ),
+  'packages/a/sub/.gitignore': '!*.log\n',
+  'packages/b/sub/.gitignore': '!*.log\n',
+  ...Object.fromEntries(GIT_CHECKED_FILES.map((file) => [file, ''])),
+}
+
 describe('git ignore rules', () => {
-  // Written at runtime: committed `.gitignore` fixtures would make git ignore files in this repo
+  // Written at runtime: committed `.gitignore` fixtures would make git ignore files in this repo,
+  // and a fixture can't hold a `.git` folder
   let repoDir: string
   beforeAll(async () => {
-    const project = await withProject({
-      '.git/info/exclude': '/scratch\n',
-      '.gitignore': 'build\n/root-only\nscripts\n',
-      'apps/web/.gitignore': 'generated/\n!scripts\n',
-      'apps/web/eslint.config.mjs': 'export default []\n',
-    })
-    repoDir = project.dir
+    const project = await withProject({ '.gitignore': '*\n' })
+    repoDir = path.join(project.dir, 'repo')
+    await fs.mkdir(repoDir)
+    git(repoDir, 'init', '--quiet')
+    await writeFiles(repoDir, { ...GIT_REPO, '.git/info/exclude': '/scratch\nlocal.js\nkeep.js\n' })
     return async () => project[Symbol.asyncDispose]()
   })
 
-  it('honour .git/info/exclude and the .gitignore files under root', async () => {
-    const eslint = await createESLint(repoDir)
-    expect(await eslint.isPathIgnored('scratch/index.js')).toBe(true)
-    expect(await eslint.isPathIgnored('build/index.js')).toBe(true)
-    expect(await eslint.isPathIgnored('root-only/index.js')).toBe(true)
-    expect(await eslint.isPathIgnored('apps/web/generated/index.js')).toBe(true)
-    // Patterns in a nested `.gitignore` apply only under its folder, and can negate one above it
-    expect(await eslint.isPathIgnored('generated/index.js')).toBe(false)
-    expect(await eslint.isPathIgnored('scripts/index.js')).toBe(true)
-    expect(await eslint.isPathIgnored('apps/web/scripts/index.js')).toBe(false)
-    expect(await eslint.isPathIgnored('src/index.js')).toBe(false)
+  it('ignore the files git ignores, from the repository root and from a folder below it', async () => {
+    const dir = repoDir
+    const ignored = gitIgnoredFiles(dir)
+    for (const root of ['.', 'app']) {
+      // The last config gives every file a config, since `isPathIgnored` is `true` for a file that
+      // no config's `files` matches
+      const eslint = await createESLint(path.join(dir, root), {
+        typeAware: false,
+        extraConfigs: [{ files: ['**/*.*'] }],
+      })
+      const checked = GIT_CHECKED_FILES.filter(
+        (file) => root === '.' || file.startsWith(`${root}/`),
+      )
+      const results = await Promise.all(
+        checked.map(async (file) => ({
+          file,
+          ignored: await eslint.isPathIgnored(path.join(dir, file)),
+        })),
+      )
+      expect(results, root).toEqual(checked.map((file) => ({ file, ignored: ignored.has(file) })))
+    }
   })
 
   it("apply at the top level of ESLint's `defineConfig`, from root", async () => {
@@ -384,24 +450,15 @@ describe('git ignore rules', () => {
       scan()
       expect(gitignores.flatMap(({ ignores }) => ignores)).toEqual([`**/${kept}`])
     })
+    // Its wording is in `default-project-warnings`' snapshot
     expect(warnings).toEqual([
       [
-        "@gpahal/eslint-config: `gitignore`: `src/.gitignore`: the rules on lines 2 and 5 have more than 3 `*` wildcards in one path segment, which can take ESLint seconds per path to match, so they're skipped. Use at most 3, as in `*.log`",
+        expect.stringMatching(
+          /^@gpahal\/eslint-config: `gitignore`: `src\/\.gitignore`: the rules on lines 2 and 5 /,
+        ),
         'GPAHAL_GITIGNORE_WILDCARDS',
       ],
     ])
-  })
-
-  it('keeps the braces of a `.gitignore` literal, as git does, so a huge range expands to nothing', async () => {
-    await using project = await withProject({
-      '.git/HEAD': '',
-      '.gitignore': `x{1..2000000}y\n${'{a,'.repeat(5000)}b${'}'.repeat(5000)}\n`,
-      'x5y.js': 'export const a = 1\n',
-      'b.js': 'export const b = 1\n',
-    })
-    const eslint = await createESLint(project.dir, { typeAware: false })
-    expect(await eslint.isPathIgnored(path.join(project.dir, 'x5y.js'))).toBe(false)
-    expect(await eslint.isPathIgnored(path.join(project.dir, 'b.js'))).toBe(false)
   })
 
   it('match `[!x]*` rules as minimatch reads them, and rebase one from above root', async () => {
@@ -435,64 +492,6 @@ describe('git ignore precedence, as git check-ignore has it', () => {
       expect(await eslint.isPathIgnored(path.join(project.dir, 'src/a.js'))).toBe(false)
     },
   )
-
-  it.each([
-    [
-      'a .gitignore negates info/exclude',
-      { '.git/info/exclude': 'keep.js\n', '.gitignore': '!keep.js\n', 'keep.js': '' },
-      '.',
-      ['keep.js'],
-    ],
-    [
-      'a deeper .gitignore negates a shallower one',
-      { '.gitignore': 'shared.js\n', 'app/.gitignore': '!shared.js\n', 'app/shared.js': '' },
-      'app',
-      ['app/shared.js'],
-    ],
-    [
-      'a negated file stays ignored in an ignored folder',
-      { '.gitignore': 'dir/\n', 'dir/.gitignore': '!x.js\n', 'dir/x.js': '' },
-      '.',
-      ['dir/x.js'],
-    ],
-    [
-      'the patterns of a .gitignore above root apply to the paths under it',
-      {
-        '.gitignore': 'app/out/\n*/gen.js\n**/app/tmp/\n/top.js\n**/**/app/generated/**\n',
-        'app/out/a.js': '',
-        'app/gen.js': '',
-        'app/src/gen.js': '',
-        'app/tmp/a.js': '',
-        'app/top.js': '',
-        'app/generated/a.js': '',
-      },
-      'app',
-      [
-        'app/out/a.js',
-        'app/gen.js',
-        'app/src/gen.js',
-        'app/tmp/a.js',
-        'app/top.js',
-        'app/generated/a.js',
-      ],
-    ],
-    [
-      'the negations of a deeper .gitignore come after a merged sibling config',
-      {
-        'a/.gitignore': 'x.js\n',
-        'b/.gitignore': 'x.js\n',
-        'a/sub/.gitignore': '!x.js\n',
-        'c/.gitignore': '!x.js\n',
-      },
-      '.',
-      ['a/x.js', 'b/x.js', 'a/sub/x.js', 'c/x.js'],
-    ],
-  ])('%s', async (_name, files, root, checked) => {
-    const results = await compare(files, root, checked)
-    expect(results.map(({ file, eslint }) => ({ file, eslint }))).toEqual(
-      results.map(({ file, git }) => ({ file, eslint: git })),
-    )
-  })
 
   // Git turns `core.ignorecase` on when it makes a repository on a case-insensitive file system
   it.each([true, false])(
@@ -704,37 +703,67 @@ describe('the project walk', () => {
     },
   )
 
-  it('reads each folder and each .gitignore file once in a large monorepo', async () => {
+  // The root, `packages`, and each package's own folder, `src`, `src/lib`, `src/lib/deep` and
+  // `tests`, each read once, and each `.gitignore` and the tsconfig the packages extend, once
+  it('reads each folder, .gitignore and extended tsconfig once in a large monorepo, and no tsconfig again for a second config', async () => {
     const count = 20
     await using project = await withTmpProject('eslint-config', {
       '.git/HEAD': '',
       '.gitignore': 'dist\n',
+      'package.json': '{ "type": "module" }\n',
+      'tsconfig.json': JSON.stringify({
+        compilerOptions: { module: 'NodeNext', moduleResolution: 'NodeNext', types: [] },
+        files: [],
+      }),
       ...Object.fromEntries(
-        Array.from({ length: count }, (_, index) => [
-          [`packages/${String(index)}/.gitignore`, 'generated/\n*.log\n!keep.log\n'] as const,
-          ...['src/lib/deep/b.ts', 'tests/a.test.ts'].map(
-            (file) => [`packages/${String(index)}/${file}`, ''] as const,
-          ),
-        ]).flat(),
+        Array.from({ length: count }, (_, index) => {
+          const dir = `packages/${String(index)}`
+          return [
+            [`${dir}/.gitignore`, 'generated/\n*.log\n!keep.log\n'],
+            [`${dir}/tsconfig.json`, '{ "extends": "../../tsconfig.json", "include": ["src"] }\n'],
+            [`${dir}/vitest.config.ts`, 'export default {}\n'],
+            [`${dir}/src/lib/deep/b.ts`, 'export const b = 1\n'],
+            [`${dir}/tests/a.test.ts`, ''],
+          ] as const
+        }).flat(),
       ),
     })
+    const root = project.dir
     const readdirSync = vi.spyOn(syncFs, 'readdirSync')
     const readFileSync = vi.spyOn(syncFs, 'readFileSync')
-    const resolved = resolveOptions({ root: project.dir })
+    const scan = scanProject({ root, gitignore: true, ignores: IGNORES, findsTsconfigFiles: true })
     const folders = readdirSync.mock.calls.map(([folder]) => String(folder))
     const gitignores = readFileSync.mock.calls
       .map(([file]) => String(file))
       .filter((file) => path.basename(file) === '.gitignore')
+    readFileSync.mockClear()
+    // TypeScript reads folders too, to find the files of each project
+    const defaults = findDefaultProjectFiles(root, scan.tsconfigFiles, scan.configFiles)
+    const rootTsconfigReads = readFileSync.mock.calls.filter(
+      ([file]) => file === path.join(root, 'tsconfig.json'),
+    )
     vi.restoreAllMocks()
-    // The root, `packages`, and each package's own folder, `src`, `src/lib`, `src/lib/deep` and
-    // `tests`
     expect(folders).toHaveLength(2 + count * 5)
     expect(new Set(folders).size).toBe(folders.length)
     expect(gitignores).toHaveLength(1 + count)
     expect(new Set(gitignores).size).toBe(gitignores.length)
     // The root's, the packages' merged into one, and the empty `info/exclude` and `.gitmodules`
     // configs, which are always there
-    expect(resolved.gitignores).toHaveLength(4)
+    expect(scan.gitignores).toHaveLength(4)
+    expect(defaults).toHaveLength(count)
+    // Once as a project and once as the config the others extend
+    expect(rootTsconfigReads).toHaveLength(2)
+
+    await defineConfig({ root, isInEditor: false })
+    const secondRead = vi.spyOn(syncFs, 'readFileSync')
+    try {
+      await defineConfig({ root, isInEditor: false })
+      expect(secondRead.mock.calls.map(([file]) => file)).not.toContain(
+        path.join(root, 'packages/0/tsconfig.json'),
+      )
+    } finally {
+      secondRead.mockRestore()
+    }
   })
 
   it('reads no .gitignore file and enters no dot folder with gitignore: false', async () => {
@@ -794,39 +823,6 @@ describe('sibling .gitignore files', () => {
       ],
       ['packages/d/**/other/'],
     ])
-  })
-
-  it('merge under package names with glob characters as git reads them', async () => {
-    await using project = await withProject()
-    git(project.dir, 'init', '--quiet')
-    const names = ['a', 'b', 'c', '[id]', '#h', 'a b', 'q,r', '{z}', '!n', 'a|b']
-    const perPackage = ['dist2/x.js', 'a.cache', 'keep.cache', 'a.log', 'out/x.js', 'sub/a.log']
-    const checked = names.flatMap((name) => perPackage.map((file) => `packages/${name}/${file}`))
-    await writeFiles(project.dir, {
-      '.gitignore': '*.log\n/packages/*/out/\n',
-      ...Object.fromEntries(
-        names.map((name) => [
-          `packages/${name}/.gitignore`,
-          name === 'c' ? 'dist2/\n*.cache\n' : 'dist2/\n*.cache\n!keep.cache\n',
-        ]),
-      ),
-      'packages/a/sub/.gitignore': '!*.log\n',
-      'packages/b/sub/.gitignore': '!*.log\n',
-      ...Object.fromEntries(checked.map((file) => [file, ''])),
-    })
-    const ignored = gitIgnoredFiles(project.dir)
-    // The last config gives every file a config, since `isPathIgnored` is `true` for a file that
-    // no config's `files` matches
-    const eslint = await createESLint(project.dir, {
-      typeAware: false,
-      extraConfigs: [{ files: ['**/*.*'] }],
-    })
-    for (const file of checked) {
-      expect({ file, ignored: await eslint.isPathIgnored(file) }).toEqual({
-        file,
-        ignored: ignored.has(file),
-      })
-    }
   })
 })
 

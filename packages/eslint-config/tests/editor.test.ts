@@ -1,18 +1,15 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 
 import type { ESLint, Linter } from 'eslint'
-
-import { runNode } from '@gpahal/internal/node/testing'
 
 import { defineConfig } from '@/index'
 import { isInEditorEnvOf, type EditorEnv } from '@/internal/editor'
 
-import { CORE_AREAS_OFF, CORE_AREAS_OFF_SOURCE, eslintWith, withProject } from './helpers'
+import { CORE_AREAS_OFF, eslintWith, withProject } from './helpers'
 
 const ESLINT_DIR = path.dirname(fileURLToPath(import.meta.resolve('eslint/package.json')))
-const ESLINT_BIN = path.join(ESLINT_DIR, 'bin', 'eslint.js')
 
 const PREFER_CONST = 'export function one() {\n  let a = 1\n  return a\n}\n'
 const DISABLED_PREFER_CONST =
@@ -81,9 +78,10 @@ describe('editor detection', () => {
   })
 })
 
-test("ESLint's `--concurrency` workers run its worker script at the path editor detection matches", async () => {
+test("ESLint's `--concurrency` workers run its worker script at the path editor detection matches, with the `workerData` that `isESLintWorker` reads", async () => {
   // Editor detection treats this script as ESLint's command line. If ESLint moves it, update
-  // ESLINT_BIN_PATTERN in src/internal/editor.ts
+  // ESLINT_BIN_PATTERN in src/internal/editor.ts. The setup warnings are given only outside the
+  // workers, which `isESLintWorker` in src/internal/utils.ts tells by these `workerData` keys
   await expect(
     fs.access(path.join(ESLINT_DIR, 'lib', 'eslint', 'worker.js')),
   ).resolves.toBeUndefined()
@@ -92,40 +90,5 @@ test("ESLint's `--concurrency` workers run its worker script at the path editor 
     'utf8',
   )
   expect(eslintSource).toContain('"./worker.js"')
-})
-
-// ESLint's `--concurrency` workers are worker threads that each load the config again
-test("ESLint's bin fixes, in `--concurrency` workers too, with an editor's variables set and its output piped, and warns once, from the main thread", async () => {
-  await using project = await withProject({
-    // `turbo` without the `turbo` option, for a setup warning
-    'package.json': '{ "name": "bin", "type": "module", "devDependencies": { "turbo": "*" } }\n',
-    'index.js': PREFER_CONST,
-    'a.js': PREFER_CONST,
-    'b.js': PREFER_CONST,
-    'eslint.config.mjs': `import { defineConfig } from ${JSON.stringify(new URL('../build/index.js', import.meta.url).href)}\n\nexport default defineConfig({ root: import.meta.dirname, typeAware: false, ${CORE_AREAS_OFF_SOURCE} })\n`,
-  })
-  // ESLint's bin as the script, so `process.argv` is as when it runs, not from a package script,
-  // as when an agent in an editor's terminal runs it
-  const fix = async (...args: Array<string>) =>
-    runNode(
-      [
-        '--input-type=module',
-        '--eval',
-        `await import(${JSON.stringify(pathToFileURL(ESLINT_BIN).href)})`,
-        ESLINT_BIN,
-        '--fix',
-        ...args,
-      ],
-      {
-        cwd: project.dir,
-        env: { VSCODE_PID: '1', npm_lifecycle_event: '', npm_lifecycle_script: '', CI: '' },
-      },
-    )
-  // Separate files, so the runs can't race
-  const runs = await Promise.all([fix('index.js'), fix('--concurrency', '2', 'a.js', 'b.js')])
-  expect(runs.map(({ status }) => status)).toEqual([0, 0])
-  for (const file of ['index.js', 'a.js', 'b.js']) {
-    expect(await fs.readFile(path.join(project.dir, file), 'utf8'), file).toBe(FIXED_PREFER_CONST)
-  }
-  expect(runs[1].stderr.split('GPAHAL_FRAMEWORK_OPTION_UNSET')).toHaveLength(2)
+  expect(eslintSource).toMatch(/workerData: \{\s*eslintOptionsOrURL,\s*filePathIndexArray,/)
 })

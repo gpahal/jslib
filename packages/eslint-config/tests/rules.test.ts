@@ -5,17 +5,16 @@ import ts from 'typescript'
 
 import type { EslintConfigOptions } from '@/index'
 
-import { createFocusedESLint } from './fix-helpers'
 import {
   CORE_AREAS_OFF,
   createESLint,
+  createFocusedESLint,
   FIXTURES_DIR,
   lint,
   lintText,
   ruleIdOf,
   ruleSeverity,
   sharedESLint,
-  typeErrors,
   withProject,
 } from './helpers'
 
@@ -41,12 +40,32 @@ async function lintRules(files: Array<string>, typescript: EslintConfigOptions['
   })
 }
 
+/**
+ * The TypeScript errors in the rules fixture with `code` in place of `file`'s text, as
+ * `TS<code>: <message>`
+ */
 function fixtureTypeErrors(file: string, code: string): Array<string> {
   const { config } = ts.readConfigFile(path.join(RULES_DIR, 'tsconfig.json'), (name) =>
     ts.sys.readFile(name),
   ) as { config: unknown }
   const { options } = ts.parseJsonConfigFileContent(config, ts.sys, RULES_DIR)
-  return typeErrors(path.join(RULES_DIR, file), code, options)
+  const filePath = path.join(RULES_DIR, file)
+  const host = ts.createCompilerHost(options)
+  const readFile = host.readFile.bind(host)
+  host.readFile = (name) => (path.resolve(name) === filePath ? code : readFile(name))
+  const program = ts.createProgram({
+    rootNames: [filePath],
+    // TypeScript's libs can't hold an error that the fix made, and checking them takes most of the
+    // time
+    options: { ...options, skipLibCheck: true },
+    host,
+  })
+  return ts
+    .getPreEmitDiagnostics(program)
+    .map(
+      (diagnostic) =>
+        `TS${String(diagnostic.code)}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')}`,
+    )
 }
 
 /**

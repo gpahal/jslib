@@ -1,5 +1,228 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`the rules and globals that differ from every preset with e18e.modernization: false 1`] = `
+{
+  "typescript/src/x.ts": [
+    "- e18e/prefer-object-has-own",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with e18e.moduleReplacements: true 1`] = `
+{
+  "typescript/src/x.ts": [
+    "+ e18e/ban-dependencies: [2,{}]",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with e18e.performanceImprovements: false 1`] = `
+{
+  "typescript/src/x.ts": [
+    "- e18e/no-spread-in-reduce",
+    "- e18e/prefer-static-collator",
+    "- e18e/prefer-throw-if-no-entry",
+    "- e18e/prefer-timer-args",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with nothing more, in a type test 1`] = `
+{
+  "typescript/src/x.test-d.ts against typescript/src/x.ts": [
+    "- @typescript-eslint/explicit-module-boundary-types",
+    "- @typescript-eslint/no-empty-function",
+    "+ @typescript-eslint/no-inferrable-types: [2]",
+    "- @typescript-eslint/no-non-null-assertion",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":false}]",
+    "- @typescript-eslint/no-unsafe-type-assertion",
+    "+ @typescript-eslint/non-nullable-type-assertion-style: [2]",
+    "- @typescript-eslint/unbound-method",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":true,"peerDependencies":true,"optionalDependencies":true}]",
+    "- import-x/no-relative-packages",
+    "- no-promise-executor-return",
+    "- sonarjs/no-identical-functions",
+    "- unicorn/consistent-function-scoping",
+    "- unicorn/no-global-object-property-assignment",
+    "+ vitest/*: 26 rules",
+    "+ globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with server.files matching browser files too 1`] = `
+{
+  "browser/src/x.ts": [
+    "+ @gpahal/no-browser-global-properties: [2,"<1139 items, sha256 5631a1bd20bc>"]",
+    "+ @gpahal/no-browser-globals: [2,"<1139 items, sha256 e83faa3751e4>"]",
+    "- @gpahal/no-node-dynamic-imports",
+    "- @gpahal/no-node-global-properties",
+    "- @gpahal/no-node-globals",
+    "- @gpahal/no-node-imports",
+    "- no-restricted-globals",
+    "+ unicorn/no-unnecessary-global-this: [2]",
+    "+ unicorn/prefer-array-from-async: [2]",
+    "+ unicorn/prefer-iterator-helpers: [2]",
+    "+ unicorn/prefer-iterator-to-array-at-end: [2]",
+    "+ unicorn/prefer-iterator-to-array: [2]",
+    "+ unicorn/prefer-node-protocol: [2]",
+    "+ unicorn/prefer-top-level-await: [2]",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with server.files matching browser files too, without nextjs 1`] = `
+{
+  "browser/src/x.ts against server/src/x.ts": [],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with testFiles adding to the defaults with a function 1`] = `
+{
+  "checks/a.ts": [
+    "- @typescript-eslint/explicit-module-boundary-types",
+    "- @typescript-eslint/no-empty-function",
+    "+ @typescript-eslint/no-inferrable-types: [2]",
+    "- @typescript-eslint/no-non-null-assertion",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":false}]",
+    "- @typescript-eslint/no-unsafe-type-assertion",
+    "+ @typescript-eslint/non-nullable-type-assertion-style: [2]",
+    "- @typescript-eslint/unbound-method",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":true,"peerDependencies":true,"optionalDependencies":true}]",
+    "- import-x/no-relative-packages",
+    "- no-promise-executor-return",
+    "- sonarjs/no-identical-functions",
+    "- unicorn/consistent-function-scoping",
+    "- unicorn/no-global-object-property-assignment",
+    "+ vitest/*: 26 rules",
+    "+ globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+  "tests/a.ts": [],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with testFiles and vitest.files leaving out files of each other 1`] = `
+{
+  "tests/a.test.ts": [
+    "- vitest/*: 26 rules",
+    "- globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+  "tests/fixtures/a.test.ts": [
+    "+ @typescript-eslint/explicit-module-boundary-types: [2]",
+    "+ @typescript-eslint/no-empty-function: [2,{"allow":[]}]",
+    "- @typescript-eslint/no-inferrable-types",
+    "+ @typescript-eslint/no-non-null-assertion: [2]",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":true}]",
+    "+ @typescript-eslint/no-unsafe-type-assertion: [2]",
+    "- @typescript-eslint/non-nullable-type-assertion-style",
+    "+ @typescript-eslint/unbound-method: [2]",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":false,"peerDependencies":true,"optionalDependencies":true}]",
+    "+ import-x/no-relative-packages: [2]",
+    "+ no-promise-executor-return: [2,{"allowVoid":false}]",
+    "+ sonarjs/no-identical-functions: [2,3]",
+    "+ unicorn/consistent-function-scoping: [2,{"checkArrowFunctions":true}]",
+    "+ unicorn/no-global-object-property-assignment: [2]",
+    "- vitest/*: 26 rules",
+    "- globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+  "unit/a.ts": [
+    "- @typescript-eslint/explicit-module-boundary-types",
+    "- @typescript-eslint/no-empty-function",
+    "+ @typescript-eslint/no-inferrable-types: [2]",
+    "- @typescript-eslint/no-non-null-assertion",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":false}]",
+    "- @typescript-eslint/no-unsafe-type-assertion",
+    "+ @typescript-eslint/non-nullable-type-assertion-style: [2]",
+    "- @typescript-eslint/unbound-method",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":true,"peerDependencies":true,"optionalDependencies":true}]",
+    "- import-x/no-relative-packages",
+    "- no-promise-executor-return",
+    "- sonarjs/no-identical-functions",
+    "- unicorn/consistent-function-scoping",
+    "- unicorn/no-global-object-property-assignment",
+    "+ vitest/*: 26 rules",
+    "+ globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with testFiles replacing the defaults with a list 1`] = `
+{
+  "checks/a.ts": [
+    "- @typescript-eslint/explicit-module-boundary-types",
+    "- @typescript-eslint/no-empty-function",
+    "+ @typescript-eslint/no-inferrable-types: [2]",
+    "- @typescript-eslint/no-non-null-assertion",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":false}]",
+    "- @typescript-eslint/no-unsafe-type-assertion",
+    "+ @typescript-eslint/non-nullable-type-assertion-style: [2]",
+    "- @typescript-eslint/unbound-method",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":true,"peerDependencies":true,"optionalDependencies":true}]",
+    "- import-x/no-relative-packages",
+    "- no-promise-executor-return",
+    "- sonarjs/no-identical-functions",
+    "- unicorn/consistent-function-scoping",
+    "- unicorn/no-global-object-property-assignment",
+    "+ vitest/*: 26 rules",
+    "+ globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+  "tests/a.ts": [
+    "+ @typescript-eslint/explicit-module-boundary-types: [2]",
+    "+ @typescript-eslint/no-empty-function: [2,{"allow":[]}]",
+    "- @typescript-eslint/no-inferrable-types",
+    "+ @typescript-eslint/no-non-null-assertion: [2]",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":true}]",
+    "+ @typescript-eslint/no-unsafe-type-assertion: [2]",
+    "- @typescript-eslint/non-nullable-type-assertion-style",
+    "+ @typescript-eslint/unbound-method: [2]",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":false,"peerDependencies":true,"optionalDependencies":true}]",
+    "+ import-x/no-relative-packages: [2]",
+    "+ no-promise-executor-return: [2,{"allowVoid":false}]",
+    "+ sonarjs/no-identical-functions: [2,3]",
+    "+ unicorn/consistent-function-scoping: [2,{"checkArrowFunctions":true}]",
+    "+ unicorn/no-global-object-property-assignment: [2]",
+    "- vitest/*: 26 rules",
+    "- globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with vitest.files as a function of the resolved testFiles 1`] = `
+{
+  "tests/a.test.ts": [
+    "- vitest/*: 26 rules",
+    "- globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+  "unit/a.ts": [
+    "- @typescript-eslint/explicit-module-boundary-types",
+    "- @typescript-eslint/no-empty-function",
+    "+ @typescript-eslint/no-inferrable-types: [2]",
+    "- @typescript-eslint/no-non-null-assertion",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":false}]",
+    "- @typescript-eslint/no-unsafe-type-assertion",
+    "+ @typescript-eslint/non-nullable-type-assertion-style: [2]",
+    "- @typescript-eslint/unbound-method",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":true,"peerDependencies":true,"optionalDependencies":true}]",
+    "- import-x/no-relative-packages",
+    "- no-promise-executor-return",
+    "- sonarjs/no-identical-functions",
+    "- unicorn/consistent-function-scoping",
+    "- unicorn/no-global-object-property-assignment",
+    "+ vitest/*: 26 rules",
+    "+ globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with vitest.files as a list 1`] = `
+{
+  "tests/integration/a.test.ts": [
+    "- vitest/*: 26 rules",
+    "- globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+}
+`;
+
 exports[`the rules base alone turns on for typescript/src/x.ts, as a difference from every preset 1`] = `
 [
   "- @eslint-react/dom-no-dangerously-set-innerhtml",

@@ -706,7 +706,7 @@ The implementing agent keeps this table current. Status values are `todo`, `in p
 | D5 font-fallback CSS whitespace | D | done |
 | D6 std doctests in one program | D | done |
 | D7 prettier test lockfile | D | done |
-| E1 – E8 eslint-config test trims | E | todo |
+| E1 – E8 eslint-config test trims | E | done; E6 tailwind `entryPoint` permutations skipped, since they test a fix and root resolution, not rule inventory |
 | F1 shared entryPoint helper | F | done |
 | F2 shared semver checker (fixes P2) | F | done; the optional list joiner skipped, since `peers.ts` items contain commas |
 | Phase 3 top-level type imports | 3 | todo |

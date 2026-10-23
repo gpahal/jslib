@@ -86,11 +86,9 @@ describe('typeAware.ignores', () => {
       const warnings = warningsOf(project.dir, { configs }).filter(
         ([, code]) => code === 'GPAHAL_FILES_OUTSIDE_TSCONFIG',
       )
-      expect(warnings).toEqual([
-        [
-          expect.stringContaining('1 TypeScript file in the project, `scripts/d.ts`,'),
-          expect.anything(),
-        ],
+      // Their wording is in `default-project-warnings`' snapshot
+      expect(warnings.map(([message]) => message.match(/`[^`]+\.ts`/g))).toEqual([
+        ['`scripts/d.ts`'],
       ])
     },
   )
