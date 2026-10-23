@@ -82,7 +82,7 @@ jobs:
       - if: matrix.name == 'typecheck'
         run: pnpm audit --prod
       # No remote Turbo cache, so every job builds what its tasks need
-      - run: pnpm turbo run ${{ matrix.tasks }} --continue=dependencies-successful
+      - run: pnpm turbo run --continue=dependencies-successful ${{ matrix.tasks }}
         env:
           RECIPE_SHARD: ${{ matrix.recipe_shard }}
       # The build rewrites `package.json` exports when entry points change
