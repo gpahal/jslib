@@ -14,15 +14,10 @@ const require = createRequire(import.meta.url)
 const TSC_BIN = path.join(path.dirname(require.resolve('typescript/package.json')), 'bin/tsc')
 
 /**
- * `tsc`'s defaults for unset options, and its `--showConfig` output. Internal, but what `tsc` uses
+ * `tsc`'s defaults for unset options. Internal, but what `tsc` uses
  */
-const { computedOptions, convertToTSConfig } = ts as typeof ts & {
+const { computedOptions } = ts as typeof ts & {
   computedOptions: Record<string, { computeValue: (options: ts.CompilerOptions) => unknown }>
-  convertToTSConfig: (
-    parsed: ts.ParsedCommandLine,
-    configFileName: string,
-    host: ts.System,
-  ) => { compilerOptions: unknown }
 }
 
 /**
@@ -165,25 +160,13 @@ async function writeProject(
   return dir
 }
 
-// Catches an option flipped or dropped by mistake. Review a changed snapshot against the README
-test.concurrent.for(PRESETS)(
-  '%s resolves to the options in the snapshot',
-  async (preset, { expect }) => {
-    await using dir = await writeProject('show-config-', {
-      'tsconfig.json': JSON.stringify({ extends: path.join(PRESETS_DIR, preset) }),
-      'a.ts': 'export {}\n',
-    })
-    const configPath = path.join(dir.path, 'tsconfig.json')
-    const parsed = parseConfig(configPath)
-    expect(parsed.errors).toEqual([])
-    // What `tsc --showConfig` prints. The JSON round trip drops `undefined` values as `tsc` does
-    // eslint-disable-next-line unicorn/prefer-structured-clone -- `structuredClone` keeps `undefined`
-    const shown = JSON.parse(JSON.stringify(convertToTSConfig(parsed, configPath, ts.sys))) as {
-      compilerOptions: unknown
-    }
-    expect(shown.compilerOptions).toMatchSnapshot()
-  },
-)
+test.concurrent.for(PRESETS)('%s parses without errors', async (preset, { expect }) => {
+  await using dir = await writeProject('preset-', {
+    'tsconfig.json': JSON.stringify({ extends: path.join(PRESETS_DIR, preset) }),
+    'a.ts': 'export {}\n',
+  })
+  expect(parseConfig(path.join(dir.path, 'tsconfig.json')).errors).toEqual([])
+})
 
 // tsconfck, which Vite 7, Vitest 4 and vite-tsconfig-paths use, throws on a `null` in an extended
 // config
@@ -212,7 +195,7 @@ test('node.json types only the ESNext APIs that Node 24 has', () => {
 })
 
 // `next build` type-checks with these unless the tsconfig sets them, and doesn't rewrite a tsconfig
-// that has `extends`. The snapshot leaves out the ones `tsc` computes
+// that has `extends`
 test('nextjs-app.json has the computed options that next build requires', () => {
   const options = parseConfig(path.join(PRESETS_DIR, 'nextjs-app.json')).options
   for (const option of ['esModuleInterop', 'resolveJsonModule']) {

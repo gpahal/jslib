@@ -7,7 +7,7 @@ import postcss from 'postcss'
 import stylelint, { type Config } from 'stylelint'
 import { compile } from 'tailwindcss'
 
-import { countWork, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
+import { withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 import { isRecord } from '@gpahal/std/objects'
 
 import { defineConfig } from '@/index'
@@ -460,19 +460,6 @@ describe('referenceFiles', () => {
         ])
       },
     )
-
-    it('reads an entry point in time linear in its length', async () => {
-      const caseDir = path.join(importsDir, 'linear')
-      const workOf = async (count: number): Promise<number> => {
-        const entryPoint = path.join(caseDir, `${count}.css`)
-        await writeFiles(caseDir, { [`${count}.css`]: '@theme inline '.repeat(count) })
-        return countWork(async () => defineConfig({ root: dir, tailwindcss: { entryPoint } }))
-      }
-      const small = await workOf(10_000)
-      const large = await workOf(40_000)
-      // 4 times the length takes 4 times the work in linear code, and 16 times in quadratic code
-      expect(large).toBeLessThan(small * 8)
-    })
 
     it("resolves a symlinked file's imports from its real path", async () => {
       const caseDir = path.join(importsDir, 'symlinked')

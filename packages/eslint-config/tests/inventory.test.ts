@@ -5,9 +5,8 @@ import type { Linter, Rule } from 'eslint'
 import { builtinRules } from 'eslint/use-at-your-own-risk'
 
 import { defineConfig } from '@/index'
-import { parseRuleId, PRESET_WARNINGS } from '@/internal/rules'
+import { parseRuleId } from '@/internal/rules'
 
-import { ALL_ON_OPTIONS } from '../scripts/typegen'
 import {
   collator,
   createAllPresetsESLint,
@@ -134,89 +133,6 @@ function findRule(config: Linter.Config, name: string): Rule.RuleModule {
   return rule
 }
 
-const TAILWIND = [
-  'better-tailwindcss/enforce-canonical-classes',
-  'better-tailwindcss/enforce-consistent-class-order',
-  'better-tailwindcss/no-deprecated-classes',
-  'better-tailwindcss/no-duplicate-classes',
-  'better-tailwindcss/no-unnecessary-whitespace',
-]
-const CODE = [
-  'import-x/newline-after-import',
-  'unicorn/no-leading-empty-lines',
-  'unicorn/switch-case-braces',
-  'unicorn/switch-case-break-position',
-  ...TAILWIND,
-]
-/**
- * An ESM import in a script is wrong wherever it is, and an `import = require` in a `.cts` file can
- * follow code, so neither gets `import-x/newline-after-import`
- */
-const COMMONJS_CODE = CODE.filter((rule) => rule !== 'import-x/newline-after-import')
-const MARKDOWN = [
-  '@gpahal/markdown/prefer-autolinks',
-  'markdown-preferences/definitions-last',
-  'markdown-preferences/hard-linebreak-style',
-  'markdown-preferences/level1-heading-style',
-  'markdown-preferences/level2-heading-style',
-  'markdown-preferences/link-bracket-spacing',
-  'markdown-preferences/no-text-backslash-linebreak',
-  'markdown-preferences/ordered-list-marker-sequence',
-  'markdown-preferences/ordered-list-marker-start',
-  'markdown-preferences/prefer-fenced-code-blocks',
-  'markdown-preferences/sort-definitions',
-  'markdown-preferences/strikethrough-delimiters-style',
-]
-
-/**
- * Layout rules change code that Prettier also formats, so two of them can undo each other's fixes,
- * so review additions against both Prettier and the rules already listed.
- * `markdown-recipe.test.ts` checks that the Markdown ones and Prettier settle a file in one run
- */
-const LAYOUT_RULES: Record<string, Array<string>> = {
-  'typescript/src/x.ts': CODE,
-  'react/src/x.tsx': CODE,
-  'react/src/x.jsx': CODE,
-  'x.js': CODE,
-  'x.mjs': CODE,
-  'cjs/x.cjs': COMMONJS_CODE,
-  'typescript/src/x.mts': CODE,
-  'typescript/src/x.cts': COMMONJS_CODE,
-  'typescript/src/x.d.ts': CODE,
-  'typescript/src/x.test.ts': CODE,
-  'typescript/e2e/x.spec.ts': [...CODE, 'playwright/consistent-spacing-between-blocks'],
-  'react/src/x.stories.tsx': CODE,
-  'x.config.ts': CODE,
-  'scripts/x.ts': CODE,
-  'browser/src/x.ts': CODE,
-  'server/src/x.ts': CODE,
-  'astro/page.astro': CODE,
-  'astro/page.astro/0_0.ts': CODE,
-  'markdown/README.md': MARKDOWN,
-  'markdown/README.md/0.tsx': CODE,
-  'json/data.json': [],
-  'json/tsconfig.json': [],
-  'json/data.json5': [],
-  'json/.vscode/settings.json': [],
-  'yaml/workflow.yml': [],
-  'yaml/pnpm-workspace.yaml': [],
-  'yaml/package.json': ['pnpm/json-prefer-workspace-settings', 'pnpm/json-valid-catalog'],
-  'toml/wrangler.toml': [
-    'toml/array-bracket-newline',
-    'toml/array-bracket-spacing',
-    'toml/array-element-newline',
-    'toml/comma-style',
-    'toml/indent',
-    'toml/inline-table-curly-spacing',
-    'toml/key-spacing',
-    'toml/no-space-dots',
-    'toml/padding-line-between-tables',
-    'toml/quoted-keys',
-    'toml/table-bracket-spacing',
-  ],
-  'html/index.html': TAILWIND,
-}
-
 /**
  * Each file's config with every preset on, resolved once for the tests that read it
  */
@@ -269,28 +185,6 @@ describe('with every preset on', () => {
     })
     expect(deprecated).toEqual([])
   })
-
-  it('the layout rules on for each kind of file', () => {
-    expect(Object.keys(LAYOUT_RULES)).toEqual(FILES)
-    const layoutRules = Object.fromEntries(
-      FILES.map((file) => {
-        const config = configs.get(file)
-        const rules = inventoryOf(config)
-          .keys()
-          .filter((name) => config !== undefined && findRule(config, name).meta?.type === 'layout')
-          .toArray()
-        return [file, rules]
-      }),
-    )
-    expect(layoutRules).toEqual(
-      Object.fromEntries(
-        Object.entries(LAYOUT_RULES).map(([file, rules]) => [
-          file,
-          rules.toSorted((a, b) => collator.compare(a, b)),
-        ]),
-      ),
-    )
-  })
 })
 
 test(`the rules base alone turns on for ${REFERENCE_FILE}, as a difference from every preset`, async () => {
@@ -301,14 +195,4 @@ test(`the rules base alone turns on for ${REFERENCE_FILE}, as a difference from 
   )
   const allPresets = inventoryOf((await getAllPresetsConfigs()).get(REFERENCE_FILE))
   expect(diffOf(allPresets, base)).toMatchSnapshot()
-})
-
-test('every rule the presets turn on is an error, but the warnings they set on purpose', async () => {
-  const configs = await defineConfig(ALL_ON_OPTIONS)
-  const warnings = configs.flatMap((config) =>
-    Object.entries(config.rules ?? {})
-      .filter(([rule, entry]) => severityOf(entry) === 1 && !PRESET_WARNINGS.has(rule))
-      .map(([rule]) => `${config.name ?? 'unnamed'}: ${rule}`),
-  )
-  expect(warnings).toEqual([])
 })

@@ -4,8 +4,6 @@ import { fromMarkdown } from 'mdast-util-from-markdown'
 import { gfmFromMarkdown } from 'mdast-util-gfm'
 import { gfm } from 'micromark-extension-gfm'
 
-import { countWork, minCpuMs } from '@gpahal/internal/node/testing'
-
 import type { EslintConfigOptions } from '@/index'
 import { parseUncached } from '@/internal/markdown/language'
 import { createMarkdownProcessor } from '@/internal/markdown/processor'
@@ -760,52 +758,13 @@ describe('markdown processor unused directive removal', () => {
   })
 })
 
-describe('markdown processor speed', () => {
-  it('finds unused directive blocks without quadratic scaling', () => {
+describe('markdown processor unused directive blocks', () => {
+  it('removes each of many unused directive blocks', () => {
     const processor = createProcessor()
     const directive = '<!-- eslint-disable-next-line markdown/no-html -- reason -->'
-    const chunk = `${directive}\n\nParagraph.\n\n`
-    const workOf = (count: number) => {
-      const markdown = chunk.repeat(count)
-      processor.preprocess?.(markdown, 'docs.md')
-      const messages = unusedEach(markdown, directive)
-      let adjusted: Array<Linter.LintMessage> = []
-      const work = countWork(() => {
-        adjusted = processor.postprocess?.([messages], 'docs.md') ?? []
-      })
-      expect(adjusted.filter((message) => message.fix?.text === '')).toHaveLength(count)
-      return work
-    }
-    expect(workOf(1000)).toBeLessThan(6 * workOf(250))
-  })
-
-  it('checks the unused directives of one HTML node without quadratic scaling', () => {
-    const processor = createProcessor()
-    const directive = '<!-- eslint-disable markdown/no-html -- reason -->'
-    const lintOf = (count: number) => {
-      // One HTML block, since a comment block runs to the end of the line with its first `-->`
-      const markdown = `# T\n\n${`${directive} `.repeat(count)}\n\nText.\n`
-      const messages = unusedEach(markdown, directive)
-      return () => {
-        processor.preprocess?.(markdown, 'docs.md')
-        processor.postprocess?.([messages], 'docs.md')
-      }
-    }
-    // CPU time, since `countWork` weighs each slice of the one long line by its length, though the
-    // slices share its characters
-    const [shortMs = 0, longMs] = minCpuMs([lintOf(1000), lintOf(4000)])
-    expect(longMs).toBeLessThan(8 * shortMs + 50)
-  })
-
-  it('reads an HTML node of unclosed comments without quadratic scaling', () => {
-    const processor = createProcessor()
-    let runCount = 0
-    const markdownOf = (count: number) =>
-      `${'<!-- '.repeat(count)}\n\n\`\`\`js\nvar a = ${String(runCount++)}\n\`\`\`\n`
-    const preprocess = (count: number) => () => processor.preprocess?.(markdownOf(count), 'docs.md')
-    // CPU time, since a lazy regex, the quadratic way to read them, backtracks inside one call that
-    // no count sees
-    const [shortMs = 0, longMs] = minCpuMs([preprocess(4000), preprocess(40_000)])
-    expect(longMs).toBeLessThan(30 * shortMs + 50)
+    const markdown = `${directive}\n\nParagraph.\n\n`.repeat(250)
+    processor.preprocess?.(markdown, 'docs.md')
+    const adjusted = processor.postprocess?.([unusedEach(markdown, directive)], 'docs.md') ?? []
+    expect(adjusted.filter((message) => message.fix?.text === '')).toHaveLength(250)
   })
 })

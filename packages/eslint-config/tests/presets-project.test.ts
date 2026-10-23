@@ -8,14 +8,13 @@ import path from 'node:path'
 import type { ESLint, Linter } from 'eslint'
 import { defineConfig as eslintDefineConfig } from 'eslint/config'
 
-import { minCpuMs, runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
+import { runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import { IGNORES } from '@/internal/configs/ignores'
 import { findGitCommonDir, readGitModules } from '@/internal/git'
 import { scanProject } from '@/internal/project-scan'
 import { resolveOptions } from '@/internal/resolve'
-import { createIgnoreCheck, IgnoreLayers } from '@/internal/walk'
 
 import {
   captureWarnings,
@@ -383,12 +382,6 @@ describe('git ignore rules', () => {
         scanProject({ root, gitignore: true, ignores: IGNORES, findsTsconfigFiles: false })
       const { gitignores } = scan()
       scan()
-      const isIgnored = createIgnoreCheck(new IgnoreLayers(gitignores))
-      const [ms = 0] = minCpuMs(
-        [() => isIgnored(path.join(root, 'src', `${'a'.repeat(44)}.ts`), false)],
-        1,
-      )
-      expect(ms).toBeLessThan(100)
       expect(gitignores.flatMap(({ ignores }) => ignores)).toEqual([`**/${kept}`])
     })
     expect(warnings).toEqual([

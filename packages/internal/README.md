@@ -4,7 +4,7 @@ Unpublished code shared by the `@gpahal/*` packages. A package imports it as a d
 
 ## Modules
 
-Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.browser.json` type-checks them without Node's types, and `tests/browser.test.ts` checks that their builds import no Node module. Node-only modules are in `src/node/`, imported as `@gpahal/internal/node/<name>`.
+Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.browser.json` type-checks them without Node's types. Node-only modules are in `src/node/`, imported as `@gpahal/internal/node/<name>`.
 
 | Module | Main exports | Runs in |
 | --- | --- | --- |
@@ -19,7 +19,7 @@ Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.brow
 | `node/resolve` | `resolvePath`, `isResolvable`, `resolveFromNodeModules`, `resolveFile`, `findInstalledPackage`, `missingPeersError`, `formatPeerSpecifier` | Node |
 | `node/root` | `checkRoot` | Node |
 | `node/source-maps` | `isSourceMap`, `resolveSourcePath`, `isPublishedFile`, `dropSources` | Node, builds and tests only |
-| `node/testing` | `runNode`, `runNodeOk`, `withTmpProject`, `writeFiles`, `countCalls`, `countWork`, `minCpuMs`, `readMarkdownSection`, `readCodeBlocks`, `splitFileNameComment` | Node, tests only |
+| `node/testing` | `runNode`, `runNodeOk`, `withTmpProject`, `writeFiles`, `minCpuMs`, `readMarkdownSection`, `readCodeBlocks`, `splitFileNameComment` | Node, tests only |
 
 The JSDoc gives the details. The rules that span modules:
 

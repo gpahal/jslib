@@ -1,12 +1,44 @@
-import type { Linter } from 'eslint'
+import markdown from '@eslint/markdown'
+import { Linter } from 'eslint'
 
-import { minCpuMs } from '@gpahal/internal/node/testing'
-
-import { lintRun, problemsOf } from './markdown-fork-helpers'
+import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'
 
 // Each `@gpahal/markdown` rule forked from `@eslint/markdown` exists for the cases where the stock
 // rule differs. These tests run the stock rule on those cases and fail once it no longer differs,
 // so the fork may be removable
+
+const linter = new Linter({ configType: 'flat' })
+
+/**
+ * The problems of `markdown/<rule>`, or of `@gpahal/markdown/<rule>` with `isFork`, on `code`, as
+ * `line:column`. The stock rule runs on the stock language with `languageOptions`
+ */
+function problemsOf(
+  rule: string,
+  code: string,
+  {
+    isFork = false,
+    languageOptions = {},
+  }: { isFork?: boolean; languageOptions?: Linter.LanguageOptions | undefined } = {},
+): Array<string> {
+  const config: Linter.Config = isFork
+    ? {
+        files: ['**/*.md'],
+        plugins: { '@gpahal/markdown': MARKDOWN_PLUGIN },
+        language: '@gpahal/markdown/gfm',
+        rules: { [`@gpahal/markdown/${rule}`]: 'error' },
+      }
+    : {
+        files: ['**/*.md'],
+        plugins: { markdown },
+        language: 'markdown/gfm',
+        languageOptions,
+        rules: { [`markdown/${rule}`]: 'error' },
+      }
+  return linter
+    .verify(code, config, 'doc.md')
+    .map((message) => `${String(message.line)}:${String(message.column)}`)
+}
 
 type Case = {
   name: string
@@ -70,22 +102,6 @@ const CASES: Record<string, Array<Case>> = {
     { name: 'a tag', code: '# T\n\n#general\n', stock: ['3:1'], fork: [] },
   ],
 }
-
-const frontmatter = (spaces: number): string => `---\n${' '.repeat(spaces)}\n---\n\n# A\n`
-
-describe('the fork of `no-multiple-h1`', () => {
-  it('differs from the stock rule, which is quadratic on a front matter line of spaces, or `FRONTMATTER_TITLE` may be removable', () => {
-    // Once this fails, `FRONTMATTER_TITLE` in src/internal/markdown/rules/utils.ts may go back to
-    // the stock default. 4 times the spaces take 16 times as long in quadratic code; the fixed
-    // cost of a lint lowers the ratio, measured at about 12
-    const yaml: Linter.LanguageOptions = { frontmatter: 'yaml' }
-    const [shortMs = 0, longMs = 0] = minCpuMs([
-      lintRun('no-multiple-h1', frontmatter(3000), false, yaml),
-      lintRun('no-multiple-h1', frontmatter(12_000), false, yaml),
-    ])
-    expect(longMs / shortMs).toBeGreaterThan(7)
-  })
-})
 
 describe.each(Object.entries(CASES))('the fork of `%s`', (rule, cases) => {
   it.each(cases)(

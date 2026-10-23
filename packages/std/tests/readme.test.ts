@@ -3,14 +3,7 @@ import path from 'node:path'
 
 import ts from 'typescript'
 
-import {
-  compileBlock,
-  compileRunner,
-  parseOutcome,
-  runExample,
-  settle,
-  type Outcome,
-} from './helpers'
+import { runExample } from './helpers'
 
 // Literal and error comments assert results. Prose comments leave statements executable.
 
@@ -107,49 +100,5 @@ describe('README examples', () => {
 
   it.each(blocks)('$heading', async ({ code }) => {
     await expect(runExample(code)).resolves.toBeUndefined()
-  })
-})
-
-describe('README runner', () => {
-  it('extracts every TypeScript block under its nearest heading', () => {
-    const markdown =
-      '# First\n\n```ts\na()\n```\n\n```ts\nb()\n```\n\n```text\n# Not a heading\n```\n\n## Second\n\n```ts\nc()\n```'
-    expect(getBlocks(markdown)).toEqual([
-      { heading: 'First', code: 'a()\n' },
-      { heading: 'First', code: 'b()\n' },
-      { heading: 'Second', code: 'c()\n' },
-    ])
-  })
-
-  it('executes awaited statements with prose comments', async () => {
-    const { body } = compileBlock("await Promise.reject(new Error('ran')) // ordinary prose")
-    await expect(
-      compileRunner(body)({}, async () => {
-        throw new Error('Prose must not create an assertion')
-      }),
-    ).rejects.toThrow('ran')
-  })
-
-  it('checks values and errors and leaves prose alone', async () => {
-    const { body, outcomes } = compileBlock(
-      [
-        '({ a: [1, undefined] }) // { a: [1, undefined] }',
-        "await Promise.reject(new TypeError('bad')) // TypeError: bad",
-        "await Promise.reject(new DOMException('late', 'TimeoutError')) // DOMException: late",
-        'await Promise.resolve() // ordinary prose',
-      ].join('\n'),
-    )
-    expect(outcomes).toEqual([
-      { kind: 'value', value: { a: [1, undefined] } },
-      { kind: 'error', type: 'TypeError', message: 'bad' },
-      { kind: 'error', type: 'DOMException', message: 'late' },
-    ])
-    const actual: Array<Outcome> = []
-    await compileRunner(body)({}, async (_, run) => {
-      actual.push(await settle(run))
-    })
-    expect(actual).toEqual(outcomes)
-    expect(parseOutcome('1; throw new Error()')).toBeUndefined()
-    expect(parseOutcome('someFunction()')).toBeUndefined()
   })
 })

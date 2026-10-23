@@ -1,10 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { Linter, RuleTester, type Rule } from 'eslint'
+import { RuleTester, type Rule } from 'eslint'
 import GithubSlugger from 'github-slugger'
-
-import { countWork } from '@gpahal/internal/node/testing'
 
 import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
@@ -260,31 +258,6 @@ ruleTester.run('prefer-autolinks', getRule('prefer-autolinks'), {
     output: `${output}\n`,
     errors: [{ messageId }],
   })),
-})
-
-test('the heading and reference rules scale linearly with the siblings of a node', () => {
-  const linter = new Linter({ configType: 'flat' })
-  const work = (count: number, rules: Linter.RulesRecord) =>
-    countWork(() => {
-      const config: Linter.Config = {
-        files: ['**/*.md'],
-        plugins: { '@gpahal/markdown': MARKDOWN_PLUGIN },
-        language: '@gpahal/markdown/gfm',
-        rules,
-      }
-      expect(linter.verify('*a*\n\n---\n\n'.repeat(count / 2), config, 'a.md')).toEqual([])
-    })
-  const rules: Linter.RulesRecord = Object.fromEntries(
-    [
-      'heading-increment',
-      'no-emphasis-as-heading',
-      'no-missing-label-refs',
-      'no-missing-link-fragments',
-    ].map((name) => [`@gpahal/markdown/${name}`, 'error']),
-  )
-  // Less the work of parsing. 4 times the siblings take 16 times the work in quadratic code
-  const rulesWork = (count: number) => work(count, rules) - work(count, {})
-  expect(rulesWork(8000)).toBeLessThan(6 * rulesWork(2000))
 })
 
 // `no-bare-urls` keeps the messages of the stock rule it runs

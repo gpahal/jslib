@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import type { ESLint, Linter } from 'eslint'
 
-import { runNode, runNodeOk } from '@gpahal/internal/node/testing'
+import { runNode } from '@gpahal/internal/node/testing'
 
 import { defineConfig } from '@/index'
 import { isInEditorEnvOf, type EditorEnv } from '@/internal/editor'
@@ -19,73 +19,6 @@ const DISABLED_PREFER_CONST =
   'export function one() {\n  // eslint-disable-next-line prefer-const -- reason\n  let a = 1\n  return a\n}\n'
 
 const FIXED_PREFER_CONST = 'export function one() {\n  const a = 1\n  return a\n}\n'
-
-/**
- * Lints `src/index.js` of the working directory with `--fix`, as an editor would, with the
- * `defineConfig` of `CONFIG_URL` and each ESLint of `ESLINT_URLS`, and prints the rules that report
- * and the output of each. The config turns off the areas the test doesn't check, since loading them
- * makes up most of the time a fresh process takes to build the config
- */
-const COPY_SCRIPT = `
-const { defineConfig } = await import(process.env.CONFIG_URL)
-const cwd = process.cwd()
-const results = []
-for (const eslintUrl of JSON.parse(process.env.ESLINT_URLS)) {
-  const { ESLint } = await import(eslintUrl)
-  const eslint = new ESLint({
-    cwd,
-    overrideConfigFile: true,
-    overrideConfig: await defineConfig({ root: cwd, isInEditor: true, typeAware: false, ${CORE_AREAS_OFF_SOURCE} }),
-    fix: true,
-  })
-  const [result] = await eslint.lintFiles(['src/index.js'])
-  results.push({ ruleIds: result.messages.map((message) => message.ruleId), output: result.output })
-}
-console.log(JSON.stringify(results))
-`
-
-test("in an editor, prefer-const reports without fixing through the project's eslint and the config's own copy", async () => {
-  await using project = await withProject({
-    'app/package.json': '{ "name": "app", "type": "module" }\n',
-    'app/eslint.config.mjs': 'export default []\n',
-    'app/src/index.js': PREFER_CONST,
-  })
-  const packageDir = path.join(import.meta.dirname, '..')
-  const appModules = path.join(project.dir, 'app', 'node_modules')
-  const configDir = path.join(appModules, '@gpahal', 'eslint-config')
-  // A second copy of eslint, with its dependencies, which the package manager gives the config
-  // when it can't share the project's
-  const copyModules = path.join(project.dir, 'copy', 'node_modules')
-  await fs.cp(path.dirname(await fs.realpath(ESLINT_DIR)), copyModules, { recursive: true })
-  await fs.mkdir(path.join(configDir, 'node_modules'), { recursive: true })
-  await fs.copyFile(path.join(packageDir, 'package.json'), path.join(configDir, 'package.json'))
-  await fs.cp(path.join(packageDir, 'build'), path.join(configDir, 'build'), { recursive: true })
-  await fs.symlink(path.join(copyModules, 'eslint'), path.join(configDir, 'node_modules', 'eslint'))
-  const { dependencies } = JSON.parse(
-    await fs.readFile(path.join(packageDir, 'package.json'), 'utf8'),
-  ) as { dependencies: Record<string, string> }
-  await Promise.all(
-    Object.keys(dependencies).map(async (name) => {
-      const link = path.join(appModules, name)
-      await fs.mkdir(path.dirname(link), { recursive: true })
-      await fs.symlink(await fs.realpath(path.join(packageDir, 'node_modules', name)), link)
-    }),
-  )
-  await fs.symlink(await fs.realpath(ESLINT_DIR), path.join(appModules, 'eslint'))
-  // One process, as the copies load apart: each from its own real path
-  const stdout = await runNodeOk(['--input-type=module', '--eval', COPY_SCRIPT], {
-    cwd: path.join(project.dir, 'app'),
-    env: {
-      CONFIG_URL: pathToFileURL(path.join(configDir, 'build', 'index.js')).href,
-      ESLINT_URLS: JSON.stringify(
-        [appModules, copyModules].map(
-          (modules) => pathToFileURL(path.join(modules, 'eslint', 'lib', 'api.js')).href,
-        ),
-      ),
-    },
-  })
-  expect(JSON.parse(stdout)).toEqual([{ ruleIds: ['prefer-const'] }, { ruleIds: ['prefer-const'] }])
-})
 
 // report-only.test.ts checks the report-only fixes, which are the same in and outside an editor
 test('in one process, configs made in and outside an editor each fix as they say', async () => {

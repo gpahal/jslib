@@ -90,7 +90,7 @@ function isWarnEntry(entry: unknown): boolean {
 /**
  * A skipped test is often deliberate, as for a known failure, but shouldn't go unnoticed
  */
-export const PRESET_WARNINGS: ReadonlySet<string> = new Set(['vitest/no-disabled-tests'])
+const PRESET_WARNINGS: ReadonlySet<string> = new Set(['vitest/no-disabled-tests'])
 
 function isNormalizedWarning(name: string, entry: unknown): boolean {
   return isWarnEntry(entry) && !PRESET_WARNINGS.has(name)
