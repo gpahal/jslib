@@ -13,7 +13,12 @@ import { commentLayout } from '@/internal/comment-layout'
 import { preserveConditionalOptions } from '@/internal/conditional-options'
 import { customPropertyEmptyLineBefore } from '@/internal/custom-property-empty-line-before'
 import { declarationEmptyLineBefore } from '@/internal/declaration-empty-line-before'
-import { extendedRulesOf, loadExtends, type ExtendedOptions } from '@/internal/extends'
+import {
+  extendedRulesOf,
+  loadExtends,
+  markPresetLayer,
+  type ExtendedOptions,
+} from '@/internal/extends'
 import {
   fileTypeOverrides,
   fileTypesOfOverride,
@@ -57,7 +62,12 @@ import {
   type StylelintReferenceFile,
   type StylelintRules,
 } from '@/internal/rules'
-import { loadTailwindDesign, tailwindApply, type TailwindDesign } from '@/internal/tailwind-apply'
+import {
+  loadTailwindDesign,
+  TAILWIND_APPLY,
+  tailwindApply,
+  type TailwindDesign,
+} from '@/internal/tailwind-apply'
 import { tailwindDirectives } from '@/internal/tailwind-directives'
 import { tailwindThemeFunction } from '@/internal/tailwind-theme-function'
 import {
@@ -82,6 +92,21 @@ function pickRules(
   return Object.fromEntries(
     Object.entries(rules).filter(([name]) => isKept(name)),
   ) as StylelintRules
+}
+
+/**
+ * The `@gpahal/tailwind-apply` settings of `config` and its overrides
+ */
+function onlyTailwindApply(config: Config): Config {
+  const rulesOf = (rules: Config['rules'] = {}): StylelintRules =>
+    pickRules(rules, (name) => name === TAILWIND_APPLY)
+  const overrides = (config.overrides ?? [])
+    .map(({ files, rules }) => ({ files, rules: rulesOf(rules) }))
+    .filter(({ rules }) => Object.keys(rules).length > 0)
+  return {
+    rules: rulesOf(config.rules),
+    ...(overrides.length > 0 && { overrides }),
+  }
 }
 
 /**
@@ -116,20 +141,25 @@ export async function defineConfig(options: StylelintConfigOptions): Promise<Sty
   checkRoot(PREFIX, validOptions.root)
   if (validOptions.referenceFiles !== undefined) {
     checkReferenceGlobs(validOptions.referenceFiles, 'referenceFiles')
-    await checkReferencePathsExist(validOptions.referenceFiles, validOptions.root, 'referenceFiles')
+    checkReferencePathsExist(validOptions.referenceFiles, validOptions.root, 'referenceFiles')
   }
   const userOverrides = checkOverrides(validOptions.overrides ?? [])
   // Checked with the subjects you gave them; `loadExtends` doesn't check them again
   for (const [index, override] of userOverrides.entries()) {
     if (override.referenceFiles !== undefined) {
-      await checkReferencePathsExist(
+      checkReferencePathsExist(
         override.referenceFiles,
         validOptions.root,
         `overrides[${index}].referenceFiles`,
       )
     }
   }
-  const extended = await loadExtends(validOptions.extends, validOptions.root, userOverrides)
+  const extended = await loadExtends(
+    validOptions.extends,
+    validOptions.root,
+    userOverrides,
+    isRecord(validOptions.tailwindcss) && validOptions.tailwindcss.validateApply === true,
+  )
   const stableOptions = {
     ...validOptions,
     // Resolved before the preset's plugins go first, so an error names your plugin's index
@@ -649,6 +679,9 @@ function createConfigBuilder(
     rules: { ...preset, ...tailwind?.rules },
     ...(presetLayerOverrides.length > 0 && { overrides: presetLayerOverrides }),
   })
+  // A config that extends this one keeps only the settings of `@gpahal/tailwind-apply`, whose
+  // design system only this config has. The extending config's own options decide the others
+  markPresetLayer(presetLayer, tailwindDesign === undefined ? {} : onlyTailwindApply(presetLayer))
   const presetReferenceTypeOverrides = presetTypeOverrides.flatMap(
     ({ files, rules: typeRules }) => {
       const typeReferenceRules = pickRules(typeRules, (name) => referenceRules.includes(name))

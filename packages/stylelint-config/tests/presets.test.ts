@@ -227,6 +227,16 @@ async function lintAstro(code: string) {
   return lintRules(code, tailwindcssConfig, 'src/page.astro')
 }
 
+test("the tailwindcss preset keeps the case of theme() paths and --theme() variables, which --fix doesn't lowercase", async () => {
+  const css =
+    '.a {\n  font-size: theme(fontSize.sm);\n  line-height: theme(lineHeight.tight);\n  width: --theme(--Width);\n}\n'
+  expect(await lintRules(css, tailwindcssConfig)).not.toContain('value-keyword-case')
+  expect(await fix(css, tailwindcssConfig)).toBe(css)
+  expect(await fix('.a {\n  color: currentColor;\n}\n', tailwindcssConfig)).toBe(
+    '.a {\n  color: currentcolor;\n}\n',
+  )
+})
+
 describe('.astro files', () => {
   it('lints <style> blocks and style attributes', async () => {
     const astro = [

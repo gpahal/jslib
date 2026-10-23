@@ -1,10 +1,12 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 import stylelint, { type Config } from 'stylelint'
 import recessOrderGroups from 'stylelint-config-recess-order/groups'
 
+import { withTmpProject } from '@gpahal/internal/node/testing'
 import { toArray } from '@gpahal/std/arrays'
 
 import baseDefault, {
@@ -530,7 +532,114 @@ async function settingsOf(
   return Object.fromEntries(names.map((name) => [name, rules[name] ?? null]))
 }
 
-describe("an override's extends and an extended config's overrides beat the preset's settings", () => {
+/**
+ * The rule and severity of each warning that `config` reports on `code` in `file`
+ */
+async function warningsOf(config: Config, file: string, code: string): Promise<Array<string>> {
+  const { results } = await stylelint.lint({ code, codeFilename: file, config })
+  return results.flatMap((result) =>
+    result.warnings.map((warning) => `${warning.rule}: ${warning.severity}`),
+  )
+}
+
+describe('extended configs beat the preset, and your rules merge over them', () => {
+  it("appends extends after the preset's, whose rules beat the preset's", async () => {
+    await using project = await withTmpProject('stylelint-config-define', {
+      'extended.mjs':
+        "export default { rules: { 'color-hex-length': 'long', 'number-max-precision': 2 } }\n",
+    })
+    const config = await defineConfig({
+      root: process.cwd(),
+      extends: path.join(project.dir, 'extended.mjs'),
+    })
+    expect(config.extends).toEqual([
+      ...[(await defineConfig({ root: process.cwd() })).extends].flat(),
+      { rules: { 'color-hex-length': 'long', 'number-max-precision': 2 } },
+    ])
+    expect(await lintRules('a {\n  width: 1.123px;\n  color: #fff;\n}\n', config)).toEqual([
+      'color-hex-length',
+      'number-max-precision',
+    ])
+  })
+
+  it('merges your secondary options over the setting of an extended config', async () => {
+    await using project = await withTmpProject('stylelint-config-extends-precedence', {
+      'team.mjs': `export default { rules: {
+        'color-named': 'never',
+        'selector-pseudo-class-no-unknown': [true, { ignorePseudoClasses: ['export'] }],
+      } }`,
+    })
+    const rules: StylelintRules = {
+      'color-named': [undefined, { severity: 'warning' }],
+      'selector-pseudo-class-no-unknown': [undefined, { ignorePseudoClasses: ['deep'] }],
+    }
+    const file = path.join(project.dir, 'x.css')
+    for (const config of [
+      await defineConfig({ root: project.dir, extends: ['./team.mjs'], rules }),
+      await defineConfig({
+        root: project.dir,
+        overrides: [{ files: ['*.css'], extends: ['./team.mjs'], rules }],
+      }),
+    ]) {
+      const resolved = await stylelint.resolveConfig(file, { config })
+      expect(resolved?.rules?.['color-named']).toEqual(['never', { severity: 'warning' }])
+      expect(resolved?.rules?.['selector-pseudo-class-no-unknown']).toEqual([
+        true,
+        { ignorePseudoClasses: ['export', 'deep'] },
+      ])
+      expect(await warningsOf(config, file, 'a {\n  color: red;\n}\n')).toEqual([
+        'color-named: warning',
+      ])
+    }
+  })
+
+  it('gives the own rule that replaces a stock rule the extended setting of the stock rule', async () => {
+    await using project = await withTmpProject('stylelint-config-extends-own-rules', {
+      'team.mjs': "export default { rules: { 'declaration-empty-line-before': 'never' } }",
+    })
+    const config = await defineConfig({
+      root: project.dir,
+      tailwindcss: true,
+      extends: ['./team.mjs'],
+    })
+    const resolved = await stylelint.resolveConfig(path.join(project.dir, 'x.css'), { config })
+    expect(resolved?.rules?.['declaration-empty-line-before']).toBeNull()
+    expect(resolved?.rules?.['@gpahal/declaration-empty-line-before']).toEqual(['never'])
+  })
+
+  const off = { rules: { 'color-no-invalid-hex': null } }
+  const warning: StylelintRules = { 'color-no-invalid-hex': [undefined, { severity: 'warning' }] }
+  it.each<[string, Options]>([
+    ['at the top level', { extends: [off], rules: warning }],
+    [
+      'in an override with its own extends',
+      { overrides: [{ files: ['**/*.css'], extends: [off], rules: warning }] },
+    ],
+  ])(
+    'keeps a rule that an extended config turns off off with a secondary-only setting, %s',
+    async (_name, options) => {
+      const config = await defineConfig({ root: process.cwd(), ...options })
+      expect(await lintRules('a {\n  color: #ggg;\n}\n', config, 'src/a.css')).not.toContain(
+        'color-no-invalid-hex',
+      )
+    },
+  )
+
+  it('throws on a setting that keeps the primary option of a rule no config sets', async () => {
+    await expect(
+      defineConfig({
+        root: process.cwd(),
+        overrides: [
+          { files: 'legacy/**', rules: { 'color-named': [undefined, { severity: 'warning' }] } },
+        ],
+      }),
+    ).rejects.toThrow(
+      new TypeError(
+        "@gpahal/stylelint-config: `overrides[0].rules.color-named`: keeps the primary option of a setting that no config sets, so Stylelint would turn the rule off. Set the primary option, as in ['always', { … }]",
+      ),
+    )
+  })
+
   const scssConfig = { rules: { 'function-no-unknown': null, 'hue-degree-notation': 'number' } }
   const teamConfig = {
     overrides: [
@@ -555,16 +664,19 @@ describe("an override's extends and an extended config's overrides beat the pres
     ],
   ]
 
-  it.each(cases)('%s, as with the static preset', async (_name, options, file, names) => {
-    const defined = await defineConfig({ root: process.cwd(), ...options })
-    const { extends: extended = [], ...rest } = options
-    const withStatic = { ...rest, extends: [baseDefault, ...toArray(extended)] } as Config
-    const settings = await settingsOf(defined, file, names)
-    expect(settings).toEqual(await settingsOf(withStatic, file, names))
-    expect(settings).not.toEqual(await settingsOf(defined, 'src/a.css', names))
-  })
+  it.each(cases)(
+    "%s beats the preset's settings, as with the static preset",
+    async (_name, options, file, names) => {
+      const defined = await defineConfig({ root: process.cwd(), ...options })
+      const { extends: extended = [], ...rest } = options
+      const withStatic = { ...rest, extends: [baseDefault, ...toArray(extended)] } as Config
+      const settings = await settingsOf(defined, file, names)
+      expect(settings).toEqual(await settingsOf(withStatic, file, names))
+      expect(settings).not.toEqual(await settingsOf(defined, 'src/a.css', names))
+    },
+  )
 
-  it('leaves your top-level rules over them, as in Stylelint', async () => {
+  it("leaves your top-level rules over an override's extends, as in Stylelint", async () => {
     const config = await defineConfig({
       root: process.cwd(),
       rules: { 'function-no-unknown': [true, { severity: 'warning' }] },
@@ -573,23 +685,5 @@ describe("an override's extends and an extended config's overrides beat the pres
     expect(await settingsOf(config, 'src/a.scss', ['function-no-unknown'])).toEqual({
       'function-no-unknown': [true, { ignoreFunctions: ['tech'], severity: 'warning' }],
     })
-  })
-})
-
-describe('a secondary-only setting keeps a rule that an extended config turns off off', () => {
-  const css = 'a {\n  color: #ggg;\n}\n'
-  const off = { rules: { 'color-no-invalid-hex': null } }
-  const warning: StylelintRules = { 'color-no-invalid-hex': [undefined, { severity: 'warning' }] }
-  const cases: Array<[string, Options]> = [
-    ['at the top level', { extends: [off], rules: warning }],
-    [
-      'in an override with its own extends',
-      { overrides: [{ files: ['**/*.css'], extends: [off], rules: warning }] },
-    ],
-  ]
-
-  it.each(cases)('%s', async (_name, options) => {
-    const config = await defineConfig({ root: process.cwd(), ...options })
-    expect(await lintRules(css, config, 'src/a.css')).not.toContain('color-no-invalid-hex')
   })
 })

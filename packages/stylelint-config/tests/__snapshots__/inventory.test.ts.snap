@@ -99,7 +99,7 @@ exports[`with tailwindcss > the rules on for a.css 1`] = `
   "string-no-newline: [true,{"ignore":["at-rule-preludes","declaration-values"]}]",
   "syntax-string-no-invalid: [true]",
   "unit-no-unknown: [true]",
-  "value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/"]}]",
+  "value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/"],"ignoreFunctions":["theme","--theme"]}]",
   "value-no-vendor-prefix: [true,{"ignoreValues":["box","inline-box"],"disableFix":true}]",
 ]
 `;
@@ -227,7 +227,7 @@ exports[`with tailwindcss, reference files and validateApply > the rules on for 
   "string-no-newline: [true,{"ignore":["at-rule-preludes","declaration-values"]}]",
   "syntax-string-no-invalid: [true]",
   "unit-no-unknown: [true]",
-  "value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/"]}]",
+  "value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/"],"ignoreFunctions":["theme","--theme"]}]",
   "value-no-vendor-prefix: [true,{"ignoreValues":["box","inline-box"],"disableFix":true}]",
 ]
 `;

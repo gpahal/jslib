@@ -8,13 +8,7 @@ import type { Config } from 'stylelint'
 import { isArray, toArray } from '@gpahal/std/arrays'
 import { formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
 
-import {
-  checkIgnoreGlobs,
-  checkProcessors,
-  checkReferenceFiles,
-  expandGlobBraces,
-  PREFIX,
-} from '@/internal/options'
+import { checkIgnoreGlobs, checkProcessors, checkReferenceFiles, PREFIX } from '@/internal/options'
 import type { StylelintReferenceFile, StylelintReferenceFiles } from '@/internal/rules'
 
 /**
@@ -243,314 +237,50 @@ export function normalizeConfigPaths(config: Config, root: string, subject = '')
 }
 
 /**
- * Check that each `referenceFiles` entry matches a file, since Stylelint otherwise fails with a stack
- * trace on every run
+ * Check that each `referenceFiles` entry of paths without glob syntax names a path that exists,
+ * since Stylelint otherwise fails with a stack trace on every run. An entry with a glob passes to
+ * Stylelint unchecked, since matching it would walk the file system on every config load
  *
- * @throws TypeError when none of an entry's paths and globs matches a file.
+ * @throws TypeError when none of an entry's paths exists.
  */
-export async function checkReferencePathsExist(
+export function checkReferencePathsExist(
   referenceFiles: StylelintReferenceFiles,
   root: string,
   name: string,
-): Promise<void> {
+): void {
   const isList = isArray(referenceFiles)
   for (const [index, entry] of toArray<string | StylelintReferenceFile>(referenceFiles).entries()) {
     const entryName = isList ? `${name}[${index}]` : name
-    const globs =
-      typeof entry === 'string'
-        ? [[entryName, entry] as const]
-        : typeof entry.files === 'string'
-          ? [[`${entryName}.files`, entry.files] as const]
-          : entry.files.map(
-              (glob, fileIndex) => [`${entryName}.files[${fileIndex}]`, glob] as const,
-            )
-    const patterns = globs.map(([, glob]) => glob)
-    if (globs.length === 0 || (await matchesFile(patterns, root))) {
+    const patterns = typeof entry === 'string' ? [entry] : toArray(entry.files)
+    if (
+      patterns.length === 0 ||
+      patterns.some(
+        (pattern) => isGlob(pattern) || statOf(path.resolve(root, pattern)) !== undefined,
+      )
+    ) {
       continue
     }
-    throw new TypeError(noMatchMessage(globs, entryName, root))
-  }
-}
-
-function noMatchMessage(
-  globs: ReadonlyArray<readonly [name: string, glob: string]>,
-  entryName: string,
-  root: string,
-): string {
-  const patterns = globs.map(([, glob]) => glob)
-  const hasGlob = patterns.some((pattern) => isGlob(pattern))
-  // A path that exists is a folder with no file, or isn't a file
-  const stats = patterns.map((pattern) => statOf(path.resolve(root, pattern)))
-  const [single] = globs
-  if (single === undefined || globs.length > 1) {
-    const isMissing = !hasGlob && stats.every((stat) => stat === undefined)
-    return formatMessage(
-      PREFIX,
-      [formatNames([`${entryName}.files`])],
-      isMissing
-        ? `none of ${formatNames(patterns)} exists. Create one of the files, or remove the entry`
-        : `none of ${formatNames(patterns)} matches a file. Create a file one of them matches, or remove the entry`,
+    const [single] = patterns
+    const subject =
+      typeof entry === 'string'
+        ? entryName
+        : typeof entry.files === 'string'
+          ? `${entryName}.files`
+          : `${entryName}.files[0]`
+    throw new TypeError(
+      single === undefined || patterns.length > 1
+        ? formatMessage(
+            PREFIX,
+            [formatNames([`${entryName}.files`])],
+            `none of ${formatNames(patterns)} exists. Create one of the files, or remove the entry`,
+          )
+        : formatMessage(
+            PREFIX,
+            [formatNames([subject])],
+            `${formatNames([single])} doesn't exist. Create the file, or remove the entry`,
+          ),
     )
   }
-  const [subject, pattern] = single
-  const [stat] = stats
-  const named = formatNames([pattern])
-  return formatMessage(
-    PREFIX,
-    [formatNames([subject])],
-    hasGlob
-      ? `${named} matches no file. Create a file it matches, or remove the entry`
-      : stat?.isDirectory() === true
-        ? `${named} is a folder with no file. Add a file to it, or remove the entry`
-        : stat === undefined
-          ? `${named} doesn't exist. Create the file, or remove the entry`
-          : `${named} isn't a file. Replace it with a file, or remove the entry`,
-  )
-}
-
-/**
- * Whether a reference entry's `patterns` match a file, as Stylelint's globby matches them: symlinks
- * count as their targets, a folder stands for its files, and `!` globs exclude. Stylelint's globby
- * drops some `!` globs once it makes them absolute; this applies every one
- */
-async function matchesFile(patterns: ReadonlyArray<string>, root: string): Promise<boolean> {
-  // `exclude` matches a glob against the paths in the form the positive globs give them, relative
-  // or absolute, and skips the folders it matches, such as those of `!**/node_modules/**`
-  const negatives = [
-    ...new Set(
-      patterns
-        .filter((pattern) => pattern.startsWith('!'))
-        .flatMap((pattern) => {
-          const absolute = path.resolve(root, pattern.slice(1))
-          return [pattern.slice(1), absolute, path.relative(root, absolute)]
-        }),
-    ),
-  ]
-  const isExcluded = (file: string): boolean => {
-    const absolute = path.resolve(root, file)
-    const forms = [file, absolute, path.relative(root, absolute)]
-    return negatives.some((negative) => forms.some((form) => path.matchesGlob(form, negative)))
-  }
-  const globs: Array<string> = []
-  for (const pattern of patterns) {
-    if (pattern.startsWith('!')) {
-      continue
-    }
-    if (isGlob(pattern)) {
-      globs.push(pattern)
-      continue
-    }
-    const stats = statOf(path.resolve(root, pattern))
-    if (stats?.isFile() === true && !isExcluded(pattern)) {
-      return true
-    }
-    // Stylelint's globby expands a folder's path to the files in it
-    if (stats?.isDirectory() === true) {
-      globs.push(`${pattern.replaceAll('\\', '/').replace(/\/$/, '')}/**`)
-    }
-  }
-  if (globs.length === 0) {
-    return false
-  }
-  // The walk stops at the first file, so a glob such as `**/tokens.css` doesn't read every folder
-  const entries = fs.promises.glob(globs, { cwd: root, exclude: negatives, withFileTypes: true })
-  for await (const entry of entries) {
-    if (
-      entry.isFile() ||
-      (entry.isSymbolicLink() && isFile(path.join(entry.parentPath, entry.name)))
-    ) {
-      return true
-    }
-  }
-  return matchesThroughFolderLinks(globs, isExcluded, root)
-}
-
-const MAX_LINK_WALK_ENTRIES = 100_000
-
-/**
- * Whether one of `globs` matches a file through a symlinked folder that a glob segment reaches,
- * which `fs.promises.glob` doesn't follow and Stylelint's globby does. It skips `node_modules` and
- * dot folders unless the glob names one, and walks each linked folder once per
- * {@link GlobProgress}, so linked workspace packages and cycles don't multiply the walk, while
- * aliases of one folder that the glob reads differently each get walked. After
- * {@link MAX_LINK_WALK_ENTRIES} entries it returns `true`, leaving the check to Stylelint
- */
-function matchesThroughFolderLinks(
-  globs: ReadonlyArray<string>,
-  isExcluded: (file: string) => boolean,
-  root: string,
-): boolean {
-  const state = { budget: MAX_LINK_WALK_ENTRIES }
-  // The walk's paths have no leading `./`, which `path.matchesGlob` doesn't skip
-  return globs
-    .map((glob) => glob.replace(/^(?:\.\/)+/, ''))
-    .some((glob) => {
-      const segments = glob.replaceAll('\\', '/').split('/')
-      const walk: LinkWalk = {
-        glob,
-        expansions: expandGlobBraces(glob, 'referenceFiles').map((expanded) =>
-          expanded.replaceAll('\\', '/').split('/'),
-        ),
-        isExcluded,
-        root,
-        state,
-        visited: new Set(),
-        namesModules: segments.includes('node_modules'),
-        namesDotFolders: segments.some(
-          (segment) => segment.startsWith('.') && segment !== '.' && segment !== '..',
-        ),
-      }
-      const start = walk.expansions.map((_segments, index) => `${index}:0`)
-      const progress = staticBaseSegmentsOf(glob).reduce(
-        (reached, name) => advance(walk, reached, name),
-        withGlobstarSkips(walk, start),
-      )
-      return walkFolder(walk, path.resolve(root, staticBaseOf(glob)), false, progress)
-    })
-}
-
-/**
- * Where a walked path is in a glob: the `<expansion>:<segment>` positions of the segments that the
- * path's next name can match, one or more per brace expansion of the glob. Two paths with the same
- * progress match the same files below them
- */
-type GlobProgress = ReadonlySet<string>
-
-/**
- * `progress` with each position at a `**` segment also at the segment after it, since `**` matches
- * no names too
- */
-function withGlobstarSkips(walk: LinkWalk, progress: Iterable<string>): GlobProgress {
-  const positions = new Set<string>()
-  const pending = [...progress]
-  for (let position = pending.pop(); position !== undefined; position = pending.pop()) {
-    if (positions.has(position)) {
-      continue
-    }
-    positions.add(position)
-    const [expansion = 0, segment = 0] = position.split(':').map(Number)
-    if (walk.expansions[expansion]?.[segment] === '**') {
-      pending.push(`${expansion}:${segment + 1}`)
-    }
-  }
-  return positions
-}
-
-/**
- * The {@link GlobProgress} after `name`. A `**` segment matches any name but one starting with
- * `.`, as `path.matchesGlob` reads it
- */
-function advance(walk: LinkWalk, progress: GlobProgress, name: string): GlobProgress {
-  const next: Array<string> = []
-  for (const position of progress) {
-    const [expansion = 0, index = 0] = position.split(':').map(Number)
-    const segment = walk.expansions[expansion]?.[index]
-    if (segment === '**') {
-      if (!name.startsWith('.')) {
-        next.push(position)
-      }
-    } else if (segment !== undefined && (segment === name || path.matchesGlob(name, segment))) {
-      next.push(`${expansion}:${index + 1}`)
-    }
-  }
-  return withGlobstarSkips(walk, next)
-}
-
-/**
- * A walk of {@link matchesThroughFolderLinks} for `glob`
- */
-type LinkWalk = {
-  glob: string
-  /**
-   * The segments of each brace expansion of `glob`
-   */
-  expansions: ReadonlyArray<ReadonlyArray<string>>
-  isExcluded: (file: string) => boolean
-  root: string
-  state: { budget: number }
-  /**
-   * The real path and {@link GlobProgress} of each folder walked through a link
-   */
-  visited: Set<string>
-  namesModules: boolean
-  namesDotFolders: boolean
-}
-
-function walkFolder(
-  walk: LinkWalk,
-  folder: string,
-  viaLink: boolean,
-  progress: GlobProgress,
-): boolean {
-  const { glob, isExcluded, root, state, visited } = walk
-  // The path of an entry in the form `glob` gives it
-  const formOf = (file: string): string =>
-    path.isAbsolute(glob) ? file : path.relative(root, file).replaceAll('\\', '/')
-  let entries: Array<fs.Dirent>
-  try {
-    entries = fs.readdirSync(folder, { withFileTypes: true })
-  } catch {
-    return false
-  }
-  for (const entry of entries) {
-    state.budget -= 1
-    if (state.budget < 0) {
-      return true
-    }
-    const file = path.join(folder, entry.name)
-    if (isExcluded(formOf(file))) {
-      continue
-    }
-    const stats = entry.isSymbolicLink() ? statOf(file) : entry
-    // A file reached without a symlinked folder is one that `fs.promises.glob` has seen
-    if (viaLink && stats?.isFile() === true && path.matchesGlob(formOf(file), glob)) {
-      return true
-    }
-    const isSkipped =
-      (entry.name === 'node_modules' && !walk.namesModules) ||
-      (entry.name.startsWith('.') && !walk.namesDotFolders)
-    if (isSkipped || stats?.isDirectory() !== true) {
-      continue
-    }
-    const isViaLink = viaLink || entry.isSymbolicLink()
-    const folderProgress = advance(walk, progress, entry.name)
-    if (isViaLink) {
-      let realPath: string
-      try {
-        realPath = fs.realpathSync(file)
-      } catch {
-        continue
-      }
-      const positions = [...folderProgress].toSorted((left, right) =>
-        left < right ? -1 : Number(left > right),
-      )
-      const key = `${realPath}\0${positions.join(',')}`
-      if (visited.has(key)) {
-        continue
-      }
-      visited.add(key)
-    }
-    if (walkFolder(walk, file, isViaLink, folderProgress)) {
-      return true
-    }
-  }
-  return false
-}
-
-/**
- * The folders of `glob` before its first segment with glob syntax, such as `src` for `src/?/a.css`
- */
-function staticBaseOf(glob: string): string {
-  return staticBaseSegmentsOf(glob).join('/') || (glob.startsWith('/') ? '/' : '')
-}
-
-/**
- * The segments of {@link staticBaseOf}, with `''` first for an absolute glob
- */
-function staticBaseSegmentsOf(glob: string): Array<string> {
-  const segments = glob.replaceAll('\\', '/').split('/')
-  const index = segments.findIndex((segment) => isGlob(segment) || /[!()+@|]/.test(segment))
-  return segments.slice(0, index === -1 ? -1 : index)
 }
 
 /**

@@ -36,6 +36,7 @@ import {
   type StylelintExtends,
   type StylelintOverride,
 } from '@/internal/rules'
+import { TAILWIND_APPLY, tailwindApply } from '@/internal/tailwind-apply'
 
 export const REPORT_KEYS = [
   'reportNeedlessDisables',
@@ -64,12 +65,37 @@ export type ExtendedOptions = {
 const baseConfigs = new WeakSet<StylelintExtendedConfig>()
 
 /**
- * Load each config once per call; keep normalized clones for Stylelint's rule and plugin merging
+ * The key of a preset layer's mark, from the global registry, so a layer that another copy of the
+ * package built counts too
+ */
+const PRESET_LAYER = Symbol.for('@gpahal/stylelint-config/preset-layer')
+
+/**
+ * Marks `layer` as the preset's settings in a config `defineConfig` built. A config that extends that
+ * one uses `kept` in its place, since its own options decide the preset's settings
+ */
+export function markPresetLayer<T extends object>(layer: T, kept: StylelintExtendedConfig): T {
+  Object.defineProperty(layer, PRESET_LAYER, { value: kept })
+  return layer
+}
+
+function keptOfPresetLayer(config: object): StylelintExtendedConfig | undefined {
+  const kept: unknown = Object.hasOwn(config, PRESET_LAYER)
+    ? Reflect.get(config, PRESET_LAYER)
+    : undefined
+  return isPlainObject(kept) ? kept : undefined
+}
+
+/**
+ * Load each config once per call; keep normalized clones for Stylelint's rule and plugin merging.
+ * With `hasTailwindDesign`, the extended configs' `@gpahal/tailwind-apply` plugins are dropped, since
+ * Stylelint registers them after yours, and the last one registered for a rule wins
  */
 export async function loadExtends(
   extended: StylelintExtends | undefined,
   root: string,
   userOverrides: ReadonlyArray<StylelintOverride> = [],
+  hasTailwindDesign = false,
 ): Promise<{
   configs: Array<StylelintExtendedConfig>
   options: ExtendedOptions
@@ -157,6 +183,7 @@ export async function loadExtends(
       }
       config = entry
     }
+    config = keptOfPresetLayer(config) ?? config
     if (active.has(key)) {
       return fail('extends contains a cycle')
     }
@@ -212,8 +239,8 @@ export async function loadExtends(
         })
       }
       const isBase = typeof key === 'string' && isBaseConfigFile(key)
-      const { rules: ownRules, ...normalized } = await normalizeLoadedConfig(
-        own,
+      const { rules: ownRules, ...normalized } = normalizeLoadedConfig(
+        withoutTailwindApply(own, hasTailwindDesign),
         directory,
         subject,
         !checkedOverrides.has(source),
@@ -265,6 +292,27 @@ export async function loadExtends(
 }
 
 /**
+ * `config` without the `@gpahal/tailwind-apply` plugins that would replace yours: any of them with
+ * `all`, else the one that checks nothing
+ */
+function withoutTailwindApply<T extends { plugins?: Config['plugins'] | undefined }>(
+  config: T,
+  all: boolean,
+): T {
+  if (config.plugins === undefined) return config
+  const inactive = tailwindApply(undefined)
+  const plugins = toArray(config.plugins)
+  const kept = plugins.filter(
+    (plugin) =>
+      typeof plugin === 'string' ||
+      !('ruleName' in plugin) ||
+      plugin.ruleName !== TAILWIND_APPLY ||
+      (!all && plugin !== inactive),
+  )
+  return kept.length === plugins.length ? config : { ...config, plugins: kept }
+}
+
+/**
  * What's wrong with an `extends` entry that's a built-in module or a non-`file:` URL
  */
 function unsupportedEntryProblem(entry: string): string | undefined {
@@ -301,19 +349,21 @@ function loadErrorReason(error: unknown): string {
 
 /**
  * A loaded config's own keys, without `extends` and `overrides`, with paths resolved from its folder.
- * With `checkReferences`, it checks that each `referenceFiles` entry matches a file
+ * With `checkReferences`, it checks that each `referenceFiles` entry without a glob names a path
+ * that exists
  *
- * @throws TypeError when a path doesn't resolve, or a `referenceFiles` entry matches no file.
+ * @throws TypeError when a path doesn't resolve, or none of a `referenceFiles` entry's paths
+ *   exists.
  */
-async function normalizeLoadedConfig(
+function normalizeLoadedConfig(
   own: Omit<StylelintExtendedConfig, 'extends' | 'overrides'>,
   directory: string,
   subject: string,
   checkReferences: boolean,
-): Promise<Config> {
+): Config {
   const normalized = normalizeConfigPaths(clonePlain(omitUndefinedValues(own)), directory, subject)
   if (checkReferences && own.referenceFiles !== undefined) {
-    await checkReferencePathsExist(own.referenceFiles, directory, `${subject}.referenceFiles`)
+    checkReferencePathsExist(own.referenceFiles, directory, `${subject}.referenceFiles`)
   }
   return normalized
 }

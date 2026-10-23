@@ -692,13 +692,13 @@ The implementing agent keeps this table current. Status values are `todo`, `in p
 | B-P4 contradicting rule pairs in config             | B      | todo   |
 | B-P5 drop shim exemption                            | B      | todo   |
 | B-C1 – B-C11 cleanups                               | B      | todo   |
-| C-S1 extended preset layers                         | C      | todo   |
-| C-S2 validateApply through extends                  | C      | todo   |
-| C-S3 `theme()` keyword case                         | C      | todo   |
-| C-S4 default-theme paths                            | C      | todo   |
-| C-S5 `@utility` compile                             | C      | todo   |
-| C-P6 cheaper referenceFiles check                   | C      | todo   |
-| C-T1, C-T2 stylelint test trims                     | C      | todo   |
+| C-S1 extended preset layers                         | C      | done   |
+| C-S2 validateApply through extends                  | C      | done   |
+| C-S3 `theme()` keyword case                         | C      | done   |
+| C-S4 default-theme paths                            | C      | done   |
+| C-S5 `@utility` compile                             | C      | done   |
+| C-P6 cheaper referenceFiles check                   | C      | done   |
+| C-T1, C-T2 stylelint test trims                     | C      | done   |
 | D1 zod dead code                                    | D      | todo   |
 | D2 resolver via import-meta-resolve (conditional)   | D      | todo   |
 | D3 mergeConfigs wrapped-plugin error                | D      | todo   |

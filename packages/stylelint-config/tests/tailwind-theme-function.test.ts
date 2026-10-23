@@ -95,6 +95,24 @@ describe('@gpahal/tailwind-theme-function', () => {
       `@theme {\n  --color-*: initial;\n}\n\n${colorOf('theme(--color-red-500)')}`,
       'Unexpected unknown theme variable "--color-red-500" in "theme()"',
     ],
+    // Tailwind's JavaScript default theme has the keys of every mapped namespace but these
+    [
+      colorOf('theme(borderRadius.nope)'),
+      'Unexpected unknown theme key "borderRadius.nope" in "theme()", whose variable is "--radius-nope"',
+    ],
+    [
+      `@theme {\n  --color-*: initial;\n}\n\n${colorOf('theme(colors.red.500)')}`,
+      'Unexpected unknown theme key "colors.red.500" in "theme()", whose variable is "--color-red-500"',
+    ],
+    [
+      `@theme {\n  --container-*: initial;\n}\n\n${colorOf('theme(containers.sm)')}`,
+      'Unexpected unknown theme key "containers.sm" in "theme()", whose variable is "--container-sm"',
+    ],
+    // An object, which has no value
+    [
+      colorOf('theme(fontSize.sm.1)'),
+      'Unexpected unknown theme key "fontSize.sm.1" in "theme()", whose variable is "--text-sm-1"',
+    ],
   ])('reports what fails Tailwind, in %j', async (code, message) => {
     expect(await tailwindProblemOf(`${ENTRY}\n${code}`)).toMatch(/^Could not resolve value/)
     expect(await reportsOf(code)).toEqual([message])
@@ -113,6 +131,14 @@ describe('@gpahal/tailwind-theme-function', () => {
     `@theme {\n  --color-*: initial;\n}\n\n${colorOf('theme(--color-red-500, red)')}`,
     // `--font-*` keeps `--font-weight-*`
     '@theme {\n  --font-*: initial;\n}\n\n.a {\n  font-weight: theme(--font-weight-bold);\n}\n',
+    // Paths that Tailwind's JavaScript default theme resolves, whether or not the CSS theme has them
+    colorOf(
+      'theme(borderRadius.full) theme(lineHeight.none) theme(lineHeight.3) theme(lineHeight.10) theme(aspectRatio.square)',
+    ),
+    colorOf(
+      'theme(boxShadow.none) theme(transitionTimingFunction.linear) theme(animation.none) theme(fontSize.sm.0)',
+    ),
+    `@theme {\n  --radius-*: initial;\n}\n\n${colorOf('theme(borderRadius.lg)')}`,
   ])('takes what Tailwind compiles, in %j', async (code) => {
     expect(await tailwindProblemOf(`${ENTRY}\n${code}`)).toBeUndefined()
     expect(await reportsOf(code)).toEqual([])

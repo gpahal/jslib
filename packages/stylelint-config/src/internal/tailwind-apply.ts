@@ -1,15 +1,16 @@
 /**
  * The `@gpahal/tailwind-apply` rule: each `@apply` class and `@variant` variant is one the entry
  * point's design system knows. The design system comes from Tailwind's public `compile()` of the
- * entry point's stylesheets without their ordinary rules, so an `@apply` or `theme()` error there
- * doesn't stop it. A class is known when `build()` of it adds CSS
+ * entry point's stylesheets without their ordinary rules, and with the `@apply` rules, nested
+ * `@variant` rules and `theme()` calls of the rest set aside, so an error in one doesn't stop it. A
+ * class is known when `build()` of it adds CSS
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { parse } from 'postcss'
+import { Declaration, parse, type AtRule } from 'postcss'
 import stylelint, { type Plugin, type Rule } from 'stylelint'
 
 import { resolveFile, resolveFromNodeModules } from '@gpahal/internal/node/resolve'
@@ -22,7 +23,7 @@ import {
   tailwindStylesheetPath,
   type TailwindCompile,
 } from '@/internal/tailwind-loader'
-import { atRulePrelude, segment, type Part } from '@/internal/tailwind-values'
+import { atRulePrelude, functionCalls, segment, type Part } from '@/internal/tailwind-values'
 
 const {
   createPlugin,
@@ -58,9 +59,53 @@ const DESIGN_AT_RULES: ReadonlySet<string> = new Set([
   'tailwind',
 ])
 
+const THEME_FUNCTIONS: ReadonlySet<string> = new Set(['theme', '--theme'])
+
 /**
- * `css` with only its design system at-rules, or as it is when it doesn't parse, so Tailwind
- * reports the error
+ * `text` with each outermost `theme()` and `--theme()` call replaced by `0`
+ */
+function withoutThemeCalls(text: string): string {
+  const calls = functionCalls(text, THEME_FUNCTIONS).toSorted(
+    (left, right) => left.index - right.index,
+  )
+  let result = ''
+  let end = 0
+  for (const call of calls) {
+    // A call nested in the last one replaced
+    if (call.index < end) continue
+    result += `${text.slice(end, call.index)}0`
+    end = call.endIndex
+  }
+  return result + text.slice(end)
+}
+
+/**
+ * Makes the body of a kept at-rule compile whatever it applies: Tailwind's `compile()` throws on an
+ * unknown class of an `@apply`, an unknown variant of a nested `@variant` and an unknown variable of
+ * a `theme()` call, which the rules report when the file is linted. An `@apply` becomes a
+ * placeholder declaration, so a utility made of one still builds CSS, a nested `@variant` gives way
+ * to its contents, and a `theme()` call to `0`
+ */
+function compilableBody(atRule: AtRule): void {
+  atRule.walk((node) => {
+    if (node.type === 'decl') {
+      if (node.value.includes('theme(')) node.value = withoutThemeCalls(node.value)
+    } else if (node.type === 'atrule') {
+      const name = node.name.toLowerCase()
+      if (name === 'apply') {
+        node.replaceWith(new Declaration({ prop: '--gpahal-apply', value: '0' }))
+      } else if (name === 'variant' && node.nodes !== undefined) {
+        node.replaceWith(node.nodes)
+      } else if (node.params.includes('theme(')) {
+        node.params = withoutThemeCalls(node.params)
+      }
+    }
+  })
+}
+
+/**
+ * `css` with only its design system at-rules, compilable as {@link compilableBody} makes them, or
+ * as it is when it doesn't parse, so Tailwind reports the error
  */
 function designOnly(css: string, file: string): string {
   let root: ReturnType<typeof parse>
@@ -74,7 +119,9 @@ function designOnly(css: string, file: string): string {
       node.type === 'atrule' &&
       (DESIGN_AT_RULES.has(node.name.toLowerCase()) ||
         (node.name.toLowerCase() === 'variant' && node.nodes === undefined))
-    if (!isKept) {
+    if (isKept) {
+      compilableBody(node)
+    } else {
       node.remove()
     }
   })
@@ -300,7 +347,7 @@ async function compileDesign({
         isKnown = built > length
         length = built
       } catch {
-        // A class whose CSS fails to build, as with an `@apply` error in its `@utility`, exists
+        // A class whose CSS fails to build, as with an error in a plugin's utility, exists
         isKnown = true
       }
       known.set(candidate, isKnown)
