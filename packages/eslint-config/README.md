@@ -546,6 +546,7 @@ Replace `tseslint.config(...)`, `parserOptions.projectService` and `tsconfigRoot
 - **`is a rule that eslint-config-prettier turns off`** or **`is a layout rule for files that Prettier formats`**: your config turns on a formatting rule. Turn it off, list it in `allowFormattingRules`, or pass a plugin's preset through `withoutFormattingRules`.
 - **`is a rule that needs type information`**, with `typeAware: false`: remove the rule or `typeAware: false`.
 - **`needs type information, which <glob> files don't get`**: your config turns on a type-aware rule only for files without type information. Apply the fix the error names, or remove the rule.
+- **`Internal error: Atomics.wait() failed: timed-out`**, with a `better-tailwindcss/*` rule: eslint-plugin-better-tailwindcss loads Tailwind CSS in worker threads and gives each call 30 seconds, which a busy machine, such as a CI runner with several ESLint processes, can exceed. Raise it with the `SYNCKIT_TIMEOUT` environment variable, in milliseconds, as in `SYNCKIT_TIMEOUT=300000 eslint .`.
 - **`returns a composer, which ESLint reads as a config object`**: await the composer before putting it in an array or `extends`, as in `...(await defineConfig({ … }))`.
 
 The root README covers [editor setup](https://github.com/gpahal/jslib#editor-setup) and the errors of installing and running the tools together.
