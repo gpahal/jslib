@@ -5,53 +5,54 @@ import { assertBuildIsCurrent, runNodeOk } from '@gpahal/internal/node/testing'
 
 import { BUILD_DIR } from './helpers'
 
-const enabledUrls: Array<string> = []
-
-beforeAll(async () => {
-  await assertBuildIsCurrent(BUILD_DIR)
-  enabledUrls.push(...(await resolvedUrls({})))
-})
+beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
 /**
- * Records every module URL that loads while the build's config builds with the options in
- * `process.argv[2]`, and prints them, each once, since the output would outgrow the child's buffer.
- * A path that only resolves, as with `require.resolve()`, doesn't count
+ * Builds the build's config for each options of `process.argv[2]` in turn, and prints the module URLs that load during each build, each once, since the
+ * output would outgrow the child's buffer. A module loads once per process, so a build's URLs leave
+ * out the modules an earlier build loaded. A path that only resolves, as with `require.resolve()`,
+ * doesn't count
  */
 const SCRIPT = `
 import { registerHooks } from 'node:module'
 
-const urls = new Set()
+let urls = new Set()
 registerHooks({
   load: (url, context, nextLoad) => {
     urls.add(url)
     return nextLoad(url, context)
   },
 })
-const [indexUrl, options] = process.argv.slice(1)
+const [indexUrl, optionSets] = process.argv.slice(1)
 const { defineConfig } = await import(indexUrl)
-await defineConfig({ root: process.cwd(), ...JSON.parse(options) })
-console.log(JSON.stringify([...urls]))
+const output = []
+for (const options of JSON.parse(optionSets)) {
+  urls = new Set()
+  await defineConfig({ root: process.cwd(), ...options })
+  output.push([...urls])
+}
+console.log(JSON.stringify(output))
 `
 
 /**
- * The module URLs that load while the build's config builds with `options` for the fixture
- * `fixture`, each once
+ * The module URLs that load during each build of the build's config for the fixture `fixture`, one
+ * for each of `optionSets`, in one process
  */
-async function resolvedUrls(
-  options: Record<string, unknown>,
-  fixture = 'typescript',
-): Promise<Array<string>> {
+async function loadedUrls(
+  fixture: string,
+  optionSets: Array<Record<string, unknown>>,
+): Promise<Array<Array<string>>> {
   const stdout = await runNodeOk(
     [
       '--input-type=module',
       '--eval',
       SCRIPT,
       pathToFileURL(path.join(BUILD_DIR, 'index.js')).href,
-      JSON.stringify(options),
+      JSON.stringify(optionSets),
     ],
     { cwd: path.join(import.meta.dirname, 'fixtures', fixture) },
   )
-  return JSON.parse(stdout) as Array<string>
+  return JSON.parse(stdout) as Array<Array<string>>
 }
 
 /**
@@ -61,7 +62,7 @@ const TYPESCRIPT_ESLINT_REGEX =
   /\/node_modules\/(?:typescript-eslint|@typescript-eslint\/(?:parser|eslint-plugin|typescript-estree))\//
 
 /**
- * The modules each area loads, which `enabledUrls` must have
+ * The modules each area loads, which a build with every area on must load
  */
 const AREA_MODULES = {
   unicorn: ['/eslint-plugin-unicorn/'],
@@ -72,61 +73,64 @@ const AREA_MODULES = {
   markdown: ['/@eslint/markdown/', '/mdast-util-from-markdown/'],
 }
 
-test('loads the plugin of every area that is on', () => {
-  for (const module of Object.values(AREA_MODULES).flat()) {
-    expect(
-      enabledUrls.some((url) => url.includes(module)),
-      module,
-    ).toBe(true)
-  }
-  expect(enabledUrls.some((url) => TYPESCRIPT_ESLINT_REGEX.test(url))).toBe(true)
-})
+function loadedOf(urls: Array<string>, modules: Array<string>): Array<string> {
+  return urls.filter((url) => modules.some((module) => url.includes(module)))
+}
 
 // Each process turns half of the areas off, so each area's plugin is checked to stay out while
 // the other half is on, which would load it if they imported it
 describe.concurrent('with areas off', () => {
   // eslint-plugin-unicorn's `relative-url-style` imports parse5, and markdown stays on, so this
   // also checks that markdown doesn't load the HTML parser. eslint-plugin-sonarjs and
-  // eslint-plugin-regexp load TypeScript as they load, when it's installed
+  // eslint-plugin-regexp load TypeScript as they load, when it's installed. A build with every area
+  // on comes after, in the same process, and loads the rest of the plugins
   it("doesn't import unicorn, sonarjs, jsdoc or the HTML parser, and loads TypeScript for a TypeScript project", async () => {
-    const urls = await resolvedUrls({
-      unicorn: false,
-      sonarjs: false,
-      jsdoc: false,
-      regexp: false,
-    })
-    for (const module of [
-      ...AREA_MODULES.unicorn,
-      ...AREA_MODULES.sonarjs,
-      ...AREA_MODULES.jsdoc,
-      '/hast-util-from-html/',
-      '/parse5/',
-    ]) {
-      expect(urls.filter((url) => url.includes(module))).toEqual([])
-    }
+    const [urls = [], allOnUrls = []] = await loadedUrls('typescript', [
+      { unicorn: false, sonarjs: false, jsdoc: false, regexp: false },
+      {},
+    ])
+    expect(
+      loadedOf(urls, [
+        ...AREA_MODULES.unicorn,
+        ...AREA_MODULES.sonarjs,
+        ...AREA_MODULES.jsdoc,
+        '/hast-util-from-html/',
+        '/parse5/',
+      ]),
+    ).toEqual([])
     expect(urls.some((url) => url.includes('/node_modules/typescript/'))).toBe(true)
-  })
-
-  // eslint-plugin-unicorn imports micromark as it loads, so this turns it off
-  it("doesn't import imports, pnpm, markdown or micromark", async () => {
-    const urls = await resolvedUrls({
-      imports: false,
-      pnpm: false,
-      markdown: false,
-      unicorn: false,
-    })
-    for (const module of [
-      ...AREA_MODULES.imports,
-      ...AREA_MODULES.pnpm,
-      ...AREA_MODULES.markdown,
-      '/micromark/',
-    ]) {
-      expect(urls.filter((url) => url.includes(module))).toEqual([])
+    // Every area's modules, so the checks of the modules that stay out can fail
+    const everyBuild = [...urls, ...allOnUrls]
+    for (const module of Object.values(AREA_MODULES).flat()) {
+      expect(
+        everyBuild.some((url) => url.includes(module)),
+        module,
+      ).toBe(true)
     }
+    expect(everyBuild.some((url) => TYPESCRIPT_ESLINT_REGEX.test(url))).toBe(true)
   })
 
-  it("doesn't load typescript-eslint or TypeScript for a JavaScript-only project without sonarjs and regexp", async () => {
-    const urls = await resolvedUrls({ sonarjs: false, regexp: false }, 'cjs')
+  // eslint-plugin-unicorn imports micromark as it loads, and eslint-plugin-sonarjs and
+  // eslint-plugin-regexp load TypeScript, so this turns them off
+  it("doesn't import imports, pnpm, markdown or micromark, nor typescript-eslint or TypeScript for a JavaScript-only project", async () => {
+    const [urls = []] = await loadedUrls('cjs', [
+      {
+        imports: false,
+        pnpm: false,
+        markdown: false,
+        unicorn: false,
+        sonarjs: false,
+        regexp: false,
+      },
+    ])
+    expect(
+      loadedOf(urls, [
+        ...AREA_MODULES.imports,
+        ...AREA_MODULES.pnpm,
+        ...AREA_MODULES.markdown,
+        '/micromark/',
+      ]),
+    ).toEqual([])
     expect(urls.filter((url) => TYPESCRIPT_ESLINT_REGEX.test(url))).toEqual([])
     expect(urls.filter((url) => url.includes('/node_modules/typescript/'))).toEqual([])
   })

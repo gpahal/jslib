@@ -133,6 +133,12 @@ describe('a rule whose schema the compiler would declare a name twice for', () =
   })
 })
 
+test('names every config uniquely under `gpahal/`', async () => {
+  const configNames = (await defineConfig(ALL_ON_OPTIONS)).map((config) => config.name)
+  expect(configNames.filter((name) => name?.startsWith('gpahal/') !== true)).toEqual([])
+  expect(new Set(configNames).size).toBe(configNames.length)
+})
+
 test("publishes every source the build's declaration map points to, for go-to-definition", async () => {
   const packageDir = path.join(import.meta.dirname, '..')
   const { files } = JSON.parse(

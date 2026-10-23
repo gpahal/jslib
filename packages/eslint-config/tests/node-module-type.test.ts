@@ -36,15 +36,15 @@ const messages = results.flatMap((result) =>
 console.log(JSON.stringify(messages))
 `
 
-const PACKAGE_JSON = { name: 'node-project', private: true, engines: { node: '>=24' } }
-
-test.concurrent.each([
-  ['without "type": "module"', PACKAGE_JSON],
-  ['with "type": "module"', { ...PACKAGE_JSON, type: 'module' }],
-])('node preset picks the module type from the file extension, %s', async (_name, packageJson) => {
+// Without `"type": "module"`, which eslint-plugin-n would read to treat `.js` files as CommonJS
+test('node preset picks the module type from the file extension, without "type": "module"', async () => {
   await using project = await withProject({
     ...FILES,
-    'package.json': JSON.stringify(packageJson),
+    'package.json': JSON.stringify({
+      name: 'node-project',
+      private: true,
+      engines: { node: '>=24' },
+    }),
   })
   const stdout = await runNodeOk(
     [

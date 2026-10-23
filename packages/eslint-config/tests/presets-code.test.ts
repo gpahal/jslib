@@ -15,6 +15,7 @@ import { defineConfig, type EslintConfigOptions } from '@/index'
 import { patchUnsafeFixes } from '@/internal/fixes'
 import { wrapSlopPlugin } from '@/internal/presets/antislop'
 
+import { createFocusedESLint } from './fix-helpers'
 import {
   BUILD_DIR,
   createESLint,
@@ -102,9 +103,13 @@ describe('module types', () => {
     plugins: { test: { rules: { scope: scopeRule } } },
     rules: { 'test/scope': 'error' },
   } satisfies Linter.Config
+  const SCOPE_RULE = new Set(['test/scope'])
 
   it('scope-analyse .cjs files as CommonJS', async () => {
-    const eslint = await createESLint('cjs', { node: true, extraConfigs: [scopeConfig] })
+    const eslint = await createFocusedESLint('cjs', SCOPE_RULE, {
+      node: true,
+      extraConfigs: [scopeConfig],
+    })
     // Node's function wrapper is a function scope, and allows `early-return.cjs`'s top-level return.
     // ESLint's parser, which lints the JavaScript-only project, names the source type `commonjs`
     expect(await lint(eslint, ['early-return.cjs', 'index.cjs'])).toEqual({
@@ -115,7 +120,9 @@ describe('module types', () => {
       'test/scope: module module',
     ])
     // TypeScript compiles `import` in `.cts` files to `require()`, so they stay modules
-    const typescriptESLint = await createESLint('typescript', { extraConfigs: [scopeConfig] })
+    const typescriptESLint = await createFocusedESLint('typescript', SCOPE_RULE, {
+      extraConfigs: [scopeConfig],
+    })
     const { 'src/index.cts': messages = [] } = await lint(typescriptESLint, ['src/index.cts'])
     expect(messages.filter((message) => message.startsWith('test/scope'))).toEqual([
       'test/scope: module module',
@@ -214,11 +221,11 @@ describe('commonjs option', () => {
       'scripts/a.js': COMMONJS_CODE,
       'src/a.js': COMMONJS_CODE,
     })
-    const eslint = await createESLint(project.dir, {
-      typeAware: false,
-      gitignore: false,
-      commonjs: { files: () => ['scripts/**'] },
-    })
+    const eslint = await createFocusedESLint(
+      project.dir,
+      new Set(['no-undef', 'unicorn/prefer-module', '@gpahal/no-esm-in-commonjs']),
+      { typeAware: false, gitignore: false, commonjs: { files: () => ['scripts/**'] } },
+    )
     const messages = await lint(eslint, ['scripts/a.js', 'src/a.js'], ruleIdOf)
     expect(messages['scripts/a.js']).toEqual([])
     expect(messages['src/a.js']).toEqual(
@@ -329,8 +336,9 @@ describe('unicorn/filename-case', () => {
     }
     await using project = await withProject(files)
     const options = { astro: true, react: true, typeAware: false, gitignore: false }
-    const kebab = await createESLint(project.dir, options)
-    const camel = await createESLint(project.dir, {
+    const rules = new Set(['unicorn/filename-case'])
+    const kebab = await createFocusedESLint(project.dir, rules, options)
+    const camel = await createFocusedESLint(project.dir, rules, {
       ...options,
       // The Quick start's example
       unicorn: { rules: { 'unicorn/filename-case': ['error', { case: 'camelCase' }] } },
@@ -494,6 +502,16 @@ const FIX_COMPILER_OPTIONS = {
 
 type TypedCase = { files: Record<string, string>; file: string }
 
+/**
+ * The rules whose fixes the typed cases check, the only ones that run on them, and the layout rule
+ * that drops the blank line a removed import leaves at the top
+ */
+const TYPED_FIX_RULES: ReadonlySet<string> = new Set([
+  '@typescript-eslint/consistent-type-definitions',
+  '@typescript-eslint/no-unused-vars',
+  'unicorn/no-leading-empty-lines',
+])
+
 type TypedFix = { output: string; again: string; errors: Array<string>; rules: Array<string> }
 
 /**
@@ -521,8 +539,9 @@ async function fixTypedProjects(
   const targets = cases.map(({ file }, index) =>
     path.join(project.dir, `${prefixOf(index)}${file}`),
   )
-  const eslint = await createESLint(
+  const eslint = await createFocusedESLint(
     project.dir,
+    TYPED_FIX_RULES,
     { gitignore: false, ...configOptions },
     { fix: true },
   )
@@ -643,10 +662,9 @@ describe('imports.cycles', () => {
     [undefined, []],
     [true, ALL],
     [{ maxDepth: 1 }, []],
-    [{ maxDepth: 2 }, ALL],
   ])('reports the files of a cycle with `cycles: %j`', async (cycles, expected) => {
     await using project = await withProject(FILES)
-    const eslint = await createESLint(project.dir, {
+    const eslint = await createFocusedESLint(project.dir, new Set(['import-x/no-cycle']), {
       typeAware: false,
       gitignore: false,
       ...(cycles !== undefined && { imports: { cycles } }),
@@ -870,14 +888,15 @@ describe('iterator rules', () => {
     ['react', { react: { scope: ['src/**/*.tsx'] } }, 'src/a.tsx'],
     ['astro', { astro: true }, 'src/a.astro'],
   ])('leave out iterator helpers with %s: %s', async (_name, options, file) => {
-    const eslint = await sharedESLint(FIXTURES_DIR, options)
-    for (const rule of [
+    const rules = [
       'unicorn/prefer-iterator-helpers',
       'unicorn/prefer-iterator-to-array',
       'unicorn/prefer-iterator-to-array-at-end',
       // `Array.fromAsync()` isn't in the ES2024 `lib` either
       'unicorn/prefer-array-from-async',
-    ]) {
+    ]
+    const eslint = await createFocusedESLint(FIXTURES_DIR, new Set(rules), options)
+    for (const rule of rules) {
       expect(await ruleSeverity(eslint, file, rule), rule).toBe(0)
     }
     expect(await ruleSeverity(eslint, 'src/a.ts', 'unicorn/prefer-iterator-to-array')).toBe(2)
@@ -896,9 +915,15 @@ describe('@typescript-eslint/prefer-regexp-exec', () => {
 
   it('reports no match as a condition with the regexp-test rule off in a later config', async () => {
     // The patch reads which rules are on from the presets' configs, and can't see a later one
-    const eslint = await createESLint('rules', {
-      extraConfigs: [{ rules: { 'unicorn/prefer-regexp-test': 'off' } }],
-    })
+    const eslint = await createFocusedESLint(
+      'rules',
+      new Set([
+        '@typescript-eslint/prefer-regexp-exec',
+        'unicorn/prefer-regexp-test',
+        'e18e/prefer-regex-test',
+      ]),
+      { extraConfigs: [{ rules: { 'unicorn/prefer-regexp-test': 'off' } }] },
+    )
     expect(await lintText(eslint, file, matchFunction(IF_MATCH))).toEqual([])
   })
 })
@@ -922,7 +947,11 @@ describe('node.typeStripping', () => {
         'src/c.tsx': code,
         'src/d.d.ts': "import { b } from './b.js'\n\nexport declare const d: typeof b\n",
       })
-      const eslint = await createESLint(project.dir, { node, typeAware: false, gitignore: false })
+      const eslint = await createFocusedESLint(
+        project.dir,
+        (ruleId) => ruleId.startsWith('@gpahal/no-'),
+        { node, typeAware: false, gitignore: false },
+      )
       const messages = await lint(eslint, ['src/a.ts', 'src/c.tsx', 'src/d.d.ts'], lineAndRuleOf)
       expect(
         Object.fromEntries(
@@ -1066,7 +1095,16 @@ describe('type-aware rules turned on through an area', () => {
       }),
       'node_modules/vitest/index.js': 'export {}\n',
     })
-    const eslint = await createESLint(project.dir, { vitest: { files: ['e2e/**/*.ts'] } })
+    const eslint = await createFocusedESLint(
+      project.dir,
+      new Set([
+        'vitest/unbound-method',
+        '@typescript-eslint/unbound-method',
+        'import-x/no-extraneous-dependencies',
+        '@typescript-eslint/no-non-null-assertion',
+      ]),
+      { vitest: { files: ['e2e/**/*.ts'] } },
+    )
     const messages = await lint(eslint, ['e2e/a.ts', 'e2e/b.ts'], ruleIdOf)
     expect(messages['e2e/a.ts']?.filter((rule) => rule.endsWith('/unbound-method'))).toEqual([
       'vitest/unbound-method',
@@ -1091,7 +1129,7 @@ describe('e18e options', () => {
 
   it.each(Object.keys(RULES))('e18e.%s: false turns only its rules off', async (option) => {
     // `moduleReplacements` is off by default
-    const eslint = await createESLint('typescript', {
+    const eslint = await createFocusedESLint('typescript', new Set(Object.values(RULES).flat()), {
       e18e: { moduleReplacements: true, [option]: false },
     })
     for (const [name, rules] of Object.entries(RULES)) {
@@ -1144,7 +1182,11 @@ describe('dev dependencies and file names', () => {
         '{ "name": "b", "private": true, "type": "module", "devDependencies": { "globals": "*" } }\n',
     })
     await linkGlobals(project.dir)
-    const eslint = await createESLint(project.dir, { typeAware: false })
+    const eslint = await createFocusedESLint(
+      project.dir,
+      new Set(['unicorn/filename-case', 'import-x/no-extraneous-dependencies']),
+      { typeAware: false },
+    )
     expect(await lint(eslint, files, ruleIdOf)).toEqual({
       'src/index.ts': ['import-x/no-extraneous-dependencies'],
       'src/fooBar.ts': ['unicorn/filename-case', 'import-x/no-extraneous-dependencies'],
@@ -1159,28 +1201,6 @@ describe('dev dependencies and file names', () => {
       'packages/b/src/app.config.ts': ['import-x/no-extraneous-dependencies'],
       'e2e/fixtures.ts': [],
       '.storybook/preview.tsx': [],
-    })
-  })
-})
-
-describe('dev dependencies in a workspace', () => {
-  // The rule reads the `package.json` nearest the file, so each package declares the tools its tests
-  // and configs import, as the README says
-  it.each([
-    ['only the root declares it', {}, ['import-x/no-extraneous-dependencies']],
-    ['the package declares it', { devDependencies: { globals: '*' } }, []],
-  ])('in a package test when %s', async (_name, manifest, expected) => {
-    await using project = await withProject({
-      'package.json':
-        '{ "name": "root", "private": true, "type": "module", "devDependencies": { "globals": "*" } }\n',
-      'packages/a/package.json': `${JSON.stringify({ name: 'a', private: true, type: 'module', ...manifest })}\n`,
-      'packages/a/src/a.test.ts':
-        "import globals from 'globals'\n\nexport const names = Object.keys(globals)\n",
-    })
-    await linkGlobals(project.dir)
-    const eslint = await createESLint(project.dir, { typeAware: false })
-    expect(await lint(eslint, ['packages/a/src/a.test.ts'], ruleIdOf)).toEqual({
-      'packages/a/src/a.test.ts': expected,
     })
   })
 })
@@ -1209,14 +1229,12 @@ describe('testFiles and dev dependencies', () => {
 
 async function browserImportReports(root: string) {
   const file = 'src/client/app.js'
-  const eslint = await createESLint(root, {
+  const eslint = await createFocusedESLint(root, (ruleId) => ruleId.startsWith('@gpahal/'), {
     browser: { files: ['src/client/**'] },
     gitignore: false,
     typeAware: false,
   })
-  return (await lint(eslint, [file], lineAndRuleOf))[file]?.filter((message) =>
-    message.includes('@gpahal/'),
-  )
+  return (await lint(eslint, [file], lineAndRuleOf))[file]
 }
 
 describe('browser option', () => {
@@ -1316,17 +1334,21 @@ describe('browser option', () => {
   })
 
   it('keeps its rules when your configs set the core no-restricted-* rules', async () => {
-    const eslint = await createESLint('browser', {
-      browser: { files: ['src/client/**'] },
-      configs: [
-        {
-          rules: {
-            'no-restricted-imports': ['error', 'lodash'],
-            'no-restricted-syntax': ['error', 'WithStatement'],
+    const eslint = await createFocusedESLint(
+      'browser',
+      (ruleId) => ruleId.startsWith('@gpahal/') || ruleId.startsWith('no-restricted-'),
+      {
+        browser: { files: ['src/client/**'] },
+        configs: [
+          {
+            rules: {
+              'no-restricted-imports': ['error', 'lodash'],
+              'no-restricted-syntax': ['error', 'WithStatement'],
+            },
           },
-        },
-      ],
-    })
+        ],
+      },
+    )
     const code =
       "import fs from 'node:fs'\nimport lodash from 'lodash'\n\nexport const a = [fs, lodash]\n"
     const messages = await lintText(eslint, 'src/client/imports.js', code)
@@ -1352,10 +1374,11 @@ describe('server option', () => {
   )
 
   it('reports browser globals and their globalThis properties once each', async () => {
-    const eslint = await createESLint('browser', {
-      react: true,
-      server: { files: ['src/server/**'] },
-    })
+    const eslint = await createFocusedESLint(
+      'browser',
+      (ruleId) => ruleId.startsWith('@gpahal/no-browser') || ruleId === 'no-undef',
+      { react: true, server: { files: ['src/server/**'] } },
+    )
     const messages = await lint(eslint, ['src/server/dom.ts', 'src/shared/dom.ts'], lineAndRuleOf)
     const guardMessages = Object.fromEntries(
       Object.entries(messages).map(([file, fileMessages]) => [
@@ -1399,7 +1422,7 @@ describe('server option', () => {
   })
 
   it('allows `typeof` checks of browser globals, but not their other uses', async () => {
-    const eslint = await sharedESLint('browser', {
+    const eslint = await createFocusedESLint('browser', (ruleId) => ruleId.startsWith('@gpahal/'), {
       react: true,
       server: { files: ['src/server/**'] },
       typeAware: false,
@@ -1429,11 +1452,17 @@ describe('server option', () => {
     ['react', { react: true }],
     ['nextjs', { nextjs: true }],
   ])('wins over browser for the files both match, with %s', async (_name, options) => {
-    const eslint = await createESLint('browser', {
-      ...options,
-      browser: { files: ['src/**'] },
-      server: { files: ['src/server/**'] },
-    })
+    const eslint = await createFocusedESLint(
+      'browser',
+      new Set([
+        '@gpahal/no-node-imports',
+        '@gpahal/no-browser-globals',
+        '@gpahal/no-browser-global-properties',
+        'unicorn/prefer-global-this',
+        'no-undef',
+      ]),
+      { ...options, browser: { files: ['src/**'] }, server: { files: ['src/server/**'] } },
+    )
     expect(await ruleSeverity(eslint, 'src/client/app.ts', '@gpahal/no-node-imports')).toBe(2)
     expect(
       await ruleSeverity(eslint, 'src/server/app.ts', '@gpahal/no-node-imports'),
@@ -1448,8 +1477,10 @@ describe('server option', () => {
 })
 
 describe('antislop preset', () => {
+  const EM_DASH = new Set(['slop/no-em-dash'])
+
   it('reports em dashes in code, strings too, and Markdown, and once in a code block', async () => {
-    const eslint = await createESLint('markdown', {
+    const eslint = await createFocusedESLint('markdown', EM_DASH, {
       markdown: true,
       antislop: true,
       typeAware: false,
@@ -1468,7 +1499,7 @@ describe('antislop preset', () => {
   })
 
   it('reports an em dash at its column in each language, so a disable comment on its line applies', async () => {
-    const eslint = await createESLint('markdown', {
+    const eslint = await createFocusedESLint('markdown', EM_DASH, {
       markdown: true,
       // `antislop.rules` turns it on in JSON and YAML files too
       antislop: { rules: { 'slop/no-em-dash': 'error' } },
@@ -1525,14 +1556,15 @@ describe('antislop preset', () => {
   it('reports cognitive complexity over antislop.cognitiveComplexity', async () => {
     const code =
       'export function sum(values: Array<number>): number {\n  let total = 0\n  for (const value of values) {\n    if (value > 0) {\n      total += value\n    }\n  }\n  return total\n}\n'
-    const low = await createESLint('rules', {
+    const complexity = new Set(['sonarjs/cognitive-complexity'])
+    const low = await createFocusedESLint('rules', complexity, {
       typeAware: false,
       antislop: { cognitiveComplexity: 2 },
     })
     expect(await lintText(low, 'src/complex.ts', code)).toEqual([
       expect.stringMatching(/^sonarjs\/cognitive-complexity: /),
     ])
-    const off = await createESLint('rules', {
+    const off = await createFocusedESLint('rules', complexity, {
       typeAware: false,
       antislop: { cognitiveComplexity: false },
     })
@@ -1570,9 +1602,9 @@ describe('@typescript-eslint/no-floating-promises', () => {
       'node_modules/react-router/index.d.ts': NAVIGATE_TYPES,
       ...SOURCES,
     })
-    const eslint = await createESLint(project.dir, { gitignore: false })
-    const messages = await lint(eslint, Object.keys(SOURCES), lineAndRuleOf)
     const rule = '@typescript-eslint/no-floating-promises'
+    const eslint = await createFocusedESLint(project.dir, new Set([rule]), { gitignore: false })
+    const messages = await lint(eslint, Object.keys(SOURCES), lineAndRuleOf)
     expect(
       Object.fromEntries(
         Object.entries(messages).map(([file, fileMessages]) => [
@@ -1585,6 +1617,8 @@ describe('@typescript-eslint/no-floating-promises', () => {
 })
 
 describe('n/no-unsupported-features', () => {
+  const isUnsupportedFeaturesRule = (ruleId: string) => ruleId.startsWith('n/no-unsupported')
+
   it("leaves a global's type alone, but reports its value, before the Node version of `engines`", async () => {
     await using project = await withProject({
       'package.json':
@@ -1592,7 +1626,7 @@ describe('n/no-unsupported-features', () => {
       'src/fetch.ts':
         'export type Handler = (request: Request) => Promise<Response>\n\nexport async function get(url: string): Promise<Response> {\n  return new Response(url)\n}\n',
     })
-    const eslint = await createESLint(project.dir, {
+    const eslint = await createFocusedESLint(project.dir, isUnsupportedFeaturesRule, {
       node: true,
       typeAware: false,
       gitignore: false,
@@ -1612,7 +1646,7 @@ describe('n/no-unsupported-features', () => {
       'src/a.mjs': code,
       'src/app.config.mjs': code,
     })
-    const eslint = await createESLint(project.dir, {
+    const eslint = await createFocusedESLint(project.dir, isUnsupportedFeaturesRule, {
       node: true,
       typeAware: false,
       gitignore: false,

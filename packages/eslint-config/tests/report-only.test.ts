@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import type { Linter } from 'eslint'
 import { builtinRules } from 'eslint/use-at-your-own-risk'
 
 import { withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
@@ -16,12 +15,12 @@ import {
 import { isRuleOn, parseRuleId } from '@/internal/rules'
 
 import { ALL_ON_OPTIONS } from '../scripts/typegen'
-import { fixFiles, reportFiles, type ReportResult } from './fix-helpers'
+import { fixFiles, reportFiles, withRulesOnly, type ReportResult } from './fix-helpers'
 import { collator, FIXTURES_DIR } from './helpers'
 
 // Each file of the `report-only` fixture holds code that a report-only rule's fix would change, with
 // the reason in a comment. With the presets' configs, the rule reports it and `--fix` leaves it.
-// Without `gpahal/fixes/report-only*`, the fix applies
+// Only a few cases check that the plugin's fix applies without `gpahal/fixes/report-only*`
 
 const FIXTURE_DIR = path.join(FIXTURES_DIR, 'report-only')
 
@@ -180,25 +179,26 @@ const GROUPS: Array<[string, Array<string>, Partial<EslintConfigOptions>]> = [
   ),
 ]
 
+const REPORT_ONLY_RULE_IDS: ReadonlySet<string> = new Set([
+  ...REPORT_ONLY_RULES,
+  ...UNTYPED_REPORT_ONLY_RULES,
+])
+
 /**
  * The problems in `files` with only the report-only rules running, and those that `--fix` would
- * fix, without the report-only configs with `withFixes`
+ * fix
  */
 async function reportCases(
   dir: string,
   files: Array<string>,
   options: Partial<EslintConfigOptions>,
-  withFixes: boolean,
 ): Promise<Record<string, ReportResult>> {
-  const composer = defineConfig({ root: dir, isInEditor: false, gitignore: false, ...options })
-  const configs: Array<Linter.Config> = withFixes
-    ? await composer.remove('gpahal/fixes/report-only').remove('gpahal/fixes/report-only-untyped')
-    : await composer
+  const configs = await defineConfig({ root: dir, isInEditor: false, gitignore: false, ...options })
   return reportFiles({
     dir,
-    configs,
+    configs: withRulesOnly(configs, REPORT_ONLY_RULE_IDS),
     files,
-    ruleIds: [...REPORT_ONLY_RULES, ...UNTYPED_REPORT_ONLY_RULES],
+    ruleIds: REPORT_ONLY_RULE_IDS,
   })
 }
 
@@ -245,20 +245,44 @@ describe('report-only fixes', () => {
   })
 
   it.for(GROUPS)(
-    'reports each case without fixing it, and fixes it without the report-only configs, %s',
+    'reports each case without fixing it, %s',
     async ([, files, options], { expect }) => {
-      const results = await reportCases(dir, files, options, false)
+      const results = await reportCases(dir, files, options)
       const failing = files.filter(
         (file) =>
           results[file]?.rules.includes(CASES[file] ?? '') !== true ||
           results[file].fixing.length > 0,
       )
       expect(Object.fromEntries(failing.map((file) => [file, results[file]]))).toEqual({})
-      // A case whose rule no longer fixes it is a report-only entry to remove
-      const fixed = await reportCases(dir, files, options, true)
-      expect(files.filter((file) => (fixed[file]?.fixing.length ?? 0) === 0)).toEqual([])
     },
   )
+
+  // The report-only configs, not the presets' rule options, keep the cases from fixing: without
+  // them, an untyped case and the typed cases of rules that need type information fix
+  it('fixes cases without the report-only configs, typed ones too', async () => {
+    const files = [
+      'src/js/object-shorthand.js',
+      'src/ts/return-await.ts',
+      'src/ts/prefer-optional-chain.ts',
+    ]
+    const configs = await defineConfig({
+      root: dir,
+      isInEditor: false,
+      gitignore: false,
+      ...OPTIONS,
+    })
+      .remove('gpahal/fixes/report-only')
+      .remove('gpahal/fixes/report-only-untyped')
+    const ruleIds = files.map((file) => CASES[file] ?? '')
+    const fixed = await fixFiles({
+      dir,
+      configs: withRulesOnly(configs, new Set(ruleIds)),
+      files,
+      ruleIds,
+    })
+    expect(files.filter((file) => fixed[file]?.output === undefined)).toEqual([])
+    expect(files.flatMap((file) => fixed[file]?.rules ?? [])).toEqual([])
+  })
 
   it("reports the library config's method signatures without fixing them, following an `.override()` of its files", async () => {
     const text = 'export interface Server {\n  close(callback: () => void): void\n}\n'

@@ -13,6 +13,8 @@
     // recipe takes up to about 3 minutes, past the root limit
     "test-recipes": {
       "dependsOn": ["^build", "build"],
+      // CI splits the recipes across jobs with it
+      "env": ["RECIPE_SHARD"],
       "inputs": [
         "package.json",
         "tsconfig.json",

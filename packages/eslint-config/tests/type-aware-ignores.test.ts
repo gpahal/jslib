@@ -5,7 +5,9 @@ import type { Linter } from 'eslint'
 import type { EslintConfigOptions } from '@/index'
 import { resolveOptions } from '@/internal/resolve'
 
-import { createESLint, lint, ruleIdOf, warningsOf, withProject } from './helpers'
+import { createESLint, lint, ruleIdOf, ruleSeverity, warningsOf, withProject } from './helpers'
+
+const TYPE_AWARE_RULE = '@typescript-eslint/no-unnecessary-type-assertion'
 
 const ASSERTED = "const s: string = 'a'\n\nexport const t = s as string\n"
 
@@ -22,10 +24,12 @@ describe('typeAware.ignores', () => {
     const eslint = await createESLint(project.dir, {
       typeAware: { ignores: ['src/gen/**', 'generated/**'] },
     })
-    const results = await lint(eslint, ['src/a.ts', 'src/gen/b.ts', 'generated/c.ts'], ruleIdOf)
-    expect(results['src/a.ts']).toContain('@typescript-eslint/no-unnecessary-type-assertion')
-    for (const file of ['src/gen/b.ts', 'generated/c.ts']) {
-      expect(results[file]).not.toContain('@typescript-eslint/no-unnecessary-type-assertion')
+    expect(await ruleSeverity(eslint, 'src/a.ts', TYPE_AWARE_RULE)).toBe(2)
+    // Without the file typed, which takes the most time, since typescript-eslint types it
+    const ignored = ['src/gen/b.ts', 'generated/c.ts']
+    const results = await lint(eslint, ignored, ruleIdOf)
+    for (const file of ignored) {
+      expect(results[file]).not.toContain(TYPE_AWARE_RULE)
       expect(results[file]?.filter((message) => message.startsWith('Parsing error'))).toEqual([])
       const config = (await eslint.calculateConfigForFile(
         path.join(project.dir, file),

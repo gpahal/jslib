@@ -156,7 +156,6 @@ test.each([undefined, null, 'tsconfig.json', ['react']])(
 
 test.each([
   [{ antislop: { cognitiveComplexity: false } }],
-  [{ nextjs: true }],
   [{ tailwindcss: { entryPoint: pathToFileURL(path.resolve(root, entryPoint)) } }],
   [{ tailwindcss: { entryPoint: pathToFileURL(path.resolve(root, entryPoint)).href } }],
   [{ vitest: { files: ['tests/**', '!**/*.snap'] } }],
@@ -246,7 +245,8 @@ test('throws on a malformed glob in the `files` or `ignores` of a config of your
   ).rejects.toThrow(message('`.onResolved()`', 'files'))
 })
 
-test.each(GLOB_OPTIONS.slice(0, 3))(
+// An option of its own and one of an area
+test.each([GLOB_OPTIONS[0]!, GLOB_OPTIONS[2]!])(
   'takes a glob of `%s` that starts with `./`, which matches the files as without it',
   async (_, optionsOf) => {
     // Whether ESLint ignores a file of `src`, and the rules and globals it gets

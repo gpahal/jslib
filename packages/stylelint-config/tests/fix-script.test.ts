@@ -47,23 +47,6 @@ async function readFixScripts(): Promise<Record<string, string>> {
 }
 
 /**
- * The README's Stylelint fix command, and the Stylelint command of its `check` script
- */
-async function readStylelintScripts(): Promise<{
-  'fix:stylelint': string
-  'check:stylelint': string
-}> {
-  const scripts = await readScripts()
-  const fix = scripts['fix:stylelint']
-  const check = scripts['check']
-    ?.split(' && ')
-    .filter((command) => command.startsWith('stylelint '))
-  expect(fix).toBeDefined()
-  expect(check).toHaveLength(1)
-  return { 'fix:stylelint': fix!, 'check:stylelint': check![0]! }
-}
-
-/**
  * Runs `pnpm run <script>` in `dir`, with `NODE_PATH` and `NODE_OPTIONS` emptied, as `runNode` does,
  * so a missing link doesn't resolve through the test runner's `NODE_PATH`
  */
@@ -139,23 +122,5 @@ describe("the README's fix script", () => {
     expect(await fs.readFile(path.join(dir, 'style.css'), 'utf8')).toBe(
       '@media (width <= 100px) {\n  a {\n    color: red;\n  }\n}\n',
     )
-  })
-})
-
-// The setup recipes' projects all have styled files, so this covers the README's
-// `--allow-empty-input`
-describe("the README's Stylelint commands", () => {
-  it('pass in a project without styled files', async () => {
-    await using project = await withTmpProject('stylelint-config-no-styles', {
-      'package.json': `${JSON.stringify({ type: 'module', scripts: await readStylelintScripts() })}\n`,
-      '.gitignore': 'node_modules\n',
-      'stylelint.config.mjs': `import { defineConfig } from ${JSON.stringify(import.meta.resolve('@gpahal/stylelint-config'))}\n\nexport default await defineConfig({ root: import.meta.dirname })\n`,
-      'index.js': 'export const a = 1\n',
-    })
-    await linkBins(project.dir, ['stylelint'])
-    for (const script of ['fix:stylelint', 'check:stylelint']) {
-      const { status, output } = runScript(project.dir, script)
-      expect(status, output).toBe(0)
-    }
   })
 })

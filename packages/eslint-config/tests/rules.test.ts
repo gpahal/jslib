@@ -1,10 +1,13 @@
 import path from 'node:path'
 
+import type { ESLint } from 'eslint'
 import ts from 'typescript'
 
 import type { EslintConfigOptions } from '@/index'
 
+import { createFocusedESLint } from './fix-helpers'
 import {
+  CORE_AREAS_OFF,
   createESLint,
   FIXTURES_DIR,
   lint,
@@ -134,7 +137,11 @@ describe('import rules', () => {
         'src/b.js':
           "import { a, missing } from './a.js'\nimport * as ns from './a.js'\n\nexport const values = [a, missing, ns.a, ns.nope]\n",
       })
-      const eslint = await createESLint(project.dir, { gitignore: false, ...options })
+      const eslint = await createFocusedESLint(
+        project.dir,
+        (ruleId) => ruleId.startsWith('import-x/n'),
+        { gitignore: false, ...options },
+      )
       const messages = await lint(eslint, ['src/b.js'], ruleIdOf)
       expect(messages['src/b.js']?.filter((rule) => rule.startsWith('import-x/n'))).toEqual(
         expected,
@@ -144,7 +151,9 @@ describe('import rules', () => {
 
   it('leave named imports off in code blocks', async () => {
     await using project = await withProject({ 'src/a.js': '' })
-    const eslint = await createESLint(project.dir, { gitignore: false })
+    const eslint = await createFocusedESLint(project.dir, new Set(['import-x/named']), {
+      gitignore: false,
+    })
     expect(
       await ruleSeverity(eslint, path.join(project.dir, 'README.md/0.js'), 'import-x/named'),
     ).toBe(0)
@@ -212,5 +221,44 @@ describe('json and yaml files', () => {
         'pnpm/yaml-no-unused-catalog-item',
       ],
     })
+  })
+})
+
+/**
+ * The problems of `code` linted as `filePath`, as `line:column rule`
+ */
+async function problemsOf(eslint: ESLint, filePath: string, code: string): Promise<Array<string>> {
+  const results = await eslint.lintText(code, { filePath })
+  return results.flatMap((result) =>
+    result.messages.map(
+      (message) =>
+        `${String(message.line)}:${String(message.column)} ${message.ruleId ?? message.message}`,
+    ),
+  )
+}
+
+describe('the toml area', () => {
+  // TOML and Markdown, without the core areas, which lint neither
+  const options = { ...CORE_AREAS_OFF, markdown: true } as const
+
+  it('lints a ```toml code block in Markdown', async () => {
+    const eslint = await sharedESLint('toml', options)
+    const block = ['```toml', 'name  =  "a"', '```']
+    expect(await problemsOf(eslint, 'docs.md', ['# Title', '', ...block, ''].join('\n'))).toEqual([
+      '4:5 toml/key-spacing',
+      '4:7 toml/key-spacing',
+    ])
+  })
+
+  it('lints no TOML file with `toml: false`', async () => {
+    const eslint = await sharedESLint('toml', { ...options, toml: false })
+    expect(await eslint.calculateConfigForFile('wrangler.toml')).toBeUndefined()
+    expect(
+      await problemsOf(
+        eslint,
+        'docs.md',
+        ['# Title', '', '```toml', 'a  =  1', '```', ''].join('\n'),
+      ),
+    ).toEqual([])
   })
 })

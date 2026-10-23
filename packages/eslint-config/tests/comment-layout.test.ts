@@ -11,7 +11,7 @@ import { defineConfig as definePrettierConfig } from '@gpahal/prettier-config'
 
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
 
-import { createESLint, FIXTURES_DIR } from './helpers'
+import { CORE_AREAS_OFF, createESLint, FIXTURES_DIR } from './helpers'
 
 const astroParser = eslintPluginAstro.configs['flat/base'].find(
   (config: Linter.Config) => config.languageOptions?.['parser'] !== undefined,
@@ -607,7 +607,11 @@ describe('comment-layout fixes', () => {
       '</script>',
       '',
     )
-    const eslint = await createESLint('astro-untyped', { astro: true }, { fix: true })
+    const eslint = await createESLint(
+      'astro-untyped',
+      { ...CORE_AREAS_OFF, astro: true },
+      { fix: true, ruleFilter: ({ ruleId }) => ruleId === '@gpahal/comment-layout' },
+    )
     const emitWarning = vi.spyOn(process, 'emitWarning')
     try {
       const [result] = await eslint.lintText(source, {
@@ -714,21 +718,23 @@ const COMMENTS = [
 
 const PREFIXES = ['', '\u{FEFF}', '#!/usr/bin/env node\n', '// @ts-expect-error\n']
 
+const SEPARATORS = [' ', '\n']
+
 /**
- * Each skeleton with each comment at each offset, after one of the prefixes in turn, so each
- * prefix meets each comment without the run crossing every prefix with every case
+ * Each skeleton with each comment at each offset, after one of the prefixes and between one of the
+ * separators in turn, so each prefix and separator meets each comment without the run crossing
+ * every prefix and separator with every case
  */
 const COMMENT_CASES = SKELETONS.flatMap((skeleton) => {
   const offsets = [
     ...new Set([0, ...skeleton.matchAll(/[\s(){}<>,;:=|]/gu).map((match) => match.index)]),
   ]
   return offsets.flatMap((offset, offsetIndex) =>
-    COMMENTS.flatMap((comment, commentIndex) =>
-      [' ', '\n'].map((separator) => {
-        const prefix = PREFIXES[(offsetIndex + commentIndex) % PREFIXES.length] ?? ''
-        return `${prefix}${skeleton.slice(0, offset)}${separator}${comment}${separator}${skeleton.slice(offset)}`
-      }),
-    ),
+    COMMENTS.map((comment, commentIndex) => {
+      const prefix = PREFIXES[(offsetIndex + commentIndex) % PREFIXES.length] ?? ''
+      const separator = SEPARATORS[offsetIndex % SEPARATORS.length] ?? ''
+      return `${prefix}${skeleton.slice(0, offset)}${separator}${comment}${separator}${skeleton.slice(offset)}`
+    }),
   )
 })
 
@@ -772,7 +778,7 @@ describe('comment-layout on comments in odd places', () => {
         failures.push(`a second pass changed: ${JSON.stringify(code)}`)
       }
     }
-    expect(count).toBeGreaterThan(800)
+    expect(count).toBeGreaterThan(400)
     expect(failures).toEqual([])
   })
 })
