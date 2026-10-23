@@ -7,13 +7,14 @@ import type { ConfigObject, includeIgnoreFile as IncludeIgnoreFile } from 'eslin
 import { resolveSubOptions } from '@gpahal/internal/node/options'
 import { formatNames, getErrorReason } from '@gpahal/std/errors'
 
-import { IGNORES } from '@/internal/configs/ignores'
+import { IGNORED_FOLDER_NAMES, IGNORES } from '@/internal/configs/ignores'
 import {
   isDefaultProjectCandidate,
   isStorybookCandidate,
   STORYBOOK_FOLDER,
 } from '@/internal/default-project'
 import { CODE_EXTNS_WITH_DOT, TYPED_CODE_EXTNS_WITH_DOT } from '@/internal/files'
+import { followEntry } from '@/internal/fs'
 import {
   findGitCommonDir,
   findGitignoresAbove,
@@ -21,7 +22,7 @@ import {
   readGitModules,
   readIgnoreCase,
 } from '@/internal/git'
-import { createGlobMatcher, isInside, rebaseGlob } from '@/internal/globs'
+import { createGlobMatcher, isInside, posixRelative, rebaseGlob } from '@/internal/globs'
 import { GITIGNORE_CONFIG_NAMES } from '@/internal/names'
 import type { EslintConfigOptions } from '@/internal/types'
 import { fail, formatErrorMessage, warnOfSetupOnce } from '@/internal/utils'
@@ -51,10 +52,6 @@ function loadIncludeIgnoreFile(): typeof IncludeIgnoreFile {
   }
   return api.includeIgnoreFile
 }
-
-const IGNORED_FOLDER_NAMES: ReadonlySet<string> = new Set(
-  IGNORES.flatMap((glob) => /^\*\*\/([^*/]+)$/.exec(glob)?.[1] ?? []),
-)
 
 /**
  * minimatch, which ESLint and the walk use, backtracks on a segment of `n` wildcards in time that
@@ -94,7 +91,7 @@ function warnOfSkippedRules(file: string, root: string, lines: ReadonlyArray<num
   if (warnedWildcardFiles.has(file)) {
     return
   }
-  const relativePath = path.relative(root, file).split(path.sep).join('/')
+  const relativePath = posixRelative(root, file)
   const isOne = lines.length === 1
   const numbers = lines.map(String)
   const last = numbers.pop() ?? ''
@@ -203,7 +200,7 @@ function readIgnoreFile(
   try {
     config = loadIncludeIgnoreFile()(file, { gitignoreResolution })
   } catch (error) {
-    const relativePath = path.relative(root, file).split(path.sep).join('/')
+    const relativePath = posixRelative(root, file)
     throw new Error(
       formatErrorMessage(
         ['`gitignore`', formatNames([relativePath])],
@@ -272,10 +269,7 @@ function warnOfIgnoredRoot(
     ancestors.findLast(({ layer }) =>
       createIgnoreCheck(new IgnoreLayers([layer]))(ignored, true),
     ) ?? ancestors[0]
-  const relativePath = path
-    .relative(root, source?.file ?? '')
-    .split(path.sep)
-    .join('/')
+  const relativePath = posixRelative(root, source?.file ?? '')
   let line: number | undefined
   if (source !== undefined) {
     const lines = getRuleLines(source.file)
@@ -306,10 +300,7 @@ function warnOfIgnoredRoot(
     formatErrorMessage(
       ['`gitignore`', formatNames([relativePath])],
       `${line === undefined ? 'a rule' : `the rule on line ${String(line)}`} ignores ${formatNames([
-        path
-          .relative(source?.layer.basePath ?? gitRoot, ignored)
-          .split(path.sep)
-          .join('/'),
+        posixRelative(source?.layer.basePath ?? gitRoot, ignored),
       ])}, ${ignored === root ? 'the folder of `root`' : 'a folder above `root`'}, so git ignores every file in the project, ${isIgnoredByESLint ? 'and ESLint does too' : 'though ESLint still lints them'}. Un-ignore the folder in that file, as with a \`!\` rule, or set \`gitignore: false\``,
     ),
     'GPAHAL_ROOT_GITIGNORED',
@@ -373,17 +364,7 @@ const PROJECT_FILE_NAMES: ReadonlyArray<string> = ['tsconfig.json', 'jsconfig.js
  * TypeScript reads a `tsconfig.json` through a symbolic link
  */
 function isFileEntry(entry: fs.Dirent, file: string): boolean {
-  if (entry.isFile()) {
-    return true
-  }
-  if (!entry.isSymbolicLink()) {
-    return false
-  }
-  try {
-    return fs.statSync(file, { throwIfNoEntry: false })?.isFile() === true
-  } catch {
-    return false
-  }
+  return followEntry(entry, file)?.isFile() === true
 }
 
 function findMatchedFiles(
@@ -393,7 +374,7 @@ function findMatchedFiles(
   isIgnored: (file: string, isFolder: boolean) => boolean,
   matchesGlobs: (relativePath: string) => boolean,
 ): Array<string> {
-  const relativeFolder = path.relative(dir, folder).split(path.sep).join('/')
+  const relativeFolder = posixRelative(dir, folder)
   return entries.flatMap((entry) => {
     const relativePath = relativeFolder === '' ? entry.name : `${relativeFolder}/${entry.name}`
     const file = path.join(folder, entry.name)
@@ -581,7 +562,7 @@ function walkProject({
           configFiles.push(file)
           continue
         }
-        const relativePath = path.relative(dir, file).split(path.sep).join('/')
+        const relativePath = posixRelative(dir, file)
         if (collectsSourceFiles) {
           sourceFiles.push(relativePath)
         }

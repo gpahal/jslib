@@ -61,3 +61,32 @@ export function findUp(fileName: string, dir: string): string | undefined {
     current = parent
   }
 }
+
+/**
+ * `undefined` when it isn't a regular file or can't be read. The check guards against a symbolic
+ * link to a FIFO or device, whose read never ends
+ */
+export function readTextFile(file: string): string | undefined {
+  try {
+    return fs.statSync(file, { throwIfNoEntry: false })?.isFile() === true
+      ? fs.readFileSync(file, 'utf8')
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * The entry, or its target's stats for a symbolic link. `undefined` when the target is missing or
+ * can't be read
+ */
+export function followEntry(entry: fs.Dirent, file: string): fs.Dirent | fs.Stats | undefined {
+  if (!entry.isSymbolicLink()) {
+    return entry
+  }
+  try {
+    return fs.statSync(file, { throwIfNoEntry: false })
+  } catch {
+    return undefined
+  }
+}

@@ -12,10 +12,15 @@ import { parse as parseYaml } from 'yaml'
 import { isRecord } from '@gpahal/std/objects'
 import { trimEnd } from '@gpahal/std/strings'
 
-import { IGNORES } from '@/internal/configs/ignores'
-import { readJsonFile } from '@/internal/fs'
+import { IGNORED_FOLDER_NAMES } from '@/internal/configs/ignores'
+import { readJsonFile, readTextFile } from '@/internal/fs'
 import { findGitRoot } from '@/internal/git'
-import { createGlobMatcher, splitGlobs, withoutLeadingDotSlash } from '@/internal/globs'
+import {
+  createGlobMatcher,
+  posixRelative,
+  splitGlobs,
+  withoutLeadingDotSlash,
+} from '@/internal/globs'
 
 /**
  * With its `/`-separated path relative to `root`
@@ -37,10 +42,6 @@ const MAX_WORKSPACE_FOLDERS = 5000
  * For a glob with `**`
  */
 const MAX_WORKSPACE_DEPTH = 6
-
-const SKIPPED_FOLDER_NAMES: ReadonlySet<string> = new Set(
-  IGNORES.flatMap((glob) => /^\*\*\/([^*/]+)$/.exec(glob)?.[1] ?? []),
-)
 
 /**
  * None when it doesn't parse or `packages` isn't a list
@@ -64,16 +65,6 @@ function normalizeWorkspaceGlobs(globs: ReadonlyArray<string>): Array<string> {
   return globs.map((glob) => trimEnd(withoutLeadingDotSlash(glob), '/'))
 }
 
-function readTextFile(file: string): string | undefined {
-  try {
-    return fs.statSync(file, { throwIfNoEntry: false })?.isFile() === true
-      ? fs.readFileSync(file, 'utf8')
-      : undefined
-  } catch {
-    return undefined
-  }
-}
-
 /**
  * The nearest `pnpm-workspace.yaml`, up to the git root, is at `root` or its `packages` match it or
  * a folder between them. A stray file above the repository, or a workspace an npm project sits in
@@ -84,7 +75,7 @@ export function isInPnpmWorkspace(root: string): boolean {
   for (let dir = root; ; dir = path.dirname(dir)) {
     const text = readTextFile(path.join(dir, 'pnpm-workspace.yaml'))
     if (text !== undefined) {
-      const relative = path.relative(dir, root).split(path.sep).join('/')
+      const relative = posixRelative(dir, root)
       if (relative === '') {
         return true
       }
@@ -122,7 +113,7 @@ function getWorkspaceGlobs(
 }
 
 /**
- * Breadth first, skipping dot folders, symbolic links and `SKIPPED_FOLDER_NAMES`, within the limits
+ * Breadth first, skipping dot folders, symbolic links and `IGNORED_FOLDER_NAMES`, within the limits
  */
 function findWorkspaceFolders(root: string, globs: ReadonlyArray<string>): Array<string> {
   const { positive, negated } = splitGlobs(normalizeWorkspaceGlobs(globs))
@@ -155,7 +146,7 @@ function findWorkspaceFolders(root: string, globs: ReadonlyArray<string>): Array
       if (
         !entry.isDirectory() ||
         entry.name.startsWith('.') ||
-        SKIPPED_FOLDER_NAMES.has(entry.name)
+        IGNORED_FOLDER_NAMES.has(entry.name)
       ) {
         continue
       }

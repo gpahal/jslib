@@ -1,5 +1,4 @@
 import fs from 'node:fs'
-import { createRequire } from 'node:module'
 import path from 'node:path'
 
 import { meta, parseForESLint, type ParserOptions } from '@typescript-eslint/parser'
@@ -10,8 +9,8 @@ import { formatNames } from '@gpahal/std/errors'
 import { isRecord } from '@gpahal/std/objects'
 
 import { DEFAULT_PROJECT_FILE_MATCH_COUNT } from '@/internal/configs/javascript'
-import { isFoundDefaultProjectFile } from '@/internal/default-project'
-import { createGlobMatcher, escapeGlob, isInside } from '@/internal/globs'
+import { isFoundDefaultProjectFile, loadTypeScript } from '@/internal/default-project'
+import { createGlobMatcher, escapeGlob, isInside, posixRelative } from '@/internal/globs'
 import { checkRootSpelling } from '@/internal/root-spelling'
 import type { TypedConfig } from '@/internal/types'
 import { fail, formatErrorMessage } from '@/internal/utils'
@@ -44,14 +43,9 @@ const compilerOptions = new Map<string, string>()
 
 const typePackages = new Map<string, string>()
 
-function getTypeScript(): typeof TypeScriptModule {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- `require` returns `any`, and this is the `typescript` module
-  return createRequire(import.meta.url)('typescript') as typeof TypeScriptModule
-}
-
 function parseTsconfig(file: string): TypeScriptModule.ParsedCommandLine | undefined {
   if (!fs.existsSync(file)) return undefined
-  const ts = getTypeScript()
+  const ts = loadTypeScript()
   const parsed = ts.getParsedCommandLineOfConfigFile(file, undefined, {
     ...ts.sys,
     onUnRecoverableConfigFileDiagnostic: () => undefined,
@@ -152,7 +146,7 @@ function compilerOptionsOf(file: string): string {
 function typePackagesOf(file: string): string {
   const cached = typePackages.get(file)
   if (cached !== undefined) return cached
-  const ts = getTypeScript()
+  const ts = loadTypeScript()
   const options = parseTsconfig(file)?.options ?? { configFilePath: file }
   const names = ts.getAutomaticTypeDirectiveNames(options, ts.sys)
   const containingFile = path.join(path.dirname(file), '__inferred type names__.ts')
@@ -218,7 +212,7 @@ function conflictOf(
   }
   if (file === undefined) return undefined
   // typescript-eslint matches the reserved globs against the path relative to the file's own root
-  const relativePath = path.relative(service.root, file).split(path.sep).join('/')
+  const relativePath = posixRelative(service.root, file)
   const isOwn = service.isDefaultProjectFile(relativePath)
   if (isOwn !== reserved.isDefaultProjectFile(relativePath)) {
     const globs = (options: ServiceOptions) => JSON.stringify(options.allowDefaultProject)
@@ -306,7 +300,7 @@ function withDefaultProjectFix(
   ) {
     return error
   }
-  const file = path.relative(tsconfigRootDir, filePath).split(path.sep).join('/')
+  const file = posixRelative(tsconfigRootDir, filePath)
   if (!isFoundDefaultProjectFile(root, file)) {
     return error
   }
