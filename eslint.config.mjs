@@ -9,6 +9,10 @@ export default defineConfig({
   turbo: true,
   vitest: true,
   typescript: { library: true },
+  // `packages/recipes` lists these frameworks only for the setup recipes' temporary projects
+  nextjs: false,
+  react: false,
+  astro: false,
   antislop: true,
   // Keeps the repository's dependencies few
   e18e: { moduleReplacements: true },

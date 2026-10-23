@@ -21,9 +21,9 @@ jobs:
       contents: read
       pull-requests: read
 
-  # The tasks of `pnpm check`, one job for each kind. They take about 1 to 2 minutes each on a
-  # 4-vCPU runner, where `pnpm check` alone takes about 6. The `typecheck` job fails when
-  # `pnpm check` and these jobs run different tasks
+  # The tasks of `pnpm check`, one job for each kind, and the canaries, which only CI runs. They
+  # take about 1 to 2 minutes each on a 4-vCPU runner, where `pnpm check` alone takes about 6. The
+  # `typecheck` job fails when these jobs run other tasks than `pnpm check` and the canaries
   tasks:
     name: ${{ matrix.name }}
     needs: gate
@@ -40,6 +40,8 @@ jobs:
             tasks: lint-check lint-check-root fmt-check knip
           - name: test
             tasks: test
+          # The canaries, which fail once upstream fixes a bug that a workaround exists for. Only CI
+          # runs them, so an upstream release fails CI rather than a local `pnpm check`
           - name: test-canaries
             tasks: test-canaries
           - name: test-recipes
@@ -57,20 +59,28 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - if: matrix.name == 'typecheck'
-        name: Check that the jobs run the tasks of `pnpm check`
+        name: Check that the jobs run the tasks of `pnpm check` and the canaries
         run: |
-          check="$(node -p "require('./package.json').scripts.check.split(' ').filter((word) => /^[a-z]/.test(word)).slice(2).sort().join(' ')")"
-          jobs="build fmt-check knip lint-check lint-check-root test test-canaries test-recipes typecheck typecheck-release typecheck-root"
+          check="$(node -p "[...require('./package.json').scripts.check.split(' ').filter((word) => /^[a-z]/.test(word)).slice(2), 'test-canaries'].sort().join(' ')")"
+          jobs="$(yq '.jobs.tasks.strategy.matrix.include[].tasks' .github/workflows/ci.yml | xargs -n 1 | LC_ALL=C sort | xargs)"
           if [ "$check" != "$jobs" ]; then
-            echo "pnpm check runs '$check', but the CI jobs run '$jobs'. Update the matrix in ci.yml"
+            echo "pnpm check and the canaries run '$check', but the CI jobs run '$jobs'. Update the matrix in ci.yml"
             exit 1
           fi
       # Only shipped dependencies gate CI, so a new dev-only advisory doesn't block unrelated PRs
       - if: matrix.name == 'typecheck'
         run: pnpm audit --prod
-      # No remote Turbo cache, so every job builds what its tasks need
+      # Turbo's local cache, one for each job, saved under the commit and restored from the latest
+      # save. GitHub scopes a pull request's caches to its ref, so a pull request reads main's cache
+      # but can't write it
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ matrix.name }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-${{ matrix.name }}-
       - run: pnpm turbo run --continue=dependencies-successful ${{ matrix.tasks }}
-      # The build rewrites `package.json` exports when entry points change
+      # The build rewrites `package.json` exports when entry points change, and a cache hit restores
+      # them
       - run: ./scripts/verify-no-git-changes.sh
 
   # The status check that the `main` ruleset requires. It passes when every job of `tasks` passed,

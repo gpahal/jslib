@@ -674,13 +674,13 @@ The implementing agent keeps this table current. Status values are `todo`, `in p
 
 | Item                                                | Stream | Status |
 | --------------------------------------------------- | ------ | ------ |
-| A1 canaries via Vitest projects, CI-only            | A      | todo   |
-| A2 warning codes into eslint-config's Vitest config | A      | todo   |
-| A3 stylelint-config shared modules                  | A      | todo   |
-| A4 tsconfig release-check task                      | A      | todo   |
-| A5 private `packages/recipes`                       | A      | todo   |
-| A6 Turbo cache in CI                                | A      | todo   |
-| A7 AGENTS.md updates                                | A      | todo   |
+| A1 canaries via Vitest projects, CI-only            | A      | done   |
+| A2 warning codes into eslint-config's Vitest config | A      | done   |
+| A3 stylelint-config shared modules                  | A      | done   |
+| A4 tsconfig release-check task                      | A      | done   |
+| A5 private `packages/recipes`                       | A      | done   |
+| A6 Turbo cache in CI                                | A      | done   |
+| A7 AGENTS.md updates                                | A      | done   |
 | B-E2 declarator docs                                | B      | todo   |
 | B-E3 commented-out members                          | B      | todo   |
 | B-E4 Astro module header                            | B      | todo   |

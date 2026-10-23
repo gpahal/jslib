@@ -25,10 +25,11 @@ const README = await fs.readFile(path.join(REPO_DIR, 'README.md'), 'utf8')
 
 /**
  * The folders whose `node_modules` hold the recipes' third-party packages, as this workspace installs
- * them
+ * them: this package's for the apps' frameworks, and the config packages' for the linters and their
+ * plugins
  */
-const SOURCE_DIRS = ['stylelint-config', 'eslint-config', 'prettier-config'].map((name) =>
-  path.join(REPO_DIR, 'packages', name),
+const SOURCE_DIRS = ['recipes', 'stylelint-config', 'eslint-config', 'prettier-config'].map(
+  (name) => path.join(REPO_DIR, 'packages', name),
 )
 SOURCE_DIRS.push(REPO_DIR)
 
@@ -40,7 +41,7 @@ function section(heading: string): string {
   if (text === undefined) {
     throw new Error(
       formatMessage(
-        '@gpahal/stylelint-config',
+        '@gpahal/recipes',
         ['README recipe'],
         `section ${describeValue(heading)} is missing`,
       ),
@@ -80,7 +81,7 @@ function readRecipe(heading: string): Recipe {
       const [first = ''] = code.split('\n', 1)
       throw new Error(
         formatMessage(
-          '@gpahal/stylelint-config',
+          '@gpahal/recipes',
           ['README recipe', describeValue(heading)],
           `expected a file name comment, received ${describeValue(first)}`,
         ),
@@ -113,7 +114,7 @@ function strictCheck(check: string): string {
   if (parts.length > 2) {
     throw new Error(
       formatMessage(
-        '@gpahal/stylelint-config',
+        '@gpahal/recipes',
         ['README recipe', '`check`'],
         `expected at most one Stylelint command, received ${describeValue(check)}`,
       ),
@@ -185,7 +186,7 @@ class Installer {
       if (dir === undefined) {
         throw new Error(
           formatMessage(
-            '@gpahal/stylelint-config',
+            '@gpahal/recipes',
             ['README recipe', describeValue(name)],
             `isn't installed in the workspace`,
           ),
@@ -436,6 +437,11 @@ type Case = Project & {
    * Globals that the project's code mustn't type-check with
    */
   missingGlobals?: Array<MissingGlobal>
+  /**
+   * Sources with an error that ESLint reports and can't fix, and the files as the other fixers
+   * leave them, for a `fix` run after the checks
+   */
+  failingFix?: { sources: Record<string, string>; rule: string; fixed: Record<string, string> }
 }
 
 /**
@@ -466,6 +472,15 @@ const FIXER_CASES: Array<Case> = [
         '# Setup\n\n```jsonc\n{\n  "compilerOptions": {\n    "types": ["node"]\n  }\n}\n```\n',
     },
     invalidSource: { 'src/index.ts': 'export const title: string = 123\n' },
+    // A `debugger` statement, and a `let` that `prefer-const` fixes
+    failingFix: {
+      sources: { 'src/debug.ts': 'let a = 1\ndebugger\nexport { a }\n', 'src/debug.css': CSS },
+      rule: 'no-debugger',
+      fixed: {
+        'src/debug.ts': 'const a = 1\ndebugger\nexport { a }\n',
+        'src/debug.css': FIXED_CSS,
+      },
+    },
   },
   {
     name: 'Astro',
@@ -820,6 +835,19 @@ test.concurrent.for(FIXER_CASES)(
     expect(scripts.filter(([, code]) => code.includes('let '))).toEqual([])
 
     await expectChecks(dir, testCase, expect)
+
+    // `fix` runs every fixer after one fails, and fails
+    const { failingFix } = testCase
+    if (failingFix === undefined) {
+      return
+    }
+    await writeFiles(dir, failingFix.sources)
+    const failed = await runScript(dir, 'fix')
+    expect(failed.status, failed.output).not.toBe(0)
+    expect(failed.output).toContain(failingFix.rule)
+    for (const [file, text] of Object.entries(failingFix.fixed)) {
+      expect(await fs.readFile(path.join(dir, file), 'utf8')).toBe(text)
+    }
   },
 )
 

@@ -68,9 +68,10 @@
   "scripts": {
     "lint-check": "eslint . --max-warnings 0",
     "prepublishOnly": "../../scripts/verify-publish-tool.sh",
-    "test": "VITEST_CANARIES=0 vitest run --config ../../vitest.config.ts",
-    "test-canaries": "VITEST_CANARIES=1 vitest run --config ../../vitest.config.ts",
-    "typecheck": "tsc"
+    "test": "vitest run --config ../../vitest.config.ts --project 'tests*'",
+    "test-canaries": "vitest run --config ../../vitest.config.ts --project canaries",
+    "typecheck": "tsc",
+    "typecheck-release": "publint --strict"
   },
   "devDependencies": {
     "@gpahal/internal": "workspace:*",

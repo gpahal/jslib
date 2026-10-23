@@ -44,15 +44,26 @@
     "packages/stylelint-config": {
       "entry": ["src/*.ts", "tests/**/*.{test,test-d}.ts", "tests/exact-optional/*.ts"],
       "project": ["src/**/*.ts", "tests/**/*.ts"],
+      "tailwind": false,
+      // As in eslint-config
+      "ignoreDependencies": ["brace-expansion"]
+    },
+    "packages/font-fallback": {
+      "entry": ["src/*.ts", "tests/**/*.test.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.ts"],
+      // A system command, which a test runs to make a FIFO, since Node can't
+      "ignoreBinaries": ["mkfifo"]
+    },
+    "packages/recipes": {
+      "entry": ["tests/**/*.test.ts"],
+      "project": ["tests/**/*.ts"],
       // Astro runs only in the temporary setup-recipe projects
       "astro": false,
-      "tailwind": false,
-      // `brace-expansion`: as in eslint-config. `tests/setup-recipes.test.ts` copies eslint-config
-      // and tsconfig into its projects, depending on them so Turbo builds them first, and links the
-      // recipes' app packages into them by path
+      // `tests/setup-recipes.test.ts` copies the config packages into its projects, depending on them
+      // so Turbo builds them first, and links the recipes' app packages into them by path
       "ignoreDependencies": [
-        "brace-expansion",
         "@gpahal/eslint-config",
+        "@gpahal/stylelint-config",
         "@gpahal/tsconfig",
         "astro",
         "@astrojs/check",
@@ -64,12 +75,6 @@
         "vite",
         "@vitejs/plugin-react"
       ]
-    },
-    "packages/font-fallback": {
-      "entry": ["src/*.ts", "tests/**/*.test.ts"],
-      "project": ["src/**/*.ts", "tests/**/*.ts"],
-      // A system command, which a test runs to make a FIFO, since Node can't
-      "ignoreBinaries": ["mkfifo"]
     },
     "packages/tsconfig": {
       "entry": ["tests/**/*.test.ts"],

@@ -44,6 +44,7 @@ Libraries:
 Internal, never published:
 
 - [@gpahal/internal](packages/internal): code the packages share and bundle, such as their option schemas.
+- [@gpahal/recipes](packages/recipes): end-to-end checks of the [setup recipes](#setup-recipes) and of the packages' test scripts.
 
 ## Supported setups
 
@@ -832,7 +833,7 @@ pnpm build
 pnpm check
 ```
 
-Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate. [CI](.github/workflows/ci.yml) runs the same tasks in five parallel jobs, typecheck, lint, test, test-canaries and test-recipes, and `pnpm audit --prod`, on Linux with read-only access and no secrets; a `check` job passes when they all do. `main` takes only squash-merged pull requests with signed commits and a passing `check`. A PR doesn't have to be up to date with `main`, but on a push to `main`, CI skips the checks only when a passing run on the merged PR's head tested the same files, which requires the PR to contain the latest `main`; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
+Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate but the canaries, tests that fail once upstream fixes a bug that a workaround exists for; `pnpm turbo run test-canaries` runs them. [CI](.github/workflows/ci.yml) runs the tasks of both in five parallel jobs, typecheck, lint, test, test-canaries and test-recipes, each with a Turbo cache of its own, and `pnpm audit --prod`, on Linux with read-only access and no secrets; a `check` job passes when they all do. `main` takes only squash-merged pull requests with signed commits and a passing `check`. A PR doesn't have to be up to date with `main`, but on a push to `main`, CI skips the checks only when a passing run on the merged PR's head tested the same files, which requires the PR to contain the latest `main`; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
 
 ## Releasing
 

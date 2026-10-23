@@ -3,7 +3,6 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { publint } from 'publint'
 import ts from 'typescript'
 
 import { PACKAGE_DIR, PRESETS } from './helpers'
@@ -12,12 +11,6 @@ const PACKAGE_JSON = JSON.parse(readFileSync(path.join(PACKAGE_DIR, 'package.jso
   files: Array<string>
   exports: Record<string, string>
 }
-
-// The package has no `typecheck-release` script, where the other packages run publint
-test('publint finds no problems in the packed package', async () => {
-  const { messages } = await publint({ pkgDir: PACKAGE_DIR, pack: 'pnpm', strict: true })
-  expect(messages.filter(({ type }) => type !== 'suggestion')).toEqual([])
-})
 
 test('every preset is published and exported by its name, with base as the root', () => {
   expect(new Set(PACKAGE_JSON.files)).toEqual(new Set(PRESETS))

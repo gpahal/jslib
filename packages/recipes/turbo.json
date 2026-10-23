@@ -2,9 +2,16 @@
   "$schema": "https://turbo.build/schema.json",
   "extends": ["//"],
   "tasks": {
+    // `tests/test-selection.test.ts` lists the test files of every package's `test` and
+    // `test-canaries` scripts, which pick them by Vitest project. It checks only where the canaries
+    // go, so the other test files don't change its result
     "test": {
-      // `tests/fix-script.test.ts` runs the fix and Stylelint scripts of the repository README
-      "inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/README.md"]
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/packages/*/package.json",
+        "$TURBO_ROOT$/packages/*/vitest.config.ts",
+        "$TURBO_ROOT$/packages/*/tests/**/*.canary.test.ts"
+      ]
     },
     // `tests/setup-recipes.test.ts`, which the slow child processes of every setup recipe of the
     // repository README make a task of its own. Its projects get the builds of the packages the
@@ -12,15 +19,13 @@
     // script sets a 10-minute test timeout, since under `pnpm check` on a 4-vCPU CI runner a
     // recipe takes up to about 3 minutes, past the root limit
     "test-recipes": {
-      "dependsOn": ["^build", "build"],
+      "dependsOn": ["^build"],
       "inputs": [
         "package.json",
         "tsconfig.json",
-        "tests/tsconfig.json",
         "tests/setup-recipes.test.ts",
         "$TURBO_ROOT$/README.md",
         "$TURBO_ROOT$/vitest.config.ts",
-        "$TURBO_ROOT$/packages/eslint-config/src/internal/utils.ts",
         "$TURBO_ROOT$/packages/tsconfig/*.json"
       ]
     }

@@ -25,7 +25,7 @@
   "scripts": {
     "build": "tsdown",
     "lint-check": "eslint . --max-warnings 0",
-    "test": "VITEST_CANARIES=0 vitest run --config ../../vitest.config.ts",
+    "test": "vitest run --config ../../vitest.config.ts --project 'tests*'",
     "typecheck": "tsc -p tsconfig.browser.json && tsc && tsc -p tests"
   },
   "dependencies": {
