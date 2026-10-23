@@ -1,10 +1,8 @@
 packages:
   - packages/*
-# Their install scripts only check or fetch a binary that the platform package already has, or, for
-# simple-git-hooks, install the hooks that the root `prepare` script installs too
+# Their install scripts only check or fetch a binary that the platform package already has
 allowBuilds:
   esbuild: false
-  simple-git-hooks: false
   unrs-resolver: false
 minimumReleaseAge: 4320
 # Old versions such as `semver@6.3.1` and `why-is-node-running@3.2.2` fail the check, so versions

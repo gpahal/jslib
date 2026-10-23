@@ -8,7 +8,6 @@ Run commands from the repository root. Read [README.md](README.md) for setup, pa
 - Run `pnpm lint-fix`, `pnpm fmt`, then `pnpm check`, the final gate. `pnpm lint`'s cache can miss cross-file type changes.
 - The owner publishes; see [Releasing](README.md#releasing). Every change that users of a package can see needs a changeset, and a change to `@gpahal/internal` needs one for each package that bundles it.
 - Write each changeset by hand as `.changeset/<slug>.md`: front matter with one `'@gpahal/<name>': patch` line per package between `---` lines, then a sentence on what changed for the releaser; no changelog is written. Don't run `pnpm cs`, which bumps versions.
-- The pre-push hook pushes only `HEAD`, fails on any untracked or uncommitted file and runs `pnpm check`, so remove scratch files before pushing.
 
 ## Changes
 

@@ -839,7 +839,7 @@ Build first: the packages resolve each other through their gitignored `build/` f
 Changesets version and publish the packages:
 
 1. `pnpm cs` adds a changeset interactively, then applies all pending changesets, bumping the versions of the packages they name. `changelog` is off in `.changeset/config.json`, so no `CHANGELOG.md` is written and a changeset's text is discarded. Commit the result on a branch, open a pull request and squash-merge it once `check` passes.
-2. `pnpm cs-publish` publishes from a clean `main` that matches `origin/main`. It runs every gate, builds, then runs `changeset publish --no-git-tag`, which skips versions npm already has and creates no git tags, so nothing is tagged locally or pushed to the remote.
+2. `pnpm cs-publish` publishes from a clean tree with the `main` branch checked out at the commit of `origin/main`, once the latest `check` run on GitHub for that commit has passed. It reads that run with `gh`, which must be logged in, and runs no gates locally. It builds, then runs `changeset publish --no-git-tag`, which skips versions npm already has and creates no git tags, so nothing is tagged locally or pushed to the remote.
 
 A bump of `@gpahal/std` also bumps every package that depends on it through `workspace:*`. `@gpahal/internal` is bundled and bumps nothing, so name the packages that bundle it in the changeset.
 

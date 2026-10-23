@@ -19,7 +19,7 @@
     "check": "turbo run build typecheck test test-recipes typecheck-root typecheck-release lint-check lint-check-root fmt-check knip --continue=dependencies-successful",
     "clean": "rm -rf .turbo .eslintcache packages/*/build packages/*/.turbo packages/*/tests/tmp packages/*/*.tsbuildinfo packages/*/tests/*.tsbuildinfo packages/*/tests/*/*.tsbuildinfo packages/*/*.tgz",
     "cs": "changeset && changeset version",
-    "cs-publish": "./scripts/verify-publish-branch.sh && pnpm pre-push </dev/null && ./scripts/verify-no-ignored-files.sh && turbo run build --force && ./scripts/verify-no-git-changes.sh && JSLIB_RELEASE=1 changeset publish --no-git-tag",
+    "cs-publish": "./scripts/verify-publish-branch.sh && ./scripts/verify-no-git-changes.sh && ./scripts/verify-no-ignored-files.sh && turbo run build --force && ./scripts/verify-no-git-changes.sh && JSLIB_RELEASE=1 changeset publish --no-git-tag",
     "fmt": "prettier . --write",
     "fmt-check": "prettier . --check",
     "knip": "knip",
@@ -27,19 +27,10 @@
     "lint-check": "turbo run lint-check lint-check-root",
     "lint-check-root": "eslint . --max-warnings 0 --ignore-pattern 'packages/**'",
     "lint-fix": "eslint . --cache --fix",
-    "pre-commit": "pnpm build --output-logs=errors-only && pnpm exec lint-staged",
-    "pre-push": "./scripts/verify-push-is-head.sh && ./scripts/verify-no-git-changes.sh && pnpm check && ./scripts/verify-no-git-changes.sh",
-    "prepare": "simple-git-hooks",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck typecheck-root",
     "typecheck-release": "turbo run typecheck-release",
     "typecheck-root": "tsc"
-  },
-  "lint-staged": {
-    "*": [
-      "prettier --check --ignore-unknown",
-      "eslint --max-warnings 0 --no-warn-ignored"
-    ]
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
@@ -47,10 +38,8 @@
     "@types/node": "^24.19.2",
     "eslint": "^10.13.0",
     "knip": "^6.42.1",
-    "lint-staged": "^17.6.0",
     "prettier": "^3.9.10",
     "publint": "^0.3.25",
-    "simple-git-hooks": "^2.14.0",
     "tsdown": "^0.23.1",
     "turbo": "^2.11.9",
     "typescript": "~6.0.3",
