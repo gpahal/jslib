@@ -40,12 +40,17 @@ const messages = ruleMessages(ruleName, {
 function indentOf(comment: Comment): string | undefined {
   const before = comment.raws.before ?? ''
   if (!before.includes('\n')) {
-    // The first node of an embedded stylesheet has no line break in `before`, so its column
-    // tells whether code precedes it
+    // The first node of an embedded stylesheet has no line break in `before`, so the document's
+    // code before the stylesheet, or else the node's column, tells whether code precedes it.
+    // postcss-html and postcss-markdown count a CRLF's `\r` in the column
+    const codeBefore: unknown =
+      comment.parent === undefined ? undefined : Reflect.get(comment.parent.raws, 'codeBefore')
     const isLineStart =
       comment.parent?.type === 'root' &&
       !comment.prev() &&
-      comment.source?.start?.column === before.length + 1
+      (typeof codeBefore === 'string'
+        ? codeBefore === '' || codeBefore.endsWith('\n')
+        : comment.source?.start?.column === before.length + 1)
     return isLineStart && before.trim() === '' ? before : undefined
   }
   const indent = before.slice(before.lastIndexOf('\n') + 1)

@@ -87,6 +87,7 @@ export const ESLINT_RECOMMENDED_TYPESCRIPT_RULES: TypedRules = {
   'no-func-assign': 'off',
   'no-import-assign': 'off',
   'no-new-native-nonconstructor': 'off',
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- typescript-eslint's list still turns it off, and a test compares the two
   'no-new-symbol': 'off',
   'no-obj-calls': 'off',
   'no-redeclare': 'off',

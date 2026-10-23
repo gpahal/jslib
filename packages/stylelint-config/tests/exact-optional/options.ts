@@ -79,7 +79,7 @@ const configs = [{ rules: { 'color-named': null } }] as const
 
 /**
  * The root of {@link withReadonlyArrays}, whose reference globs each match a file, as `defineConfig`
- * checks
+ * checks. The importing test removes it
  */
 export const readonlyArraysRoot = fs.realpathSync(
   fs.mkdtempSync(path.join(os.tmpdir(), 'stylelint-config-readonly-')),
@@ -88,9 +88,6 @@ for (const file of ['legacy/a.css', 'tokens/a.css']) {
   fs.mkdirSync(path.dirname(path.join(readonlyArraysRoot, file)), { recursive: true })
   fs.writeFileSync(path.join(readonlyArraysRoot, file), '')
 }
-process.on('exit', () => {
-  fs.rmSync(readonlyArraysRoot, { recursive: true, force: true })
-})
 
 /**
  * Every array option as a readonly array, as a config that shares a constant list passes it

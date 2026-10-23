@@ -2,7 +2,7 @@ import globals from 'globals'
 
 import { clonePlain } from '@gpahal/std/objects'
 
-import type { FileSpecs } from '@/internal/globs'
+import { intersectFileSpecs, type FileSpecs, type Scope } from '@/internal/globs'
 import type { TypedConfig, TypedRules } from '@/internal/types'
 
 const MESSAGE =
@@ -33,7 +33,8 @@ export const BROWSER_ONLY_GLOBALS: ReadonlyArray<string> = Object.keys(globals.b
 
 /**
  * The `window` properties that read like local variables, as `length` or `top`, without those
- * `no-deprecated` or `no-alert` report, and `self`, the usual global in workers
+ * `no-deprecated` or `no-alert` report, and `self`, the usual global in workers. Files without type
+ * information also get {@link DEPRECATED_BROWSER_GLOBALS}
  */
 const CONFUSING_BROWSER_GLOBALS = [
   'addEventListener',
@@ -88,23 +89,57 @@ const CONFUSING_BROWSER_GLOBALS = [
   'top',
 ]
 
-const CONFUSING_BROWSER_GLOBALS_RULES: TypedRules = {
-  'no-restricted-globals': [
-    'error',
-    ...CONFUSING_BROWSER_GLOBALS.map((name) => ({
-      name,
-      message: `Use \`globalThis.${name}\`, which shows that it's the browser global.`,
-    })),
-  ],
-  // It would fix the `globalThis.<name>` that `no-restricted-globals` asks for back to `<name>`
-  'unicorn/no-unnecessary-global-this': 'off',
+/**
+ * Confusing browser globals that `@typescript-eslint/no-deprecated` reports, but only in files with
+ * type information
+ */
+const DEPRECATED_BROWSER_GLOBALS = ['blur', 'event', 'external', 'name', 'onunload', 'status']
+
+function confusingGlobalsRules(names: ReadonlyArray<string>): TypedRules {
+  return {
+    'no-restricted-globals': [
+      'error',
+      ...names.map((name) => ({
+        name,
+        message: `Use \`globalThis.${name}\`, which shows that it's the browser global.`,
+      })),
+    ],
+    // It would fix the `globalThis.<name>` that `no-restricted-globals` asks for back to `<name>`
+    'unicorn/no-unnecessary-global-this': 'off',
+  }
 }
+
+const CONFUSING_BROWSER_GLOBALS_RULES = confusingGlobalsRules(CONFUSING_BROWSER_GLOBALS)
+
+const UNTYPED_CONFUSING_BROWSER_GLOBALS_RULES = confusingGlobalsRules([
+  ...CONFUSING_BROWSER_GLOBALS,
+  ...DEPRECATED_BROWSER_GLOBALS,
+])
 
 /**
  * A setting of yours of `no-restricted-globals` replaces this list
  */
 export function confusingBrowserGlobalsRules(): TypedRules {
   return clonePlain(CONFUSING_BROWSER_GLOBALS_RULES)
+}
+
+/**
+ * For the files of `scope` without type information, where `no-deprecated` doesn't run, the
+ * confusing browser globals with those it reports. Comes right after the config of
+ * {@link confusingBrowserGlobalsRules}, since its list replaces that one
+ */
+export function untypedConfusingBrowserGlobalsConfig(
+  name: string,
+  scope: Scope,
+  untyped: Scope,
+): TypedConfig {
+  const ignores = [...(scope.ignores ?? []), ...(untyped.ignores ?? [])]
+  return {
+    name,
+    files: intersectFileSpecs(scope.files, untyped.files),
+    ...(ignores.length > 0 && { ignores }),
+    rules: clonePlain(UNTYPED_CONFUSING_BROWSER_GLOBALS_RULES),
+  }
 }
 
 /**
@@ -187,9 +222,11 @@ export function browserConfig({
 export function browser({
   files,
   ignores,
+  untyped,
 }: {
   files: FileSpecs
   ignores?: ReadonlyArray<string> | undefined
+  untyped: Scope
 }): Array<TypedConfig> {
   return [
     browserConfig({
@@ -198,12 +235,17 @@ export function browser({
       allowsProcessEnv: true,
       ...(ignores && { ignores: [...ignores] }),
     }),
+    untypedConfusingBrowserGlobalsConfig(
+      'gpahal/browser/untyped-confusing-globals',
+      { files: [...files], ...(ignores && { ignores: [...ignores] }) },
+      untyped,
+    ),
   ]
 }
 
 /**
  * Runs in Node even where a preset such as `react` defines browser globals for every code file.
- * Browser globals stay defined, so `no-undef` doesn't report them too
+ * Browser globals are defined, with or without such a preset, so `no-undef` doesn't report them too
  */
 export function server({ files }: { files: FileSpecs }): Array<TypedConfig> {
   return [
@@ -211,7 +253,10 @@ export function server({ files }: { files: FileSpecs }): Array<TypedConfig> {
       name: 'gpahal/server/globals',
       files: [...files],
       languageOptions: {
-        globals: globals.nodeBuiltin,
+        globals: {
+          ...Object.fromEntries(BROWSER_ONLY_GLOBALS.map((global) => [global, 'readonly'])),
+          ...globals.nodeBuiltin,
+        },
       },
     },
     {

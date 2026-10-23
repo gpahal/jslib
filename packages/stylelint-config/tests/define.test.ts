@@ -351,8 +351,12 @@ describe('defineConfig validation', () => {
     ],
     [{ plugins: [[[noRed]]] }, '`plugins[0][0]`: expected a plugin or a path, received an array'],
     [
+      { extends: ['stylelint-config-standard', 5] },
+      '`extends[1]`: expected a config or a path or package name, received `5`',
+    ],
+    [
       { overrides: [{ rules: {} }] },
-      '`overrides[0]`: `files`: expected a string or an array of strings, received `undefined`',
+      '`overrides[0].files`: expected a string or an array of strings, received `undefined`',
     ],
     // Stylelint applies an override when any of its globs matches, so a `!` glob doesn't exclude
     [
@@ -374,7 +378,7 @@ describe('defineConfig validation', () => {
     // with the run's `fix`
     [
       { overrides: [{ files: '*.css', fix: true }] },
-      "`overrides[0]`: `fix`: isn't taken, since it hides problems without writing fixes. Pass `--fix`",
+      "`overrides[0].fix`: isn't taken, since it hides problems without writing fixes. Pass `--fix`",
     ],
     [
       { validate: false },

@@ -175,6 +175,15 @@ describe('file: URLs', () => {
     },
   )
 
+  it('rejects a folder without a cause, so a log has no `[cause]: undefined`', async () => {
+    await using project = await withTmpProject('font-fallback')
+    const folder = path.join(project.dir, 'folder.ttf')
+    await mkdir(folder)
+    const error = await getRejection(getFontFallbacks(pathToFileURL(folder), FILE_OPTIONS))
+    expect(error.message).toBe(`${PREFIX}: font ${folder}: is not a file`)
+    expect(Object.hasOwn(error, 'cause')).toBe(false)
+  })
+
   it('rejects a file it fails to read by its path, with its code and the error as the cause', async () => {
     const fontPath = path.join(FIXTURES_DIR, 'My Fonts', 'missing.ttf')
     const error = await getRejection(getFontFallbacks(pathToFileURL(fontPath), FILE_OPTIONS))
@@ -250,7 +259,7 @@ describe('fetching', () => {
       new URL(FONT_URL),
       expect.objectContaining({ redirect: 'error' }),
     )
-    expect(lookup).toHaveBeenCalledWith('fonts.example', { all: true, verbatim: true })
+    expect(lookup).toHaveBeenCalledWith('fonts.example', { all: true, order: 'verbatim' })
   })
 
   it('fetches and names an https: URL as it was when called', async () => {

@@ -109,6 +109,34 @@ describe("`@typescript-eslint/no-meaningless-void-operator`'s patch", () => {
   })
 })
 
+describe("`@typescript-eslint/promise-function-async`'s patch", () => {
+  it("doesn't report a function that returns React's `ReactNode`, whose promise React awaits", async () => {
+    const eslint = await sharedESLint('rules')
+    const code = [
+      // As `@types/react` 19 declares them
+      'type AwaitedReactNode = string | null | undefined',
+      'type ReactNode = AwaitedReactNode | Promise<AwaitedReactNode>',
+      '',
+      'export function Layout({ children }: { children: ReactNode }) {',
+      '  return children',
+      '}',
+      '',
+      'export const Slot = ({ children, on }: { children: ReactNode; on: boolean }) =>',
+      '  on ? children : null',
+      '',
+      // The one report, a union with a promise of something else
+      'export function load(cached: boolean) {',
+      '  return cached ? 1 : Promise.resolve(1)',
+      '}',
+      '',
+    ].join('\n')
+    const rule = '@typescript-eslint/promise-function-async'
+    // In place of a file of the project, which the project service needs
+    const messages = await lintText(eslint, 'src/void-promise.ts', code)
+    expect(messages.filter((text) => text.startsWith(`${rule}:`))).toHaveLength(1)
+  })
+})
+
 function countReads(
   node: TSESTree.ImportDeclaration,
   key: 'source' | 'specifiers',

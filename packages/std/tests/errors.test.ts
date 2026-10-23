@@ -271,6 +271,16 @@ describe('getErrorMessage', () => {
     )
   })
 
+  it('ends AggregateErrors with messages nested past 100 levels in an ellipsis', () => {
+    let error: unknown = new Error('leaf')
+    for (let i = 0; i < 101; i++) {
+      error = new AggregateError([error], `m${String(100 - i)}`)
+    }
+    const message = getErrorMessage(error)
+    expect(message).toMatch(/^m0: m1: m2: .* m99: m100: …$/su)
+    expect(getErrorMessage(new AggregateError([], 'm'))).toBe('m')
+  })
+
   it('caps the message without splitting a surrogate pair', () => {
     const message = `${'a'.repeat(9999)}😀b`
     expect(getErrorMessage(new AggregateError([new Error(message)]))).toBe(`${'a'.repeat(9999)}…`)

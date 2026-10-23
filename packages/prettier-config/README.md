@@ -292,8 +292,6 @@ Some files get more:
 | Files | Settings |
 | --- | --- |
 | Code | Imports sorted into groups, with a blank line between groups: Node built-ins and other scheme imports, such as `bun:test` and `cloudflare:workers`; `react`, `react-dom`, `react-native`, `next` and `astro`, with `astro:` imports; other packages, with `npm:`, `jsr:` and `https:` imports; `@gpahal/*`; `@/public` and `@/common`; `@/types`, `@/config`, `@/lib`, `@/actions`, `@/contexts`, `@/hooks`, `@/layouts`, `@/pages`, `@/components/lib`, `@/components`, `@/styles`, `@/assets`, other `@/*`, `~/*` and `#*`; then relative imports. Type and value imports from one module merge |
-| `.vue` | Imports sorted when the import sorter can load `@vue/compiler-sfc`, its optional peer. Without it, Prettier's own parser formats them and leaves imports where they are |
-| Ember `.gjs` and `.gts` | Imports sorted when the import sorter can load both `prettier-plugin-ember-template-tag` and `content-tag`, its optional peers |
 | [Markdown files][] | One line per paragraph (`proseWrap: 'never'`) |
 | [JSON with comments][] | No trailing commas |
 | `.mdx` | Left as they are unless they start with a `{/* @format */}` pragma, since Prettier's MDX parser reads MDX 1, and its output can render differently in MDX 2 and 3. To format them all, add the override `{ files: '*.mdx', options: { requirePragma: false } }` |

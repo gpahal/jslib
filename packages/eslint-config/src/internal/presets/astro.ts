@@ -5,8 +5,9 @@ import { formatInstallCommand } from '@gpahal/internal/node/package-manager'
 import { uniqueBy } from '@gpahal/std/arrays'
 import { formatNames } from '@gpahal/std/errors'
 
-import { browserConfig } from '@/internal/configs/browser'
+import { browserConfig, untypedConfusingBrowserGlobalsConfig } from '@/internal/configs/browser'
 import { ASTRO_FILES, ASTRO_SCRIPT_FILES, TYPED_CODE_EXTNS_WITH_DOT } from '@/internal/files'
+import type { Scope } from '@/internal/globs'
 import { withSetup } from '@/internal/naming'
 import { importPeers, interopDefault, isInstalledIn } from '@/internal/peers'
 import type { TypedConfig, TypedRules } from '@/internal/types'
@@ -69,7 +70,7 @@ const ASTRO_TEMPLATE_RULES: TypedRules = {
  * `.astro` files get the TypeScript files' rules first, so the Astro parser set here wins. Their
  * virtual `<script>` files have no type information and get the browser code rules
  */
-export async function astro(): Promise<Array<TypedConfig>> {
+export async function astro({ untyped }: { untyped: Scope }): Promise<Array<TypedConfig>> {
   const eslintPluginAstro = await importPeers('astro', ASTRO_PEERS, async () =>
     interopDefault(import('eslint-plugin-astro')),
   )
@@ -158,5 +159,10 @@ export async function astro(): Promise<Array<TypedConfig>> {
       isNodeGlobalsOff: true,
       message: 'Astro `<script>` blocks run in the browser, without Node',
     }),
+    untypedConfusingBrowserGlobalsConfig(
+      'gpahal/astro/scripts-untyped-confusing-globals',
+      { files: ASTRO_SCRIPT_FILES },
+      untyped,
+    ),
   ])
 }

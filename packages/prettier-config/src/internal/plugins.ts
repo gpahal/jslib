@@ -234,8 +234,8 @@ function olderThan(
 ): string {
   const needed = `the ${minMajor}.${minMinor} this config needs`
   return typeof version === 'string'
-    ? `${name} ${version} is older than ${needed}`
-    : `${name}'s version couldn't be read to check that it's at least ${needed}`
+    ? `\`${name}\` ${version} is older than ${needed}`
+    : `\`${name}\`'s version couldn't be read to check that it's at least ${needed}`
 }
 
 const UNTESTED_TAILWIND_VERSION = [0, 9] as const
@@ -324,12 +324,20 @@ export function resolveTailwindPlugin(
   return tailwindPath
 }
 
-function sortImportsError(description: string, dir: string | undefined): TypeError {
+/**
+ * `specifier` is the package to install, with a range when one is installed but too old, since
+ * adding a direct dependency without one keeps its existing range
+ */
+function sortImportsError(
+  description: string,
+  specifier: string,
+  dir: string | undefined,
+): TypeError {
   return new TypeError(
     formatMessage(
       PREFIX,
       ['`sortImports`'],
-      `${description}, as in \`${formatInstallCommand([SORT_IMPORTS_PLUGIN], dir ?? process.cwd())}\`, or set \`sortImports: false\``,
+      `${description}, as in \`${formatInstallCommand([specifier], dir ?? process.cwd())}\`, or set \`sortImports: false\``,
     ),
   )
 }
@@ -387,13 +395,16 @@ export function resolveSortImportsPlugin(
   const sorter = environment.resolveFrom(SORT_IMPORTS_PLUGIN, tailwindPath)
   if (sorter === undefined) {
     throw sortImportsError(
-      `${TAILWIND_PLUGIN} can't load ${SORT_IMPORTS_PLUGIN} from where it's installed, so imports would stay unsorted. Install it in your project`,
+      `\`${TAILWIND_PLUGIN}\` can't load \`${SORT_IMPORTS_PLUGIN}\` from where it's installed, so imports would stay unsorted. Install it in your project`,
+      SORT_IMPORTS_PLUGIN,
       dir,
     )
   }
   if (!isAtLeast(sorter.version, MIN_SORT_IMPORTS_VERSION)) {
+    const [minMajor, minMinor] = MIN_SORT_IMPORTS_VERSION
     throw sortImportsError(
-      `${TAILWIND_PLUGIN} loads ${SORT_IMPORTS_PLUGIN} from where it's installed, and ${olderThan(SORT_IMPORTS_PLUGIN, sorter.version, MIN_SORT_IMPORTS_VERSION)}. Install it in your project`,
+      `\`${TAILWIND_PLUGIN}\` loads \`${SORT_IMPORTS_PLUGIN}\` from where it's installed, and ${olderThan(SORT_IMPORTS_PLUGIN, sorter.version, MIN_SORT_IMPORTS_VERSION)}. Install a newer version`,
+      `${SORT_IMPORTS_PLUGIN}@^${minMajor}.${minMinor}`,
       dir,
     )
   }

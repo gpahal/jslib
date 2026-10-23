@@ -34,6 +34,25 @@ const JSONC_FILES = [
   '**/.oxlintrc.json',
 ]
 
+/**
+ * Every `.jsonc` file too, code blocks such as `README.md/0.jsonc` included: VS Code's JSONC accepts
+ * trailing commas, and Prettier adds them to a block, which keeps Markdown's `trailingComma`
+ */
+const TRAILING_COMMA_FILES = ['**/*.jsonc', ...JSONC_JSON_TRAILING_COMMA_FILES]
+
+/**
+ * A guard after your configs: ESLint rejects `allowTrailingCommas` in another language, so a config
+ * of yours that gives these files one, such as `json/json` for `**\/*.json`, would fail every run
+ */
+export function jsoncLanguageConfig(): TypedConfig {
+  return {
+    name: 'gpahal/json/jsonc-language',
+    files: [...TRAILING_COMMA_FILES],
+    plugins: { json: eslintPluginJson },
+    language: 'json/jsonc',
+  }
+}
+
 export function json(): Array<TypedConfig> {
   return [
     {
@@ -53,10 +72,7 @@ export function json(): Array<TypedConfig> {
     },
     {
       name: 'gpahal/json/jsonc-trailing-commas',
-      // Every `.jsonc` file too, code blocks such as `README.md/0.jsonc` included: VS Code's JSONC
-      // accepts trailing commas, and Prettier adds them to a block, which keeps Markdown's
-      // `trailingComma`
-      files: ['**/*.jsonc', ...JSONC_JSON_TRAILING_COMMA_FILES],
+      files: [...TRAILING_COMMA_FILES],
       languageOptions: {
         allowTrailingCommas: true,
       },

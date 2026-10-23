@@ -25,7 +25,6 @@ export default defineConfig({
     // and processes the tests spawn still print them. The codes are its `WARNING_CODES`
     execArgv: [
       'GPAHAL_FRAMEWORK_OPTION_UNSET',
-      'GPAHAL_UNSUPPORTED_FRAMEWORK',
       'GPAHAL_COMMONJS_PACKAGE',
       'GPAHAL_NO_TSCONFIG',
       'GPAHAL_FILES_OUTSIDE_TSCONFIG',

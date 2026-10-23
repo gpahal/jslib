@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from 'node:util'
 
-import { Document, Input, Root, stringify, type Syntax } from 'postcss'
+import { Input, Root, stringify, type Syntax } from 'postcss'
 import postcssHtml from 'postcss-html'
 import postcssMarkdown from 'postcss-markdown'
 import type { Config } from 'stylelint'
@@ -27,15 +27,6 @@ export type FileTypeOverride = {
   type: FileType
   isOn: boolean
   override: Override & { files: string }
-}
-
-/**
- * A syntax that finds no styles. Its document has no roots, so postcss-markdown keeps the block's
- * text
- */
-const NO_STYLES_SYNTAX: Syntax = {
-  parse: () => new Document(),
-  stringify,
 }
 
 /**
@@ -77,14 +68,11 @@ const htmlSyntax = postcssHtml(otherStyleSyntaxes(NO_STYLES_ROOT_SYNTAX))
 
 /**
  * The syntaxes of the HTML in Markdown. Without them postcss-markdown loads `postcss-html` by name
- * and silently skips the HTML when it can't, as under pnpm without hoisting. ` ```vue ` and
- * ` ```svelte ` blocks, which the package doesn't support, find no styles
+ * and silently skips the HTML when it can't, as under pnpm without hoisting
  */
 const MARKDOWN_SYNTAXES = {
   ...otherStyleSyntaxes(NO_STYLES_ROOT_SYNTAX),
   html: htmlSyntax,
-  vue: NO_STYLES_SYNTAX,
-  svelte: NO_STYLES_SYNTAX,
   xml: htmlSyntax,
 }
 

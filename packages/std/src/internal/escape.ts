@@ -2,6 +2,9 @@
  * `escapeControls`, for std's own modules. `@gpahal/std/strings` makes it public
  */
 
+import { describeValue } from '@/internal/describe'
+import { stdMessage } from '@/internal/message'
+
 /**
  * Characters that can rewrite or hide text in a terminal or log: control and format characters,
  * such as ESC and the bidirectional overrides, line and paragraph separators, lone surrogates (with
@@ -34,7 +37,8 @@ function escapeCharacter(char: string): string {
  * `text` with each control or format character, line or paragraph separator, lone surrogate,
  * default-ignorable code point and braille blank written as a JavaScript escape, and each backslash
  * as `\\`, so the output reads back unambiguously. The zero-width joiner and non-joiner stay. For
- * untrusted text in error messages, logs and terminal output
+ * untrusted text in error messages, logs and terminal output. A `text` that isn't a string throws a
+ * `TypeError`
  *
  * @example
  * ```ts
@@ -55,6 +59,14 @@ export function escapeControls(
     keepBackslashes?: boolean | undefined
   },
 ): string {
+  if (typeof text !== 'string') {
+    throw new TypeError(
+      stdMessage(
+        ['`escapeControls`', '`text`'],
+        `expected a string, received ${describeValue(text)}`,
+      ),
+    )
+  }
   return text.replaceAll(
     options?.keepBackslashes === true ? CONTROL_REGEX : CONTROL_OR_BACKSLASH_REGEX,
     (char) => escapeCharacter(char),

@@ -213,9 +213,18 @@ export default defineConfig({
 }
 ```
 
+```ts
+// tsdown.config.ts
+import { defineConfig, type UserConfig } from 'tsdown'
+
+const config: UserConfig = defineConfig({ entry: ['src/index.ts'] })
+
+export default config
+```
+
 Its `fix` and `check` scripts replace those of [Running the fixers][], without Stylelint's steps. A package without `"private": true` gets eslint-plugin-package-json's publishing checks, which require `description`, `license`, `author`, `repository` and `sideEffects`.
 
-`node: true` checks the Node APIs the code uses against `engines.node`, and `typescript.library` reports exports without declared types. The tsconfig's `library` turns on `isolatedDeclarations`, and `erasable` rejects syntax that Node's type stripping can't erase, such as enums. Install the `@types/node` of the Node version that `engines` names. [tsconfig's library recipes](packages/tsconfig/README.md#a-library-built-by-a-bundler) add tests and other hosts.
+`node: true` checks the Node APIs the code uses against `engines.node`, and `typescript.library` reports exports without declared types. The tsconfig's `library` turns on `isolatedDeclarations`, which needs the declared type of `tsdown.config.ts`'s default export, and `erasable` rejects syntax that Node's type stripping can't erase, such as enums. Install the `@types/node` of the Node version that `engines` names. [tsconfig's library recipes](packages/tsconfig/README.md#a-library-built-by-a-bundler) add tests and other hosts.
 
 ### A pnpm monorepo
 

@@ -52,6 +52,7 @@ import {
   mergeUserRules,
   replaceLayer,
   settingIn,
+  type StylelintConfig,
   type StylelintOverride,
   type StylelintReferenceFile,
   type StylelintRules,
@@ -109,7 +110,7 @@ function onceList(option: ListOption | undefined): ListOption | undefined {
  *   or an override that can't merge, as listed in
  *   https://github.com/gpahal/jslib/tree/main/packages/stylelint-config#options
  */
-export async function defineConfig(options: StylelintConfigOptions): Promise<Config> {
+export async function defineConfig(options: StylelintConfigOptions): Promise<StylelintConfig> {
   const untypedOptions: unknown = options
   checkRejectedKeys(untypedOptions)
   const validOptions = assertValid(OPTIONS_SCHEMA, untypedOptions, {

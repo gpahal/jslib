@@ -228,6 +228,13 @@ describe('getPathExtension', () => {
     expect(getPathExtension('a/.gitignore')).toBe('')
     expect(getPathExtension('a/b.png?v=1')).toBe('png?v=1')
   })
+
+  it('rejects a value that is not a string', () => {
+    // @ts-expect-error - Not a string, as a JavaScript caller can pass
+    expect(() => getPathExtension(5)).toThrow(
+      new TypeError('@gpahal/std: `getPathExtension`: `path`: expected a string, received `5`'),
+    )
+  })
 })
 
 describe('getLinkActiveState', () => {

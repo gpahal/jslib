@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@gpahal/internal": "workspace:*",
-    "eslint-plugin-better-tailwindcss": "^4.9.1",
+    "eslint-plugin-better-tailwindcss": "^4.10.0",
     "prettier": "^3.9.10",
     "prettier-plugin-astro": "^1.1.1",
     "prettier-plugin-classnames": "^0.10.4",

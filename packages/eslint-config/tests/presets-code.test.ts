@@ -307,19 +307,6 @@ describe('framework hints', () => {
     await using project = await projectWith(['vitest', 'react'])
     expect(warningsOf(project.dir, { typeAware: false, vitest: value, react: value })).toEqual([])
   })
-  it('warns of a framework that no preset supports while its plugin is missing', async () => {
-    await using project = await projectWith(['vue', 'svelte'])
-    expect(
-      warningsOf(project.dir, { typeAware: false, configs: [{ plugins: { vue: {} } }] }),
-    ).toEqual([
-      [
-        expect.stringMatching(
-          /^@gpahal\/eslint-config: `root`: `package.json` lists `svelte`, which no preset/,
-        ),
-        'GPAHAL_UNSUPPORTED_FRAMEWORK',
-      ],
-    ])
-  })
 })
 
 describe('unicorn/filename-case', () => {
@@ -1166,7 +1153,7 @@ describe('dev dependencies and file names', () => {
       'scripts/x.ts': [],
       'src/cli.ts': ['import-x/no-extraneous-dependencies'],
       'vite.config.ts': [],
-      // A config module that the app runs, as Angular's is
+      // A config module that the app runs
       'src/app/app.config.ts': ['import-x/no-extraneous-dependencies'],
       'src/web/vite.config.ts': [],
       'packages/b/src/app.config.ts': ['import-x/no-extraneous-dependencies'],
@@ -1389,6 +1376,28 @@ describe('server option', () => {
     expect(messages['src/server/dom.ts']).not.toContainEqual(expect.stringMatching(/:no-undef$/))
   })
 
+  it("reports a browser global once without a preset that defines browser globals, as `no-undef` doesn't too", async () => {
+    const eslint = await sharedESLint('browser', {
+      server: { files: ['src/server/**'] },
+      typeAware: false,
+    })
+    expect(
+      await lintText(eslint, 'src/server/title.js', 'export const title = document.title\n'),
+    ).toEqual([expect.stringMatching(/^@gpahal\/no-browser-globals: Unexpected use of 'document'/)])
+  })
+
+  it('reports `window` once, leaving `global` to `unicorn/prefer-global-this`', async () => {
+    const eslint = await sharedESLint('browser', {
+      server: { files: ['src/server/**'] },
+      typeAware: false,
+    })
+    const code = 'export const href = window.location.href\nexport const g = global.process\n'
+    expect(await lintText(eslint, 'src/server/env.js', code)).toEqual([
+      expect.stringMatching(/^@gpahal\/no-browser-globals: Unexpected use of 'window'/),
+      'unicorn/prefer-global-this: Prefer `globalThis` over `global`.',
+    ])
+  })
+
   it('allows `typeof` checks of browser globals, but not their other uses', async () => {
     const eslint = await sharedESLint('browser', {
       react: true,
@@ -1429,10 +1438,7 @@ describe('server option', () => {
     expect(
       await ruleSeverity(eslint, 'src/server/app.ts', '@gpahal/no-node-imports'),
     ).toBeUndefined()
-    expect(await lintText(eslint, 'src/server/route.js', windowCode)).toEqual([
-      expect.stringMatching(/^unicorn\/prefer-global-this: /),
-      serverMessage,
-    ])
+    expect(await lintText(eslint, 'src/server/route.js', windowCode)).toEqual([serverMessage])
     expect(await lintText(eslint, 'src/client/page.js', windowCode)).toEqual([
       expect.stringMatching(/^unicorn\/prefer-global-this: /),
     ])
@@ -1628,8 +1634,7 @@ describe('n/no-unsupported-features', () => {
       'eslint.config.mjs': [],
       'scripts/build.mjs': [],
       'src/a.mjs': [expect.stringMatching(/^n\/no-unsupported-features\/node-builtins: /)],
-      // A config file in a package's source, such as Angular's `src/app/app.config.ts`, often runs
-      // in the app
+      // A config file in a package's source, such as `src/app/app.config.ts`, often runs in the app
       'src/app.config.mjs': [expect.stringMatching(/^n\/no-unsupported-features\/node-builtins: /)],
     })
   })

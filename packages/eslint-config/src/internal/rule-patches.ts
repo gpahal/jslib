@@ -1,5 +1,6 @@
 import type { Linter, Rule, Scope, SourceCode } from 'eslint'
 import type * as ESTree from 'estree'
+import type TypeScriptModule from 'typescript'
 
 import { isPlainObject, isRecord } from '@gpahal/std/objects'
 
@@ -10,9 +11,11 @@ import {
   hasPatchedFixes,
   isOnInSettings,
   isRuleNode,
+  isTypeServices,
   mergeListeners,
   optionsInSettings,
   patchCreateOnce,
+  type TypeServices,
 } from '@/internal/fixes'
 import { withCompanionContext, withReport } from '@/internal/utils'
 
@@ -357,6 +360,69 @@ function patchMeaninglessVoid(rule: Rule.RuleModule): void {
   })
 }
 
+const PROMISE_FUNCTION_ASYNC_PATCHED = Symbol('@gpahal/eslint-config promise-function-async')
+
+function isTypeReference(type: TypeScriptModule.Type): type is TypeScriptModule.TypeReference {
+  return 'target' in type
+}
+
+/**
+ * Whether `type` is React's `Promise<AwaitedReactNode>`, a member of `@types/react` 19's `ReactNode`
+ */
+function isReactNodePromise(type: TypeScriptModule.Type, checker: TypeScriptModule.TypeChecker) {
+  if (type.getSymbol()?.getName() !== 'Promise') {
+    return false
+  }
+  const [argument] = isTypeReference(type) ? checker.getTypeArguments(type) : []
+  return argument?.aliasSymbol?.getName() === 'AwaitedReactNode'
+}
+
+/**
+ * Whether each signature of the function `node` returns a union whose only promises are React's
+ * `Promise<AwaitedReactNode>`, as a component that returns `children` does
+ */
+function returnsReactNode(node: unknown, services: TypeServices): boolean {
+  const tsNode = services.esTreeNodeToTSNodeMap.get(node)
+  if (tsNode === undefined) {
+    return false
+  }
+  const checker = services.program.getTypeChecker()
+  const signatures = checker.getTypeAtLocation(tsNode).getCallSignatures()
+  return (
+    signatures.length > 0 &&
+    signatures.every((signature) => {
+      const type = checker.getReturnTypeOfSignature(signature)
+      const promises = type.isUnion()
+        ? type.types.filter((member) => member.getSymbol()?.getName() === 'Promise')
+        : []
+      return promises.length > 0 && promises.every((member) => isReactNodePromise(member, checker))
+    })
+  )
+}
+
+/**
+ * Drops `promise-function-async`'s reports of a function without a return type that returns
+ * React's `ReactNode`, as a component or a render function that returns `children` does. The
+ * `Promise` in `ReactNode` is an async component's output, which React awaits, and `async` would
+ * make every render a promise
+ */
+function patchPromiseFunctionAsync(rule: Rule.RuleModule): void {
+  patchCreateOnce(rule, PROMISE_FUNCTION_ASYNC_PATCHED, (create) => (context) => {
+    const services: unknown = context.sourceCode.parserServices
+    if (!hasPatchedFixes(context) || !isTypeServices(services)) {
+      return create(context)
+    }
+    return create(
+      withReport(context, (descriptor) => {
+        const node: unknown = 'node' in descriptor ? descriptor.node : undefined
+        if (!returnsReactNode(node, services)) {
+          context.report(descriptor)
+        }
+      }),
+    )
+  })
+}
+
 const PUBLISHING_PATCHED = Symbol('@gpahal/eslint-config private package hint')
 
 /**
@@ -671,6 +737,9 @@ export function patchRuleSet(
     root,
   )) {
     patchMeaninglessVoid(rule)
+  }
+  for (const rule of findPatchTargets('@typescript-eslint/promise-function-async', configs, root)) {
+    patchPromiseFunctionAsync(rule)
   }
   for (const rule of findPatchTargets('sonarjs/unverified-certificate', configs, root)) {
     patchUnverifiedCertificate(rule)

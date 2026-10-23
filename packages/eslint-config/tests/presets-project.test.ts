@@ -33,6 +33,7 @@ import {
   FIXTURES_DIR,
   lint,
   lintText,
+  ruleIdOf,
   ruleSeverity,
   severityOf,
   withProject,
@@ -872,6 +873,35 @@ describe('import resolver', () => {
         .map((message) => message.ruleId)
         .filter((ruleId) => ruleId?.startsWith('import-x/') === true),
     ).toEqual(['import-x/no-unresolved'])
+  })
+
+  // pnpm's bin shims set `NODE_PATH` to the store's hoisted packages, which unrs-resolver would
+  // otherwise search after `node_modules`
+  it('reports packages that only `NODE_PATH` holds as unresolved', async () => {
+    await using store = await withTmpProject('eslint-config-node-path', {
+      'hoisted/package.json': '{ "name": "hoisted", "type": "module", "main": "index.js" }\n',
+      'hoisted/index.js': 'export const value = 1\n',
+    })
+    await using project = await withProject({
+      'package.json': '{ "name": "a", "private": true, "type": "module" }\n',
+      'tsconfig.json': '{ "compilerOptions": { "strict": true }, "include": ["src"] }\n',
+      'src/index.ts':
+        "import { value } from 'hoisted'\n\nexport function a() {\n  return value\n}\n",
+    })
+    process.chdir(project.dir)
+    vi.stubEnv('NODE_PATH', store.dir)
+    try {
+      const eslint = await createESLint(project.dir, {
+        packageJson: false,
+        typeAware: false,
+        extraConfigs: [resolveConfig],
+      })
+      expect(await lint(eslint, ['src/index.ts'], ruleIdOf)).toEqual({
+        'src/index.ts': ['import-x/no-unresolved'],
+      })
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 
   describe('tsconfig files', () => {

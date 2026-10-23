@@ -250,6 +250,12 @@ describe('rejected files', () => {
     await expect(getFontRejection(bytes)).resolves.toEqual(expectFontError(description))
   })
 
+  it('rejects empty bytes without a cause, so a log has no `[cause]: undefined`', async () => {
+    const error = await getFontRejection(new Uint8Array())
+    expect(error.message).toBe(`${PREFIX}: ${FONT_BYTES}: is empty`)
+    expect(Object.hasOwn(error, 'cause')).toBe(false)
+  })
+
   it.each([
     [FIGTREE_WOFF2_PATH, 'f.ttf', "is a WOFF2 font, which doesn't match its .ttf extension"],
     [CFF_PATH, 'f.ttf', "is a CFF font, which doesn't match its .ttf extension"],

@@ -259,3 +259,46 @@ describe('a pnpm consumer without hoisting', () => {
     expect(status).toBe(2)
   })
 })
+
+// pnpm puts this package in the project's `node_modules/.pnpm`, so TypeScript can't name a type of
+// Stylelint's that reaches a config file only through this package's declarations
+describe('a TypeScript consumer that emits declarations', () => {
+  it('names the type of a defineConfig config file', async () => {
+    await assertBuildIsCurrent(BUILD_DIR)
+    await using project = await withTmpProject('stylelint-config-declarations', {
+      'package.json': '{"type":"module"}\n',
+      'stylelint.config.mjs':
+        "import { defineConfig } from '@gpahal/stylelint-config'\n\nexport default defineConfig({ root: '/project' })\n",
+      // As a composite tsconfig of config files does, such as the root README's Astro recipe's
+      'tsconfig.json': JSON.stringify({
+        compilerOptions: {
+          module: 'nodenext',
+          strict: true,
+          allowJs: true,
+          checkJs: true,
+          declaration: true,
+          emitDeclarationOnly: true,
+          outDir: 'out',
+          types: [],
+        },
+        include: ['stylelint.config.mjs'],
+      }),
+    })
+    const storeDir = path.join(project.dir, 'node_modules/.pnpm/stylelint-config/node_modules')
+    const packageDir = path.join(storeDir, '@gpahal/stylelint-config')
+    await fs.mkdir(packageDir, { recursive: true })
+    await fs.cp(path.join(PACKAGE_DIR, 'package.json'), path.join(packageDir, 'package.json'))
+    await fs.cp(BUILD_DIR, path.join(packageDir, 'build'), { recursive: true })
+    for (const name of ['stylelint', 'postcss', 'zod']) {
+      await linkDependency(storeDir, PACKAGE_DIR, name)
+    }
+    await fs.mkdir(path.join(project.dir, 'node_modules/@gpahal'))
+    await fs.symlink(packageDir, path.join(project.dir, 'node_modules/@gpahal/stylelint-config'))
+    const { status, stdout, stderr } = await runNode(
+      [path.join(PACKAGE_DIR, 'node_modules/typescript/bin/tsc'), '-p', 'tsconfig.json'],
+      { cwd: project.dir },
+    )
+    expect(`${stdout}${stderr}`).toBe('')
+    expect(status).toBe(0)
+  })
+})

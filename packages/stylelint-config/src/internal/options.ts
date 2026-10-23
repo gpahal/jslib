@@ -26,6 +26,7 @@ import { describeValue, formatMessage, formatNames } from '@gpahal/std/errors'
 import { isObject, isPlainObject, isRecord } from '@gpahal/std/objects'
 
 import type {
+  StylelintExtendedConfig,
   StylelintExtends,
   StylelintOverride,
   StylelintPlugins,
@@ -298,12 +299,15 @@ const DISABLE_SETTINGS_SCHEMA = typeCheck<Exclude<Config['reportNeedlessDisables
 /**
  * Stylelint accepts config objects even though its types only list strings
  */
-const EXTENDS_SCHEMA = typeCheck<StylelintExtends>(
-  (value) =>
-    typeof value === 'string' ||
-    isPlainObject(value) ||
-    isArrayOf(value, (entry) => typeof entry === 'string' || isPlainObject(entry)),
-  { expected: 'a config, a path or package name, or an array of them' },
+const EXTENDS_ENTRY_SCHEMA = typeCheck<string | StylelintExtendedConfig>(
+  (value) => typeof value === 'string' || isPlainObject(value),
+  { expected: 'a config or a path or package name' },
+)
+
+const EXTENDS_SCHEMA = deferred<StylelintExtends>(
+  z.union([EXTENDS_ENTRY_SCHEMA, z.array(EXTENDS_ENTRY_SCHEMA)], {
+    error: expectedError('a config, a path or package name, or an array of them'),
+  }),
 )
 
 const PROCESSORS_SCHEMA = z.array(z.string())
@@ -459,15 +463,19 @@ export function checkOverrides(
  * @throws TypeError as {@link checkOverrides} does.
  */
 export function checkOverride(override: StylelintOverride, index: number): StylelintOverride {
-  const subject = formatNames([`overrides[${index}]`])
   for (const key of Object.keys(override)) {
     const reason = OVERRIDE_KEY_REJECTIONS.get(key)
     if (reason !== undefined) {
-      throw new TypeError(formatMessage(PREFIX, [subject, formatNames([key])], reason))
+      throw new TypeError(
+        formatMessage(PREFIX, [formatNames([`overrides[${index}].${key}`])], reason),
+      )
     }
   }
   const untypedOverride: unknown = override
-  const checked = assertValid(OVERRIDE_SCHEMA, untypedOverride, { prefix: PREFIX, subject })
+  const checked = assertValid(OVERRIDE_SCHEMA, untypedOverride, {
+    prefix: PREFIX,
+    path: ['overrides', index],
+  })
   if (checked.ignoreFiles !== undefined)
     checkIgnoreGlobs(checked.ignoreFiles, `overrides[${index}].ignoreFiles`)
   checkOverrideFiles(checked.files, `overrides[${index}].files`)

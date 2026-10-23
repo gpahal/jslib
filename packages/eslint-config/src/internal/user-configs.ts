@@ -304,10 +304,15 @@ function getNonCodeRuleFiles(
   }
   const [, kind, language] = match
   // eslint-plugin-package-json's rules run in `json/json` only, but `files.json` matches JSONC too
-  const files = rule.startsWith(AREA_RULE_PREFIXES.packageJson[0])
-    ? `\`files: [${PACKAGE_JSON_FILES.map((glob) => `'${glob}'`).join(', ')}]\``
-    : `\`files: [...files.${kind}]\`, with \`files\` from this package`
-  return { kind, language, files }
+  if (rule.startsWith(AREA_RULE_PREFIXES.packageJson[0])) {
+    const files = `\`files: [${PACKAGE_JSON_FILES.map((glob) => `'${glob}'`).join(', ')}]\``
+    return { kind, language: '`package.json`', files }
+  }
+  return {
+    kind,
+    language,
+    files: `\`files: [...files.${kind}]\`, with \`files\` from this package`,
+  }
 }
 
 /**

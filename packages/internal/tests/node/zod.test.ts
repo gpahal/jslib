@@ -116,6 +116,45 @@ describe('assertValid', () => {
     )
   })
 
+  it('heads several issues with the root subject when there is no subject', () => {
+    const schema = strictObject({ semi: z.boolean(), tabWidth: z.number() })
+    expect(() =>
+      assertValid(
+        schema,
+        { semi: 1, tabWidth: 'a' },
+        { prefix: '@scope/config', rootSubject: 'options' },
+      ),
+    ).toThrow(
+      new TypeError(
+        [
+          '@scope/config: options: 2 issues',
+          '  `semi`: expected a boolean, received `1`',
+          '  `tabWidth`: expected a number, received `"a"`',
+        ].join('\n'),
+      ),
+    )
+  })
+
+  it("continues `path` with one issue's path, and lists several under it", () => {
+    const schema = strictObject({ files: stringOrStrings(), name: z.optional(z.string()) })
+    const context = { prefix: '@scope/config', path: ['overrides', 0] }
+    expect(() => assertValid(schema, {}, context)).toThrow(
+      new TypeError(
+        '@scope/config: `overrides[0].files`: expected a string or an array of strings, received `undefined`',
+      ),
+    )
+    expect(() => assertValid(schema, null, context)).toThrow(/^@scope\/config: `overrides\[0\]`: /)
+    expect(() => assertValid(schema, { files: 1, name: 2 }, context)).toThrow(
+      new TypeError(
+        [
+          '@scope/config: `overrides[0]`: 2 issues',
+          '  `files`: expected a string or an array of strings, received `1`',
+          '  `name`: expected a string, received `2`',
+        ].join('\n'),
+      ),
+    )
+  })
+
   it('reports only the branches of a union that took the value type', () => {
     const schema = z.union(
       [

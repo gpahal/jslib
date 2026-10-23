@@ -216,7 +216,9 @@ class Installer {
 
 /**
  * Runs `pnpm run <script>` in `dir` without the test runner's `NODE_PATH`, which pnpm points at the
- * workspace's packages and would hide a missing link, or its `NODE_OPTIONS`
+ * workspace's packages and would hide a missing link, or its `NODE_OPTIONS`. The concurrent cases
+ * can keep eslint-plugin-better-tailwindcss's Tailwind CSS workers past their 30 seconds on a CI
+ * runner, so `SYNCKIT_TIMEOUT` raises it, as the task's script raises the test timeout
  */
 async function runScript(
   dir: string,
@@ -230,6 +232,8 @@ async function runScript(
       NODE_OPTIONS: '',
       ASTRO_TELEMETRY_DISABLED: '1',
       NEXT_TELEMETRY_DISABLED: '1',
+      // Under the test timeout, so a worker that hangs still fails the case with its own error
+      SYNCKIT_TIMEOUT: '300000',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })

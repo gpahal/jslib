@@ -300,6 +300,12 @@ export const DUPLICATE_REPORTS: ReadonlyArray<DuplicateReport> = [
       '`localStorage` in `server` files, with `node`, where the own rule says that server code runs without browser globals. Only the n rule reports a built-in that the supported Node versions lack',
   },
   {
+    kept: ['@gpahal/no-browser-globals'],
+    twin: 'unicorn/prefer-global-this',
+    reason:
+      "`window` and `self` in `server` files, where the own rule says that server code runs without browser globals, and the unicorn rule's `globalThis.location` would still be one. Only the unicorn rule reports `global`",
+  },
+  {
     kept: ['@typescript-eslint/prefer-nullish-coalescing'],
     twin: 'unicorn/prefer-logical-operator-over-ternary',
     reason:

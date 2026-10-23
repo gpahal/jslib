@@ -2,8 +2,8 @@ import { createRequire } from 'node:module'
 
 import type { Parser, ParserOptions, Plugin, Printer } from 'prettier'
 
-// The import sorter as a plugin module that Prettier loads by path, without the parsers and
-// printers whose optional dependency the sorter can't load, whose getters throw, failing
+// The import sorter as a plugin module that Prettier loads by path, without its Vue and Ember
+// parsers or those whose optional dependency it can't load, whose getters throw, failing
 // prettier-plugin-merge. Its parsers pin directives' imports. The Tailwind plugin loads the sorter
 // itself. Self-contained, since tests load the source
 
@@ -18,12 +18,16 @@ const sorter = require(SORTER) as Plugin
  * The packages that each optional parser and printer needs, loaded from the sorter's folder
  */
 const OPTIONAL_DEPENDENCIES: Readonly<Record<string, ReadonlyArray<string>>> = {
-  'ember-template-tag': ['prettier-plugin-ember-template-tag', 'content-tag'],
   oxc: ['@prettier/plugin-oxc'],
   'oxc-ts': ['@prettier/plugin-oxc'],
   'estree-oxc': ['@prettier/plugin-oxc'],
-  vue: ['@vue/compiler-sfc'],
 }
+
+/**
+ * The parsers of the frameworks the package doesn't support, left out even when their dependencies
+ * resolve
+ */
+const UNSUPPORTED_PARSERS: ReadonlySet<string> = new Set(['ember-template-tag', 'vue'])
 
 const sorterRequire = createRequire(require.resolve(SORTER))
 
@@ -46,6 +50,9 @@ function withResolvable<T>(
 ): Record<string, T> {
   const descriptors = Object.entries(Object.getOwnPropertyDescriptors(object ?? {}))
     .filter(([name]) => {
+      if (UNSUPPORTED_PARSERS.has(name)) {
+        return false
+      }
       const dependencies = OPTIONAL_DEPENDENCIES[name] ?? []
       return dependencies.every((dependency) => canResolve(dependency))
     })
