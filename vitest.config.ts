@@ -31,6 +31,9 @@ const options = {
   // takes several times a workstation's time. A timeout only catches hangs
   testTimeout: 120_000,
   hookTimeout: 120_000,
+  // Each package keeps its own module cache. Vitest clears the cache when the lockfile changes, and
+  // packages that Turbo starts together would otherwise clear a shared one under each other
+  fsModuleCachePath: 'node_modules/.vitest-cache',
 } satisfies TestOptions
 
 type Project = { name: string } & Pick<TestOptions, 'include' | 'exclude' | 'isolate'>
