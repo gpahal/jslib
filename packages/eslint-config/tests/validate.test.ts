@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+import json from '@eslint/json'
 import type { Linter } from 'eslint'
 import * as eslintPluginRegexp from 'eslint-plugin-regexp'
 
@@ -159,6 +160,7 @@ test.each([
   [{ tailwindcss: { entryPoint: pathToFileURL(path.resolve(root, entryPoint)).href } }],
   [{ vitest: { files: ['tests/**', '!**/*.snap'] } }],
   [{ testFiles: ['tests/????'] }],
+  [{ testFiles: ['tests/!(fixtures)'] }],
   [{ astro: true, html: true, tailwindcss: { scope: ['apps/**/*.astro'], entryPoint } }],
   [{ isInEditor: undefined, markdown: undefined }],
 ])('accepts %j', async (options) => {
@@ -219,6 +221,16 @@ test.each(GLOB_OPTIONS)('throws on a malformed glob of `%s`', (name, optionsOf) 
     ),
   ).not.toThrow()
 })
+
+test.each(GLOB_OPTIONS)(
+  'suggests the glob from `root` for an absolute glob of `%s`',
+  (name, optionsOf) => {
+    const absolute = `${root.split(path.sep).join('/')}/src/**`
+    expect(build(optionsOf([absolute]))).toThrow(
+      `@gpahal/eslint-config: \`${name}\`: glob \`${absolute}\` starts with \`/\`, but globs are relative to \`root\`. Write \`src/**\``,
+    )
+  },
+)
 
 test('throws on a malformed glob in the `files` or `ignores` of a config of yours', async () => {
   const glob = '../src/**'
@@ -708,6 +720,75 @@ test('keeps the JavaScript rules of a config of yours out of the files another c
   }
 })
 
+test.each([['src/*'], ['src/!(legacy)']])(
+  'keeps the JavaScript rules of a config of yours with `files: [%j]` out of JSON files',
+  async (glob) => {
+    await using project = await withTmpProject('eslint-config', {
+      'src/a.ts': 'export const a = null\n',
+      'src/data.json': '{ "a": null }\n',
+    })
+    const configs = await defineConfig({
+      root: project.dir,
+      typeAware: false,
+      isInEditor: false,
+      configs: [{ files: [glob], rules: { 'unicorn/no-null': 'error' } }],
+    })
+    const results = await eslintWith(project.dir, configs).lintFiles(['src/a.ts', 'src/data.json'])
+    expect(results.map((result) => result.messages.map((message) => message.ruleId))).toEqual([
+      ['unicorn/no-null'],
+      [],
+    ])
+  },
+)
+
+test.each([{}, { files: ['cfg/**'] }])(
+  'keeps the JavaScript rules of a config of yours with %j out of a folder another config of yours gives a language',
+  async (scope) => {
+    await using project = await withTmpProject('eslint-config', {
+      'cfg/a.ts': 'export const a = null\n',
+      'cfg/app.code-workspace': '{\n  // folders\n  "folders": [null]\n}\n',
+    })
+    const configs = await defineConfig({
+      root: project.dir,
+      typeAware: false,
+      isInEditor: false,
+      configs: [
+        { files: ['cfg/*.code-workspace'], language: 'json/jsonc', plugins: { json } },
+        { ...scope, rules: { 'unicorn/no-null': 'error' } },
+      ],
+    })
+    const results = await eslintWith(project.dir, configs).lintFiles([
+      'cfg/a.ts',
+      'cfg/app.code-workspace',
+    ])
+    expect(results.map((result) => result.messages.map((message) => message.ruleId))).toEqual([
+      ['unicorn/no-null'],
+      [],
+    ])
+  },
+)
+
+test.each(['cfg/**', 'cfg/**/*', 'cfg/*'])(
+  'keeps the JavaScript rules of a config of yours without `files` outside `%s`, which another config of yours gives a language',
+  async (glob) => {
+    await using project = await withTmpProject('eslint-config', {
+      'src/a.ts': 'export const a = null\n',
+      'cfg/app.code-workspace': '{\n  // folders\n  "folders": [null]\n}\n',
+    })
+    const configs = await defineConfig({
+      root: project.dir,
+      typeAware: false,
+      isInEditor: false,
+      configs: [
+        { files: [glob], language: 'json/jsonc', plugins: { json } },
+        { rules: { 'unicorn/no-null': 'error' } },
+      ],
+    })
+    const [result] = await eslintWith(project.dir, configs).lintFiles(['src/a.ts'])
+    expect(result?.messages.map((message) => message.ruleId)).toEqual(['unicorn/no-null'])
+  },
+)
+
 test('keeps JSONC with trailing commas for `tsconfig.json` under a config of yours with `json/json`', async () => {
   await using project = await withTmpProject('eslint-config', {
     'tsconfig.json': '{\n  // options\n  "compilerOptions": { "strict": true, },\n}\n',
@@ -837,6 +918,29 @@ test('rejects a rule whose `meta.languages` leaves out `js/js` in a config for c
   ).rejects.toThrow(
     "@gpahal/eslint-config: `configs[0]`: `files`: can match code files, where `local/json` can't run. Limit it to files in a language the rule supports, and set `language`",
   )
+})
+
+// The check of the configs that `scopeUserConfig` returns rejects these
+test.each<[string, Array<Record<string, unknown>>, string]>([
+  [
+    'a config of yours without `files` that turns on a rule whose `meta.languages` leaves out `js/js`',
+    [
+      {
+        plugins: {
+          local: { rules: { json: { meta: { languages: ['json/json'] }, create: () => ({}) } } },
+        },
+        rules: { 'local/json': 'error' },
+      },
+    ],
+    "@gpahal/eslint-config: `configs[0]` (`user/configs[0]`): has no `files`, so it applies to code files, where `local/json` can't run. Limit it to files in a language the rule supports, and set `language`",
+  ],
+  [
+    "a config of yours with `language` that turns on a rule its language can't run",
+    [{ files: ['**/*.json'], language: 'json/json', rules: { 'unicorn/no-null': 'error' } }],
+    "@gpahal/eslint-config: `configs[0]`: `unicorn/no-null`: can't run in the config's language, `json/json`. Turn it on in a config of its own for code files instead",
+  ],
+])('rejects %s', async (_, configs, message) => {
+  await expect(build({ configs })()).rejects.toThrow(message)
 })
 
 test.each<[Record<string, unknown>, Linter.Config]>([

@@ -14,6 +14,7 @@ import {
   type Placement,
   type TextLine,
 } from '@/internal/markdown/processor/blocks'
+import { findFirstIndex } from '@/internal/search'
 
 /**
  * As in `(no problems were reported from 'a', 'b', or 'c')`. A test pins the text, so a rewording
@@ -195,17 +196,11 @@ function findHtmlNode(
       return undefined
     }
     const children: Array<Nodes> = current.children
-    let low = 0
-    let high = children.length
-    while (low < high) {
-      const middle = (low + high) >>> 1
-      if ((children[middle]?.position?.start.offset ?? Infinity) <= start) {
-        low = middle + 1
-      } else {
-        high = middle
-      }
-    }
-    index = low - 1
+    index =
+      findFirstIndex(
+        children.length,
+        (child) => (children[child]?.position?.start.offset ?? Infinity) > start,
+      ) - 1
     const child = children[index]
     if (child?.position?.end.offset === undefined || end > child.position.end.offset) {
       return undefined
@@ -449,19 +444,11 @@ function isSameStructure(
 ): boolean {
   const [start, end] = fix.range
   const { children } = root
-  const indexOf = (offset: number): number => {
-    let low = 0
-    let high = children.length
-    while (low < high) {
-      const middle = (low + high) >>> 1
-      if ((children[middle]?.position?.start.offset ?? Infinity) <= offset) {
-        low = middle + 1
-      } else {
-        high = middle
-      }
-    }
-    return low - 1
-  }
+  const indexOf = (offset: number): number =>
+    findFirstIndex(
+      children.length,
+      (index) => (children[index]?.position?.start.offset ?? Infinity) > offset,
+    ) - 1
   const first = children[indexOf(start) - 1]
   const last = children[Math.max(indexOf(end), indexOf(start)) + 1]
   const lineStartOf = (offset: number): number => lines[findLineIndex(lines, offset)]?.start ?? 0
@@ -515,17 +502,8 @@ function findContainingRange(
   start: number,
   end: number,
 ): [number, number] | undefined {
-  let low = 0
-  let high = ranges.length
-  while (low < high) {
-    const middle = (low + high) >>> 1
-    if ((ranges[middle]?.[1] ?? Infinity) < end) {
-      low = middle + 1
-    } else {
-      high = middle
-    }
-  }
-  const range = ranges[low]
+  const range =
+    ranges[findFirstIndex(ranges.length, (index) => (ranges[index]?.[1] ?? Infinity) >= end)]
   return range !== undefined && range[0] <= start ? range : undefined
 }
 

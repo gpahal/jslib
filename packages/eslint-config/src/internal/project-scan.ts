@@ -23,6 +23,7 @@ import {
   readIgnoreCase,
 } from '@/internal/git'
 import { createGlobMatcher, isInside, posixRelative, rebaseGlob } from '@/internal/globs'
+import { joinList } from '@/internal/lists'
 import { GITIGNORE_CONFIG_NAMES } from '@/internal/names'
 import type { EslintConfigOptions } from '@/internal/types'
 import { fail, formatErrorMessage, warnOfSetupOnce } from '@/internal/utils'
@@ -93,9 +94,7 @@ function warnOfSkippedRules(file: string, root: string, lines: ReadonlyArray<num
   }
   const relativePath = posixRelative(root, file)
   const isOne = lines.length === 1
-  const numbers = lines.map(String)
-  const last = numbers.pop() ?? ''
-  const listed = numbers.length === 0 ? last : `${numbers.join(', ')} and ${last}`
+  const listed = joinList(lines.map(String), 'and')
   warnOfSetupOnce(
     warnedWildcardFiles,
     file,

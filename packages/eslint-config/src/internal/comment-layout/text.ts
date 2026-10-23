@@ -3,6 +3,7 @@ import type { TSESTree } from '@typescript-eslint/utils'
 import { getBlockCommentLines } from '@gpahal/internal/comments'
 
 import { docBlockInner, isUnsafeToFix } from '@/internal/comment-layout/classify'
+import { findFirstIndex } from '@/internal/search'
 
 const TERMINATOR_CHAR_REGEX = /[\n\r\u{2028}\u{2029}]/gu
 
@@ -21,17 +22,9 @@ export function createLineStarts(text: string): LineStart {
       0,
       ...Array.from(text.matchAll(LINE_TERMINATOR_REGEX), (match) => match.index + match[0].length),
     ]
-    let low = 0
-    let high = starts.length - 1
-    while (low < high) {
-      const middle = Math.ceil((low + high) / 2)
-      if ((starts[middle] ?? 0) <= offset) {
-        low = middle
-      } else {
-        high = middle - 1
-      }
-    }
-    return starts[low] ?? 0
+    const lineStarts = starts
+    const index = findFirstIndex(lineStarts.length, (line) => (lineStarts[line] ?? 0) > offset)
+    return lineStarts[Math.max(index - 1, 0)] ?? 0
   }
 }
 
@@ -121,8 +114,11 @@ export function starredLayoutFix(
   isJsx = false,
 ): { fixed: string | undefined; end: number; movesCode: boolean } | undefined {
   const lines = opener === '/**' ? docBlockLines(value) : getBlockCommentLines(value)
-  // A JSX comment's ` *` lines sit under the `/` of `{/*`, where Prettier puts them
-  const indent = indentBefore(text, lineStart, range[0], isJsx ? '{' : '')
+  // A JSX comment's ` *` lines sit under the `/` of `{/*`, where Prettier puts them, or under its
+  // own `/` when the block starts its line inside the braces
+  const indent =
+    (isJsx ? indentBefore(text, lineStart, range[0], '{') : undefined) ??
+    indentBefore(text, lineStart, range[0])
   if (indent === undefined || lines.length === 0) {
     return undefined
   }

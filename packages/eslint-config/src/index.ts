@@ -19,7 +19,6 @@ import {
 import { duplicateRulesConfigs } from '@/internal/duplicate-configs'
 import { CODE_BLOCK_FILES, CODE_FILES } from '@/internal/files'
 import {
-  patchContradictingReports,
   patchReportOnlyRules,
   patchUnsafeFixes,
   removeUnusedImportsFixes,
@@ -270,7 +269,6 @@ async function buildConfigs(resolved: ResolvedOptions): Promise<BuiltConfigs> {
     ),
   )
   const patchedFixes = patchUnsafeFixes(configs, root)
-  patchContradictingReports(configs, root)
   patchRuleSet(configs, root)
   const areaConfigs = (key: 'userRules' | 'exemptions' | 'codeBlockConfigs') =>
     areas.flatMap((area) => area[key] ?? [])

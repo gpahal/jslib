@@ -1,6 +1,6 @@
 import { expandBraces } from '@gpahal/internal/globs'
 
-import { createGlobMatcher, hasGlobMagic } from '@/internal/globs'
+import { createSegmentMatcher, hasSegmentMagic } from '@/internal/globs'
 import { PREFIX } from '@/internal/utils'
 
 /**
@@ -47,7 +47,7 @@ function extensionBoundary(segment: string): number {
 function isExtensionPattern(pattern: string): boolean {
   // Inside a name, since minimatch never matches a whole path segment of `.`
   const withoutClasses = pattern.replaceAll(/\[[a-z0-9!^-]+\]/gi, (group) =>
-    createGlobMatcher(`a${group}a`)('a.a') ? '.' : 'a',
+    createSegmentMatcher(`a${group}a`)('a.a') ? '.' : 'a',
   )
   const plain = withoutClasses.replaceAll(/[?*+@]\(/g, '(')
   return /^[\w()|-]+$/.test(plain)
@@ -58,14 +58,14 @@ function isExtensionPattern(pattern: string): boolean {
  */
 function canExpandedMatchFile(glob: string, extensions: ReadonlyArray<string>): boolean {
   const segment = glob.slice(glob.lastIndexOf('/') + 1)
-  if (!hasGlobMagic(segment)) {
+  if (!hasSegmentMagic(segment)) {
     return extensions.some((extension) => segment.endsWith(`.${extension}`))
   }
   const boundary = extensionBoundary(segment)
   if (boundary < 0) return true
   const pattern = segment.slice(boundary + 1)
   if (!isExtensionPattern(pattern)) return true
-  const matches = createGlobMatcher(pattern)
+  const matches = createSegmentMatcher(pattern)
   return extensions.some((extension) => matches(extension))
 }
 
@@ -90,7 +90,7 @@ export function canMatchFile(
  */
 function canExpandedMatchOtherFile(glob: string, extensions: ReadonlyArray<string>): boolean {
   const segment = glob.slice(glob.lastIndexOf('/') + 1)
-  if (!hasGlobMagic(segment)) {
+  if (!hasSegmentMagic(segment)) {
     return extensions.every((extension) => !segment.endsWith(`.${extension}`))
   }
   const boundary = extensionBoundary(segment)

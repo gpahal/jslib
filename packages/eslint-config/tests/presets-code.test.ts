@@ -400,24 +400,9 @@ describe('unicorn/prefer-spread', () => {
       expect.stringMatching(
         /^unicorn\/prefer-spread: Prefer the spread operator over `Array\.from/,
       ),
-      expect.stringMatching(/^e18e\/prefer-spread-syntax: .*Array\.from/),
     ])
   })
 
-  // Dropped, as e18e's `prefer-spread-syntax` report is, only where unicorn's
-  // `prefer-array-from-map` reports
-  it.each([
-    ['(value, index, all) => value + index + all.length', true],
-    ['Math.abs, values', true],
-    ['(value) => value * 2, values', false],
-    ['Math.abs', true],
-  ])('reports `Array.from(values).map(%s)` when %s', async (mapArguments, isReported) => {
-    const eslint = await sharedESLint('rules')
-    const messages = await lintText(eslint, file, code(`Array.from(values).map(${mapArguments})`))
-    for (const rule of ['unicorn/prefer-spread', 'e18e/prefer-spread-syntax']) {
-      expect(messages.some((message) => message.startsWith(`${rule}: `))).toBe(isReported)
-    }
-  })
   // Spreading a value without `[Symbol.iterator]` throws, and TypeScript rejects it. `any` says
   // nothing either way
   it.each([
@@ -431,20 +416,22 @@ describe('unicorn/prefer-spread', () => {
       file,
       `export function copy(values: ${type}): Array<unknown> {\n  return Array.from(values)\n}\n`,
     )
-    for (const rule of ['unicorn/prefer-spread', 'e18e/prefer-spread-syntax']) {
-      expect(messages.some((message) => message.startsWith(`${rule}: `))).toBe(isReported)
-    }
+    expect(messages.some((message) => message.startsWith('unicorn/prefer-spread: '))).toBe(
+      isReported,
+    )
   })
-  it('leaves `Array.from(values).map(fn)` to prefer-array-from-map, without contradicting it, and to `--fix` unchanged, as that rule only suggests', async () => {
+  it('reports `Array.from(values).map(fn)` once, without a fix, and `Array.from(new Set(values))`', async () => {
     const eslint = await createESLint('rules', {}, { fix: true })
-    const [result] = await eslint.lintText(code('Array.from(values).map((value) => value * 2)'), {
-      filePath: file,
-    })
-    expect(result?.output).toBeUndefined()
-    expect(result?.messages.map((message) => message.ruleId ?? message.message)).toEqual([
-      'unicorn/prefer-array-from-map',
-    ])
-    expect(result?.messages[0]?.suggestions).toHaveLength(1)
+    for (const body of [
+      'Array.from(values).map((value) => value * 2)',
+      'Array.from(new Set(values))',
+    ]) {
+      const [result] = await eslint.lintText(code(body), { filePath: file })
+      expect(result?.output).toBeUndefined()
+      expect(result?.messages.map((message) => message.ruleId ?? message.message)).toEqual([
+        'unicorn/prefer-spread',
+      ])
+    }
   })
 })
 
@@ -475,15 +462,6 @@ describe('the patched rules of shared plugins', () => {
         )
         .map((message) => message.ruleId),
     ).toEqual(['unicorn/prefer-spread'])
-    expect(
-      linter
-        .verify(
-          '[...m.keys()].map((x) => x)\n',
-          config({ 'e18e/prefer-array-from-map': 'error' }),
-          'x.js',
-        )
-        .map((message) => message.ruleId),
-    ).toEqual(['e18e/prefer-array-from-map'])
   })
 })
 
@@ -807,64 +785,61 @@ describe('interfaces that merge declarations', () => {
     expect(again).toBe(output)
   })
 
-  it('keep the module augmentations of a `.ts` file, and fix an interface outside them', () => {
-    const { output, again, errors, rules } = fixed('augmentations')
+  it('keep the module augmentations of a `.ts` file, and report an interface outside them', () => {
+    const { output, errors, rules } = fixed('augmentations')
     expect(output).toBe(
-      `${USE}\n${AUGMENTATION}\ntype Local = {\n  d: number\n}\n\nexport const local: Local = { d: 1 }\n`,
+      `${USE}\n${AUGMENTATION}\ninterface Local {\n  d: number\n}\n\nexport const local: Local = { d: 1 }\n`,
     )
     expect(errors).toEqual([])
-    expect(rules).not.toContain('@typescript-eslint/consistent-type-definitions')
-    expect(again).toBe(output)
+    expect(rules).toEqual(['@typescript-eslint/consistent-type-definitions'])
   })
 
-  it('fix an empty interface that extends to an intersection', () => {
+  it('report a file-local interface without fixing it', () => {
     const { output, errors, rules } = fixed('intersection')
     expect(output).toBe(
-      "import type { B } from './b.ts'\n\ntype C = { c: string }\n\ntype A<T> = B<T> & C\n\nexport const a: A<number> = { b: 1, c: '' }\n",
+      "import type { B } from './b.ts'\n\ntype C = { c: string }\n\ninterface A<T> extends B<T>, C {}\n\nexport const a: A<number> = { b: 1, c: '' }\n",
     )
     expect(errors).toEqual([])
-    expect(rules).toEqual([])
+    expect(rules).toEqual(['@typescript-eslint/consistent-type-definitions'])
   })
 
   it.each([
-    ['src/page.astro', false],
-    ['README.md/0.ts', false],
-    ['src/global.ts', true],
-    ['src/a.d.ts', false],
-    ['src/b.d.ts', true],
-    // A declaration file's namespace members are exported without `export`, so they can merge
-    ['src/c.d.ts', true],
-  ])('treat `%s` as a module whose interfaces other files see: %s', (filename, isVisible) => {
-    const patchedFixes = patchUnsafeFixes(
-      [{ plugins: { '@typescript-eslint': tseslint.plugin } }],
-      process.cwd(),
-    )
-    const code =
-      {
-        'src/a.d.ts':
-          "import type { B } from './b'\n\ninterface Local {\n  b: B\n}\n\nexport type All = Local\n\nexport {}\n",
-        'src/b.d.ts':
-          "import type { B } from './b'\n\ninterface Local {\n  b: B\n}\n\nexport type All = Local\n",
-        'src/c.d.ts': 'export namespace Api {\n  interface Local {\n    a: number\n  }\n}\n',
-        'README.md/0.ts':
-          'interface Local {\n  a: number\n}\n\nexport const local: Local = { a: 1 }\n',
-      }[filename] ?? 'interface Local {\n  a: number\n}\n\nconst local: Local = { a: 1 }\n'
-    const fixed = new Linter({ configType: 'flat' }).verifyAndFix(
+    ['a script code block', 'README.md/0.ts', 'interface Window {\n  a: number\n}\n', false],
+    [
+      '`declare global`',
+      'src/a.ts',
+      'declare global {\n  interface Window {\n    a: number\n  }\n}\n\nexport {}\n',
+      false,
+    ],
+    [
+      'a script file without type information',
+      'src/global.ts',
+      'interface Window {\n  a: number\n}\n',
+      true,
+    ],
+    [
+      'a module',
+      'src/b.ts',
+      'interface Local {\n  a: number\n}\n\nexport const local: Local = { a: 1 }\n',
+      true,
+    ],
+  ])('report an interface in %s', (_name, filename, code, isReported) => {
+    const plugins = { '@typescript-eslint': tseslint.plugin }
+    const messages = new Linter({ configType: 'flat' }).verify(
       code,
       [
         {
-          files: ['**/*.{ts,astro}'],
+          files: ['**/*.ts'],
           languageOptions: { parser: tseslint.parser },
-          plugins: { '@typescript-eslint': tseslint.plugin },
+          plugins,
           rules: { '@typescript-eslint/consistent-type-definitions': ['error', 'type'] },
         },
-        ...patchedFixes,
+        ...patchUnsafeFixes([{ plugins }], process.cwd()),
       ],
       { filename: path.resolve(filename) },
     )
-    expect(fixed.output.includes('type Local = {')).toBe(!isVisible)
-    expect(fixed.messages.map(ruleIdOf)).toEqual(
-      isVisible ? ['@typescript-eslint/consistent-type-definitions'] : [],
+    expect(messages.map(ruleIdOf)).toEqual(
+      isReported ? ['@typescript-eslint/consistent-type-definitions'] : [],
     )
   })
 })
@@ -898,30 +873,6 @@ describe('iterator rules', () => {
     }
     expect(await ruleSeverity(eslint, 'src/a.ts', 'unicorn/prefer-iterator-to-array')).toBe(2)
     expect(await ruleSeverity(eslint, 'src/a.ts', 'unicorn/prefer-array-from-async')).toBe(2)
-  })
-})
-
-function matchFunction(body: string): string {
-  return `export function check(s: string): unknown {\n${body}\n}\n`
-}
-
-describe('@typescript-eslint/prefer-regexp-exec', () => {
-  const file = 'src/array-from-map.ts'
-
-  const IF_MATCH = '  if (s.match(/a/)) {\n    console.error(s)\n  }\n  return s'
-
-  it('reports no match as a condition with the regexp-test rule off in a later config', async () => {
-    // The patch reads which rules are on from the presets' configs, and can't see a later one
-    const eslint = await createFocusedESLint(
-      'rules',
-      new Set([
-        '@typescript-eslint/prefer-regexp-exec',
-        'unicorn/prefer-regexp-test',
-        'e18e/prefer-regex-test',
-      ]),
-      { extraConfigs: [{ rules: { 'unicorn/prefer-regexp-test': 'off' } }] },
-    )
-    expect(await lintText(eslint, file, matchFunction(IF_MATCH))).toEqual([])
   })
 })
 
@@ -1117,7 +1068,6 @@ describe('e18e options', () => {
     modernization: ['e18e/prefer-object-has-own'],
     moduleReplacements: ['e18e/ban-dependencies'],
     performanceImprovements: [
-      'e18e/prefer-array-from-map',
       'e18e/prefer-timer-args',
       'e18e/prefer-static-collator',
       'e18e/prefer-throw-if-no-entry',
@@ -1293,39 +1243,25 @@ describe('browser option', () => {
     ])
   })
 
-  it('reports a bare built-in subpath, such as `path/posix`, unless the declared shim has it', async () => {
+  it('reports a built-in that `package.json` declares a browser port of', async () => {
     await using project = await withProject({
       'package.json': JSON.stringify({
         name: 'app',
         type: 'module',
-        dependencies: { assert: '*', path: '*', 'stream-browserify': '*', util: '*' },
+        dependencies: { buffer: '*' },
       }),
-      'node_modules/assert/package.json': JSON.stringify({
-        name: 'assert',
-        exports: { '.': './index.js', './strict': './strict.js' },
-      }),
-      'node_modules/path/package.json': '{ "name": "path", "main": "index.js" }',
-      'node_modules/stream-browserify/package.json': JSON.stringify({
-        name: 'stream-browserify',
-        exports: { '.': './index.js' },
-      }),
-      'node_modules/util/package.json': '{ "name": "util", "main": "util.js" }',
-      'node_modules/util/types.js': '',
-      'src/client/app.js': [
-        "import path from 'path'",
-        "import posix from 'path/posix'",
-        "import { pipeline } from 'stream/promises'",
-        "import strict from 'assert/strict'",
-        "import types from 'util/types'",
-        '',
-        'export const a = [path, posix, pipeline, strict, types]',
-        '',
-      ].join('\n'),
+      'node_modules/buffer/package.json': '{ "name": "buffer", "main": "index.js" }',
+      'src/client/app.js': "import { Buffer } from 'buffer'\n\nexport const a = Buffer\n",
     })
-    expect(await browserImportReports(project.dir)).toEqual([
-      '2:@gpahal/no-node-imports',
-      '3:@gpahal/no-node-imports',
-    ])
+    expect(await browserImportReports(project.dir)).toEqual(['1:@gpahal/no-node-imports'])
+  })
+
+  it('reports a dynamic import of a built-in written as an expression of literals', async () => {
+    await using project = await withProject({
+      'package.json': JSON.stringify({ name: 'app', type: 'module' }),
+      'src/client/app.js': "export const load = () => import('f' + 's')\n",
+    })
+    expect(await browserImportReports(project.dir)).toEqual(['1:@gpahal/no-node-dynamic-imports'])
   })
 
   it('keeps its rules when your configs set the core no-restricted-* rules', async () => {

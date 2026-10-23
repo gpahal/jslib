@@ -118,10 +118,7 @@ export function App() {
 ",
   },
   "src/array-from-map.ts": {
-    "problems": [
-      "6:10 e18e/prefer-array-from-map",
-      "25:10 e18e/prefer-array-from-map",
-    ],
+    "problems": [],
     "text": "/**
  * The values of \`set\`, adding each one's successor to it as it goes. \`Array.from(set, fn)\` would
  * map the values added too, so \`[1, 2]\` would give \`[1, 2, 3, 4]\`
@@ -154,7 +151,6 @@ export function sizes(set: Set<number>): Array<number> {
     "problems": [
       "5:15 unicorn/prefer-at",
       "12:10 unicorn/prefer-spread",
-      "12:10 e18e/prefer-spread-syntax",
     ],
     "text": "/**
  * The last of \`list\`, an array-like that may have no \`at\`
@@ -208,7 +204,6 @@ export function hasOwnKey(object: Record<string, unknown>): boolean {
     "problems": [
       "1:10 @typescript-eslint/no-unused-vars",
       "9:17 unicorn/prefer-spread",
-      "9:17 e18e/prefer-spread-syntax",
       "13:1 @gpahal/comment-layout",
     ],
     "text": "import { readFile } from 'node:fs/promises'
@@ -226,6 +221,23 @@ export function list(nodes: NodeListOf<Element>): Array<Element> {
 // The item's name
 export function nameOf(item: Item): string {
   return item.name
+}
+",
+  },
+  "src/json.ts": {
+    "problems": [
+      "9:18 @typescript-eslint/consistent-type-definitions",
+    ],
+    "text": "/**
+ * A JSON value
+ */
+export type Json = string | number | boolean | null | Array<Json> | JsonObject
+
+/**
+ * A JSON object with a kind. As a type alias, it would refer to itself through \`Record\` (TS2456)
+ */
+export interface JsonObject extends Record<string, Json> {
+  kind: string
 }
 ",
   },
@@ -256,7 +268,6 @@ module.exports = { count }
     "problems": [
       "1:1 @gpahal/comment-layout",
       "10:10 unicorn/prefer-spread",
-      "10:10 e18e/prefer-spread-syntax",
     ],
     "text": "// The starting count
 const count = 1

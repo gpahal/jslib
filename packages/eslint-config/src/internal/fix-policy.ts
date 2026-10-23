@@ -11,6 +11,7 @@
 export const REPORT_ONLY_RULES: ReadonlyArray<string> = [
   // Code and timing
   '@typescript-eslint/consistent-indexed-object-style', // a type alias can't merge with another declaration
+  '@typescript-eslint/consistent-type-definitions', // a type alias can't merge or refer to itself, as in `interface A extends Record<string, A> {}`
   '@typescript-eslint/no-array-constructor', // `new Array(...a)` of one number is sparse
   '@typescript-eslint/no-confusing-void-expression', // `return a || f()` returns `a`, which the fix drops
   '@typescript-eslint/no-meaningless-void-operator', // without semicolons, the line joins the one before
@@ -220,7 +221,6 @@ export const UNTYPED_REPORT_ONLY_RULES: ReadonlyArray<string> = [
  */
 export const CODE_BLOCK_REPORT_ONLY_RULES: ReadonlyArray<string> = [
   '@typescript-eslint/array-type',
-  '@typescript-eslint/consistent-type-definitions',
   '@typescript-eslint/method-signature-style',
   '@typescript-eslint/no-inferrable-types',
 ]

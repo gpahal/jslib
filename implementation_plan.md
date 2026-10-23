@@ -681,17 +681,17 @@ The implementing agent keeps this table current. Status values are `todo`, `in p
 | A5 private `packages/recipes` | A | done |
 | A6 Turbo cache in CI | A | done |
 | A7 AGENTS.md updates | A | done |
-| B-E2 declarator docs | B | todo |
-| B-E3 commented-out members | B | todo |
-| B-E4 Astro module header | B | todo |
-| B-E5 JSX expression container | B | todo |
-| B-E6 html U+2028 line mapping | B | todo |
-| B-E7 negated extglob segments | B | todo |
-| B-E8 folder-glob language configs | B | todo |
-| B-P2 interface fix report-only (replaces E1) | B | todo |
-| B-P4 contradicting rule pairs in config | B | todo |
-| B-P5 drop shim exemption | B | todo |
-| B-C1 – B-C11 cleanups | B | todo |
+| B-E2 declarator docs | B | done |
+| B-E3 commented-out members | B | done |
+| B-E4 Astro module header | B | done |
+| B-E5 JSX expression container | B | done |
+| B-E6 html U+2028 line mapping | B | done |
+| B-E7 negated extglob segments | B | done |
+| B-E8 folder-glob language configs | B | done, for user configs only |
+| B-P2 interface fix report-only (replaces E1) | B | done |
+| B-P4 contradicting rule pairs in config | B | done |
+| B-P5 drop shim exemption | B | done |
+| B-C1 – B-C11 cleanups | B | done; B-C1 and B-C2 partial; B-C8, B-C9 and B-C11 skipped, see report |
 | C-S1 extended preset layers | C | done |
 | C-S2 validateApply through extends | C | done |
 | C-S3 `theme()` keyword case | C | done |

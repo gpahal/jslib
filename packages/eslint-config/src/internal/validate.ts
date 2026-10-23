@@ -352,12 +352,13 @@ function suggestCodeGlob(glob: string, target: GlobTarget): string {
 }
 
 /**
- * A list option is checked once resolved. `hasDefault` is whether leaving the option out gives it
- * defaults, which the error for no globs suggests
+ * A list option is checked once resolved. `root` is the options' root. `hasDefault` is whether
+ * leaving the option out gives it defaults, which the error for no globs suggests
  */
 export function checkCodeGlobs(
   name: string,
   globs: ReadonlyArray<string>,
+  root: string,
   target: GlobTarget = CODE_FILE_TARGET,
   hasDefault = true,
 ): void {
@@ -367,7 +368,7 @@ export function checkCodeGlobs(
       `lists no globs, so it would match no file. ${hasDefault ? 'Leave it out for the default' : 'List at least one glob'}`,
     )
   }
-  checkRelativeGlobs(name, globs)
+  checkRelativeGlobs(name, globs, root)
   if (globs.every((glob) => glob.startsWith('!'))) {
     fail(
       [formatNames([name])],

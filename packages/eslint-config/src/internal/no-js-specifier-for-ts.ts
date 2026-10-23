@@ -32,15 +32,6 @@ function exists(file: string, isFolderLoadable = false): boolean {
   return stats?.isFile() === true || (isFolderLoadable && stats?.isDirectory() === true)
 }
 
-function getStaticString(node: TSESTree.Node | null | undefined): string | undefined {
-  if (node?.type === AST_NODE_TYPES.Literal) {
-    return typeof node.value === 'string' ? node.value : undefined
-  }
-  return node?.type === AST_NODE_TYPES.TemplateLiteral && node.expressions.length === 0
-    ? (node.quasis[0]?.value.cooked ?? undefined)
-    : undefined
-}
-
 function isThisFileResolve(node: TSESTree.Node): boolean {
   return (
     node.type === AST_NODE_TYPES.MemberExpression &&
@@ -169,7 +160,8 @@ export const noJsSpecifierForTs: TSESLint.RuleModule<'tsSpecifier'> = {
       return result
     }
     const check = (source: TSESTree.Node | null | undefined, isRequire = false) => {
-      const specifier = getStaticString(source)
+      const specifier =
+        source == null ? undefined : (ASTUtils.getStringIfConstant(source) ?? undefined)
       if (
         source === null ||
         source === undefined ||

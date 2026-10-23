@@ -177,30 +177,6 @@ describe('upstream workarounds', () => {
       "import 'a'\nimport type { A } from 'a'\n\nexport type B = A\n",
       "import type { A } from 'a'\n\nexport type B = A\n",
     ],
-    [
-      'the rule keeps interfaces that use `this` now (TS2526): remove usesThisType and its use in src/internal/fixes.ts',
-      typeDefinitions,
-      'interface A {\n  self(): this\n}\n',
-      'type A = {\n  self(): this\n}\n',
-    ],
-    [
-      'the rule keeps these interfaces now: delete `patchTypeDefinitions` and its use in src/internal/fixes.ts',
-      typeDefinitions,
-      "export {}\ndeclare module 'x' {\n  interface A {\n    a: number\n  }\n}\n",
-      "export {}\ndeclare module 'x' {\n  type A = {\n    a: number\n  }\n}\n",
-    ],
-    [
-      'the rule preserves namespace interfaces now: remove the exported namespace guard from mergesWithAnotherDeclaration in src/internal/fixes.ts',
-      typeDefinitions,
-      'export namespace A { export interface X { a: string } }\nexport namespace A { export interface X { b: number } }',
-      'export namespace A { export type X = { a: string } }\nexport namespace A { export type X = { b: number } }',
-    ],
-    [
-      'the rule no longer writes an empty object type: remove emptyExtensionFix and its use in src/internal/fixes.ts',
-      typeDefinitions,
-      'interface A extends B {}\n',
-      'type A = {} & B\n',
-    ],
   ])('%s', (message, config, code, output) => {
     expect(linter.verifyAndFix(code, config, fileFor(config)).output, message).toBe(output)
   })
@@ -230,10 +206,10 @@ describe('upstream workarounds', () => {
 
   it.each<[string, Linter.Config | Array<Linter.Config>, string, Array<string>, string?]>([
     [
-      'prefer-spread leaves `Array.from(…).map()` to prefer-array-from-map now: in `patchPreferSpread` in src/internal/fixes.ts, delete the drop of `mappedCalls` and its `arrayFromMapCompanions`, and the whole patch if the canary of `Array.from(arrayLike)` fails too',
-      { plugins: { unicorn: eslintPluginUnicorn }, rules: { 'unicorn/prefer-spread': 'error' } },
-      'Array.from(s).map((x) => x)\n',
-      ['unicorn/prefer-spread'],
+      'the rule skips interfaces in ambient modules now: delete `isInAmbientModule` and its use in `patchTypeDefinitions` in src/internal/fixes.ts',
+      typeDefinitions,
+      "export {}\ndeclare module 'x' {\n  interface A {\n    a: number\n  }\n}\n",
+      ['@typescript-eslint/consistent-type-definitions'],
     ],
     [
       'unicorn skips `__placeholder__.js` now: delete its pattern from `FILENAME_CASE_IGNORES` in src/internal/configs/constants.ts',
@@ -254,18 +230,6 @@ describe('upstream workarounds', () => {
       },
       "import https from 'node:https'\n\nexport const a = new https.Agent({ rejectUnauthorized: false })\n",
       [],
-    ],
-    [
-      'the rules agree on `[...m.keys()].map()` now: delete `patchArrayFromMap` in src/internal/fixes.ts and its allowed overlap in src/internal/duplicate-rules.ts',
-      {
-        plugins: { e18e: eslintPluginE18e, unicorn: eslintPluginUnicorn },
-        rules: {
-          'e18e/prefer-array-from-map': 'error',
-          'unicorn/prefer-iterator-to-array': 'error',
-        },
-      },
-      '[...m.keys()].map((x) => x)\n',
-      ['e18e/prefer-array-from-map', 'unicorn/prefer-iterator-to-array'],
     ],
     [
       'Astro templates read HTML comment directives now: give an Astro block without front matter `<!-- … -->` directives in getCommentPlacement in src/internal/markdown/processor/comments.ts',
@@ -292,13 +256,13 @@ describe('upstream workarounds', () => {
 
   it.each<[string, Linter.Config, string, Array<string>]>([
     [
-      "slop/no-em-dash reports Markdown's columns now: drop the column shift of wrapSlopPlugin in src/internal/presets/antislop.ts, keeping `lfLines` while the line canary below fails",
+      "slop/no-em-dash reports Markdown's columns now: in `linearNoEmDash` in src/internal/presets/antislop.ts, drop the column shift of the stock rule, keeping `lfLines` while the line canary below fails",
       md({ 'slop/no-em-dash': 'error' }, { slop }),
       '# T\n\nA \u{2014} b\n',
       ['3:0'],
     ],
     [
-      'slop/no-em-dash counts a lone `\\r` as a line break now, so the stock rule that wrapSlopPlugin in src/internal/presets/antislop.ts runs for an `inspection` of changed lines needs no `lfLines`: keep `lfLines` for the own linear rule only, which still counts only `\\n`',
+      'slop/no-em-dash counts a lone `\\r` as a line break now, so the stock rule that `linearNoEmDash` in src/internal/presets/antislop.ts runs for an `inspection` of changed lines needs no `lfLines`: drop that option of `withLanguageColumns` in src/internal/language-columns.ts',
       { plugins: { slop }, rules: { 'slop/no-em-dash': 'error' } },
       '// a.\r\r// b \u{2014} c\r',
       ['1:8'],
@@ -447,18 +411,11 @@ describe('upstream workarounds', () => {
 
   it.each<[string, NonNullable<Linter.Config['plugins']>, string, string, string | Array<string>]>([
     [
-      'the rules leave `Array.from(arrayLike)` alone now: delete `isNonIterableArrayFrom` and its use in `patchPreferSpread` in src/internal/fixes.ts, for the rules that stopped reporting it',
-      { e18e: eslintPluginE18e, unicorn: eslintPluginUnicorn },
-      'e18e/prefer-spread-syntax unicorn/prefer-spread',
+      'prefer-spread leaves `Array.from(arrayLike)` alone now: delete `patchPreferSpread` in src/internal/rule-patches.ts',
+      { unicorn: eslintPluginUnicorn },
+      'unicorn/prefer-spread',
       'export function copy(list: ArrayLike<number>): Array<number> {\n  return Array.from(list)\n}\n',
-      ['e18e/prefer-spread-syntax', 'unicorn/prefer-spread'],
-    ],
-    [
-      'prefer-regexp-exec leaves a match as a condition to prefer-regexp-test now: delete `patchRegexpExec` in src/internal/fixes.ts',
-      { '@typescript-eslint': tseslint.plugin },
-      '@typescript-eslint/prefer-regexp-exec',
-      'export function check(s: string): number {\n  return s.match(/a/) ? 1 : 2\n}\n',
-      ['@typescript-eslint/prefer-regexp-exec'],
+      ['unicorn/prefer-spread'],
     ],
     [
       'no-meaningless-void-operator leaves `void` of a non-call, or guards its fix against ASI, now: delete `patchMeaninglessVoid` in src/internal/rule-patches.ts, and audit whether it can leave REPORT_ONLY_RULES in src/internal/fix-policy.ts',

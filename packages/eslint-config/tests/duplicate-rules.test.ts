@@ -248,10 +248,9 @@ describe('a duplicate pair reports once', () => {
 
 describe('a mistake that two rules report gets one report', () => {
   const tsx = 'src/counter.tsx'
-  // As `.match()` in a condition, where `re.test(s)` serves, and its result used
+  // As `.match()` in a condition, where `re.test(s)` serves
   const matchCondition =
     'export function check(s: string): unknown {\n  if (s.match(/a/)) {\n    console.error(s)\n  }\n  return s\n}\n'
-  const matchResult = 'export function check(s: string): unknown {\n  return s.match(/a/)\n}\n'
   const mappedArrayFrom =
     'export function double(values: Array<number>): Array<number> {\n  return Array.from(values).map((value) => value * 2)\n}\n'
 
@@ -307,40 +306,6 @@ describe('a mistake that two rules report gets one report', () => {
       'vitest/valid-expect',
       '@typescript-eslint/no-floating-promises',
     ],
-    [
-      'rules',
-      {},
-      typed,
-      matchCondition,
-      'unicorn/prefer-regexp-test',
-      '@typescript-eslint/prefer-regexp-exec',
-    ],
-    [
-      'rules',
-      { unicorn: false },
-      typed,
-      matchCondition,
-      'e18e/prefer-regex-test',
-      '@typescript-eslint/prefer-regexp-exec',
-    ],
-    // `e18e/prefer-array-from-map` asks for `Array.from(m.keys(), fn)`, against `m.keys().toArray()`
-    [
-      'rules',
-      {},
-      'x.js',
-      'export function keys(m, fn) {\n  return [...m.keys()].map(fn)\n}\n',
-      'unicorn/prefer-iterator-to-array',
-      'e18e/prefer-array-from-map',
-    ],
-    ['rules', {}, typed, mappedArrayFrom, 'unicorn/prefer-array-from-map', 'unicorn/prefer-spread'],
-    [
-      'rules',
-      {},
-      typed,
-      mappedArrayFrom,
-      'unicorn/prefer-array-from-map',
-      'e18e/prefer-spread-syntax',
-    ],
   ] as Array<[string, Partial<EslintConfigOptions>, string, string, string, string]>)(
     '%s, %j, %s: in %j, only %s reports, and %s does where the kept rule is off',
     async (fixture, options, file, code, kept, twin) => {
@@ -353,10 +318,7 @@ describe('a mistake that two rules report gets one report', () => {
     },
   )
 
-  // Each patch drops a report only where the other rule of the pair reports
   it.each<[string, Partial<EslintConfigOptions>, string, string]>([
-    ['@typescript-eslint/prefer-regexp-exec', {}, typed, matchResult],
-    ['@typescript-eslint/prefer-regexp-exec', { unicorn: false }, typed, matchResult],
     [
       'unicorn/prefer-iterator-to-array',
       {},
@@ -364,11 +326,14 @@ describe('a mistake that two rules report gets one report', () => {
       'export function keys(m) {\n  return [...m.keys()]\n}\n',
     ],
     [
-      'e18e/prefer-array-from-map',
+      'unicorn/prefer-iterator-to-array',
       {},
       'x.js',
-      'export function keys(s, fn) {\n  return [...s].map(fn)\n}\n',
+      'export function keys(m, fn) {\n  return [...m.keys()].map(fn)\n}\n',
     ],
+    ['unicorn/prefer-regexp-test', {}, typed, matchCondition],
+    ['e18e/prefer-regex-test', { unicorn: false }, typed, matchCondition],
+    ['unicorn/prefer-spread', {}, typed, mappedArrayFrom],
   ])('reports with %s alone, with %j, in %s: %j', async (rule, options, file, code) => {
     const eslint = await sharedESLint('rules', { ...NO_SLOP, ...options })
     expect(await lintRuleIds(eslint, file, code)).toEqual([rule])

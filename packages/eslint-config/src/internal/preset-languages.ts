@@ -13,7 +13,7 @@ import { formatMessage, formatNames } from '@gpahal/std/errors'
 
 import { NON_CODE_EXTNS, NON_CODE_KIND_EXTNS } from '@/internal/files'
 import { canMatchFile } from '@/internal/glob-match'
-import { createGlobMatcher, hasGlobMagic } from '@/internal/globs'
+import { createSegmentMatcher, hasSegmentMagic } from '@/internal/globs'
 import type { TypedConfig } from '@/internal/types'
 import { PREFIX } from '@/internal/utils'
 
@@ -27,8 +27,11 @@ export type LanguageSource = {
    */
   language: string
   /**
-   * Per `files` entry, the patterns a file's name must all match. Entries with a glob that isn't
-   * `**\/<name>` or `<name>` are left out
+   * Per `files` entry, the patterns a file's name must all match. A glob of yours that names folders
+   * counts by its last segment, as `src/**\/*.css` does as `*.css`, so the patterns can match files
+   * the entry doesn't, and JavaScript rules skip them all. A preset's entry with such a glob is left
+   * out, since `**\/.vscode/*.json` would give every `.json` file its language. A leading `!`
+   * negates a pattern, unless it starts an extglob, as in `!(a).css`
    */
   names: ReadonlyArray<ReadonlyArray<string>>
   ignoredNames: ReadonlyArray<string>
@@ -41,6 +44,18 @@ export type LanguageSource = {
 export type KindLanguage = Pick<LanguageSource, 'kind' | 'language'>
 
 /**
+ * Names of every kind, which a segment that matches them all, such as `**` or `*`, matches. A
+ * segment that matches every one but not every name, such as `!(zzz)`, counts too, which keeps the
+ * entry out of scoping, as before the last-segment rule
+ */
+const ANY_NAME_PROBES: ReadonlyArray<string> = ['a', '.a', 'a.ts', 'A-b_1.d.ts', 'a b(1).json']
+
+function matchesAnyName(segment: string): boolean {
+  const matches = createSegmentMatcher(segment)
+  return ANY_NAME_PROBES.every((name) => matches(name))
+}
+
+/**
  * As `*.json` for `**\/*.json`. No match when the glob names folders
  */
 const ANY_FOLDER_NAME_REGEX = /^(?:\*\*\/)?([^/]+)$/
@@ -51,8 +66,41 @@ function expand(glob: string, subjects: ReadonlyArray<string>): Array<string> {
   return expandBraces(glob, { prefix: PREFIX, subjects })
 }
 
+/**
+ * A leading `!` negates the rest of `pattern`, as a `!` glob's does, unless it starts an extglob
+ */
 function matchesName(pattern: string, name: string): boolean {
-  return createGlobMatcher(pattern)(name)
+  return pattern.startsWith('!') && !pattern.startsWith('!(')
+    ? !createSegmentMatcher(pattern.slice(1))(name)
+    : createSegmentMatcher(pattern)(name)
+}
+
+/**
+ * As `*.json` for `**\/*.json`, and `*.css` for `src/**\/*.css` by its last segment. Escaped so
+ * that a leading `!` negates only for a `!` glob, as `!*.css` for `!**\/*.css`. `null` for a `!`
+ * glob that names folders, which is left out, since its last segment could leave out files the entry
+ * matches, and `undefined` for a glob that leaves the entry out, as one whose last segment matches
+ * every name, such as `cfg/**`, does
+ */
+function getEntryName(glob: string, byLastSegment: boolean): string | null | undefined {
+  if (glob.startsWith('!')) {
+    const name = ANY_FOLDER_NAME_REGEX.exec(glob.slice(1))?.[1]
+    if (name === undefined) {
+      return byLastSegment ? null : undefined
+    }
+    return `!${name.startsWith('(') ? '\\' : ''}${name}`
+  }
+  let name = ANY_FOLDER_NAME_REGEX.exec(glob)?.[1]
+  if (name === undefined && byLastSegment) {
+    name = glob.slice(glob.lastIndexOf('/') + 1)
+    if (matchesAnyName(name)) {
+      return undefined
+    }
+  }
+  if (name === undefined || name === '') {
+    return undefined
+  }
+  return name.startsWith('!') && !name.startsWith('!(') ? `\\${name}` : name
 }
 
 /**
@@ -82,7 +130,7 @@ export function getLanguageKind(language: string): string {
 }
 
 /**
- * Each brace combination as file name patterns, or none when a glob names folders
+ * Each brace combination as file name patterns, or none for an entry left out
  *
  * @throws TypeError, before making them, when the combinations would be more than
  *   {@link MAX_EXPANSIONS}, as five globs of 10 alternatives each make 100,000
@@ -90,21 +138,22 @@ export function getLanguageKind(language: string): string {
 function getEntryNames(
   subjects: ReadonlyArray<string>,
   entry: NonNullable<Linter.Config['files']>[number],
+  byLastSegment: boolean,
 ): Array<Array<string>> {
   const globNames: Array<Array<string>> = []
   for (const glob of toArray(entry)) {
     if (typeof glob !== 'string') {
       return []
     }
-    const names = expand(glob, subjects).map(
-      (expanded) => ANY_FOLDER_NAME_REGEX.exec(expanded)?.[1],
-    )
+    const names = expand(glob, subjects).map((expanded) => getEntryName(expanded, byLastSegment))
     if (names.includes(undefined)) {
       return []
     }
-    globNames.push(names.map((name) => name ?? ''))
+    if (!names.includes(null)) {
+      globNames.push(names.map((name) => name ?? ''))
+    }
   }
-  // Counted once every glob is known to name files only
+  // Counted once every glob is known to name files
   const count = globNames.reduce((product, names) => product * names.length, 1)
   if (count > MAX_EXPANSIONS) {
     throw new TypeError(
@@ -134,8 +183,9 @@ export function getLanguageSources(configs: ReadonlyArray<TypedConfig>): Array<L
     }
     const configSubject =
       config.name === undefined ? 'config' : `config ${formatNames([config.name])}`
+    const isPreset = config.name?.startsWith('gpahal/') === true
     const names = config.files.flatMap((entry, index) =>
-      getEntryNames([configSubject, `\`files[${String(index)}]\``], entry),
+      getEntryNames([configSubject, `\`files[${String(index)}]\``], entry, !isPreset),
     )
     const kind =
       names
@@ -212,7 +262,7 @@ function getGlobLanguages(
   excludedNames: ReadonlyArray<string>,
 ): Array<KindLanguage> {
   const name = glob.slice(glob.lastIndexOf('/') + 1)
-  if (!hasGlobMagic(name)) {
+  if (!hasSegmentMagic(name)) {
     if (excludedNames.some((excluded) => matchesName(excluded, name))) {
       return []
     }

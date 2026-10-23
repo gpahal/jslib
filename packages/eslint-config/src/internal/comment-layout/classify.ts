@@ -276,10 +276,39 @@ const BANNER = /^(?:[-=*#~_+/\\]{3}|MARK:)|[-=*#~_+]{3}$/
 const CODE_LINE =
   /^(?:(?:const|let|var|function|class|import|export|return|if|for|while|await|type|interface)\s.*[=;{}()]|.*[;{}]$|[\w$.]+\(.*\);?$)/
 
+/**
+ * Code without semicolons: a union constituent, as `| 'b'` but not a table row, or an enum member,
+ * as `B,` or `B = 2,`
+ */
+const UNION_OR_ENUM_MEMBER_LINE = /^(?:\|(?!.*\|$)\s*\S|[A-Z][\w$]*(?:\s*=\s*\S.*)?,$)/
+
+/**
+ * A class or type member without a semicolon, as `private b = 2`, `b?: number` or
+ * `async load(id: string): Promise<void>`. Not a URL, as `https://example.com`
+ */
+const MEMBER_LINE =
+  /^(?:(?:private|protected|public|readonly|static|abstract|declare|override|async|get|set|accessor)\s+)*#?[\w$]+[?!]?(?:\s*[:=](?!\/\/)\s*\S|\(.*\)(?:\s*:\s*\S.*)?$)/
+
+/**
+ * Prose that {@link MEMBER_LINE} matches: a capitalized label, as `Note: x` or `Example: z`, or two
+ * words in a row after the first colon or `=`, as `note: keeps the order`, unless the first is a
+ * keyword, as in `b: keyof T`
+ */
+const MEMBER_PROSE =
+  /^[A-Z][\w$]*:|^[^:=]*[:=].*?(?<![\w$])(?!(?:keyof|typeof|readonly|unique|infer|new|await|void|async|function)\s)[A-Za-z_$][\w$]*\s+[A-Za-z_$]/
+
+function isCodeLine(text: string): boolean {
+  return (
+    CODE_LINE.test(text) ||
+    UNION_OR_ENUM_MEMBER_LINE.test(text) ||
+    (MEMBER_LINE.test(text) && !MEMBER_PROSE.test(text))
+  )
+}
+
 export function isNoteLine(comment: Comment): boolean {
   const text = comment.value.trim()
   return (
     comment.type === AST_TOKEN_TYPES.Line &&
-    (TASK_MARKER.test(text) || BANNER.test(text) || CODE_LINE.test(text))
+    (TASK_MARKER.test(text) || BANNER.test(text) || isCodeLine(text))
   )
 }

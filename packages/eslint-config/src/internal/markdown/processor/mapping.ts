@@ -10,22 +10,16 @@ import {
 } from '@/internal/markdown/processor/blocks'
 import type { CommentSyntax } from '@/internal/markdown/processor/comments'
 import { isDirectiveMessage } from '@/internal/markdown/processor/directives'
+import { findFirstIndex } from '@/internal/search'
 
 /**
  * `undefined` for an offset in the comments before the code
  */
 function findCodeLine(block: Block, offset: number): CodeLine | undefined {
-  let low = 0
-  let high = block.codeLines.length
-  while (low < high) {
-    const middle = (low + high) >>> 1
-    if ((block.codeLines[middle]?.js ?? offset) <= offset) {
-      low = middle + 1
-    } else {
-      high = middle
-    }
-  }
-  return block.codeLines[low - 1]
+  const { codeLines } = block
+  return codeLines[
+    findFirstIndex(codeLines.length, (index) => (codeLines[index]?.js ?? offset) > offset) - 1
+  ]
 }
 
 /**

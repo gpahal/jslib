@@ -38,6 +38,9 @@ export function unicorn({ files }: UnicornOptions): Array<TypedConfig> {
         'unicorn/single-line-block-comment-style': 'off',
         // It strips the ` * ` prefix that comment-layout keeps, so `--fix` never settles
         'unicorn/no-asterisk-prefix-in-documentation-comments': 'off',
+        // `Array.from(s, fn)` for `Array.from(s).map(fn)`, where `unicorn/prefer-spread` asks for
+        // `[...s].map(fn)`
+        'unicorn/prefer-array-from-map': 'off',
         // Naming opinions, which reviews judge better. The first was also the slowest rule
         'unicorn/consistent-boolean-name': 'off',
         'unicorn/consistent-compound-words': 'off',

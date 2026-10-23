@@ -1,6 +1,7 @@
 import type { TSESLint, TSESTree } from '@typescript-eslint/utils'
 
 import { isNode } from '@/internal/ast'
+import { findFirstIndex } from '@/internal/search'
 
 /**
  * A binary search, since a JSX element can have thousands of children, each with a comment. A hole,
@@ -43,17 +44,10 @@ export function createNodeLookup(
   statements: Array<TSESTree.ProgramStatement>,
 ): NodeLookup {
   function countStatementsBefore(offset: number): number {
-    let low = 0
-    let high = statements.length
-    while (low < high) {
-      const middle = (low + high) >>> 1
-      if ((statements[middle]?.range[0] ?? offset) < offset) {
-        low = middle + 1
-      } else {
-        high = middle
-      }
-    }
-    return low
+    return findFirstIndex(
+      statements.length,
+      (index) => (statements[index]?.range[0] ?? offset) >= offset,
+    )
   }
 
   function childAt(node: TSESTree.Node, offset: number): TSESTree.Node | undefined {

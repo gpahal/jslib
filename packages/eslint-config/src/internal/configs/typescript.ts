@@ -115,7 +115,8 @@ export function typescript({
       files: typedFiles,
       rules: {
         '@typescript-eslint/array-type': ['error', { default: 'generic' }],
-        // `patchTypeDefinitions` drops the fix where other files can see, merge or augment one
+        // Report-only, as `REPORT_ONLY_RULES` records. `patchTypeDefinitions` drops the report where
+        // only an interface can augment
         '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
         // `import { type A, B } from 'a'`, which `import-x/no-duplicates` merges to
         '@typescript-eslint/consistent-type-imports': [
@@ -198,6 +199,10 @@ export function typescript({
               ],
               // A method taken off its object, as in `callback(this.handle)`, loses its `this`
               '@typescript-eslint/unbound-method': 'error',
+              // It asks for `re.exec(s)` where `unicorn/prefer-regexp-test` and
+              // `e18e/prefer-regex-test` ask for `re.test(s)` in a condition, and `s.match(re)` reads
+              // as well elsewhere
+              '@typescript-eslint/prefer-regexp-exec': 'off',
             },
           } satisfies TypedConfig,
           // Before the areas' `rules`, so `rulesTypeAware` options apply in tests too
