@@ -22,6 +22,7 @@ import {
   declarationValue,
   FUNCTION_AT_RULES,
   functionCalls,
+  THEME_FUNCTIONS,
 } from '@/internal/tailwind-values'
 import type { Part } from '@/internal/tailwind-values'
 
@@ -271,8 +272,6 @@ function variableOf(
  */
 const MAX_VARIABLE_ARGUMENT_LENGTH = 512
 
-const FUNCTIONS: ReadonlySet<string> = new Set(['theme', '--theme'])
-
 const ruleFunction: Rule = (primary: unknown) => (root, result) => {
   if (!validateOptions(result, ruleName, { actual: primary, possible: [true] })) {
     return
@@ -288,7 +287,7 @@ const ruleFunction: Rule = (primary: unknown) => (root, result) => {
     if (!text.includes('theme(')) {
       return
     }
-    for (const call of functionCalls(text, FUNCTIONS)) {
+    for (const call of functionCalls(text, THEME_FUNCTIONS)) {
       const [first] = call.args
       // A fallback argument, even an empty one, silences Tailwind's error
       if (first === undefined || call.args.length > 1) {

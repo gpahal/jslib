@@ -11,6 +11,8 @@ import { runNodeOk, withTmpProject } from '@gpahal/internal/node/testing'
 import { defineConfig } from '@/index'
 import type { StylelintExtendedConfig } from '@/index'
 
+import { warningsOf } from './helpers'
+
 /**
  * The package's folder, which holds a `package.json`, as `root` requires
  */
@@ -24,16 +26,6 @@ const syntax = (name: string) => ({ syntax: { atRules: { [name]: { prelude: '<id
 async function rulesAt(config: Config, file: string, code = 'a {\n  color: red;\n}\n') {
   const { results } = await stylelint.lint({ code, config, codeFilename: file })
   return results.flatMap((result) => result.warnings.map((warning) => warning.rule))
-}
-
-/**
- * The rule and severity of each warning that `config` reports on `code` in `file`
- */
-async function warningsOf(config: Config, file: string, code: string): Promise<Array<string>> {
-  const { results } = await stylelint.lint({ code, codeFilename: file, config })
-  return results.flatMap((result) =>
-    result.warnings.map((warning) => `${warning.rule}: ${warning.severity}`),
-  )
 }
 
 test('resolves references, ignores and overrides from a root with glob characters', async () => {
@@ -713,5 +705,25 @@ describe("skips the preset's settings of an extended defineConfig-built config",
     })
     const resolved = await stylelint.resolveConfig(path.join(project.dir, 'x.css'), { config })
     expect(resolved?.rules?.['hue-degree-notation']).toEqual(['angle'])
+  })
+
+  it('keeps your reference rules over the preset reference settings that its override references add', async () => {
+    await using project = await withTmpProject('stylelint-config-extends-preset-reference', {
+      'package.json': '{}',
+      'theme.css': ':root { --brand: red; }',
+    })
+    const extended = await defineConfig({
+      root: project.dir,
+      extends: [{ overrides: [{ files: ['src/b/**'], referenceFiles: ['theme.css'] }] }],
+    })
+    const config = await defineConfig({
+      root: project.dir,
+      referenceFiles: ['theme.css'],
+      extends: [extended],
+    })
+    const resolved = await stylelint.resolveConfig(path.join(project.dir, 'src/a.css'), {
+      config,
+    })
+    expect(resolved?.rules?.['no-unknown-custom-properties']).toEqual([true])
   })
 })

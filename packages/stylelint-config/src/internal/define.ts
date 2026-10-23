@@ -149,12 +149,11 @@ export async function defineConfig(options: StylelintConfigOptions): Promise<Sty
       )
     }
   }
-  const extended = await loadExtends(
-    validOptions.extends,
-    validOptions.root,
+  const extended = await loadExtends(validOptions.extends, validOptions.root, {
     userOverrides,
-    isRecord(validOptions.tailwindcss) && validOptions.tailwindcss.validateApply === true,
-  )
+    hasTailwindDesign:
+      isRecord(validOptions.tailwindcss) && validOptions.tailwindcss.validateApply === true,
+  })
   const stableOptions = {
     ...validOptions,
     // Resolved before the preset's plugins go first, so an error names your plugin's index
@@ -408,7 +407,12 @@ function createConfigBuilder(
   // The preset's file type overrides, with the extended top-level settings of the rules they set.
   // An extended config comes after the preset in `extends`, so its setting beats the preset's
   // override, a `null` included, as in Stylelint
-  const fileTypes = fileTypeOverrides({ astro, html, markdown }).map((fileType) => {
+  const fileTypes = fileTypeOverrides({
+    astro,
+    html,
+    markdown,
+    tailwindcss: tailwindcss !== false,
+  }).map((fileType) => {
     const overrideRules = fileType.override.rules
     if (overrideRules === undefined) {
       return { ...fileType, presetRules: undefined, userRuleFilter: undefined }

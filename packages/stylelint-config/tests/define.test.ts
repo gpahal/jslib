@@ -309,6 +309,17 @@ describe('defineConfig validation', () => {
       { overrides: [{ files: ['src/**', '!src/legacy/**'] }] },
       '`overrides[0].files[1]`: `!src/legacy/**` matches every other file, since Stylelint applies an override when any of its globs matches. Exclude files with `ignoreFiles`, or list positive globs',
     ],
+    [
+      {
+        overrides: [
+          {
+            files: 'src/a*',
+            rules: { 'color-named': 'never', 'selector-pseudo-class-no-unknown': true },
+          },
+        ],
+      },
+      "`overrides[0].files`: matches files of types with different settings of `selector-pseudo-class-no-unknown`, and no glob matches just one type's files of it. Split this override into one per file type: `src/a*.astro`, `src/a*.html`, `src/a*.{md,markdown}`, `src/a*.@(css|pcss|postcss)`, `src/a*.module.css`, or wrap the setting with `replace()`",
+    ],
   ])('throws a TypeError on %j', async (options, message) => {
     await expect(build(options)).rejects.toThrow(new TypeError(`${PREFIX}: ${message}`))
   })
@@ -323,17 +334,6 @@ describe('defineConfig validation', () => {
     [{ root: 'apps/web' }, '`root`: expected an absolute path'],
     [{ extends: ['stylelint-config-standard', 5] }, '`extends[1]`: expected a config'],
     [{ overrides: [{ rules: {} }] }, '`overrides[0].files`: expected a string'],
-    [
-      {
-        overrides: [
-          {
-            files: 'src/a*',
-            rules: { 'color-named': 'never', 'selector-pseudo-class-no-unknown': true },
-          },
-        ],
-      },
-      '`overrides[0].files`: matches files of types with different settings of `selector-pseudo-class-no-unknown`',
-    ],
     // Stylelint applies a config's fixes in memory and drops their warnings, but writes them only
     // with the run's `fix`
     [{ overrides: [{ files: '*.css', fix: true }] }, "`overrides[0].fix`: isn't taken"],

@@ -53,6 +53,20 @@ export async function tailwindProblemOf(css: string): Promise<string | undefined
 }
 
 /**
+ * The rule and severity of each warning that `config` reports on `code` in `file`
+ */
+export async function warningsOf(
+  config: Config,
+  file: string,
+  code: string,
+): Promise<Array<string>> {
+  const { results } = await stylelint.lint({ code, codeFilename: file, config })
+  return results.flatMap((result) =>
+    result.warnings.map((warning) => `${warning.rule}: ${warning.severity}`),
+  )
+}
+
+/**
  * The rules that `config` reports on `code`, and its invalid options
  */
 export async function lintRules(

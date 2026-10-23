@@ -128,3 +128,9 @@ export function atRulePrelude(atRule: AtRule): Part {
  * It matches their names case-sensitively
  */
 export const FUNCTION_AT_RULES: RegExp = /^(?:media|custom-media|container|supports)$/
+
+/**
+ * Tailwind's functions that read the theme, whose arguments are case-sensitive key paths and
+ * variable names
+ */
+export const THEME_FUNCTIONS: ReadonlySet<string> = new Set(['theme', '--theme'])

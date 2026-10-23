@@ -231,11 +231,16 @@ async function lintAstro(code: string) {
 test("the tailwindcss preset keeps the case of theme() paths and --theme() variables, which --fix doesn't lowercase", async () => {
   const css =
     '.a {\n  font-size: theme(fontSize.sm);\n  line-height: theme(lineHeight.tight);\n  width: --theme(--Width);\n}\n'
-  expect(await lintRules(css, tailwindcssConfig)).not.toContain('value-keyword-case')
-  expect(await fix(css, tailwindcssConfig)).toBe(css)
-  expect(await fix('.a {\n  color: currentColor;\n}\n', tailwindcssConfig)).toBe(
-    '.a {\n  color: currentcolor;\n}\n',
-  )
+  for (const file of ['src/a.css', 'src/a.module.css']) {
+    expect(await lintRules(css, tailwindcssConfig, file)).not.toContain('value-keyword-case')
+    expect(await fix(css, tailwindcssConfig, file)).toBe(css)
+    expect(await fix('.a {\n  color: currentColor;\n}\n', tailwindcssConfig, file)).toBe(
+      '.a {\n  color: currentcolor;\n}\n',
+    )
+  }
+  // CSS Modules' own exceptions stay
+  const composes = ".a {\n  composes: fooBar from './x.module.css';\n}\n"
+  expect(await fix(composes, tailwindcssConfig, 'src/a.module.css')).toBe(composes)
 })
 
 describe('.astro files', () => {

@@ -42,6 +42,7 @@ import {
 } from '@/internal/tailwind-loader'
 import type { TailwindCompile } from '@/internal/tailwind-loader'
 import { isReset, recordUnprefixedName } from '@/internal/tailwind-theme-function'
+import { THEME_FUNCTIONS } from '@/internal/tailwind-values'
 
 type Syntax = NonNullable<NonNullable<Config['languageOptions']>['syntax']>
 
@@ -260,7 +261,7 @@ export function tailwindcssConfig(
           { ignoreFunctions: tailwindFunctions.filter((name) => !name.startsWith('--')) },
         ],
         // Legacy key paths, such as `fontSize.sm`, and theme variable names are case-sensitive
-        'value-keyword-case': ['lower', { ignoreFunctions: ['theme', '--theme'] }],
+        'value-keyword-case': ['lower', { ignoreFunctions: [...THEME_FUNCTIONS] }],
         // `@apply` goes among declarations, and an entry file may group its at-rules with or
         // without blank lines, daisyUI's `@plugin` with an options block included
         'at-rule-empty-line-before': [

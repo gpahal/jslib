@@ -82,6 +82,19 @@ const project = await withTmpProject('stylelint-config-tailwind-apply', {
     '  }',
     '}',
     '',
+    // Inside a known variant's block
+    '@utility bad-nested {',
+    '  @variant hover {',
+    '    color: theme(--color-nope);',
+    '',
+    '    @apply nested-nope;',
+    '',
+    '    @variant nested-nope-variant {',
+    '      color: red;',
+    '    }',
+    '  }',
+    '}',
+    '',
     '@custom-variant bad-variant {',
     '  @media (width >= theme(--breakpoint-nope)) {',
     '    @apply also-nope;',
@@ -289,10 +302,15 @@ describe('tailwindcss.validateApply', () => {
     ).toEqual([
       'Unexpected unknown utility class "nope" in "@apply"',
       'Unexpected unknown variant "nope-variant" in "@variant"',
+      'Unexpected unknown utility class "nested-nope" in "@apply"',
+      'Unexpected unknown variant "nested-nope-variant" in "@variant"',
       'Unexpected unknown utility class "also-nope" in "@apply"',
     ])
     expect(
-      await reportsOf('.a {\n  @apply bad bad-theme bad-variant:flex nope;\n}\n', loaded),
+      await reportsOf(
+        '.a {\n  @apply bad bad-theme bad-nested bad-variant:flex nope;\n}\n',
+        loaded,
+      ),
     ).toEqual(['Unexpected unknown utility class "nope" in "@apply"'])
   })
 

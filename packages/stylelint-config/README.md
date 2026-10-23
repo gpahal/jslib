@@ -459,7 +459,7 @@ After `stylelint --fix`, Stylelint's summary still counts the problems of the re
 | Functions | `--alpha()` is checked. A value with `theme()`, `--theme()`, `--spacing()` or an added function isn't, except for the variables of `theme()` and `--theme()`, which [`@gpahal/tailwind-theme-function`](#tailwind-theme-function) checks with reference files |
 | Theme variables | Names such as `--text-tiny--line-height`, `--color-gray-0\.5` and `--color-*` are allowed |
 | `alpha-value-notation` | `number` |
-| `value-keyword-case` | Keeps the case of the arguments of `theme()` and `--theme()`, such as `theme(fontSize.sm)`, whose key paths and variable names are case-sensitive |
+| `value-keyword-case` | Keeps the case of the arguments of `theme()` and `--theme()`, such as `theme(fontSize.sm)`, whose key paths and variable names are case-sensitive, in `*.module.css` files too |
 | `hue-degree-notation` | `number`, as Tailwind's palette writes hues, such as `oklch(97.1% 0.013 17.38)`, where the default config wants `17.38deg` |
 | `custom-property-empty-line-before`, `@gpahal/custom-property-empty-line-before`, `custom-property-no-missing-var-function` | Off |
 | `at-rule-empty-line-before` | `@apply` can follow a declaration, blockless at-rules group with or without blank lines between them, and `@import`, `@plugin`, `@source`, `@config` and `@reference`, including a `@plugin` with an options block, are exempt everywhere, so an entry file groups them with or without blank lines and one needs no blank line after a rule either |

@@ -20,7 +20,7 @@ import {
   withReadonlyArrays,
   withUndefinedOptions,
 } from './exact-optional/options'
-import { fix, lintRules, topLevelRules } from './helpers'
+import { fix, lintRules, topLevelRules, warningsOf } from './helpers'
 
 // Vitest ends its workers without Node's `exit` event, so a handler there would leave the folder
 afterAll(() => {
@@ -527,16 +527,6 @@ async function settingsOf(
   const resolved = await stylelint.resolveConfig(file, { config })
   const rules: Record<string, unknown> = resolved?.rules ?? {}
   return Object.fromEntries(names.map((name) => [name, rules[name] ?? null]))
-}
-
-/**
- * The rule and severity of each warning that `config` reports on `code` in `file`
- */
-async function warningsOf(config: Config, file: string, code: string): Promise<Array<string>> {
-  const { results } = await stylelint.lint({ code, codeFilename: file, config })
-  return results.flatMap((result) =>
-    result.warnings.map((warning) => `${warning.rule}: ${warning.severity}`),
-  )
 }
 
 describe('extended configs beat the preset, and your rules merge over them', () => {

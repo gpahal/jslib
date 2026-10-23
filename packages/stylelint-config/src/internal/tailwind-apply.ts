@@ -25,7 +25,7 @@ import {
   tailwindStylesheetPath,
 } from '@/internal/tailwind-loader'
 import type { TailwindCompile } from '@/internal/tailwind-loader'
-import { atRulePrelude, functionCalls, segment } from '@/internal/tailwind-values'
+import { atRulePrelude, functionCalls, segment, THEME_FUNCTIONS } from '@/internal/tailwind-values'
 import type { Part } from '@/internal/tailwind-values'
 
 const {
@@ -62,8 +62,6 @@ const DESIGN_AT_RULES: ReadonlySet<string> = new Set([
   'tailwind',
 ])
 
-const THEME_FUNCTIONS: ReadonlySet<string> = new Set(['theme', '--theme'])
-
 /**
  * `text` with each outermost `theme()` and `--theme()` call replaced by `0`
  */
@@ -90,6 +88,8 @@ function withoutThemeCalls(text: string): string {
  * to its contents, and a `theme()` call to `0`
  */
 function compilableBody(atRule: AtRule): void {
+  // Unwrapped after the walk, which skips the nodes that a replacement moves
+  const variants: Array<AtRule> = []
   atRule.walk((node) => {
     if (node.type === 'decl') {
       if (node.value.includes('theme(')) node.value = withoutThemeCalls(node.value)
@@ -98,12 +98,15 @@ function compilableBody(atRule: AtRule): void {
       if (name === 'apply') {
         node.replaceWith(new Declaration({ prop: '--gpahal-apply', value: '0' }))
       } else if (name === 'variant' && node.nodes !== undefined) {
-        node.replaceWith(node.nodes)
+        variants.push(node)
       } else if (node.params.includes('theme(')) {
         node.params = withoutThemeCalls(node.params)
       }
     }
   })
+  for (const variant of variants) {
+    variant.replaceWith(variant.nodes ?? [])
+  }
 }
 
 /**

@@ -90,8 +90,10 @@ function keptOfPresetLayer(config: object): StylelintExtendedConfig | undefined 
 export async function loadExtends(
   extended: StylelintExtends | undefined,
   root: string,
-  userOverrides: ReadonlyArray<StylelintOverride> = [],
-  hasTailwindDesign = false,
+  {
+    userOverrides = [],
+    hasTailwindDesign = false,
+  }: { userOverrides?: ReadonlyArray<StylelintOverride>; hasTailwindDesign?: boolean } = {},
 ): Promise<{
   configs: Array<StylelintExtendedConfig>
   options: ExtendedOptions
@@ -236,7 +238,7 @@ export async function loadExtends(
       }
       const isBase = typeof key === 'string' && isBaseConfigFile(key)
       const { rules: ownRules, ...normalized } = normalizeLoadedConfig(
-        withoutTailwindApply(own, hasTailwindDesign),
+        withoutTailwindApply(own, { dropActive: hasTailwindDesign }),
         directory,
         subject,
         !checkedOverrides.has(source),
@@ -288,12 +290,12 @@ export async function loadExtends(
 }
 
 /**
- * `config` without the `@gpahal/tailwind-apply` plugins that would replace yours: any of them with
- * `all`, else the one that checks nothing
+ * `config` without the `@gpahal/tailwind-apply` plugins that would replace yours: the one that
+ * checks nothing, and with `dropActive` those that check a design system too
  */
 function withoutTailwindApply<T extends { plugins?: Config['plugins'] | undefined }>(
   config: T,
-  all: boolean,
+  { dropActive }: { dropActive: boolean },
 ): T {
   if (config.plugins === undefined) return config
   const inactive = tailwindApply(undefined)
@@ -303,7 +305,7 @@ function withoutTailwindApply<T extends { plugins?: Config['plugins'] | undefine
       typeof plugin === 'string' ||
       !('ruleName' in plugin) ||
       plugin.ruleName !== TAILWIND_APPLY ||
-      (!all && plugin !== inactive),
+      (!dropActive && plugin !== inactive),
   )
   return kept.length === plugins.length ? config : { ...config, plugins: kept }
 }

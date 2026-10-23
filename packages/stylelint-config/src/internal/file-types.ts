@@ -15,6 +15,7 @@ import { FONT_FAMILY_VARIABLE_REGEX } from '@/internal/preset-rules'
 import type { StylelintOverride } from '@/internal/rules'
 import { TAILWIND_APPLY } from '@/internal/tailwind-apply'
 import { TAILWIND_THEME_FUNCTION } from '@/internal/tailwind-theme-function'
+import { THEME_FUNCTIONS } from '@/internal/tailwind-values'
 
 /**
  * The kinds of file that get different settings: one per preset override, and CSS for the
@@ -105,10 +106,12 @@ export function fileTypeOverrides({
   astro,
   html,
   markdown,
+  tailwindcss,
 }: {
   astro: boolean
   html: boolean
   markdown: boolean
+  tailwindcss: boolean
 }): Array<FileTypeOverride> {
   return [
     {
@@ -153,7 +156,8 @@ export function fileTypeOverrides({
     },
     // CSS Modules' syntax, as stylelint-config-css-modules allows it, and camelCase class names.
     // `value-keyword-case` would lowercase the camelCase names in `composes`, `:export`, `:import`
-    // and `@value`, which then name nothing
+    // and `@value`, which then name nothing. With Tailwind, it skips the theme functions' arguments,
+    // as at the top level
     {
       type: 'cssModules',
       isOn: true,
@@ -174,6 +178,7 @@ export function fileTypeOverrides({
             {
               ignoreProperties: [FONT_FAMILY_VARIABLE_REGEX, 'composes'],
               ignoreKeywords: [CSS_MODULES_NAME_REGEX],
+              ...(tailwindcss && { ignoreFunctions: [...THEME_FUNCTIONS] }),
             },
           ],
           'selector-class-pattern': [
