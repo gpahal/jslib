@@ -30,16 +30,18 @@
       "project": ["src/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
       // Tailwind CSS is only for tests, which have no stylesheets for knip to find
       "tailwind": false,
-      // Imported by `@gpahal/internal/globs`, which the build bundles, so the published package
-      // imports it, but knip only sees the bundled module's source
-      "ignoreDependencies": ["brace-expansion"]
+      // Imported by `@gpahal/internal/globs` and `@gpahal/internal/node/versions`, which the build
+      // bundles, so the published package imports them, but knip only sees the bundled modules'
+      // source
+      "ignoreDependencies": ["brace-expansion", "semver"]
     },
     "packages/prettier-config": {
       "entry": ["src/*.ts", "tests/**/*.{test,test-d}.ts", "tests/exact-optional/*.ts"],
       "project": ["src/**/*.ts", "tests/**/*.ts"],
       "tailwind": false,
-      // Loaded by resolved path, which knip can't follow
-      "ignoreDependencies": ["prettier-plugin-packagejson"]
+      // `prettier-plugin-packagejson` is loaded by resolved path, which knip can't follow, and
+      // `semver` is imported by `@gpahal/internal/node/versions`, as in eslint-config
+      "ignoreDependencies": ["prettier-plugin-packagejson", "semver"]
     },
     "packages/stylelint-config": {
       "entry": ["src/*.ts", "tests/**/*.{test,test-d}.ts", "tests/exact-optional/*.ts"],

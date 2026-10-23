@@ -1,6 +1,6 @@
 # @gpahal/internal
 
-Unpublished code shared by the `@gpahal/*` packages. A package imports it as a dev dependency, and tsdown bundles its code and types into the package's build. Its own dependencies, such as `@gpahal/std`, `zod` and `brace-expansion`, stay external, so a package depends on what the modules it imports import. std can't use it, since it depends on std.
+Unpublished code shared by the `@gpahal/*` packages. A package imports it as a dev dependency, and tsdown bundles its code and types into the package's build. Its own dependencies, such as `@gpahal/std`, `zod`, `brace-expansion` and `semver`, stay external, so a package depends on what the modules it imports import. std can't use it, since it depends on std.
 
 ## Modules
 
@@ -15,9 +15,10 @@ Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.brow
 | `node/cli` | `readPackageVersion`, `formatCliError`, `getCauses` | Node |
 | `node/json` | `readJsonFile` | Node |
 | `node/package-manager` | `detectPackageManager`, `formatInstallCommand` | Node |
-| `node/paths` | `resolvePathOrFileUrl`, `resolvePathOption`, `isRelativePath`, the `PATH_OR_FILE_URL_*` messages | Node |
+| `node/paths` | `resolvePathOrFileUrl`, `resolvePathOption`, `resolveFileOption`, `isRelativePath`, the `PATH_OR_FILE_URL_*` messages | Node |
 | `node/resolve` | `resolvePath`, `isResolvable`, `resolveFromNodeModules`, `resolveFile`, `findInstalledPackage`, `findNodeModulesManifest`, `missingPeersError`, `formatPeerSpecifier` | Node |
 | `node/root` | `checkRoot` | Node |
+| `node/versions` | `isAtLeast`, `isInRange`, `isNewerThanRange`, `isInsidersVersion`, `formatInstallHint`, `describeNewerThanRange` | Node |
 | `node/source-maps` | `isSourceMap`, `resolveSourcePath`, `isPublishedFile`, `dropSources` | Node, builds and tests only |
 | `node/testing` | `runNode`, `runNodeOk`, `withTmpProject`, `writeFiles`, `minCpuMs`, `readMarkdownSection`, `readCodeBlocks`, `splitFileNameComment` | Node, tests only |
 

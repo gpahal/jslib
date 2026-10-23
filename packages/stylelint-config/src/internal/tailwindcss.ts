@@ -23,7 +23,7 @@ import { AtRule, CssSyntaxError, parse, type Plugin } from 'postcss'
 import type { Config } from 'stylelint'
 
 import { resolveListOption } from '@gpahal/internal/node/options'
-import { resolvePathOption, URL_SCHEME_REGEX } from '@gpahal/internal/node/paths'
+import { resolveFileOption, URL_SCHEME_REGEX } from '@gpahal/internal/node/paths'
 import { resolveFile, resolveFromNodeModules } from '@gpahal/internal/node/resolve'
 import { formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
 
@@ -811,24 +811,19 @@ export function tailwindReferenceFiles(
     const rootTheme = theme ?? failRoot()
     return { files: [rootTheme], prefix: undefined, theme: rootTheme }
   }
-  const entryPath = resolvePathOption(entryPoint, root, {
+  // Stylelint would report a missing file only when it lints
+  const entryPath = resolveFileOption(entryPoint, root, {
     prefix: PREFIX,
     name: 'tailwindcss.entryPoint',
   })
-  let entryCss: string | undefined
+  let entryCss: string
   try {
-    // Stylelint would report a missing file only when it lints
-    if (fs.statSync(entryPath, { throwIfNoEntry: false })?.isFile() === true) {
-      entryCss = fs.readFileSync(entryPath, 'utf8')
-    }
+    entryCss = fs.readFileSync(entryPath, 'utf8')
   } catch (error) {
     return failEntryPoint(
       `reading ${formatNames([entryPath])} failed: ${getErrorReason(error)}`,
       error,
     )
-  }
-  if (entryCss === undefined) {
-    return failEntryPoint(`${formatNames([entryPath])} isn't a file`)
   }
   const { files, prefix, resets, realPaths } = importGraph(entryPath, entryCss)
   const notResolved = `\`tailwindcss/theme.css\` doesn't resolve from its folder, ${formatNames([path.dirname(entryPath)])}. Install Tailwind CSS v4 there`

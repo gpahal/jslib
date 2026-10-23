@@ -3,10 +3,11 @@
  * Contract: an absolute `root` or none, and a value already checked to be a string or a `URL`
  */
 
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { formatMessage, formatNames } from '@gpahal/std/errors'
+import { formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
 
 const FILE_URL_EXPECTED =
   "or a `file:` URL or URL string with an absolute path, such as `import.meta.resolve('./src/styles/global.css')`"
@@ -109,4 +110,33 @@ export function resolvePathOption(
       cause === undefined ? undefined : { cause },
     )
   })
+}
+
+/**
+ * {@link resolvePathOption} of an option that names a file, such as `tailwindcss.entryPoint`
+ *
+ * @throws TypeError as {@link resolvePathOption} does, "<prefix>: `<name>`: reading `<path>`
+ *   failed: <reason>", with the filesystem error as the `cause`, when the path can't be read, as
+ *   with a symlink loop, and "<prefix>: `<name>`: `<path>` isn't a file" when nothing or a folder
+ *   is there.
+ */
+export function resolveFileOption(
+  value: string | URL,
+  root: string | undefined,
+  context: PathOptionContext,
+): string {
+  const file = resolvePathOption(value, root, context)
+  const fail = (description: string, cause?: unknown): never => {
+    throw new TypeError(
+      formatMessage(context.prefix, [formatNames([context.name])], description),
+      cause === undefined ? undefined : { cause },
+    )
+  }
+  let stats: fs.Stats | undefined
+  try {
+    stats = fs.statSync(file, { throwIfNoEntry: false })
+  } catch (error) {
+    return fail(`reading ${formatNames([file])} failed: ${getErrorReason(error)}`, error)
+  }
+  return stats?.isFile() === true ? file : fail(`${formatNames([file])} isn't a file`)
 }

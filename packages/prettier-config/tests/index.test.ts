@@ -557,7 +557,7 @@ describe('plugin resolution', () => {
     )
     expect(() => resolveSortImportsPlugin(tailwindPath)).toThrow(
       new TypeError(
-        `${PREFIX}: \`sortImports\`: \`prettier-plugin-tailwindcss\` loads \`@ianvs/prettier-plugin-sort-imports\` from where it's installed, and \`@ianvs/prettier-plugin-sort-imports\` 3.7.2 is older than the 4.7 this config needs. Install a newer version, as in \`pnpm add -D @ianvs/prettier-plugin-sort-imports@^4.7\`, or set \`sortImports: false\``,
+        `${PREFIX}: \`sortImports\`: \`prettier-plugin-tailwindcss\` loads \`@ianvs/prettier-plugin-sort-imports\` from where it's installed, and \`@ianvs/prettier-plugin-sort-imports\` 3.7.2 is older than the 4.7 this config needs. Install a newer version, as in \`pnpm add -D "@ianvs/prettier-plugin-sort-imports@^4.7"\`, or set \`sortImports: false\``,
       ),
     )
   })
@@ -566,7 +566,7 @@ describe('plugin resolution', () => {
     await using tailwind = await installTailwind('0.7.2')
     expect(() => resolveTailwindPlugin(tailwind.environment)).toThrow(
       new TypeError(
-        `${PREFIX}: \`tailwindcss\`: \`prettier-plugin-tailwindcss\` 0.7.2 is older than the 0.8 this config needs. Install a newer version, as in \`pnpm add -D prettier-plugin-tailwindcss@^0.8\``,
+        `${PREFIX}: \`tailwindcss\`: \`prettier-plugin-tailwindcss\` 0.7.2 is older than the 0.8 this config needs. Install a newer version, as in \`pnpm add -D "prettier-plugin-tailwindcss@^0.8"\``,
       ),
     )
   })
@@ -575,7 +575,7 @@ describe('plugin resolution', () => {
     ['0.9.0', true],
     ['0.0.0-insiders.5b27f94', false],
   ])(
-    'warns once when the Tailwind plugin is %s, outside the tested range: %s',
+    'warns once when the Tailwind plugin is %s, newer than the tested range: %s',
     async (version, warns) => {
       await using tailwind = await installTailwind(version)
       using emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined)
@@ -585,7 +585,7 @@ describe('plugin resolution', () => {
         warns
           ? [
               [
-                `${PREFIX}: \`tailwindcss\`: prettier-plugin-tailwindcss ${version} is outside the tested range >=0.8.0 <0.9.0, so classes or imports may stay unsorted. If they do, install a version in the range, as in \`pnpm add -D "prettier-plugin-tailwindcss@>=0.8.0 <0.9.0"\``,
+                `${PREFIX}: \`tailwindcss\`: prettier-plugin-tailwindcss ${version} is newer than the tested range >=0.8.0 <0.9.0, so classes or imports may stay unsorted. If they do, install a version in the range, as in \`pnpm add -D "prettier-plugin-tailwindcss@>=0.8.0 <0.9.0"\``,
                 { code: 'GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN' },
               ],
             ]
@@ -610,7 +610,7 @@ describe('plugin resolution', () => {
       warns
         ? [
             [
-              `${PREFIX}: \`prettier\`: version ${version} is older than the 3.9 this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`pnpm add -D prettier@^3.9\``,
+              `${PREFIX}: \`prettier\`: version ${version} is older than the 3.9 this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`pnpm add -D "prettier@^3.9"\``,
               { code: 'GPAHAL_PRETTIER_OLD_PRETTIER' },
             ],
           ]
@@ -831,7 +831,7 @@ describe('defineConfig validation', () => {
   it('rejects a missing stylesheet, a folder or a URL other than `file:` as its entry point', () => {
     for (const entryPoint of ['tests/fixtures/missing.css', 'tests/fixtures']) {
       expect(build({ tailwindcss: { entryPoint } })).toThrow(
-        `${PREFIX}: \`tailwindcss.entryPoint\`: path \`${path.join(ROOT, entryPoint)}\` isn't a file`,
+        `${PREFIX}: \`tailwindcss.entryPoint\`: \`${path.join(ROOT, entryPoint)}\` isn't a file`,
       )
     }
     expect(build({ tailwindcss: { entryPoint: new URL('https://example.com/a.css') } })).toThrow(

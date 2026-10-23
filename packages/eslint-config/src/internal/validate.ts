@@ -12,7 +12,7 @@ import {
   resolveSubOptions,
   type OptionsShape,
 } from '@gpahal/internal/node/options'
-import { PATH_OR_FILE_URL_EXPECTED } from '@gpahal/internal/node/paths'
+import { PATH_OR_FILE_URL_EXPECTED, resolveFileOption } from '@gpahal/internal/node/paths'
 import { checkRoot } from '@gpahal/internal/node/root'
 import {
   assertValid,
@@ -36,7 +36,6 @@ import { findUp } from '@/internal/fs'
 import { canMatchFile } from '@/internal/glob-match'
 import { hasGlobMagic, withoutLeadingDotSlash } from '@/internal/globs'
 import { AREA_RULE_PREFIXES, hasRulePrefix, PLUGIN_AREAS, type AreaName } from '@/internal/names'
-import { resolveEntryPoint } from '@/internal/presets/tailwindcss'
 import { checkRelativeGlobs } from '@/internal/relative-globs'
 import { getPlugins, isRuleOn, parseRuleId } from '@/internal/rules'
 import type {
@@ -482,10 +481,7 @@ function checkTailwindcssEntryPoint(options: EslintConfigOptions): void {
       `expected ${PATH_OR_FILE_URL_EXPECTED}, received ${describeValue(entryPoint)}. Set it, as in \`{ entryPoint: 'src/styles.css' }\``,
     )
   }
-  const entryPath = resolveEntryPoint(entryPoint, options.root)
-  if (fs.statSync(entryPath, { throwIfNoEntry: false })?.isFile() !== true) {
-    fail(['`tailwindcss.entryPoint`'], `${formatNames([entryPath])} isn't a file`)
-  }
+  resolveFileOption(entryPoint, options.root, { prefix: PREFIX, name: 'tailwindcss.entryPoint' })
 }
 
 const AREA_RULE_SETS = [

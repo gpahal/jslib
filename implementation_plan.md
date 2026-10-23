@@ -707,8 +707,8 @@ The implementing agent keeps this table current. Status values are `todo`, `in p
 | D6 std doctests in one program | D | done |
 | D7 prettier test lockfile | D | done |
 | E1 – E8 eslint-config test trims | E | todo |
-| F1 shared entryPoint helper | F | todo |
-| F2 shared semver checker (fixes P2) | F | todo |
+| F1 shared entryPoint helper | F | done |
+| F2 shared semver checker (fixes P2) | F | done; the optional list joiner skipped, since `peers.ts` items contain commas |
 | Phase 3 top-level type imports | 3 | todo |
 | Phase 4 final verification and report | 4 | todo |
 | Phase 4 temporary files and plan file deleted | 4 | todo |

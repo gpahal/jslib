@@ -2,12 +2,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// eslint-disable-next-line e18e/ban-dependencies -- semver implements npm's range syntax, which the `peerDependencies` ranges are written in
-import semver from 'semver'
-
 import { readJsonFile as readJsonFileOrThrow } from '@gpahal/internal/node/json'
 import { detectPackageManager, formatInstallCommand } from '@gpahal/internal/node/package-manager'
 import { formatPeerSpecifier, isResolvable, missingPeersError } from '@gpahal/internal/node/resolve'
+import { describeNewerThanRange, isInRange, isNewerThanRange } from '@gpahal/internal/node/versions'
 import { formatMessageList, formatNames, getErrorCode } from '@gpahal/std/errors'
 import { isRecord } from '@gpahal/std/objects'
 
@@ -154,24 +152,16 @@ function findOutdatedPeers(
       continue
     }
     const { version } = readPackageJson(file, subjects)
-    // A prerelease, such as a Next.js canary, counts when inside the range
-    if (
-      typeof version !== 'string' ||
-      semver.satisfies(version, range, { includePrerelease: true })
-    ) {
+    if (typeof version !== 'string' || isInRange(version, range)) {
       continue
     }
-    if (
-      !STRICT_PEERS.has(name) &&
-      semver.valid(version) !== null &&
-      semver.gtr(version, range, { includePrerelease: true })
-    ) {
+    if (!STRICT_PEERS.has(name) && isNewerThanRange(version, range)) {
       warnOfSetupOnce(
         warnedNewerPeers,
         `${name}@${version}`,
         formatErrorMessage(
           subjects,
-          `${name} ${version} is newer than the tested range ${range}, so its rules may break. If they do, install a version in the range, as in \`${formatInstallCommand([formatPeerSpecifier(name, range)], dir)}\``,
+          describeNewerThanRange({ name, version, range, effect: 'its rules may break', dir }),
         ),
         'GPAHAL_PEER_NEWER_THAN_RANGE',
       )
@@ -210,9 +200,7 @@ const CORE_PEERS: ReadonlyArray<string> = ['eslint', 'typescript']
 
 function typescriptHint(outdated: ReadonlyArray<OutdatedPeer>): string {
   const typescript = outdated.find(({ name }) => name === 'typescript')
-  return typescript !== undefined &&
-    semver.valid(typescript.version) !== null &&
-    semver.gtr(typescript.version, typescript.range, { includePrerelease: true })
+  return typescript !== undefined && isNewerThanRange(typescript.version, typescript.range)
     ? ". TypeScript 7 and every TypeScript after 6.0 aren't supported right now"
     : ''
 }
