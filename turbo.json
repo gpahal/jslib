@@ -25,7 +25,21 @@
     },
     "test": {
       "dependsOn": ["build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/packages/eslint-config/src/internal/utils.ts"
+      ]
+    },
+    // The canaries, which fail once upstream fixes a bug that a workaround exists for
+    "test-canaries": {
+      "dependsOn": ["build"],
+      "env": ["VITEST_CANARIES"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/packages/eslint-config/src/internal/utils.ts"
+      ]
     },
     // publint and `attw --pack` pack the package but read neither README.md nor a license file's
     // text, only whether one is there

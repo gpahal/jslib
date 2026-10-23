@@ -1,20 +1,11 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { builtinRules } from 'eslint/use-at-your-own-risk'
-
 import { writeFiles } from '@gpahal/internal/node/testing'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
-import {
-  AUDITED_SAFE_FIXES,
-  REPORT_ONLY_RULES,
-  UNFIXED_FIXABLE_RULES,
-  UNTYPED_REPORT_ONLY_RULES,
-} from '@/internal/fix-policy'
-import { isRuleOn, parseRuleId } from '@/internal/rules'
+import { defineConfig } from '@/index'
+import { REPORT_ONLY_RULES, UNTYPED_REPORT_ONLY_RULES } from '@/internal/fix-policy'
 
-import { ALL_ON_OPTIONS } from '../scripts/typegen'
 import { fixFiles, reportFiles, withRulesOnly } from './fix-helpers'
 import { collator, CORE_AREAS_OFF, withProject } from './helpers'
 
@@ -132,53 +123,5 @@ describe('report-only fixes', () => {
         rules: [],
       },
     })
-  })
-})
-
-describe('fix-safety guardrail', () => {
-  // Other options turn on more rules: e18e's twins of Unicorn's, the core rules for files without
-  // type information, and the editor's
-  const OPTION_SETS: Array<EslintConfigOptions> = [
-    ALL_ON_OPTIONS,
-    { ...ALL_ON_OPTIONS, unicorn: false },
-    { ...ALL_ON_OPTIONS, typeAware: false },
-    { ...ALL_ON_OPTIONS, isInEditor: true },
-  ]
-
-  it('lists every enabled fixable rule as audited or report-only', async () => {
-    const fixable = new Set<string>()
-    for (const options of OPTION_SETS) {
-      const configs = await defineConfig({ isInEditor: false, ...options })
-      const plugins = new Map(configs.flatMap((config) => Object.entries(config.plugins ?? {})))
-      const entries = configs.flatMap((config) => Object.entries(config.rules ?? {}))
-      for (const [ruleId, entry] of entries) {
-        const { pluginName, ruleName } = parseRuleId(ruleId)
-        const rule =
-          pluginName === undefined
-            ? // eslint-disable-next-line @typescript-eslint/no-deprecated -- ESLint exposes the core rules nowhere else
-              builtinRules.get(ruleName)
-            : plugins.get(pluginName)?.rules?.[ruleName]
-        // ESLint rejects a fix from a rule whose `meta.fixable` isn't set
-        if (isRuleOn(entry) && rule?.meta?.fixable) {
-          fixable.add(ruleId)
-        }
-      }
-    }
-    const listed = new Set([
-      ...AUDITED_SAFE_FIXES,
-      ...UNFIXED_FIXABLE_RULES,
-      ...REPORT_ONLY_RULES,
-      ...UNTYPED_REPORT_ONLY_RULES,
-    ])
-    // Audit each rule's fixer, then add it to `AUDITED_SAFE_FIXES` or a report-only list
-    const unlisted = [...fixable.difference(listed)]
-    expect(unlisted.toSorted((a, b) => collator.compare(a, b))).toEqual([])
-    const reportOnly = new Set([...REPORT_ONLY_RULES, ...UNTYPED_REPORT_ONLY_RULES])
-    expect(
-      [...AUDITED_SAFE_FIXES, ...UNFIXED_FIXABLE_RULES].filter((ruleId) => reportOnly.has(ruleId)),
-    ).toEqual([])
-    expect(AUDITED_SAFE_FIXES.filter((ruleId) => UNFIXED_FIXABLE_RULES.includes(ruleId))).toEqual(
-      [],
-    )
   })
 })

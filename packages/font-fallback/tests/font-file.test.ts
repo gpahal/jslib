@@ -6,12 +6,7 @@ import { brotliCompressSync, constants } from 'node:zlib'
 
 import { create } from 'fontkitten'
 
-import {
-  assertBuildIsCurrent,
-  minCpuMs,
-  runNode,
-  withTmpProject,
-} from '@gpahal/internal/node/testing'
+import { minCpuMs, runNode, withTmpProject } from '@gpahal/internal/node/testing'
 
 import { getFontFallbacks, type FontFallback } from '@/index'
 import { readFontFile } from '@/internal/parse'
@@ -684,8 +679,6 @@ for (const file of files) {
 const { user, system } = process.cpuUsage(start)
 process.stdout.write(JSON.stringify({ results, ms: (user + system) / 1000 }))
 `
-
-  beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
   // Each font would exhaust the heap or take seconds with a parser that decodes what it skips. The
   // child process has 256 MiB of heap, so a font that exhausts it crashes the child, not the runner

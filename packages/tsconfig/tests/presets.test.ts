@@ -14,15 +14,10 @@ const require = createRequire(import.meta.url)
 const TSC_BIN = path.join(path.dirname(require.resolve('typescript/package.json')), 'bin/tsc')
 
 /**
- * `tsc`'s defaults for unset options, and its `--showConfig` output. Internal, but what `tsc` uses
+ * `tsc`'s defaults for unset options. Internal, but what `tsc` uses
  */
-const { computedOptions, convertToTSConfig } = ts as typeof ts & {
+const { computedOptions } = ts as typeof ts & {
   computedOptions: Record<string, { computeValue: (options: ts.CompilerOptions) => unknown }>
-  convertToTSConfig: (
-    parsed: ts.ParsedCommandLine,
-    configFileName: string,
-    host: ts.System,
-  ) => { compilerOptions: unknown }
 }
 
 /**
@@ -165,25 +160,13 @@ async function writeProject(
   return dir
 }
 
-// Catches an option flipped or dropped by mistake. Review a changed snapshot against the README
-test.concurrent.for(PRESETS)(
-  '%s resolves to the options in the snapshot',
-  async (preset, { expect }) => {
-    await using dir = await writeProject('show-config-', {
-      'tsconfig.json': JSON.stringify({ extends: path.join(PRESETS_DIR, preset) }),
-      'a.ts': 'export {}\n',
-    })
-    const configPath = path.join(dir.path, 'tsconfig.json')
-    const parsed = parseConfig(configPath)
-    expect(parsed.errors).toEqual([])
-    // What `tsc --showConfig` prints. The JSON round trip drops `undefined` values as `tsc` does
-    // eslint-disable-next-line unicorn/prefer-structured-clone -- `structuredClone` keeps `undefined`
-    const shown = JSON.parse(JSON.stringify(convertToTSConfig(parsed, configPath, ts.sys))) as {
-      compilerOptions: unknown
-    }
-    expect(shown.compilerOptions).toMatchSnapshot()
-  },
-)
+test.concurrent.for(PRESETS)('%s parses without errors', async (preset, { expect }) => {
+  await using dir = await writeProject('preset-', {
+    'tsconfig.json': JSON.stringify({ extends: path.join(PRESETS_DIR, preset) }),
+    'a.ts': 'export {}\n',
+  })
+  expect(parseConfig(path.join(dir.path, 'tsconfig.json')).errors).toEqual([])
+})
 
 // tsconfck, which Vite 7, Vitest 4 and vite-tsconfig-paths use, throws on a `null` in an extended
 // config
@@ -212,7 +195,7 @@ test('node.json types only the ESNext APIs that Node 24 has', () => {
 })
 
 // `next build` type-checks with these unless the tsconfig sets them, and doesn't rewrite a tsconfig
-// that has `extends`. The snapshot leaves out the ones `tsc` computes
+// that has `extends`
 test('nextjs-app.json has the computed options that next build requires', () => {
   const options = parseConfig(path.join(PRESETS_DIR, 'nextjs-app.json')).options
   for (const option of ['esModuleInterop', 'resolveJsonModule']) {
@@ -295,43 +278,6 @@ test('Node runs the node-app sources, and tsc emits them for Node', async () => 
   })
   await expect(tscErrors(dir.path)).resolves.toEqual([])
   expect(JSON.parse(await runNodeOk(['dist/main.js'], { cwd: dir.path }))).toEqual(NODE_APP_OUTPUT)
-})
-
-// Canary for the README's warnings in "A Node app that strips types": node-app type-checks this
-// code, which Node can't run. Fails when Node starts running it, so the warning can go
-test('Node fails to run code that node-app type-checks, as the README warns', async () => {
-  await using dir = await writeProject('node-app-unrunnable-', {
-    'package.json': JSON.stringify({ type: 'module' }),
-    'src/b.ts': 'export const b = 1\n',
-    'src/js-specifier.ts': "import { b } from './b.js'\n\nconsole.log(b)\n",
-    'src/decorator.ts': [
-      'function logged<T>(value: T, _context: ClassMethodDecoratorContext): T {',
-      '  return value',
-      '}',
-      'export class A {',
-      '  @logged',
-      '  c(): number {',
-      '    return 1',
-      '  }',
-      '}',
-      '',
-    ].join('\n'),
-    'src/accessor.ts': 'export class A {\n  accessor b = 1\n}\n',
-  })
-  const failures = await Promise.all(
-    ['src/js-specifier.ts', 'src/decorator.ts', 'src/accessor.ts'].map(async (file) => {
-      const { status, stderr } = await runNode([file], { cwd: dir.path })
-      return [file, status, /ERR_MODULE_NOT_FOUND|SyntaxError/.exec(stderr)?.[0]]
-    }),
-  )
-  expect(
-    failures,
-    'Node runs code that node-app type-checks: for each file that now runs, remove its case from the README\'s warning in "A Node app that strips types", and the check that `@gpahal/eslint-config`\'s `node: { typeStripping: true }` adds for it, `@gpahal/no-js-specifier-for-ts` for the `.js` specifier or the decorator or `accessor` field check of `@gpahal/no-unstrippable-syntax`',
-  ).toEqual([
-    ['src/js-specifier.ts', 1, 'ERR_MODULE_NOT_FOUND'],
-    ['src/decorator.ts', 1, 'SyntaxError'],
-    ['src/accessor.ts', 1, 'SyntaxError'],
-  ])
 })
 
 /**

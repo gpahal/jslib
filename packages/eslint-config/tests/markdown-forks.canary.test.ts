@@ -1,8 +1,6 @@
 import markdown from '@eslint/markdown'
 import { Linter } from 'eslint'
 
-import { minCpuMs } from '@gpahal/internal/node/testing'
-
 import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'
 
 // Each `@gpahal/markdown` rule forked from `@eslint/markdown` exists for the cases where the stock
@@ -104,54 +102,6 @@ const CASES: Record<string, Array<Case>> = {
     { name: 'a tag', code: '# T\n\n#general\n', stock: ['3:1'], fork: [] },
   ],
 }
-
-/**
- * Makes each timed text unique, so no run reads a cached parse
- */
-const runs = { count: 0 }
-
-/**
- * These rules are quadratic through regexes that backtrack inside one call, which no call count
- * sees, so their tests take CPU time
- */
-function lintRun(
-  rule: string,
-  code: string,
-  isFork = false,
-  languageOptions: Linter.LanguageOptions = {},
-): () => void {
-  return () => {
-    runs.count++
-    problemsOf(rule, `${code}${String(runs.count)}\n`, { isFork, languageOptions })
-  }
-}
-
-const frontmatter = (spaces: number): string => `---\n${' '.repeat(spaces)}\n---\n\n# A\n`
-
-describe('the fork of `no-multiple-h1`', () => {
-  it('scales linearly on an unclosed `<!--`', () => {
-    // Against a rule that only reads code blocks, so the time to parse the file, which most of the
-    // lint takes, is in both. The stock rule takes over 20 times as long as that on 40,000 lines
-    const code = `# A\n\n${'<!--\n'.repeat(40_000)}`
-    const [forkMs = 0, baseMs = 0] = minCpuMs([
-      lintRun('no-multiple-h1', code, true),
-      lintRun('lowercase-code-block-language', code, true),
-    ])
-    expect(forkMs).toBeLessThan(4 * baseMs + 200)
-  })
-
-  it('differs from the stock rule, which is quadratic on a front matter line of spaces, or `FRONTMATTER_TITLE` may be removable', () => {
-    // Once this fails, `FRONTMATTER_TITLE` in src/internal/markdown/rules/utils.ts may go back to
-    // the stock default. 4 times the spaces take 16 times as long in quadratic code; the fixed
-    // cost of a lint lowers the ratio, measured at about 12
-    const yaml: Linter.LanguageOptions = { frontmatter: 'yaml' }
-    const [shortMs = 0, longMs = 0] = minCpuMs([
-      lintRun('no-multiple-h1', frontmatter(3000), false, yaml),
-      lintRun('no-multiple-h1', frontmatter(12_000), false, yaml),
-    ])
-    expect(longMs / shortMs).toBeGreaterThan(7)
-  })
-})
 
 describe.each(Object.entries(CASES))('the fork of `%s`', (rule, cases) => {
   it.each(cases)(

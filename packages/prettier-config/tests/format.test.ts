@@ -5,13 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { format, getSupportInfo, resolveConfig, type Config } from 'prettier'
 
-import {
-  assertBuildIsCurrent,
-  runNode,
-  runNodeOk,
-  withTmpProject,
-  writeFiles,
-} from '@gpahal/internal/node/testing'
+import { runNode, runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 
 import defaultConfig, { defineConfig, mergeConfigs } from '@/index'
 
@@ -494,7 +488,7 @@ describe('tailwindcss config', () => {
     )
   })
 
-  // prettier-plugin-merge fails with the import sorter on; see the canary in upstream.test.ts
+  // prettier-plugin-merge fails with the import sorter on; see the canary in upstream.canary.test.ts
   it('sorts and then wraps classes with prettier-plugin-classnames and prettier-plugin-merge', async () => {
     const require = createRequire(import.meta.url)
     const config = defineConfig({
@@ -626,9 +620,6 @@ describe('astro config', () => {
 
 describe('prettier CLI', () => {
   const BUILD_DIR = path.join(import.meta.dirname, '..', 'build')
-  beforeAll(async () => {
-    await assertBuildIsCurrent(BUILD_DIR)
-  })
   const buildUrl = (file: string) => pathToFileURL(path.join(BUILD_DIR, file)).href
   const CONFIG = `import { defineConfig } from '${buildUrl('index.js')}'
 

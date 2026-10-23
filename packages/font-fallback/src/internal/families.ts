@@ -40,7 +40,7 @@ export const EXTRA_LOCAL_NAMES: Readonly<
 
 /**
  * A family of `@capsizecss/metrics`, as its typed collection has it. Its types leave out a
- * `descent` of 0, which its data has, so `tests/upstream.test.ts` fails once they don't
+ * `descent` of 0, which its data has, so `tests/upstream.canary.test.ts` fails once they don't
  */
 type Family = {
   familyName: string

@@ -41,7 +41,8 @@
     "build": "tsdown",
     "lint-check": "eslint . --max-warnings 0",
     "prepublishOnly": "../../scripts/verify-publish-tool.sh",
-    "test": "vitest run --config ../../vitest.config.ts",
+    "test": "VITEST_CANARIES=0 vitest run --config ../../vitest.config.ts",
+    "test-canaries": "VITEST_CANARIES=1 vitest run --config ../../vitest.config.ts",
     "typecheck": "tsc && tsc -p tests",
     "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
   },

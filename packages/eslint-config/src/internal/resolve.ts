@@ -52,6 +52,7 @@ import {
   intersectFileSpecs,
   isLiteralGlob,
   isSameFiles,
+  posixRelative,
   splitGlobs,
   unescapeGlob,
   withNegatedGlobs,
@@ -399,7 +400,7 @@ function getFolderDepth(folder: string): number {
  */
 function getPackageSourceGlobs(root: string, packageFolders: ReadonlyArray<string>): Array<string> {
   return packageFolders
-    .map((folder) => path.relative(root, folder).split(path.sep).join('/'))
+    .map((folder) => posixRelative(root, folder))
     .toSorted((a, b) => getFolderDepth(a) - getFolderDepth(b))
     .flatMap((folder) =>
       folder === '' ? 'src/**' : [`!${escapeGlob(folder)}/**`, `${escapeGlob(folder)}/src/**`],
@@ -469,9 +470,7 @@ function getTailwindcssTarget(isOn: Readonly<Record<AreaName, boolean>>): GlobTa
 }
 
 function getTypedAstroFiles(root: string, projectFolders: ReadonlyArray<string>): Array<string> {
-  const folders = projectFolders.map((folder) =>
-    path.relative(root, folder).split(path.sep).join('/'),
-  )
+  const folders = projectFolders.map((folder) => posixRelative(root, folder))
   return folders.includes('')
     ? [...ASTRO_FILES]
     : folders.map((folder) => `${escapeGlob(folder)}/${ASTRO_FILES[0] ?? ''}`)
@@ -981,10 +980,7 @@ function resolveRootedOptions(options: EslintConfigOptions, root: string): Resol
     allowDefaultProject,
     isFunction: !isDefaultProjectListed,
     matchedFiles,
-    walkedFiles: [
-      ...configFiles.map((file) => path.relative(root, file).split(path.sep).join('/')),
-      ...sourceFiles,
-    ],
+    walkedFiles: [...configFiles.map((file) => posixRelative(root, file)), ...sourceFiles],
   }).filter((file) => !isTypeAwareIgnored(file))
   const defaultProjectFileCount = defaultProjectFiles.length
   // Your configs' global ignores apply in `warnOfProjectScan`, which sees the composer's too

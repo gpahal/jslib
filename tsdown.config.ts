@@ -7,8 +7,6 @@ import ts from 'typescript'
 
 import {
   dropSources,
-  hashSource,
-  isHashedSource,
   isPublishedFile,
   isSourceMap,
   resolveSourcePath,
@@ -226,7 +224,7 @@ function getTypesPackageName(packageName: string): string {
  * tsdown's `deps.onlyImport` can't replace it: as of 0.23 it checks import and export statements
  * and `import()` expressions, but not a type's `import("module")` or a
  * `/// <reference types="module" />`. The canaries in eslint-config's
- * `tests/build-upstream.test.ts` fail once it checks both; then remove this check
+ * `tests/build-upstream.canary.test.ts` fail once it checks both; then remove this check
  */
 async function checkDeclarationImports({ cwd, outDir }: ResolvedConfig): Promise<void> {
   const packageJson: unknown = JSON.parse(await fs.readFile(path.join(cwd, 'package.json'), 'utf8'))
@@ -277,8 +275,7 @@ async function checkDeclarationImports({ cwd, outDir }: ResolvedConfig): Promise
  * Completes each source map. It embeds the sources outside the package, so the unpublished
  * `@gpahal/internal` still maps to readable code. It drops the package's sources that `files`
  * leaves out, such as eslint-config's generated rule types, which are too large to embed, so
- * go-to-definition stays in the declaration file. It records each TypeScript source's SHA-256 in
- * a JavaScript map's `x_sourceHashes`, which `assertBuildIsCurrent` compares with the sources
+ * go-to-definition stays in the declaration file
  */
 async function completeSourceMaps({ cwd, outDir, pkg }: ResolvedConfig): Promise<void> {
   const files = (await fs.readdir(outDir, { recursive: true })).filter((file) =>
@@ -301,26 +298,14 @@ async function completeSourceMaps({ cwd, outDir, pkg }: ResolvedConfig): Promise
         .join('/')
       return !relativePath.startsWith('..') && !isPublishedFile(relativePath, files)
     })
-    const sources = await Promise.all(
-      map.sources.map(async (source) => {
-        const sourcePath = resolveSourcePath(mapPath, map, source)
-        // A JSON source, such as `package.json`, is left out
-        const content = isHashedSource(source) ? await fs.readFile(sourcePath, 'utf8') : undefined
-        return { sourcePath, content }
-      }),
-    )
+    const sourcePaths = map.sources.map((source) => resolveSourcePath(mapPath, map, source))
     const isOutside = (sourcePath: string): boolean =>
       path.relative(cwd, sourcePath).startsWith('..')
-    if (sources.some(({ sourcePath }) => isOutside(sourcePath))) {
+    if (sourcePaths.some((sourcePath) => isOutside(sourcePath))) {
       map.sourcesContent = await Promise.all(
-        sources.map(async ({ sourcePath, content }) =>
-          isOutside(sourcePath) ? (content ?? fs.readFile(sourcePath, 'utf8')) : null,
+        sourcePaths.map(async (sourcePath) =>
+          isOutside(sourcePath) ? fs.readFile(sourcePath, 'utf8') : null,
         ),
-      )
-    }
-    if (file.endsWith('.js.map')) {
-      map.x_sourceHashes = sources.map(({ content }) =>
-        content === undefined ? null : hashSource(content),
       )
     }
     await fs.writeFile(mapPath, JSON.stringify(map))

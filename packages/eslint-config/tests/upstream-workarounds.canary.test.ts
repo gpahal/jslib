@@ -18,20 +18,20 @@ import { pluginsToRulesDTS } from 'eslint-typegen/core'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
-import { minCpuMs, runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
+import { runNodeOk, withTmpProject } from '@gpahal/internal/node/testing'
 import { isRecord } from '@gpahal/std/objects'
 
 import { defineConfig } from '@/index'
 import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'
-import { DEFAULT_PROJECT_CONFLICT } from '@/internal/project-service'
 import { UNFLAGGED_TYPED_RULES } from '@/internal/rules'
 
 import { withRulesOnly } from './fix-helpers'
 import { collator } from './helpers'
+import { parseWithProjectService } from './project-service-parse'
 
 // Each test shows an upstream bug that a workaround in this package exists for, with the stock
 // plugin or language. It fails once upstream fixes the bug, and its message names the workaround
-// to delete or simplify. The forks of `@eslint/markdown` rules are in `markdown-forks.test.ts`
+// to delete or simplify. The forks of `@eslint/markdown` rules are in `markdown-forks.canary.test.ts`
 
 const linter = new Linter({ configType: 'flat' })
 
@@ -333,23 +333,15 @@ describe('upstream workarounds', () => {
     verify('<!-- eslint-disable -->\n')
   })
 
-  it('`markdown/no-reversed-media-syntax` still rewrites a link before brackets, or takes exponential time', () => {
+  it('`markdown/no-reversed-media-syntax` still rewrites a link before brackets', () => {
     const config = md({ 'markdown/no-reversed-media-syntax': 'error' })
     const isMasked = ['See [docs](https://a.dev)[^1] here.\n', 'Take f(x)[0] here.\n'].every(
       (text) => linter.verifyAndFix(text, config, 'doc.md').output === text,
     )
-    // Timed only once the fixes are right, and once, since a slow rule takes about 11 s here
-    const isSlow = (): boolean => {
-      const [ms = 0] = minCpuMs(
-        [() => linter.verify(`(${'(a)'.repeat(30)})x\n`, config, 'doc.md')],
-        1,
-      )
-      return ms > 2000
-    }
     expect(
-      !isMasked || isSlow(),
-      'no-reversed-media-syntax masks links and footnotes and is fast now: re-enable it in src/internal/configs/markdown.ts',
-    ).toBe(true)
+      isMasked,
+      'no-reversed-media-syntax masks links and footnotes now: once it no longer takes exponential time on a run of `(a)` in parentheses, re-enable it in src/internal/configs/markdown.ts',
+    ).toBe(false)
   })
 
   it('`slop/no-em-dash` still finds each position by splitting the text before it', async () => {
@@ -591,7 +583,6 @@ console.log(JSON.stringify({ parser: base.languageOptions.parserOptions.parser ?
     ).toEqual(['node_modules/dep/tsconfig.json', 'tsconfig.json'])
   })
 
-  // In a process of their own: typescript-eslint's project service lives as long as the process
   it.concurrent.each([
     [
       'typescript-eslint keeps a project service per config now: remove the reservation check from src/internal/project-service.ts',
@@ -605,50 +596,7 @@ console.log(JSON.stringify({ parser: base.languageOptions.parserOptions.parser ?
       'a.config.ts',
       'was not found by the project service',
     ],
-    [
-      'typescript-estree words this error differently now: update `DEFAULT_PROJECT_CONFLICT` in src/internal/project-service.ts',
-      'c',
-      'c.config.ts',
-      DEFAULT_PROJECT_CONFLICT,
-    ],
   ])('%s', async (message, dir, file, expected) => {
-    await using project = await withTmpProject('eslint-config-project-service')
-    const tsconfig = '{ "include": ["src"] }\n'
-    await writeFiles(project.dir, {
-      'a/tsconfig.json': tsconfig,
-      'a/a.config.ts': 'export default {}\n',
-      'b/tsconfig.json': tsconfig,
-      'b/b.config.ts': 'export default {}\n',
-      'c/tsconfig.json': tsconfig,
-      'c/src/index.ts': "export { default } from '../c.config.js'\n",
-      'c/c.config.ts': 'export default {}\n',
-    })
-    await fs.symlink(path.join(project.dir, 'a'), path.join(project.dir, 'link'))
-    const script = String.raw`
-const { parser } = await import('typescript-eslint')
-const parse = (root, globs, file) => {
-  try {
-    parser.parseForESLint('export default {}\n', {
-      filePath: file,
-      tsconfigRootDir: root,
-      projectService: { allowDefaultProject: globs },
-    })
-    return 'parsed'
-  } catch (error) {
-    return error.message
-  }
-}
-const { DIR: dir, ROOT: name, FILE: file } = process.env
-if (name !== 'c') {
-  parse(dir + '/a', ['a.config.ts'], dir + '/a/a.config.ts')
-}
-const root = name === 'link' ? dir + '/a' : dir + '/' + name
-console.log(parse(root, [file], dir + '/' + name + '/' + file))
-`
-    const output = await runNodeOk(['--input-type=module', '--eval', script], {
-      cwd: path.join(import.meta.dirname, '..'),
-      env: { DIR: project.dir, ROOT: dir, FILE: file },
-    })
-    expect(output, message).toContain(expected)
+    expect(await parseWithProjectService(dir, file), message).toContain(expected)
   })
 })

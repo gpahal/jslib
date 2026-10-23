@@ -940,7 +940,7 @@ describe('defineConfig validation', () => {
   )
 
   // prettier-plugin-merge formats with each plugin as a range, which prettier-plugin-organize-imports
-  // skips; see the canary in upstream.test.ts
+  // skips; see the canary in upstream.canary.test.ts
   it('throws on prettier-plugin-organize-imports while sortImports is on or before prettier-plugin-merge', () => {
     const name = 'prettier-plugin-organize-imports'
     const lead = `\`${name}\` replaces the import sorter's parsers, so imports would stay unsorted.`

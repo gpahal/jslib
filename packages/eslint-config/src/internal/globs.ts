@@ -81,7 +81,7 @@ export function escapeGlob(filePath: string): string {
  * Relative to `root`
  */
 export function folderGlob(root: string, dir: string): string {
-  const relative = path.relative(root, dir).split(path.sep).join('/')
+  const relative = posixRelative(root, dir)
   return relative === '' ? '**' : `${escapeGlob(relative)}/**`
 }
 
@@ -200,7 +200,7 @@ function rebaseGlobDown(glob: string, folders: ReadonlyArray<string>): Array<str
  */
 export function rebaseGlob(glob: string, basePath: string, root: string): Array<string> {
   if (isInside(basePath, root)) {
-    const down = path.relative(root, basePath).split(path.sep).join('/')
+    const down = posixRelative(root, basePath)
     if (down === '') {
       return [glob]
     }
@@ -228,4 +228,11 @@ export function joinSiblingGlob(names: ReadonlyArray<string>, glob: string): str
 export function isInside(child: string, parent: string): boolean {
   const relative = path.relative(parent, child)
   return relative === '' || (!path.isAbsolute(relative) && relative.split(path.sep)[0] !== '..')
+}
+
+/**
+ * `to` relative to `from`, with `/` separators
+ */
+export function posixRelative(from: string, to: string): string {
+  return path.relative(from, to).split(path.sep).join('/')
 }

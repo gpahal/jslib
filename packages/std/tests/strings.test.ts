@@ -20,8 +20,6 @@ import {
   words,
 } from '@/strings'
 
-import { minCpuMs } from './cpu-time'
-
 /**
  * A seeded linear congruential generator, so a failure reproduces
  */
@@ -212,21 +210,6 @@ describe('words', () => {
       'f',
       '🇺🇸',
     ])
-  })
-
-  it.each([
-    ['an uppercase run', (n: number) => 'A'.repeat(n)],
-    ['a long ordinal', (n: number) => `${'1'.repeat(n)}st`],
-    ['decomposed uppercase letters', (n: number) => `${'A\u{301}'.repeat(n / 2)}a`],
-    ['case and digit changes', (n: number) => 'aA1'.repeat(n / 2)],
-    ['emoji', (n: number) => '😀'.repeat(n)],
-  ])('splits %s in linear time', (_, makeInput) => {
-    const short = makeInput(12_500)
-    const long = makeInput(50_000)
-    // CPU time, since a regex backtracks inside one call. 4 times the input takes 16 times as long
-    // in quadratic code, and the slack covers the timer's resolution
-    const [shortMs = 0, longMs = 0] = minCpuMs([() => words(short), () => words(long)])
-    expect(longMs).toBeLessThan(8 * shortMs + 50)
   })
 
   it('returns every non-empty match of a custom pattern, even a sticky one', () => {

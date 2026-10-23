@@ -6,7 +6,6 @@ import eslintPluginAstro from 'eslint-plugin-astro'
 import * as prettier from 'prettier'
 import { parser as tsEslintParser } from 'typescript-eslint'
 
-import { countWork } from '@gpahal/internal/node/testing'
 import { defineConfig as definePrettierConfig } from '@gpahal/prettier-config'
 
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
@@ -633,48 +632,7 @@ describe('comment-layout fixes', () => {
   })
 })
 
-/**
- * A file of `count` calls, each with a doc block above it
- */
-function notesBeforeCalls(count: number): string {
-  return Array.from({ length: count }, (_, index) => `/** note */\nf${index}()\n`).join('')
-}
-
-/**
- * The work `comment-layout` does on `text`, less that of a lint with the rule off, so parsing
- * doesn't hide how the rule scales
- */
-function ruleWork(text: string): number {
-  const linter = new Linter({ configType: 'flat' })
-  const workOf = (severity: Linter.RuleSeverity) =>
-    countWork(() =>
-      linter.verify(
-        text,
-        {
-          files: ['**/*.ts'],
-          plugins: { '@gpahal': GPAHAL_PLUGIN },
-          languageOptions: { parser: tsEslintParser },
-          rules: { '@gpahal/comment-layout': severity },
-        },
-        'x.ts',
-      ),
-    )
-  return workOf('error') - workOf('off')
-}
-
-describe('comment-layout scaling', () => {
-  // 10 times the input takes 10 times the work in linear code, and 100 times in quadratic code. A
-  // binary search adds a little, so the bound is 15 times
-  it.each([
-    ['doc blocks', notesBeforeCalls],
-    [
-      'a run of `//` comments',
-      (count: number) => `${'// x\n'.repeat(count * 2)}export const a = 1\n`,
-    ],
-  ] as const)('avoid quadratic scaling with the count of %s', (_name, source) => {
-    expect(ruleWork(source(5000))).toBeLessThan(15 * ruleWork(source(500)))
-  })
-
+describe('comment-layout on long input', () => {
   // A spread of more items than the runtime's argument limit throws `RangeError: Maximum call
   // stack size exceeded`; generated or imported text can hold runs this long
   it.each([

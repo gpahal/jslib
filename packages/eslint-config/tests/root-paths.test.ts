@@ -4,14 +4,12 @@ import { pathToFileURL } from 'node:url'
 
 import { ESLint, type Linter } from 'eslint'
 
-import { assertBuildIsCurrent, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
+import { withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 
 import { defineConfig } from '@/index'
 import { describeRootSpellingFix } from '@/internal/root-spelling'
 
 import { BUILD_DIR, eslintWith } from './helpers'
-
-beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
 const CONFIG_URL = JSON.stringify(pathToFileURL(path.join(BUILD_DIR, 'index.js')).href)
 

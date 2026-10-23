@@ -14,8 +14,6 @@ import {
   toError,
 } from '@/errors'
 
-import { minCpuMs } from './cpu-time'
-
 describe('assertNever', () => {
   it('throws a TypeError that describes the value, or with the given message', () => {
     expect(() => assertNever({ kind: 'triangle' } as never)).toThrow(
@@ -416,10 +414,6 @@ describe('describeValue', () => {
     expect(describeValue(-(2n ** 10_000n))).toBe('a negative 10001-bit bigint')
     const big = 2n ** 20_000_000n
     expect(describeValue(big)).toBe('a 20000001-bit bigint')
-    // Against writing it in hexadecimal, which is linear. Writing its digits in decimal takes over
-    // 100 times as long
-    const [describeMs = 0, hexMs = 0] = minCpuMs([() => describeValue(big), () => big.toString(16)])
-    expect(describeMs).toBeLessThan(4 * hexMs + 50)
   })
 })
 

@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { assertBuildIsCurrent, withTmpProject } from '@gpahal/internal/node/testing'
+import { withTmpProject } from '@gpahal/internal/node/testing'
 
 import { linkTailwind, TAILWIND_DIR } from './helpers'
 
@@ -11,7 +11,6 @@ const PACKAGE_DIR = path.join(import.meta.dirname, '..')
 // `runNode` always empties `NODE_PATH`, so this test sets it on a child process of its own
 describe('NODE_PATH', () => {
   it("doesn't resolve tailwindcss/theme.css through it", async () => {
-    await assertBuildIsCurrent(path.join(PACKAGE_DIR, 'build'))
     await using project = await withTmpProject('stylelint-config-node-path', {
       'app/package.json': '{}',
       'app/global.css': "@import 'tailwindcss';\n",

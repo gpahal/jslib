@@ -38,7 +38,8 @@ const ESLINT_REACT_TYPED_RULES = [
 /**
  * Typed rules that throw without type information yet don't set `meta.docs.requiresTypeChecking`:
  * @e18e/eslint-plugin 0.8.1's that call `getTypedParserServices`, and @eslint-react's.
- * `tests/upstream-workarounds.test.ts` fails once either plugin flags its rules: then remove them
+ * `tests/upstream-workarounds.canary.test.ts` fails once either plugin flags its rules: then
+ * remove them
  */
 export const UNFLAGGED_TYPED_RULES: ReadonlyArray<string> = [
   'e18e/no-indexof-equality',
@@ -89,7 +90,7 @@ function isWarnEntry(entry: unknown): boolean {
 /**
  * A skipped test is often deliberate, as for a known failure, but shouldn't go unnoticed
  */
-export const PRESET_WARNINGS: ReadonlySet<string> = new Set(['vitest/no-disabled-tests'])
+const PRESET_WARNINGS: ReadonlySet<string> = new Set(['vitest/no-disabled-tests'])
 
 function isNormalizedWarning(name: string, entry: unknown): boolean {
   return isWarnEntry(entry) && !PRESET_WARNINGS.has(name)

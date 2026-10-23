@@ -13,8 +13,8 @@ import {
   NOT_CONFIG_INFIXES,
   TYPED_CODE_EXTNS_WITH_DOT,
 } from '@/internal/files'
-import { findPackageJson } from '@/internal/fs'
-import { isInside } from '@/internal/globs'
+import { findPackageJson, followEntry, readTextFile } from '@/internal/fs'
+import { isInside, posixRelative } from '@/internal/globs'
 
 type TypeScript = typeof TypeScriptModule
 
@@ -45,6 +45,14 @@ const STORYBOOK_CANDIDATE_REGEX = /^(?!.*\.d\.[cm]?ts$).+\.(?:[cm]?[jt]s|tsx)$/
 
 export function isStorybookCandidate(name: string): boolean {
   return STORYBOOK_CANDIDATE_REGEX.test(name)
+}
+
+/**
+ * On first use and synchronously, so the options resolve before the configs build
+ */
+export function loadTypeScript(): TypeScript {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- `require` returns `any`, and this is the `typescript` module
+  return createRequire(import.meta.url)('typescript') as TypeScript
 }
 
 /**
@@ -96,14 +104,7 @@ function listFolder(folder: string): FileSystemEntries {
   const files: Array<string> = []
   const directories: Array<string> = []
   for (const entry of entries) {
-    let stats: fs.Stats | fs.Dirent | undefined = entry
-    if (entry.isSymbolicLink()) {
-      try {
-        stats = fs.statSync(path.join(folder, entry.name), { throwIfNoEntry: false })
-      } catch {
-        stats = undefined
-      }
-    }
+    const stats = followEntry(entry, path.join(folder, entry.name))
     if (stats?.isFile() === true) {
       files.push(entry.name)
     } else if (stats?.isDirectory() === true) {
@@ -300,8 +301,7 @@ export function checkDefaultProjectTsconfig(root: string): DefaultProjectProblem
 }
 
 function findDefaultProjectProblem(configFile: string): DefaultProjectProblem | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- `require` returns `any`, and this is the `typescript` module
-  const ts = createRequire(import.meta.url)('typescript') as TypeScript
+  const ts = loadTypeScript()
   if (!ts.sys.fileExists(configFile)) {
     return { kind: 'missing' }
   }
@@ -423,7 +423,7 @@ export function discoverProjects(
   const toRelative = (files: ReadonlyArray<string>, unlisted: ReadonlySet<string>) =>
     files
       .filter((file) => unlisted.has(file))
-      .map((file) => path.relative(root, file).split(path.sep).join('/'))
+      .map((file) => posixRelative(root, file))
       .toSorted((a, b) => (a < b ? -1 : Number(a > b)))
   const rootKey = path.resolve(root)
   let defaultProjectFiles = getLatest(discoveries, rootKey, memoKey)
@@ -451,14 +451,6 @@ export function discoverProjects(
 function stampOf(file: string): string | null {
   const stats = fs.statSync(file, { throwIfNoEntry: false })
   return stats === undefined ? null : `${String(stats.mtimeMs)}:${String(stats.size)}`
-}
-
-function readText(file: string): string | null {
-  try {
-    return fs.readFileSync(file, 'utf8')
-  } catch {
-    return null
-  }
 }
 
 /**
@@ -491,8 +483,8 @@ function findImportedFiles(
   for (let index = 0; index < queue.length && found.size < wanted.size; index++) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the index is in range
     const file = queue[index]!
-    const text = readText(file)
-    if (text === null) {
+    const text = readTextFile(file)
+    if (text === undefined) {
       continue
     }
     const info = ts.preProcessFile(text, true, true)
@@ -521,9 +513,7 @@ function findUnlistedFiles(
   candidates: ReadonlyArray<string>,
   sourceFiles: ReadonlyArray<string>,
 ): Set<string> {
-  // Synchronously, so the options resolve before the configs build
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- `require` returns `any`, and this is the `typescript` module
-  const ts = createRequire(import.meta.url)('typescript') as TypeScript
+  const ts = loadTypeScript()
   const key = canonicalFileName(ts)
   const projects: ParsedProjects = {
     key,
@@ -627,8 +617,7 @@ export function isAstroTypesFileMissing(root: string): boolean {
   if (fs.existsSync(typesFile)) {
     return false
   }
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- `require` returns `any`, and this is the `typescript` module
-  const ts = createRequire(import.meta.url)('typescript') as TypeScript
+  const ts = loadTypeScript()
   const configFile = path.join(root, 'tsconfig.json')
   if (!ts.sys.fileExists(configFile)) {
     return false

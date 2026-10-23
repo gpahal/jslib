@@ -6,7 +6,6 @@ import * as prettier from 'prettier'
 import type { ExpectStatic } from 'vitest'
 
 import {
-  assertBuildIsCurrent,
   readCodeBlocks,
   readMarkdownSection,
   splitFileNameComment,
@@ -764,12 +763,6 @@ async function setUpRecipe({
   }
   return project
 }
-
-beforeAll(async () => {
-  for (const name of ['std', 'eslint-config', 'prettier-config', 'stylelint-config']) {
-    await assertBuildIsCurrent(path.join(REPO_DIR, 'packages', name, 'build'))
-  }
-})
 
 // The fixers' Stylelint commands read `.gitignore`, and pass without one
 test('the minimal recipe writes a .gitignore', () => {

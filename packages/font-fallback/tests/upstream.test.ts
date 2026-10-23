@@ -2,22 +2,16 @@ import { once } from 'node:events'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 
-import { entireMetricsCollection } from '@capsizecss/metrics/entireMetricsCollection'
 import { create } from 'fontkitten'
 
-import { CFF_PATH, FIGTREE_PATH } from './fixtures'
-import { getTable, readBytes, replaceTable, setTableRecord } from './helpers'
+import { FIGTREE_PATH } from './fixtures'
+import { readBytes, setTableRecord } from './helpers'
 
-describe('fontkitten workarounds', () => {
-  it('still overreads CFF maxp tables; remove padShortMaxp in parse.ts, which pads direct and WOFF2 input, when fixed', async () => {
-    const bytes = await readBytes(CFF_PATH)
-    const maxp = getTable(bytes, 'maxp')
-    expect(maxp).toHaveLength(6)
-    const font = create(Buffer.from(replaceTable(bytes, 'maxp', maxp)))
-    assert(!font.isCollection)
-    expect(Reflect.get(font, 'maxp')).toBeUndefined()
-  })
+// Upstream behavior that this package's code relies on, which isn't a bug it works around. Each
+// test names the code to update when it fails. The canaries of those bugs are in
+// `upstream.canary.test.ts`
 
+describe('fontkitten contracts', () => {
   it('still maps code points to glyph ids by its private cmap processor; update readMetrics in parse.ts when this fails', async () => {
     const font = create(Buffer.from(await readBytes(FIGTREE_PATH)))
     assert(!font.isCollection)
@@ -34,20 +28,6 @@ describe('fontkitten workarounds', () => {
     assert(!font.isCollection)
     expect(Reflect.get(font, 'post')).toBeUndefined()
     expect(Reflect.get(font, 'head')).toBeDefined()
-  })
-})
-
-describe('@capsizecss/metrics workarounds', () => {
-  it('still gives Coiny and Revalia a positive descent; remove the Math.abs in families.ts when fixed', () => {
-    expect(entireMetricsCollection.coiny.variants.regular).toMatchObject({ descent: 250 })
-    expect(entireMetricsCollection.revalia.variants.regular).toMatchObject({ descent: 382 })
-  })
-
-  it('still types a descent of 0 as missing; remove the default descent in families.ts when fixed', () => {
-    const face = entireMetricsCollection.allkin.variants.regular
-    expect(face).toMatchObject({ descent: 0 })
-    // @ts-expect-error - the types leave out a descent of 0
-    expect(face.descent).toBe(0)
   })
 })
 

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { assertBuildIsCurrent, runNodeOk } from '@gpahal/internal/node/testing'
+import { runNodeOk } from '@gpahal/internal/node/testing'
 
 import {
   checkCorePeerVersions,
@@ -12,9 +12,7 @@ import {
   warnOfSonarjsTypescriptCopy,
 } from '@/internal/peers'
 
-import { BUILD_DIR, captureWarnings, CORE_AREAS_OFF, FIXTURES_DIR, withProject } from './helpers'
-
-beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
+import { captureWarnings, CORE_AREAS_OFF, FIXTURES_DIR, withProject } from './helpers'
 
 const PACKAGE_DIR = path.join(import.meta.dirname, '..')
 

@@ -1,11 +1,9 @@
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { assertBuildIsCurrent, runNodeOk } from '@gpahal/internal/node/testing'
+import { runNodeOk } from '@gpahal/internal/node/testing'
 
 import { BUILD_DIR } from './helpers'
-
-beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
 /**
  * Builds the build's config for each options of `process.argv[2]` in turn, and prints the module URLs that load during each build, each once, since the

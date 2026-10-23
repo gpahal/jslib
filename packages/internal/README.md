@@ -4,7 +4,7 @@ Unpublished code shared by the `@gpahal/*` packages. A package imports it as a d
 
 ## Modules
 
-Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.browser.json` type-checks them without Node's types, and `tests/browser.test.ts` checks that their builds import no Node module. Node-only modules are in `src/node/`, imported as `@gpahal/internal/node/<name>`.
+Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.browser.json` type-checks them without Node's types. Node-only modules are in `src/node/`, imported as `@gpahal/internal/node/<name>`.
 
 | Module | Main exports | Runs in |
 | --- | --- | --- |
@@ -15,16 +15,15 @@ Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.brow
 | `node/cli` | `readPackageVersion`, `formatCliError`, `getCauses` | Node |
 | `node/json` | `readJsonFile` | Node |
 | `node/package-manager` | `detectPackageManager`, `formatInstallCommand` | Node |
-| `node/paths` | `resolvePathOrFileUrl`, `isRelativePath`, the `PATH_OR_FILE_URL_*` messages | Node |
-| `node/resolve` | `resolvePath`, `isResolvable`, `resolveFromNodeModules`, `resolveFile`, `findInstalledPackage`, `missingPeersError`, `formatPeerSpecifier` | Node |
+| `node/paths` | `resolvePathOrFileUrl`, `resolvePathOption`, `isRelativePath`, the `PATH_OR_FILE_URL_*` messages | Node |
+| `node/resolve` | `resolvePath`, `isResolvable`, `resolveFromNodeModules`, `resolveFile`, `findInstalledPackage`, `findNodeModulesManifest`, `missingPeersError`, `formatPeerSpecifier` | Node |
 | `node/root` | `checkRoot` | Node |
-| `node/source-maps` | `isSourceMap`, `resolveSourcePath`, `isHashedSource`, `hashSource`, `isPublishedFile`, `dropSources` | Node, builds and tests only |
-| `node/testing` | `runNode`, `runNodeOk`, `withTmpProject`, `writeFiles`, `assertBuildIsCurrent`, `countCalls`, `countWork`, `minCpuMs`, `readMarkdownSection`, `readCodeBlocks`, `splitFileNameComment` | Node, tests only |
+| `node/source-maps` | `isSourceMap`, `resolveSourcePath`, `isPublishedFile`, `dropSources` | Node, builds and tests only |
+| `node/testing` | `runNode`, `runNodeOk`, `withTmpProject`, `writeFiles`, `minCpuMs`, `readMarkdownSection`, `readCodeBlocks`, `splitFileNameComment` | Node, tests only |
 
 The JSDoc gives the details. The rules that span modules:
 
 - `node/resolve`'s functions take the caller's `import.meta.resolve`, as `(specifier) => import.meta.resolve(specifier)`, so a package resolves from itself. `resolveFromNodeModules` and `findInstalledPackage` resolve from a user's file through the `node_modules` folders above it, never `NODE_PATH`, which pnpm sets for package scripts.
-- `assertBuildIsCurrent(buildDir)` checks a build against the SHA-256 source hashes that the root `tsdown.config.ts` records in each source map, which survive Turbo cache restores.
 - Only tests import `node/testing`. The root ESLint config forbids importing it in `packages/*/src`.
 
 ## node/options and node/zod

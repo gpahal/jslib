@@ -1,6 +1,6 @@
 #!/bin/sh
-# Runs before the gates to fail fast, and after them to catch a build's rewrite of `package.json`
-# exports
+# Runs before the publish build to fail fast, and after it to catch a build's rewrite of
+# `package.json` exports
 
 # Captured first, so a failing `git status` fails the check instead of reading as a clean tree.
 # `--untracked-files=all` overrides a `status.showUntrackedFiles=no` setting

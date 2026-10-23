@@ -1,11 +1,9 @@
 /**
- * The source maps of the builds, which the root `tsdown.config.ts` completes and
- * `assertBuildIsCurrent` from `@gpahal/internal/node/testing` checks, so both resolve and hash
- * sources the same way. The root config imports this module by path, and std's build loads that
- * config, so it imports no workspace package. Contract: parsed JSON from the builds' own maps
+ * The source maps of the builds, which the root `tsdown.config.ts` completes. The root config
+ * imports this module by path, and std's build loads that config, so it imports no workspace
+ * package. Contract: parsed JSON from the builds' own maps
  */
 
-import { createHash } from 'node:crypto'
 import path from 'node:path'
 
 export type SourceMap = {
@@ -14,11 +12,6 @@ export type SourceMap = {
   sourcesContent?: Array<string | null> | undefined
   names?: Array<string> | undefined
   mappings?: string | undefined
-  /**
-   * The SHA-256 of each TypeScript source, in hex, and `null` for the others, such as
-   * `package.json`
-   */
-  x_sourceHashes?: Array<string | null> | undefined
 }
 
 export function isSourceMap(value: unknown): value is SourceMap {
@@ -40,14 +33,6 @@ export function isSourceMap(value: unknown): value is SourceMap {
  */
 export function resolveSourcePath(mapPath: string, map: SourceMap, source: string): string {
   return path.resolve(path.dirname(mapPath), map.sourceRoot ?? '', source)
-}
-
-export function isHashedSource(source: string): boolean {
-  return /\.[cm]?ts$/.test(source)
-}
-
-export function hashSource(content: string): string {
-  return createHash('sha256').update(content).digest('hex')
 }
 
 /**
@@ -109,8 +94,7 @@ const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345
 /**
  * Remove the sources that `isDropped` picks from `map`, with their `sourcesContent`. The segments
  * that pointed at them keep their generated column but map to nothing, so a tool such as
- * TypeScript's go-to-definition stays in the generated file instead of opening a missing source.
- * Call it before computing anything indexed by source, such as `x_sourceHashes`
+ * TypeScript's go-to-definition stays in the generated file instead of opening a missing source
  */
 export function dropSources(map: SourceMap, isDropped: (source: string) => boolean): void {
   const kept = map.sources.map((source) => !isDropped(source))

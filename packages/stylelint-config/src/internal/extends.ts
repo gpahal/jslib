@@ -5,9 +5,6 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { types } from 'node:util'
 
-// eslint-disable-next-line e18e/ban-dependencies -- Use Stylelint's data loaders to preserve its config formats and parsing behavior
-import { defaultLoaders } from 'cosmiconfig'
-
 import type { Config } from 'stylelint'
 
 import { toArray } from '@gpahal/std/arrays'
@@ -356,13 +353,16 @@ async function evaluateConfigFile(
   hash: string,
 ): Promise<unknown> {
   const extension = path.extname(filename)
-  const dataLoader = ['', '.yaml', '.yml'].includes(extension)
-    ? defaultLoaders['.yaml']
+  const dataExtension = ['', '.yaml', '.yml'].includes(extension)
+    ? '.yaml'
     : extension === '.json'
-      ? defaultLoaders['.json']
+      ? '.json'
       : undefined
-  if (dataLoader !== undefined) {
-    return dataLoader(filename, content)
+  if (dataExtension !== undefined) {
+    // Imported only for a data file
+    // eslint-disable-next-line e18e/ban-dependencies -- Use Stylelint's data loaders to preserve its config formats and parsing behavior
+    const { defaultLoaders } = await import('cosmiconfig')
+    return defaultLoaders[dataExtension](filename, content)
   }
   const require = createRequire(import.meta.url)
   const commonjs = require.cache[filename]

@@ -8,23 +8,15 @@ import path from 'node:path'
 import type { ESLint, Linter } from 'eslint'
 import { defineConfig as eslintDefineConfig } from 'eslint/config'
 
-import {
-  assertBuildIsCurrent,
-  minCpuMs,
-  runNodeOk,
-  withTmpProject,
-  writeFiles,
-} from '@gpahal/internal/node/testing'
+import { runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import { IGNORES } from '@/internal/configs/ignores'
 import { findGitCommonDir, readGitModules } from '@/internal/git'
 import { scanProject } from '@/internal/project-scan'
 import { resolveOptions } from '@/internal/resolve'
-import { createIgnoreCheck, IgnoreLayers } from '@/internal/walk'
 
 import {
-  BUILD_DIR,
   captureWarnings,
   collator,
   CORE_AREAS_OFF_SOURCE,
@@ -390,12 +382,6 @@ describe('git ignore rules', () => {
         scanProject({ root, gitignore: true, ignores: IGNORES, findsTsconfigFiles: false })
       const { gitignores } = scan()
       scan()
-      const isIgnored = createIgnoreCheck(new IgnoreLayers(gitignores))
-      const [ms = 0] = minCpuMs(
-        [() => isIgnored(path.join(root, 'src', `${'a'.repeat(44)}.ts`), false)],
-        1,
-      )
-      expect(ms).toBeLessThan(100)
       expect(gitignores.flatMap(({ ignores }) => ignores)).toEqual([`**/${kept}`])
     })
     expect(warnings).toEqual([
@@ -1026,8 +1012,6 @@ async function lintRuns(
 // typescript-eslint keeps one project service per process, which the first config that uses it
 // creates. These lint in a process of their own, from the build
 describe('the project service', () => {
-  beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
-
   const RUN_A = { cwd: 'packages/a', files: ['eslint.config.mjs', 'a.config.ts', 'src/index.ts'] }
   const RUN_B = { cwd: 'packages/b', files: ['eslint.config.mjs', 'b.config.ts', 'src/index.ts'] }
 

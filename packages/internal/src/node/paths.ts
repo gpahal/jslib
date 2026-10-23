@@ -6,6 +6,8 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { formatMessage, formatNames } from '@gpahal/std/errors'
+
 const FILE_URL_EXPECTED =
   "or a `file:` URL or URL string with an absolute path, such as `import.meta.resolve('./src/styles/global.css')`"
 
@@ -74,4 +76,37 @@ export function resolvePathOrFileUrl(
   } catch (error) {
     return onInvalid(error)
   }
+}
+
+export type PathOptionContext = {
+  prefix: string
+  /**
+   * The option's name, such as `tailwindcss.entryPoint`
+   */
+  name: string
+}
+
+/**
+ * {@link resolvePathOrFileUrl} of the option `name`
+ *
+ * @throws TypeError "<prefix>: `<name>`: expected <what it takes>, received `<value>`", with the
+ *   whole value, and the parse error, if any, as the `cause`.
+ */
+export function resolvePathOption(
+  value: string | URL,
+  root: string | undefined,
+  { prefix, name }: PathOptionContext,
+): string {
+  return resolvePathOrFileUrl(value, root, (cause) => {
+    // The whole value, not `describeValue`, which cuts a long path short and gives only the class
+    // of a `URL`
+    throw new TypeError(
+      formatMessage(
+        prefix,
+        [formatNames([name])],
+        `expected ${root === undefined ? PATH_OR_FILE_URL_WITHOUT_ROOT_EXPECTED : PATH_OR_FILE_URL_EXPECTED}, received ${formatNames([String(value)])}`,
+      ),
+      cause === undefined ? undefined : { cause },
+    )
+  })
 }

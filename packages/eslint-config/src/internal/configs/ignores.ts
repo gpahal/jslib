@@ -1,6 +1,12 @@
 import path from 'node:path'
 
-import { escapeGlob, folderGlob, joinSiblingGlob, rebaseGlob } from '@/internal/globs'
+import {
+  escapeGlob,
+  folderGlob,
+  joinSiblingGlob,
+  posixRelative,
+  rebaseGlob,
+} from '@/internal/globs'
 import type { GitIgnores } from '@/internal/project-scan'
 import { findRootSpellings, GUARDS_PLUGIN } from '@/internal/root-spelling'
 import type { TypedConfig, TypedRules } from '@/internal/types'
@@ -48,6 +54,13 @@ export const IGNORES: Array<string> = [
 ]
 
 /**
+ * The folder names of the `**\/<name>` globs of {@link IGNORES}
+ */
+export const IGNORED_FOLDER_NAMES: ReadonlySet<string> = new Set(
+  IGNORES.flatMap((glob) => /^\*\*\/([^*/]+)$/.exec(glob)?.[1] ?? []),
+)
+
+/**
  * The git ignore globs are rebased onto `root`, the finalizer's `basePath`, so deeper ignore files
  * can un-ignore what earlier ones ignored
  */
@@ -78,12 +91,10 @@ export function ignores({
  * Each name matched in any case
  */
 function anyCaseGlob(top: string, dir: string): string {
-  return escapeGlob(path.relative(top, dir).split(path.sep).join('/')).replaceAll(
-    /\p{L}/gu,
-    (char) =>
-      char.toLowerCase() === char.toUpperCase()
-        ? char
-        : `[${char.toLowerCase()}${char.toUpperCase()}]`,
+  return escapeGlob(posixRelative(top, dir)).replaceAll(/\p{L}/gu, (char) =>
+    char.toLowerCase() === char.toUpperCase()
+      ? char
+      : `[${char.toLowerCase()}${char.toUpperCase()}]`,
   )
 }
 

@@ -10,8 +10,7 @@ import ts from 'typescript'
 
 const packageDir = path.join(import.meta.dirname, '..')
 
-export type Outcome =
-  { kind: 'value'; value: unknown } | { kind: 'error'; type: string; message: string }
+type Outcome = { kind: 'value'; value: unknown } | { kind: 'error'; type: string; message: string }
 
 const ERROR_COMMENT_REGEX = /^(?<type>Error|TypeError|RangeError|DOMException): (?<message>.+)$/
 const STD_IMPORT_REGEX = /^@gpahal\/std\/(?<module>[a-z]+)$/
@@ -52,7 +51,7 @@ function isLiteral(node: ts.Node): boolean {
 /**
  * The outcome a result comment states, or `undefined` for a prose comment
  */
-export function parseOutcome(comment: string): Outcome | undefined {
+function parseOutcome(comment: string): Outcome | undefined {
   const errorMatch = ERROR_COMMENT_REGEX.exec(comment)
   return errorMatch
     ? { kind: 'error', type: errorMatch.groups!['type']!, message: errorMatch.groups!['message']! }
@@ -142,7 +141,7 @@ function toBodyStatement(code: string, statement: ts.Statement, outcomes: Array<
  * The body of an async function that runs the example `code`, with its checked statements calling `__check`,
  * and what each of them must give
  */
-export function compileBlock(code: string): { body: string; outcomes: Array<Outcome> } {
+function compileBlock(code: string): { body: string; outcomes: Array<Outcome> } {
   const sourceFile = ts.createSourceFile('block.ts', code, ts.ScriptTarget.Latest, true)
   const outcomes: Array<Outcome> = []
   const source = sourceFile.statements
@@ -185,7 +184,7 @@ function describeThrown(error: unknown): Outcome {
 /**
  * What a checked statement of a block gives
  */
-export async function settle(run: () => Promise<unknown>): Promise<Outcome> {
+async function settle(run: () => Promise<unknown>): Promise<Outcome> {
   try {
     return { kind: 'value', value: await run() }
   } catch (error) {
@@ -196,7 +195,7 @@ export async function settle(run: () => Promise<unknown>): Promise<Outcome> {
 /**
  * A function that runs an example's compiled body, inside an async arrow since the body uses `await`
  */
-export function compileRunner(
+function compileRunner(
   body: string,
 ): (
   modules: Record<string, unknown>,

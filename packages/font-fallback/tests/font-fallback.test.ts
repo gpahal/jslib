@@ -48,7 +48,7 @@ describe('rules', () => {
   it('computes the overrides Capsize does for every family with a regular face', async () => {
     const { arial } = entireMetricsCollection
     const faces = Object.values(entireMetricsCollection).flatMap((family) => {
-      // The types leave out a descent of 0 (see `tests/upstream.test.ts`)
+      // The types leave out a descent of 0 (see `tests/upstream.canary.test.ts`)
       const variants: {
         readonly [variant: string]: unknown
         regular?: Omit<FontStackMetrics, 'descent'> & { descent?: number }

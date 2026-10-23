@@ -1,12 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import {
-  assertBuildIsCurrent,
-  runNode,
-  withTmpProject,
-  writeFiles,
-} from '@gpahal/internal/node/testing'
+import { runNode, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 
 const PACKAGE_DIR = path.join(import.meta.dirname, '..')
 
@@ -77,7 +72,6 @@ describe('a pnpm consumer', () => {
   let projectDir: string
 
   beforeAll(async () => {
-    await assertBuildIsCurrent(BUILD_DIR)
     project = await withTmpProject('stylelint-config-consumer')
     projectDir = project.dir
     const link = path.join(projectDir, 'node_modules/@gpahal/stylelint-config')
@@ -201,7 +195,6 @@ describe('a pnpm consumer without hoisting', () => {
   let projectDir: string
 
   beforeAll(async () => {
-    await assertBuildIsCurrent(BUILD_DIR)
     project = await withTmpProject('stylelint-config-no-hoist')
     projectDir = project.dir
     const nodeModulesDir = path.join(projectDir, 'node_modules')
@@ -259,7 +252,6 @@ describe('a pnpm consumer without hoisting', () => {
 // Stylelint's that reaches a config file only through this package's declarations
 describe('a TypeScript consumer that emits declarations', () => {
   it('names the type of a defineConfig config file', async () => {
-    await assertBuildIsCurrent(BUILD_DIR)
     await using project = await withTmpProject('stylelint-config-declarations', {
       'package.json': '{"type":"module"}\n',
       'stylelint.config.mjs':

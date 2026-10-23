@@ -13,7 +13,7 @@ import {
   resolveFromNodeModules,
   resolvePath,
 } from '@/node/resolve'
-import { assertBuildIsCurrent, withTmpProject } from '@/node/testing'
+import { withTmpProject } from '@/node/testing'
 
 const BUILD_DIR = path.join(import.meta.dirname, '../../build')
 
@@ -137,7 +137,6 @@ describe('resolveFromNodeModules', () => {
       'app/file.js': '',
     })
     // The build, since the source is TypeScript that imports with `@/`
-    await assertBuildIsCurrent(BUILD_DIR)
     const resolveModule = pathToFileURL(path.join(BUILD_DIR, 'node/resolve.js')).href
     const code = `
       const { resolveFromNodeModules } = await import(${JSON.stringify(resolveModule)})

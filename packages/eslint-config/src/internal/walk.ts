@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { createGlobMatcher, withoutLeadingDotSlash } from '@/internal/globs'
+import { createGlobMatcher, posixRelative, withoutLeadingDotSlash } from '@/internal/globs'
 
 /**
  * As an ESLint global ignores config holds them
@@ -118,7 +118,7 @@ function isIgnoredPath(
 ): boolean {
   let isIgnored = false
   for (const { basePath, ignores } of layers.above(absolutePath)) {
-    const relativePath = path.relative(basePath, absolutePath).split(path.sep).join('/')
+    const relativePath = posixRelative(basePath, absolutePath)
     for (const glob of ignores) {
       if (glob === '' || glob === '!') {
         continue

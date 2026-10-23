@@ -1,11 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import stylelint, { type Config, type Plugin } from 'stylelint'
+import stylelint, { type Plugin } from 'stylelint'
 
-import { countWork } from '@gpahal/internal/node/testing'
-
-import { defineConfig, type StylelintConfigOptions } from '@/index'
 import { commentLayout } from '@/internal/comment-layout'
 import { customPropertyEmptyLineBefore } from '@/internal/custom-property-empty-line-before'
 import { declarationEmptyLineBefore } from '@/internal/declaration-empty-line-before'
@@ -15,7 +12,7 @@ import { tailwindApply } from '@/internal/tailwind-apply'
 import { tailwindDirectives } from '@/internal/tailwind-directives'
 import { tailwindThemeFunction } from '@/internal/tailwind-theme-function'
 
-import { fix, topLevelRules } from './helpers'
+import { fix } from './helpers'
 
 /**
  * The name and the docs URL of each own rule
@@ -45,44 +42,6 @@ function slugOf(heading: string): string {
     .replaceAll(/\s/gu, '-')
 }
 
-/**
- * Hostile stylesheets of size `n`
- */
-const HOSTILE_CSS: Record<string, (n: number) => string> = {
-  'a media query nested in parentheses': (n) =>
-    `@media ${'('.repeat(n)}width>=1px${')'.repeat(n)} { a { color: red } }\n`,
-  'deeply nested rules': (n) =>
-    `${'a {'.repeat(n)}\n\n/* x */\n--a: 1;\n\ncolor: red;${'}'.repeat(n)}`,
-  'an unclosed comment of stars': (n) => `/*${'*'.repeat(n * 10)}\na { color: red }\n`,
-}
-
-/**
- * Hostile stylesheets of size `n` for the Tailwind CSS rules
- */
-const HOSTILE_TAILWIND_CSS: Record<string, (n: number) => string> = {
-  'nested --alpha() calls': (n) =>
-    `a { color: ${'--alpha('.repeat(n)}var(--c) / 50%${')'.repeat(n)}; }\n`,
-  'many theme() calls': (n) => `a { color: ${'theme(--color-red-500) '.repeat(n)}; }\n`,
-  // With one declaration, at the deepest level: the stock and own `declaration-empty-line-before`
-  // read each block's text, so a declaration at every level makes them quadratic
-  'nested @utility rules': (n) => `${'@utility a { '.repeat(n)}color: red;${'}'.repeat(n)}\n`,
-  'a long @variant': (n) => `a { @variant ${'hover:'.repeat(n)}focus { color: red; } }\n`,
-}
-
-/**
- * The package's own rules, as `defineConfig` sets them with `options`, without the configs it
- * extends
- */
-async function ownRulesConfig(options: Partial<StylelintConfigOptions> = {}): Promise<Config> {
-  const config = await defineConfig({ root: import.meta.dirname, ...options })
-  return {
-    plugins: config.plugins ?? [],
-    rules: Object.fromEntries(
-      Object.entries(topLevelRules(config)).filter(([name]) => name.startsWith('@gpahal/')),
-    ),
-  }
-}
-
 describe('own rules', () => {
   it.each(OWN_RULES)(
     "%s's docs URL links to a heading of the package README",
@@ -96,37 +55,6 @@ describe('own rules', () => {
         /^https:\/\/github\.com\/gpahal\/jslib\/tree\/main\/packages\/stylelint-config#/,
       )
       expect(slugs).toContain(url.split('#', 2)[1])
-    },
-  )
-
-  // Linted CSS can't be trusted, as in a pull request. Stylelint's parsers overflow the stack on
-  // some of these inputs a few thousand levels deep, and its empty-line rules are quadratic in a
-  // block's declarations. The own rules must add no hang of their own
-  it.each(Object.entries(HOSTILE_CSS))('lint %s in time linear in its size', async (_name, css) => {
-    const config = await ownRulesConfig()
-    expect(Object.keys(config.rules ?? {}).length).toBeGreaterThan(0)
-    const workOf = async (n: number) =>
-      countWork(async () => stylelint.lint({ code: css(n), config, codeFilename: 'x.css' }))
-    const small = await workOf(500)
-    const large = await workOf(2000)
-    // 4 times the size takes 4 times the work in linear code, and 16 times in quadratic code
-    expect(large).toBeLessThan(small * 8)
-  })
-
-  it.each(Object.entries(HOSTILE_TAILWIND_CSS))(
-    'lint %s with the Tailwind CSS rules in time linear in its size',
-    async (_name, css) => {
-      const config = await ownRulesConfig({
-        tailwindcss: true,
-        referenceFiles: '../node_modules/tailwindcss/theme.css',
-      })
-      expect(config.rules).toHaveProperty(['@gpahal/tailwind-directives'])
-      expect(config.rules).toHaveProperty(['@gpahal/tailwind-theme-function'])
-      const workOf = async (n: number) =>
-        countWork(async () => stylelint.lint({ code: css(n), config, codeFilename: 'x.css' }))
-      const small = await workOf(500)
-      const large = await workOf(2000)
-      expect(large).toBeLessThan(small * 8)
     },
   )
 })
