@@ -8,7 +8,8 @@
  */
 
 import type { AtRule, ChildNode, Container, Rule as CssRule, Node } from 'postcss'
-import stylelint, { type Plugin, type Rule } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Plugin, Rule } from 'stylelint'
 
 import { toArray } from '@gpahal/std/arrays'
 import { isRecord } from '@gpahal/std/objects'

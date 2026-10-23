@@ -1,13 +1,8 @@
 import type { Linter, Rule } from 'eslint'
 
 import { MARKDOWN_LINE_BREAK_REGEX } from '@/internal/markdown/line-breaks'
-import {
-  toHtmlPosition,
-  type Block,
-  type BlockComment,
-  type CodeLine,
-  type FileState,
-} from '@/internal/markdown/processor/blocks'
+import { toHtmlPosition } from '@/internal/markdown/processor/blocks'
+import type { Block, BlockComment, CodeLine, FileState } from '@/internal/markdown/processor/blocks'
 import type { CommentSyntax } from '@/internal/markdown/processor/comments'
 import { isDirectiveMessage } from '@/internal/markdown/processor/directives'
 import { findFirstIndex } from '@/internal/search'

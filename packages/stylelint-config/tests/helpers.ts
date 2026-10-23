@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 /**
  * The real path of the package's Tailwind CSS

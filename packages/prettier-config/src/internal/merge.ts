@@ -9,12 +9,8 @@ import { assertValid, plainObject, typeCheck } from '@gpahal/internal/node/zod'
 import { isArrayOf, uniqueBy } from '@gpahal/std/arrays'
 import { describeValue, formatMessage, formatNames, getErrorCode } from '@gpahal/std/errors'
 import { once } from '@gpahal/std/functions'
-import {
-  isPlainObject,
-  isRecord,
-  omitUndefinedValues,
-  type OmitUndefinedValues,
-} from '@gpahal/std/objects'
+import { isPlainObject, isRecord, omitUndefinedValues } from '@gpahal/std/objects'
+import type { OmitUndefinedValues } from '@gpahal/std/objects'
 
 import type { Config, ConfigInput, Override } from '@/internal/types'
 

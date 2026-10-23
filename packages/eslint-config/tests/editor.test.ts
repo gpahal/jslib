@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url'
 import type { ESLint, Linter } from 'eslint'
 
 import { defineConfig } from '@/index'
-import { isInEditorEnvOf, type EditorEnv } from '@/internal/editor'
+import { isInEditorEnvOf } from '@/internal/editor'
+import type { EditorEnv } from '@/internal/editor'
 
 import { CORE_AREAS_OFF, eslintWith, withProject } from './helpers'
 

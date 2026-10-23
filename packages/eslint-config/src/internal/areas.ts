@@ -5,8 +5,8 @@ import {
   deferred,
   optionsObject,
   resolveSubOptions,
-  type OptionsShape,
 } from '@gpahal/internal/node/options'
+import type { OptionsShape } from '@gpahal/internal/node/options'
 import { plainObject, stringOrStrings, typeCheck } from '@gpahal/internal/node/zod'
 
 import { GLOB_LIST, GLOBS } from '@/internal/checks'
@@ -44,7 +44,8 @@ import {
 } from '@/internal/files'
 import type { Scope } from '@/internal/globs'
 import { isInPnpmWorkspace } from '@/internal/manifests'
-import { AREA_RULE_PREFIXES, PLUGIN_AREAS, type AreaName } from '@/internal/names'
+import { AREA_RULE_PREFIXES, PLUGIN_AREAS } from '@/internal/names'
+import type { AreaName } from '@/internal/names'
 import { rulesConfig } from '@/internal/naming'
 import { warnOfSonarjsTypescriptCopy } from '@/internal/peers'
 import {

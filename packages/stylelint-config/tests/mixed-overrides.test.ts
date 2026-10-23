@@ -4,12 +4,8 @@ import stylelint from 'stylelint'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
-import {
-  defineConfig,
-  type StylelintConfigOptions,
-  type StylelintOverride,
-  type StylelintRules,
-} from '@/index'
+import { defineConfig } from '@/index'
+import type { StylelintConfigOptions, StylelintOverride, StylelintRules } from '@/index'
 
 // An override whose globs match files of several types lints each file as the same override split
 // into one per file type would

@@ -12,7 +12,8 @@ import {
   TYPED_CODE_EXTNS_WITH_DOT,
   UNTYPED_CODE_FILES,
 } from '@/internal/files'
-import { intersectFiles, intersectFileSpecs, type FileSpecs, type Scope } from '@/internal/globs'
+import { intersectFiles, intersectFileSpecs } from '@/internal/globs'
+import type { FileSpecs, Scope } from '@/internal/globs'
 import { named } from '@/internal/naming'
 import type { ImportsCyclesOptions, TypedConfig, TypedRules } from '@/internal/types'
 
@@ -231,9 +232,8 @@ export function imports({
         'import-x/no-named-as-default': 'off',
         'import-x/no-named-as-default-member': 'off',
         'import-x/no-unresolved': 'off',
-        // The default `import type { A, type B, C }` is rejected by TypeScript. `patchUnsafeFixes`
-        // drops merges that leave invalid code
-        'import-x/no-duplicates': ['error', { considerQueryString: true, 'prefer-inline': true }],
+        // `import type { A }` rather than `import { type A }`, which still loads the module
+        'import-x/consistent-type-specifier-style': ['error', 'prefer-top-level'],
       },
     },
   ]

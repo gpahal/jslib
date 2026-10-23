@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util'
 
-import { Input, Root, stringify, type Syntax } from 'postcss'
+import { Input, Root, stringify } from 'postcss'
+import type { Syntax } from 'postcss'
 import postcssHtml from 'postcss-html'
 import postcssMarkdown from 'postcss-markdown'
 import type { Config } from 'stylelint'

@@ -1,6 +1,7 @@
 import * as z from 'zod/mini'
 
-import { listOption, type ListOption } from '@gpahal/internal/node/options'
+import { listOption } from '@gpahal/internal/node/options'
+import type { ListOption } from '@gpahal/internal/node/options'
 import { expectedError } from '@gpahal/internal/node/zod'
 
 export const GLOBS: z.ZodMiniType<Array<string>, Array<string>> = z.array(z.string(), {

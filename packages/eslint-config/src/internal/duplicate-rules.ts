@@ -32,6 +32,12 @@ export const DUPLICATE_RULES: ReadonlyArray<DuplicateRule> = [
     reason: '`import { default as x }`',
   },
   {
+    kept: ['import-x/consistent-type-specifier-style'],
+    off: '@typescript-eslint/no-import-type-side-effects',
+    reason:
+      "`import { type A } from 'a'`. Only the import-x rule reports an inline `type` specifier beside a value one",
+  },
+  {
     kept: ['@typescript-eslint/no-this-alias'],
     off: 'unicorn/no-this-assignment',
     reason: '`const self = this`. The typescript-eslint rule runs in JavaScript files too',

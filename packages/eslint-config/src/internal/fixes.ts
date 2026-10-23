@@ -351,38 +351,14 @@ export function optionsInSettings(
 const DUPLICATES_PATCHED = Symbol('@gpahal/eslint-config no-duplicates fix')
 
 /**
- * `import { type A } from 'a'`, which `@typescript-eslint/no-import-type-side-effects` rewrites.
+ * A value import with an inline `type` specifier, as in `import { type A, b } from 'a'`.
  * `importKind` is TypeScript syntax, which the ESTree types lack
  */
-function isInlineTypeOnlyImport(node: ESTree.ImportDeclaration): boolean {
+function hasInlineTypeSpecifier(node: ESTree.ImportDeclaration): boolean {
   return (
-    Reflect.get(node, 'importKind') === 'value' &&
-    node.specifiers.length > 0 &&
-    node.specifiers.every(
-      (specifier) =>
-        specifier.type === 'ImportSpecifier' && Reflect.get(specifier, 'importKind') === 'type',
-    )
+    Reflect.get(node, 'importKind') !== 'type' &&
+    node.specifiers.some((specifier) => Reflect.get(specifier, 'importKind') === 'type')
   )
-}
-
-function isSideEffectImport(node: ESTree.ImportDeclaration): boolean {
-  return Reflect.get(node, 'importKind') !== 'type' && node.specifiers.length === 0
-}
-
-/**
- * Side-effect and type-only duplicates, whose merge and rewrite leave only `import type`, so the
- * module no longer loads
- */
-function dropsSideEffectImport(imports: ReadonlyArray<ESTree.ImportDeclaration>): boolean {
-  return (
-    imports.some(isSideEffectImport) &&
-    imports.some(isTypeOnlyImport) &&
-    imports.every((node) => isSideEffectImport(node) || isTypeOnlyImport(node))
-  )
-}
-
-function hasDefaultSpecifier(node: ESTree.ImportDeclaration): boolean {
-  return node.specifiers.some((specifier) => specifier.type === 'ImportDefaultSpecifier')
 }
 
 const RECORDING_FIXER: Rule.RuleFixer = {
@@ -407,108 +383,63 @@ function recordFix(fix: Rule.ReportFixer): Array<Rule.Fix> {
 }
 
 /**
- * With `prefer-inline`, merging `import type { A }` and `import B` gives `import B, type { A }`,
- * which doesn't parse. A merge that also takes named specifiers moves `type` into the braces and
- * stays
- */
-function keepsTypeBeforeDefault(
-  declaration: ESTree.ImportDeclaration,
-  groupHasDefault: boolean,
-  fix: Rule.ReportFixer,
-  sourceCode: SourceCode,
-): boolean {
-  const typeToken = sourceCode.getFirstToken(declaration, 1)
-  if (
-    !groupHasDefault ||
-    Reflect.get(declaration, 'importKind') !== 'type' ||
-    typeToken?.value !== 'type' ||
-    hasDefaultSpecifier(declaration)
-  ) {
-    return false
-  }
-  const [start] = rangeOf(typeToken)
-  return recordFix(fix).every(
-    ({ range, text }) => !(text === '' && range[0] <= start && start < range[1]),
-  )
-}
-
-/**
- * Drops `import-x/no-duplicates`' fix, keeping the report, where it leaves invalid code:
+ * Patches `import-x/no-duplicates`' fix, keeping the report:
  *
- * - With a value import of only inline `type` specifiers, ESLint applies the merge and the
- *   `no-import-type-side-effects` rewrite in one pass, writing `import type { A, type B }` (TS2206)
- * - When `keepsTypeBeforeDefault` says the merge writes `import B, type { A }`
- * - When `dropsSideEffectImport` says the module no longer loads
+ * - Drops it for a module with a duplicate holding an inline `type` specifier. The rule groups
+ *   `import { type A, b } from 'a'` with `import type { C } from 'a'`, and merges it into that,
+ *   writing `import type { C, type A, b }` (TS2206). `import-x/consistent-type-specifier-style`
+ *   moves the specifier into its own `import type`, after which the merge is safe
+ * - Starts it at the start of the declaration it merges into, so that it overlaps another rule's
+ *   fix of that declaration, which ESLint then applies in a later pass. Otherwise
+ *   `consistent-type-imports` turning `import { A } from 'a'` into `import type { A } from 'a'`
+ *   and the merge of `import { b } from 'a'` into it apply together as `import type { A, b }`
+ *   (TS1361)
  */
 function patchDuplicateImports(rule: Rule.RuleModule): void {
   patchCreateOnce(rule, DUPLICATES_PATCHED, (create) => (context) => {
     if (!hasPatchedFixes(context)) {
       return create(context)
     }
-    const reports: Array<Rule.ReportDescriptor> = []
-    const declarations: Array<ESTree.ImportDeclaration & Rule.NodeParentExtension> = []
+    const reports: Array<{ descriptor: Rule.ReportDescriptor; declaration: unknown }> = []
     const listeners = create(
       withReport(context, (descriptor) => {
-        reports.push(descriptor)
+        // The rule reports each duplicate's `source`
+        const node = 'node' in descriptor ? descriptor.node : undefined
+        reports.push({ descriptor, declaration: node && Reflect.get(node, 'parent') })
       }),
     )
-    const { ImportDeclaration: onImport, 'Program:exit': onExit } = listeners
+    const { 'Program:exit': onExit } = listeners
     return {
       ...listeners,
-      ImportDeclaration: (node) => {
-        declarations.push(node)
-        onImport?.(node)
-      },
       'Program:exit': (node) => {
         onExit?.(node)
-        // A file can hold thousands of reports, so the lookups are maps, built once
-        const bySource = new Map<unknown, ESTree.ImportDeclaration & Rule.NodeParentExtension>(
-          declarations.map((declaration) => [declaration.source, declaration]),
+        const unsafeModules = new Set(
+          reports.flatMap(({ descriptor, declaration }) =>
+            isNodeOfType(declaration, 'ImportDeclaration') && hasInlineTypeSpecifier(declaration)
+              ? [descriptor.data?.['module']]
+              : [],
+          ),
         )
-        const reported = reports.map((descriptor) => ({
-          declaration: 'node' in descriptor ? bySource.get(descriptor.node) : undefined,
-          module: descriptor.data?.['module'],
-        }))
-        const groups = new Map<unknown, Map<unknown, Array<ESTree.ImportDeclaration>>>()
-        for (const { declaration, module } of reported) {
-          if (declaration === undefined) {
-            continue
-          }
-          const byModule =
-            groups.get(declaration.parent) ?? new Map<unknown, Array<ESTree.ImportDeclaration>>()
-          groups.set(declaration.parent, byModule)
-          const group = byModule.get(module) ?? []
-          byModule.set(module, group)
-          group.push(declaration)
-        }
-        // Once per group, so many duplicates of one module stay linear
-        const facts = new Map<
-          ReadonlyArray<ESTree.ImportDeclaration>,
-          { isUnsafe: boolean; hasDefault: boolean }
-        >()
-        const factsOf = (group: ReadonlyArray<ESTree.ImportDeclaration>) => {
-          let found = facts.get(group)
-          if (found === undefined) {
-            found = {
-              isUnsafe: group.some(isInlineTypeOnlyImport) || dropsSideEffectImport(group),
-              hasDefault: group.some(hasDefaultSpecifier),
-            }
-            facts.set(group, found)
-          }
-          return found
-        }
-        for (const [index, descriptor] of reports.entries()) {
-          const { declaration, module } = reported[index] ?? {}
-          if (declaration === undefined || descriptor.fix == null) {
+        for (const { descriptor, declaration } of reports) {
+          const { fix } = descriptor
+          if (fix == null || !isNodeOfType(declaration, 'ImportDeclaration')) {
             context.report(descriptor)
-            continue
+          } else if (unsafeModules.has(descriptor.data?.['module'])) {
+            context.report({ ...descriptor, fix: undefined })
+          } else {
+            context.report({
+              ...descriptor,
+              fix: (fixer) => {
+                const fixes = fix(fixer)
+                return fixes == null
+                  ? fixes
+                  : [
+                      fixer.insertTextBefore(declaration, ''),
+                      ...('range' in fixes ? [fixes] : fixes),
+                    ]
+              },
+            })
           }
-          const group = groups.get(declaration.parent)?.get(module) ?? [declaration]
-          const { isUnsafe: isGroupUnsafe, hasDefault } = factsOf(group)
-          const isUnsafe =
-            isGroupUnsafe ||
-            keepsTypeBeforeDefault(declaration, hasDefault, descriptor.fix, context.sourceCode)
-          context.report(isUnsafe ? { ...descriptor, fix: undefined } : descriptor)
         }
       },
     }
@@ -855,9 +786,9 @@ export function hasPatchedFixes(context: Rule.RuleContext): boolean {
 
 /**
  * Patches fixes that leave invalid code or change what the code declares, and returns the config
- * that turns the patches on in every file. `import-x/no-duplicates`' fix can race another rule's
- * without checking that it's on, so with `no-import-type-side-effects` off, such a report never
- * gets a fix
+ * that turns the patches on in every file. `import-x/no-duplicates`' patch doesn't check that
+ * `consistent-type-specifier-style` is on, so with it off, a duplicate of a module imported with an
+ * inline `type` specifier never gets a fix
  */
 export function patchUnsafeFixes(
   configs: ReadonlyArray<Pick<Linter.Config, 'plugins'>>,

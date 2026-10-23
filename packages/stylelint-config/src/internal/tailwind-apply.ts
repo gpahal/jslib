@@ -10,8 +10,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { Declaration, parse, type AtRule } from 'postcss'
-import stylelint, { type Plugin, type Rule } from 'stylelint'
+import { Declaration, parse } from 'postcss'
+import type { AtRule } from 'postcss'
+import stylelint from 'stylelint'
+import type { Plugin, Rule } from 'stylelint'
 
 import { resolveFile, resolveFromNodeModules } from '@gpahal/internal/node/resolve'
 import { formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
@@ -21,9 +23,10 @@ import {
   tailwindCompileOf,
   tailwindModulePath,
   tailwindStylesheetPath,
-  type TailwindCompile,
 } from '@/internal/tailwind-loader'
-import { atRulePrelude, functionCalls, segment, type Part } from '@/internal/tailwind-values'
+import type { TailwindCompile } from '@/internal/tailwind-loader'
+import { atRulePrelude, functionCalls, segment } from '@/internal/tailwind-values'
+import type { Part } from '@/internal/tailwind-values'
 
 const {
   createPlugin,

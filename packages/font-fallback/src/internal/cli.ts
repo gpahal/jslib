@@ -6,7 +6,8 @@
 
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { parseArgs, styleText, type ParseArgsConfig } from 'node:util'
+import { parseArgs, styleText } from 'node:util'
+import type { ParseArgsConfig } from 'node:util'
 
 import { formatCliError, readPackageVersion } from '@gpahal/internal/node/cli'
 import {
@@ -18,13 +19,8 @@ import {
 } from '@gpahal/std/errors'
 import { escapeControls } from '@gpahal/std/strings'
 
-import {
-  DEFAULT_FALLBACKS,
-  getFontFallbacks,
-  type FontCategory,
-  type FontFallback,
-  type FontFallbacks,
-} from '@/index'
+import { DEFAULT_FALLBACKS, getFontFallbacks } from '@/index'
+import type { FontCategory, FontFallback, FontFallbacks } from '@/index'
 import { toPercentage } from '@/internal/css'
 import {
   formatDefaultFallbacksMessage,

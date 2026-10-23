@@ -9,10 +9,8 @@ import {
   omitUndefinedValues,
   omitUndefinedValuesAndKeys,
   pick,
-  type NonFunctionObject,
-  type PlainClone,
-  type RecordObject,
 } from '@/objects'
+import type { NonFunctionObject, PlainClone, RecordObject } from '@/objects'
 
 import { trackArrayReads } from './array-reads'
 

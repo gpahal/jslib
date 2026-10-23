@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { RuleTester, type ESLint } from 'eslint'
+import { RuleTester } from 'eslint'
+import type { ESLint } from 'eslint'
 import { parser as tsEslintParser } from 'typescript-eslint'
 
 import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'

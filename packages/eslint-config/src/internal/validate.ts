@@ -10,8 +10,8 @@ import {
   optionsObject,
   required,
   resolveSubOptions,
-  type OptionsShape,
 } from '@gpahal/internal/node/options'
+import type { OptionsShape } from '@gpahal/internal/node/options'
 import { PATH_OR_FILE_URL_EXPECTED, resolveFileOption } from '@gpahal/internal/node/paths'
 import { checkRoot } from '@gpahal/internal/node/root'
 import {
@@ -26,7 +26,8 @@ import { describeValue, formatNames } from '@gpahal/std/errors'
 import { isRecord } from '@gpahal/std/objects'
 import { trimEnd } from '@gpahal/std/strings'
 
-import { AREAS, getEnabledAreas, mapAreas, type AreaDefinition } from '@/internal/areas'
+import { AREAS, getEnabledAreas, mapAreas } from '@/internal/areas'
+import type { AreaDefinition } from '@/internal/areas'
 import { GLOB_LIST } from '@/internal/checks'
 import { E18E_RULE_SET_DEFAULTS } from '@/internal/configs/constants'
 import { getCoreRule } from '@/internal/core-rules'
@@ -35,7 +36,8 @@ import { checkFormattingRules, FORMATTING_RULES, KEPT_RULES } from '@/internal/f
 import { findUp } from '@/internal/fs'
 import { canMatchFile } from '@/internal/glob-match'
 import { hasGlobMagic, withoutLeadingDotSlash } from '@/internal/globs'
-import { AREA_RULE_PREFIXES, hasRulePrefix, PLUGIN_AREAS, type AreaName } from '@/internal/names'
+import { AREA_RULE_PREFIXES, hasRulePrefix, PLUGIN_AREAS } from '@/internal/names'
+import type { AreaName } from '@/internal/names'
 import { checkRelativeGlobs } from '@/internal/relative-globs'
 import { getPlugins, isRuleOn, parseRuleId } from '@/internal/rules'
 import type {

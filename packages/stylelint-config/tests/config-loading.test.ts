@@ -3,11 +3,13 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { resolve } from 'import-meta-resolve'
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 import { runNodeOk, withTmpProject } from '@gpahal/internal/node/testing'
 
-import { defineConfig, type StylelintExtendedConfig } from '@/index'
+import { defineConfig } from '@/index'
+import type { StylelintExtendedConfig } from '@/index'
 
 /**
  * The package's folder, which holds a `package.json`, as `root` requires

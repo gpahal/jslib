@@ -23599,6 +23599,7 @@ export type ConfigNames =
   | 'gpahal/server/rules'
   | 'gpahal/markdown/shared-rules'
   | 'gpahal/duplicates/rules'
+  | 'gpahal/duplicates/rules/imports/rules-typescript'
   | 'gpahal/duplicates/type-aware'
   | 'gpahal/duplicates/rules/typescript/typescript-eslint/strict-type-checked/non-test'
   | 'gpahal/duplicates/rules/react/@eslint-react/recommended'

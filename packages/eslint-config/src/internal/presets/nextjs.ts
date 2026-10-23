@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { CODE_EXTNS } from '@/internal/files'
-import { folderGlob, intersectFiles, intersectFileSpecs, type FileSpecs } from '@/internal/globs'
+import { folderGlob, intersectFiles, intersectFileSpecs } from '@/internal/globs'
+import type { FileSpecs } from '@/internal/globs'
 import { withSetup } from '@/internal/naming'
 import {
   NEXTJS_CLIENT_ENTRY_NAMES,

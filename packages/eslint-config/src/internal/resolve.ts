@@ -1,11 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import {
-  resolveListOption,
-  resolveSubOptions,
-  type ListOption,
-} from '@gpahal/internal/node/options'
+import { resolveListOption, resolveSubOptions } from '@gpahal/internal/node/options'
+import type { ListOption } from '@gpahal/internal/node/options'
 import { toArray, unique, uniqueBy } from '@gpahal/std/arrays'
 import { formatNames } from '@gpahal/std/errors'
 import { isRecord } from '@gpahal/std/objects'
@@ -19,9 +16,8 @@ import {
   isDefaultProjectCandidate,
   isStorybookCandidate,
   STORYBOOK_FOLDER,
-  type DefaultProjectProblem,
-  type ProjectDiscovery,
 } from '@/internal/default-project'
+import type { DefaultProjectProblem, ProjectDiscovery } from '@/internal/default-project'
 import { isInEditorEnv } from '@/internal/editor'
 import {
   ASTRO_FILES,
@@ -58,31 +54,29 @@ import {
   withNegatedGlobs,
   withoutGlobFiles,
   withoutLeadingDotSlash,
-  type FileSpecs,
-  type Scope,
 } from '@/internal/globs'
+import type { FileSpecs, Scope } from '@/internal/globs'
 import { usesReactCompiler, warnOfOptionHints, warnOfPlaywrightTestDir } from '@/internal/hints'
 import { formatSomeNames, joinList } from '@/internal/lists'
 import { readProjectManifests } from '@/internal/manifests'
-import { GITIGNORE_CONFIG_NAMES, type AreaName } from '@/internal/names'
+import { GITIGNORE_CONFIG_NAMES } from '@/internal/names'
+import type { AreaName } from '@/internal/names'
 import { checkTypescriptInstalled } from '@/internal/peers'
-import { scanProject, type GitIgnores } from '@/internal/project-scan'
+import { scanProject } from '@/internal/project-scan'
+import type { GitIgnores } from '@/internal/project-scan'
 import type { EslintConfigOptions, NextjsOptions } from '@/internal/types'
 import type { UntypedKinds } from '@/internal/user-configs'
-import {
-  formatErrorMessage,
-  PREFIX,
-  warnOfSetupOnce,
-  type GpahalWarningCode,
-} from '@/internal/utils'
+import { formatErrorMessage, PREFIX, warnOfSetupOnce } from '@/internal/utils'
+import type { GpahalWarningCode } from '@/internal/utils'
 import {
   checkCodeGlobs,
   checkDefaultProjectGlobs,
   checkRelativeGlobs,
   CODE_FILE_TARGET,
-  type GlobTarget,
 } from '@/internal/validate'
-import { createIgnoreCheck, IgnoreLayers, type IgnoreLayer } from '@/internal/walk'
+import type { GlobTarget } from '@/internal/validate'
+import { createIgnoreCheck, IgnoreLayers } from '@/internal/walk'
+import type { IgnoreLayer } from '@/internal/walk'
 
 /**
  * The options with their defaults applied, and what they imply, worked out once

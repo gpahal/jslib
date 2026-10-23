@@ -3,7 +3,8 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 

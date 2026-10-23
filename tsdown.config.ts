@@ -2,7 +2,8 @@ import fs from 'node:fs/promises'
 import { builtinModules } from 'node:module'
 import path from 'node:path'
 
-import { defineConfig, type ResolvedConfig } from 'tsdown'
+import { defineConfig } from 'tsdown'
+import type { ResolvedConfig } from 'tsdown'
 import ts from 'typescript'
 
 import {

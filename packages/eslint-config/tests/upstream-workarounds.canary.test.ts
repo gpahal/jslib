@@ -6,7 +6,8 @@ import eslintPluginE18e from '@e18e/eslint-plugin'
 import eslintPluginComments from '@eslint-community/eslint-plugin-eslint-comments'
 import eslintPluginReact from '@eslint-react/eslint-plugin'
 import markdown from '@eslint/markdown'
-import { ESLint, Linter, type Rule } from 'eslint'
+import { ESLint, Linter } from 'eslint'
+import type { Rule } from 'eslint'
 import eslintPluginAstro from 'eslint-plugin-astro'
 import eslintPluginImportX from 'eslint-plugin-import-x'
 import markdownPreferences from 'eslint-plugin-markdown-preferences'
@@ -61,8 +62,11 @@ function ts(rules: Linter.RulesRecord): Linter.Config {
 }
 
 const typeDefinitions = ts({ '@typescript-eslint/consistent-type-definitions': ['error', 'type'] })
-const inlineDuplicates: Linter.RulesRecord = {
-  'import-x/no-duplicates': ['error', { 'prefer-inline': true }],
+const separateTypeImports: Linter.RulesRecord = {
+  '@typescript-eslint/consistent-type-imports': [
+    'error',
+    { prefer: 'type-imports', fixStyle: 'separate-type-imports' },
+  ],
 }
 const astroBase = eslintPluginAstro.configs['flat/base']
 
@@ -159,22 +163,16 @@ describe('upstream workarounds', () => {
       '# T\n\n```cpp++\nx\n```\n',
     ],
     [
-      'the two fixes no longer combine into `import type { A, type B }` (TS2206): delete the `isInlineTypeOnlyImport` check of `patchDuplicateImports` in src/internal/fixes.ts, and the patch once its other checks are gone',
-      ts({ ...inlineDuplicates, '@typescript-eslint/no-import-type-side-effects': 'error' }),
-      "import { type A } from 'a'\nimport type { B } from 'a'\n\nexport type C = A | B\n",
-      "import type { A, type B  } from 'a'\n\nexport type C = A | B\n",
+      'the merge no longer moves a value import with an inline `type` specifier into an `import type`: delete the `hasInlineTypeSpecifier` check of `patchDuplicateImports` in src/internal/fixes.ts',
+      ts({ 'import-x/no-duplicates': 'error' }),
+      "import type { A } from 'a'\nimport { type B, c } from 'a'\n\nexport const d: A | B = c\n",
+      "import type { A, type B, c  } from 'a'\n\nexport const d: A | B = c\n",
     ],
     [
-      'the merge no longer writes `import B, type { A }`: delete `keepsTypeBeforeDefault` and its use in `patchDuplicateImports` in src/internal/fixes.ts, and the patch once its other checks are gone',
-      ts(inlineDuplicates),
-      "import type { A } from 'a'\nimport B from 'a'\n\nexport const c: A = B\n",
-      "import B, type { A } from 'a'\n\nexport const c: A = B\n",
-    ],
-    [
-      'the merge keeps the module loading now: delete `dropsSideEffectImport` and its use in `patchDuplicateImports` in src/internal/fixes.ts, and the patch once its other checks are gone',
-      ts({ ...inlineDuplicates, '@typescript-eslint/no-import-type-side-effects': 'error' }),
-      "import 'a'\nimport type { A } from 'a'\n\nexport type B = A\n",
-      "import type { A } from 'a'\n\nexport type B = A\n",
+      'the two fixes no longer combine into `import type { A, b }` (TS1361): delete the empty insertion that starts the fix in `patchDuplicateImports` in src/internal/fixes.ts',
+      ts({ ...separateTypeImports, 'import-x/no-duplicates': 'error' }),
+      "import { A } from 'a'\nimport { b } from 'a'\n\nexport const c: A = b\n",
+      "import type { A, b  } from 'a'\n\nexport const c: A = b\n",
     ],
   ])('%s', (message, config, code, output) => {
     expect(linter.verifyAndFix(code, config, fileFor(config)).output, message).toBe(output)

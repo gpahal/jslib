@@ -27,7 +27,8 @@ import { joinList } from '@/internal/lists'
 import { GITIGNORE_CONFIG_NAMES } from '@/internal/names'
 import type { EslintConfigOptions } from '@/internal/types'
 import { fail, formatErrorMessage, warnOfSetupOnce } from '@/internal/utils'
-import { createIgnoreCheck, IgnoreLayers, walkFolders, type IgnoreLayer } from '@/internal/walk'
+import { createIgnoreCheck, IgnoreLayers, walkFolders } from '@/internal/walk'
+import type { IgnoreLayer } from '@/internal/walk'
 
 /**
  * An ignore file's rules, or the submodule folders, as globs relative to `basePath`

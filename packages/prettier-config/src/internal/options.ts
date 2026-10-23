@@ -3,13 +3,8 @@ import path from 'node:path'
 import type { Config as PrettierConfig } from 'prettier'
 import type * as z from 'zod/mini'
 
-import {
-  booleanOr,
-  deferred,
-  listOption,
-  optionsObject,
-  type OptionsShape,
-} from '@gpahal/internal/node/options'
+import { booleanOr, deferred, listOption, optionsObject } from '@gpahal/internal/node/options'
+import type { OptionsShape } from '@gpahal/internal/node/options'
 import { isRelativePath, resolveFileOption } from '@gpahal/internal/node/paths'
 import { checkRoot } from '@gpahal/internal/node/root'
 import { assertValid, loadZod, plainObject, typeCheck } from '@gpahal/internal/node/zod'
@@ -29,9 +24,8 @@ import {
   PREFIX,
   SORT_IMPORTS_PLUGIN,
   TAILWIND_PLUGIN_TAKEN,
-  type PluginList,
-  type SorterEntry,
 } from '@/internal/merge'
+import type { PluginList, SorterEntry } from '@/internal/merge'
 import { loadSorter } from '@/internal/plugins'
 import type {
   ConfigInput,

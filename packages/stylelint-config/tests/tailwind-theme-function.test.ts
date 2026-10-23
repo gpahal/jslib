@@ -1,6 +1,7 @@
 import path from 'node:path'
 
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 

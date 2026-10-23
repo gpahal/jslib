@@ -1,8 +1,10 @@
 import process from 'node:process'
 
-import postcss, { type Root } from 'postcss'
+import postcss from 'postcss'
+import type { Root } from 'postcss'
 import postcssHtml from 'postcss-html'
-import stylelint, { type Config, type CustomSyntax } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config, CustomSyntax } from 'stylelint'
 
 import { defineConfig } from '@/index'
 import { declarationEmptyLineBefore } from '@/internal/declaration-empty-line-before'

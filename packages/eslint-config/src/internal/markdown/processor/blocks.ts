@@ -2,12 +2,11 @@ import type { Code, Html, Nodes, Root } from 'mdast'
 
 import { CODE_EXTNS } from '@/internal/files'
 import { MARKDOWN_LINE_BREAK_GLOBAL_REGEX } from '@/internal/markdown/line-breaks'
-import {
-  BLOCK_COMMENT_SYNTAX,
-  getCommentPlacement,
-  type BlockOptions,
-  type CommentSyntax,
-  type UnwritableReason,
+import { BLOCK_COMMENT_SYNTAX, getCommentPlacement } from '@/internal/markdown/processor/comments'
+import type {
+  BlockOptions,
+  CommentSyntax,
+  UnwritableReason,
 } from '@/internal/markdown/processor/comments'
 import { findFirstIndex } from '@/internal/search'
 

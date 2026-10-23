@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 
-import { withSharedModules, type VitestConfig } from '../../vitest.config.ts'
+import { withSharedModules } from '../../vitest.config.ts'
+import type { VitestConfig } from '../../vitest.config.ts'
 
 const UTILS_PATH = 'src/internal/utils.ts'
 

@@ -2,7 +2,8 @@ import type { MarkdownSourceCode } from '@eslint/markdown'
 import type { Nodes } from 'mdast'
 
 import { getElements, getHtmlHeadingRank, parseHtmlNode } from '@/internal/markdown/rules/html'
-import { getLoc, getRange, type Loc } from '@/internal/markdown/rules/utils'
+import { getLoc, getRange } from '@/internal/markdown/rules/utils'
+import type { Loc } from '@/internal/markdown/rules/utils'
 
 export type Heading = {
   rank: number

@@ -12,7 +12,8 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 
 import type { AtRule, Declaration, Root } from 'postcss'
-import stylelint, { type Plugin, type Rule } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Plugin, Rule } from 'stylelint'
 
 import { isRecord } from '@gpahal/std/objects'
 
@@ -21,8 +22,8 @@ import {
   declarationValue,
   FUNCTION_AT_RULES,
   functionCalls,
-  type Part,
 } from '@/internal/tailwind-values'
+import type { Part } from '@/internal/tailwind-values'
 
 const {
   createPlugin,

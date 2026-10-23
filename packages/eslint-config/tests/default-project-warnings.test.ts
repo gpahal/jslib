@@ -1,10 +1,12 @@
 import syncFs from 'node:fs'
 import path from 'node:path'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 import { checkDefaultProjectTsconfig } from '@/internal/default-project'
 
-import { captureWarnings, warningsOf, withProject, type Warnings } from './helpers'
+import { captureWarnings, warningsOf, withProject } from './helpers'
+import type { Warnings } from './helpers'
 
 const TSCONFIG_DIR = path.join(import.meta.dirname, '..', '..', 'tsconfig')
 

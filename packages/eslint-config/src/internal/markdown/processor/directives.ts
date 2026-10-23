@@ -9,10 +9,12 @@ import {
   getLines,
   toCommentKey,
   toHtmlOffset,
-  type CommentKind,
-  type FileState,
-  type Placement,
-  type TextLine,
+} from '@/internal/markdown/processor/blocks'
+import type {
+  CommentKind,
+  FileState,
+  Placement,
+  TextLine,
 } from '@/internal/markdown/processor/blocks'
 import { findFirstIndex } from '@/internal/search'
 

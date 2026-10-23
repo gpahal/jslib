@@ -1,7 +1,8 @@
 import type { Config } from 'stylelint'
 import useBaseline from 'stylelint-plugin-use-baseline'
 
-import { resolveListOption, type ListOption } from '@gpahal/internal/node/options'
+import { resolveListOption } from '@gpahal/internal/node/options'
+import type { ListOption } from '@gpahal/internal/node/options'
 import { resolvePath } from '@gpahal/internal/node/resolve'
 import { checkRoot } from '@gpahal/internal/node/root'
 import { assertValid } from '@gpahal/internal/node/zod'
@@ -13,19 +14,15 @@ import { commentLayout } from '@/internal/comment-layout'
 import { preserveConditionalOptions } from '@/internal/conditional-options'
 import { customPropertyEmptyLineBefore } from '@/internal/custom-property-empty-line-before'
 import { declarationEmptyLineBefore } from '@/internal/declaration-empty-line-before'
-import {
-  extendedRulesOf,
-  loadExtends,
-  markPresetLayer,
-  type ExtendedOptions,
-} from '@/internal/extends'
+import { extendedRulesOf, loadExtends, markPresetLayer } from '@/internal/extends'
+import type { ExtendedOptions } from '@/internal/extends'
 import {
   fileTypeOverrides,
   fileTypesOfOverride,
   mixedTypesError,
   splitGlobsByType,
-  type FileType,
 } from '@/internal/file-types'
+import type { FileType } from '@/internal/file-types'
 import { mediaRangeSpacing } from '@/internal/media-range-spacing'
 import {
   checkIgnoreGlobs,
@@ -35,8 +32,8 @@ import {
   checkRejectedKeys,
   optionsSchema,
   PREFIX,
-  type StylelintConfigOptions,
 } from '@/internal/options'
+import type { StylelintConfigOptions } from '@/internal/options'
 import { toOverride, toReferenceFile, toStylelintExtends } from '@/internal/overrides'
 import { OWN_RULES, toOwnRules } from '@/internal/own-rules'
 import {
@@ -57,17 +54,15 @@ import {
   mergeUserRules,
   replaceLayer,
   settingIn,
-  type StylelintConfig,
-  type StylelintOverride,
-  type StylelintReferenceFile,
-  type StylelintRules,
 } from '@/internal/rules'
-import {
-  loadTailwindDesign,
-  TAILWIND_APPLY,
-  tailwindApply,
-  type TailwindDesign,
-} from '@/internal/tailwind-apply'
+import type {
+  StylelintConfig,
+  StylelintOverride,
+  StylelintReferenceFile,
+  StylelintRules,
+} from '@/internal/rules'
+import { loadTailwindDesign, TAILWIND_APPLY, tailwindApply } from '@/internal/tailwind-apply'
+import type { TailwindDesign } from '@/internal/tailwind-apply'
 import { tailwindDirectives } from '@/internal/tailwind-directives'
 import { tailwindThemeFunction } from '@/internal/tailwind-theme-function'
 import {
@@ -77,8 +72,8 @@ import {
   tailwindPropertyNames,
   tailwindReferenceFiles,
   tailwindThemeLoader,
-  type TailwindReferences,
 } from '@/internal/tailwindcss'
+import type { TailwindReferences } from '@/internal/tailwindcss'
 
 type Override = NonNullable<Config['overrides']>[number]
 

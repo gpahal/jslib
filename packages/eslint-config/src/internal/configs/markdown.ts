@@ -1,9 +1,6 @@
 import { CODE_BLOCK_FILES, MARKDOWN_FILES } from '@/internal/files'
-import {
-  createMarkdownProcessor,
-  type MarkdownParseOptions,
-  type MarkdownProcessorOptions,
-} from '@/internal/markdown/processor'
+import { createMarkdownProcessor } from '@/internal/markdown/processor'
+import type { MarkdownParseOptions, MarkdownProcessorOptions } from '@/internal/markdown/processor'
 import type { TypedConfig, TypedRules } from '@/internal/types'
 
 /**

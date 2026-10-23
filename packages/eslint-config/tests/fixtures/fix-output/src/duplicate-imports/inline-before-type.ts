@@ -1,5 +1,5 @@
-import { type Other } from './types'
-import type { Shape } from './types'
+import { type Other } from './module'
+import type { Shape } from './module'
 
 /**
  * Pairs a shape with its id

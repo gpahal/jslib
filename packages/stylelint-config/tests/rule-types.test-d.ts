@@ -5,7 +5,8 @@ import process from 'node:process'
 
 import type { Config } from 'stylelint'
 
-import { defineConfig, replace, type Replaced, type StylelintRules } from '@/index'
+import { defineConfig, replace } from '@/index'
+import type { Replaced, StylelintRules } from '@/index'
 
 export const typedPrimaryOption: StylelintRules = { 'number-max-precision': 4 }
 

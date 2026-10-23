@@ -14,7 +14,8 @@
  */
 
 import type { Declaration, Node } from 'postcss'
-import stylelint, { type Plugin, type Rule } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Plugin, Rule } from 'stylelint'
 
 import { isInlineStyle, setEmptyLineBefore } from '@/internal/empty-lines'
 import { isDisabledByStockRule, isStockRuleOn } from '@/internal/stock-disables'

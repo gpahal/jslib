@@ -8,7 +8,8 @@ import { compileRule } from 'eslint-typegen/core'
 
 import { isRecord } from '@gpahal/std/objects'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 import { AREAS } from '@/internal/areas'
 import { GITIGNORE_CONFIG_NAMES } from '@/internal/names'
 import { resolveOptions } from '@/internal/resolve'

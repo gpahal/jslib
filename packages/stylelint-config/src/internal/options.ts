@@ -11,10 +11,8 @@ import {
   listOption,
   optionsObject,
   required,
-  type ListOption,
-  type ListTransform,
-  type OptionsShape,
 } from '@gpahal/internal/node/options'
+import type { ListOption, ListTransform, OptionsShape } from '@gpahal/internal/node/options'
 import {
   assertValid,
   expectedError,

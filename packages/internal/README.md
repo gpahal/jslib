@@ -46,13 +46,8 @@ Neither module imports Zod. Their functions call `loadZod()`, which loads Zod Mi
 ```ts
 import * as z from 'zod/mini'
 
-import {
-  booleanOr,
-  listOption,
-  optionsObject,
-  required,
-  type ListOption,
-} from '@gpahal/internal/node/options'
+import { booleanOr, listOption, optionsObject, required } from '@gpahal/internal/node/options'
+import type { ListOption } from '@gpahal/internal/node/options'
 import { assertValid, expectedError } from '@gpahal/internal/node/zod'
 
 type Options = {

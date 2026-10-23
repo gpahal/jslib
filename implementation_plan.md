@@ -709,6 +709,6 @@ The implementing agent keeps this table current. Status values are `todo`, `in p
 | E1 – E8 eslint-config test trims | E | done; E6 tailwind `entryPoint` permutations skipped, since they test a fix and root resolution, not rule inventory |
 | F1 shared entryPoint helper | F | done |
 | F2 shared semver checker (fixes P2) | F | done; the optional list joiner skipped, since `peers.ts` items contain commas |
-| Phase 3 top-level type imports | 3 | todo |
+| Phase 3 top-level type imports | 3 | done; `patchDuplicateImports` kept in a smaller form, since import-x still makes invalid merges |
 | Phase 4 final verification and report | 4 | todo |
 | Phase 4 temporary files and plan file deleted | 4 | todo |

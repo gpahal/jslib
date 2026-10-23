@@ -1,4 +1,5 @@
-import { withSharedModules, type VitestConfig } from '../../vitest.config.ts'
+import { withSharedModules } from '../../vitest.config.ts'
+import type { VitestConfig } from '../../vitest.config.ts'
 
 /**
  * Sharing modules loads Stylelint, its plugins and the presets once per worker rather than once per

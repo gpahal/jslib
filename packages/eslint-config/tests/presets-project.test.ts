@@ -10,7 +10,8 @@ import { defineConfig as eslintDefineConfig } from 'eslint/config'
 
 import { runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 import { IGNORES } from '@/internal/configs/ignores'
 import { findDefaultProjectFiles } from '@/internal/default-project'
 import { findGitCommonDir, readGitModules } from '@/internal/git'

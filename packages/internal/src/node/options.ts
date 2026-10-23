@@ -9,7 +9,8 @@ import type * as z from 'zod/mini'
 import { isArrayOf } from '@gpahal/std/arrays'
 import { describeValue, formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
 
-import { expectedError, loadZod, strictObject, typeCheck, type ExpectedOptions } from '@/node/zod'
+import { expectedError, loadZod, strictObject, typeCheck } from '@/node/zod'
+import type { ExpectedOptions } from '@/node/zod'
 
 /**
  * A function that gets a copy of a list option's defaults and returns the list to use

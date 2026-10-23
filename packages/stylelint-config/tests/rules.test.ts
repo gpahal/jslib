@@ -3,18 +3,15 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 import recessOrderGroups from 'stylelint-config-recess-order/groups'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 import { toArray } from '@gpahal/std/arrays'
 
-import baseDefault, {
-  defineConfig,
-  replace,
-  type StylelintConfigOptions,
-  type StylelintRules,
-} from '@/index'
+import baseDefault, { defineConfig, replace } from '@/index'
+import type { StylelintConfigOptions, StylelintRules } from '@/index'
 import { BASE_RULES } from '@/internal/base-rules'
 import { mergeRules } from '@/internal/rules'
 

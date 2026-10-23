@@ -1,7 +1,8 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { resolveListOption, type ListOption } from '@gpahal/internal/node/options'
+import { resolveListOption } from '@gpahal/internal/node/options'
+import type { ListOption } from '@gpahal/internal/node/options'
 import { resolveFromNodeModules } from '@gpahal/internal/node/resolve'
 import { isRecord } from '@gpahal/std/objects'
 
@@ -31,8 +32,8 @@ import {
   checkImportOrder,
   checkSortImportsKeys,
   sorterOptionsOf,
-  type CheckedConfigOptions,
 } from '@/internal/options'
+import type { CheckedConfigOptions } from '@/internal/options'
 import {
   DEFAULT_PLUGIN_ENVIRONMENT,
   resolvePeerPlugin,
@@ -41,8 +42,8 @@ import {
   resolveSortImportsPlugin,
   resolveTailwindPlugin,
   warnOfPrettierVersion,
-  type SortImportsPlugin,
 } from '@/internal/plugins'
+import type { SortImportsPlugin } from '@/internal/plugins'
 import type { Config, ConfigInput, PrettierConfigOptions } from '@/internal/types'
 
 export type {
@@ -303,9 +304,8 @@ function createConfig(
       ...(sortImportsOptions.importOrderCaseSensitive !== undefined && {
         importOrderCaseSensitive: sortImportsOptions.importOrderCaseSensitive,
       }),
-      // Merges `import type { A } from 'a'` and `import { b } from 'a'` into
-      // `import { b, type A } from 'a'`, as `@gpahal/eslint-config` writes them
-      importOrderTypeScriptVersion: '5.0.0',
+      // No `importOrderTypeScriptVersion`: below 4.5, the sorter keeps `import type { A } from 'a'`
+      // apart from `import { b } from 'a'`, as `@gpahal/eslint-config` writes them
       importOrderParserPlugins: [...parserPlugins],
       ...sorterOptionsOf(sortImportsOptions),
     }),

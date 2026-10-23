@@ -6,7 +6,8 @@ import { isPlainObject, isRecord } from '@gpahal/std/objects'
 
 import { isRuleNode, untypedRangeOf } from '@/internal/ast'
 import { FILENAME_CASE_IGNORES } from '@/internal/configs/constants'
-import { DUPLICATE_REPORTS, type DuplicateReport } from '@/internal/duplicate-rules'
+import { DUPLICATE_REPORTS } from '@/internal/duplicate-rules'
+import type { DuplicateReport } from '@/internal/duplicate-rules'
 import {
   findPatchTargets,
   hasPatchedFixes,
@@ -15,8 +16,8 @@ import {
   mergeListeners,
   optionsInSettings,
   patchCreateOnce,
-  type TypeServices,
 } from '@/internal/fixes'
+import type { TypeServices } from '@/internal/fixes'
 import { findFirstIndex } from '@/internal/search'
 import { withCompanionContext, withReport } from '@/internal/utils'
 

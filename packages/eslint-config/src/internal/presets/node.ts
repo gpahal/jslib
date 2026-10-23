@@ -12,7 +12,8 @@ import {
   TYPESCRIPT_FILES,
 } from '@/internal/files'
 import { findPatchTargets, hasPatchedFixes, patchCreateOnce } from '@/internal/fixes'
-import { intersectFiles, intersectFileSpecs, type FileSpecs } from '@/internal/globs'
+import { intersectFiles, intersectFileSpecs } from '@/internal/globs'
+import type { FileSpecs } from '@/internal/globs'
 import { named, withSetup } from '@/internal/naming'
 import { interopDefault } from '@/internal/peers'
 import type { TypedConfig, TypedRules } from '@/internal/types'

@@ -4,7 +4,8 @@
 import path from 'node:path'
 
 import postcssHtml from 'postcss-html'
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 import { runNodeOk, withTmpProject } from '@gpahal/internal/node/testing'
 

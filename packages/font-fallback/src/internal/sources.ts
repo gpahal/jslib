@@ -8,9 +8,11 @@ import { fileURLToPath } from 'node:url'
 import { describeValue, formatMessage, getErrorCode } from '@gpahal/std/errors'
 import { escapeControls } from '@gpahal/std/strings'
 
-import { findRegularFamily, getFamilySubject, type FamilyFace } from '@/internal/families'
+import { findRegularFamily, getFamilySubject } from '@/internal/families'
+import type { FamilyFace } from '@/internal/families'
 import { EXPECTED_FAMILY_NAME, getFamilyKey, isFamilyName, PREFIX } from '@/internal/options'
-import { readFontFile, type FontExtension } from '@/internal/parse'
+import { readFontFile } from '@/internal/parse'
+import type { FontExtension } from '@/internal/parse'
 import type { FontCategory, FontMetrics } from '@/internal/types'
 
 export const HTTPS_REGEX: RegExp = /^https:\/\//i

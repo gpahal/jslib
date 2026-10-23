@@ -17,9 +17,10 @@ import {
   isTokenURL,
   isTokenWhiteSpaceOrComment,
   tokenize,
-  type CSSToken,
 } from '@csstools/css-tokenizer'
-import { AtRule, CssSyntaxError, parse, type Plugin } from 'postcss'
+import type { CSSToken } from '@csstools/css-tokenizer'
+import { AtRule, CssSyntaxError, parse } from 'postcss'
+import type { Plugin } from 'postcss'
 import type { Config } from 'stylelint'
 
 import { resolveListOption } from '@gpahal/internal/node/options'
@@ -28,16 +29,18 @@ import { resolveFile, resolveFromNodeModules } from '@gpahal/internal/node/resol
 import { formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
 
 import { CUSTOM_PROPERTY_EMPTY_LINE_BEFORE } from '@/internal/custom-property-empty-line-before'
-import { PREFIX, type TailwindcssOptions } from '@/internal/options'
-import { mergeUserRules, type StylelintRules } from '@/internal/rules'
+import { PREFIX } from '@/internal/options'
+import type { TailwindcssOptions } from '@/internal/options'
+import { mergeUserRules } from '@/internal/rules'
+import type { StylelintRules } from '@/internal/rules'
 import { TAILWIND_APPLY } from '@/internal/tailwind-apply'
 import { TAILWIND_DIRECTIVES, untypedFunctionsPattern } from '@/internal/tailwind-directives'
 import {
   tailwindCompileOf,
   tailwindModulePath,
   tailwindStylesheetPath,
-  type TailwindCompile,
 } from '@/internal/tailwind-loader'
+import type { TailwindCompile } from '@/internal/tailwind-loader'
 import { isReset, recordUnprefixedName } from '@/internal/tailwind-theme-function'
 
 type Syntax = NonNullable<NonNullable<Config['languageOptions']>['syntax']>

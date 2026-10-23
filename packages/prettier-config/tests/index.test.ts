@@ -6,12 +6,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { getDefaultSelectors } from 'eslint-plugin-better-tailwindcss/defaults'
 import { SelectorKind } from 'eslint-plugin-better-tailwindcss/types'
-import { resolveConfig, type Plugin } from 'prettier'
+import { resolveConfig } from 'prettier'
+import type { Plugin } from 'prettier'
 
 import { PATH_OR_FILE_URL_EXPECTED } from '@gpahal/internal/node/paths'
 import { runNodeOk, withTmpProject } from '@gpahal/internal/node/testing'
 
-import defaultConfig, { defineConfig, mergeConfigs, type Config } from '@/index'
+import defaultConfig, { defineConfig, mergeConfigs } from '@/index'
+import type { Config } from '@/index'
 import { MARKDOWN_FILES } from '@/internal/defaults'
 import { SORTER_OPTION_NAMES } from '@/internal/options'
 import {
@@ -21,8 +23,8 @@ import {
   resolveSortImportsPlugin,
   resolveTailwindPlugin,
   warnOfPrettierVersion,
-  type PluginEnvironment,
 } from '@/internal/plugins'
+import type { PluginEnvironment } from '@/internal/plugins'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 

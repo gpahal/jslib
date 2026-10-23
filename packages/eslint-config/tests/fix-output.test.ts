@@ -3,7 +3,8 @@ import path from 'node:path'
 
 import { ESLint } from 'eslint'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 
 import { collator, FIXTURES_DIR, typeCheck, withProject } from './helpers'
 

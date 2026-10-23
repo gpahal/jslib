@@ -32,16 +32,16 @@ import {
   withoutLeadingDotSlash,
 } from '@/internal/globs'
 import { joinList } from '@/internal/lists'
-import { AREA_RULE_PREFIXES, PLUGIN_AREAS, type AreaName } from '@/internal/names'
+import { AREA_RULE_PREFIXES, PLUGIN_AREAS } from '@/internal/names'
+import type { AreaName } from '@/internal/names'
 import {
   canRunIn,
   getLanguageIgnores,
   getLanguageKind,
   getLanguageSources,
   getMatchedLanguages,
-  type KindLanguage,
-  type LanguageSource,
 } from '@/internal/preset-languages'
+import type { KindLanguage, LanguageSource } from '@/internal/preset-languages'
 import { checkRelativeGlobsAt } from '@/internal/relative-globs'
 import { getPlugins, isRuleOn, needsTypeInformation, parseRuleId } from '@/internal/rules'
 import type { TypedConfig } from '@/internal/types'

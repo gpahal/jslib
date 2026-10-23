@@ -1,6 +1,7 @@
 import * as z from 'zod/mini'
 
-import { optionsObject, type OptionsShape } from '@gpahal/internal/node/options'
+import { optionsObject } from '@gpahal/internal/node/options'
+import type { OptionsShape } from '@gpahal/internal/node/options'
 import { assertValid, expectedError, plainObject, typeCheck } from '@gpahal/internal/node/zod'
 import { describeValue, formatMessage, formatNames } from '@gpahal/std/errors'
 

@@ -1,7 +1,8 @@
 import path from 'node:path'
 
 import eslintPluginComments from '@eslint-community/eslint-plugin-eslint-comments'
-import { ESLint, type Linter, type Rule } from 'eslint'
+import { ESLint } from 'eslint'
+import type { Linter, Rule } from 'eslint'
 import eslintPluginSlop from 'eslint-plugin-slop'
 import { defineConfig as eslintDefineConfig } from 'eslint/config'
 import { configs as tsEslintConfigs } from 'typescript-eslint'
@@ -9,14 +10,8 @@ import { configs as tsEslintConfigs } from 'typescript-eslint'
 import { isRecord } from '@gpahal/std/objects'
 
 import { eslintCommentsPlugin } from '@/eslint-comments'
-import {
-  defineConfig,
-  files,
-  untyped,
-  type ConfigNames,
-  type TypedConfig,
-  type TypedRules,
-} from '@/index'
+import { defineConfig, files, untyped } from '@/index'
+import type { ConfigNames, TypedConfig, TypedRules } from '@/index'
 import { slopPlugin } from '@/slop'
 
 import {

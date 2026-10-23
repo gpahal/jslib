@@ -3,7 +3,8 @@ import { entireMetricsCollection } from '@capsizecss/metrics/entireMetricsCollec
 
 import { describeValue } from '@gpahal/std/errors'
 
-import { DEFAULT_FALLBACKS, getFontFallbacks, type FontFallback } from '@/index'
+import { DEFAULT_FALLBACKS, getFontFallbacks } from '@/index'
+import type { FontFallback } from '@/index'
 import { renderFontFace, toFontFamilyName, toPercentage } from '@/internal/css'
 
 import { FIGTREE_PATH } from './fixtures'

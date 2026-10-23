@@ -1,5 +1,6 @@
 import markdown from '@eslint/markdown'
-import { Linter, type ESLint, type Rule } from 'eslint'
+import { Linter } from 'eslint'
+import type { ESLint, Rule } from 'eslint'
 
 import { withLanguageColumnsRule } from '@/internal/language-columns'
 

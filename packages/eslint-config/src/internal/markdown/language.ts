@@ -1,11 +1,8 @@
-import {
-  MarkdownLanguage,
-  MarkdownSourceCode,
-  type MarkdownLanguageContext,
-  type MarkdownLanguageOptions,
-} from '@eslint/markdown'
+import { MarkdownLanguage, MarkdownSourceCode } from '@eslint/markdown'
+import type { MarkdownLanguageContext, MarkdownLanguageOptions } from '@eslint/markdown'
 import type { Html, Nodes, Root } from 'mdast'
-import { fromMarkdown, type Options as ParseOptions } from 'mdast-util-from-markdown'
+import { fromMarkdown } from 'mdast-util-from-markdown'
+import type { Options as ParseOptions } from 'mdast-util-from-markdown'
 import { frontmatterFromMarkdown } from 'mdast-util-frontmatter'
 import { gfmFromMarkdown } from 'mdast-util-gfm'
 import { mathFromMarkdown } from 'mdast-util-math'

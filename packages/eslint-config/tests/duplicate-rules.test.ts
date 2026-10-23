@@ -3,7 +3,8 @@ import path from 'node:path'
 import type { ESLint, Linter } from 'eslint'
 import { builtinRules } from 'eslint/use-at-your-own-risk'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 import { ALLOWED_OVERLAPS, DUPLICATE_REPORTS, DUPLICATE_RULES } from '@/internal/duplicate-rules'
 import { isRuleOn, parseRuleId } from '@/internal/rules'
 

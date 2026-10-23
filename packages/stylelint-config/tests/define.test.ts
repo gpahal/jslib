@@ -2,17 +2,14 @@ import path from 'node:path'
 import process from 'node:process'
 
 import postcssHtml from 'postcss-html'
-import stylelint, { type Config, type Rule } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config, Rule } from 'stylelint'
 import recessOrderGroups from 'stylelint-config-recess-order/groups'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
-import baseDefault, {
-  defineConfig,
-  replace,
-  type StylelintConfigOptions,
-  type StylelintOverride,
-} from '@/index'
+import baseDefault, { defineConfig, replace } from '@/index'
+import type { StylelintConfigOptions, StylelintOverride } from '@/index'
 import { commentLayout } from '@/internal/comment-layout'
 import tailwindcssDefault from '@/tailwindcss'
 

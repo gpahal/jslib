@@ -137,6 +137,69 @@ export function items(list) {
 }
 ",
   },
+  "src/duplicate-imports/inline-before-type.ts": {
+    "problems": [],
+    "text": "import type {Other, Shape } from './module';
+
+/**
+ * Pairs a shape with its id
+ */
+export function pair(shape: Shape, other: Other): [Shape, Other] {
+  return [shape, other]
+}
+",
+  },
+  "src/duplicate-imports/inline-beside-type.ts": {
+    "problems": [],
+    "text": "import type { Shape,Other } from './module'
+import {  shape } from './module'
+
+/**
+ * The circle with an id
+ */
+export const pair: [Shape, Other] = [shape, { id: 1 }]
+",
+  },
+  "src/duplicate-imports/module.ts": {
+    "problems": [],
+    "text": "/**
+ * A shape
+ */
+export type Shape = { kind: string }
+
+/**
+ * An id
+ */
+export type Other = { id: number }
+
+/**
+ * A circle
+ */
+export const shape: Shape = { kind: 'circle' }
+",
+  },
+  "src/duplicate-imports/type-beside-value.ts": {
+    "problems": [],
+    "text": "import type { Shape } from './module'
+import { shape } from './module'
+
+/**
+ * A copy of the circle
+ */
+export const copy: Shape = { ...shape }
+",
+  },
+  "src/duplicate-imports/value-to-type.ts": {
+    "problems": [],
+    "text": "import type { Shape} from './module';
+import { shape  } from './module'
+
+/**
+ * A copy of the circle
+ */
+export const copy: Shape = { ...shape }
+",
+  },
   "src/has-own.ts": {
     "problems": [
       "6:10 e18e/prefer-object-has-own",
@@ -177,7 +240,7 @@ export function hasOwnKey(object: Record<string, unknown>): boolean {
     ],
     "text": "import 'node:fs/promises'
 
-import type { Item } from './types'
+import type {Item} from './types';
 
 /**
  * Lists the elements.
@@ -195,9 +258,10 @@ export function nameOf(item: Item): string {
   },
   "src/interfaces/augmentations.ts": {
     "problems": [
-      "17:11 @typescript-eslint/consistent-type-definitions",
+      "18:11 @typescript-eslint/consistent-type-definitions",
     ],
-    "text": "import { registry, type Register } from './registry'
+    "text": "import { registry  } from './registry'
+import type {Register} from './registry';
 
 export const all: Register = { ...registry, b: '', c: true }
 
@@ -367,18 +431,6 @@ export function first(nodes) {
 }
 ",
   },
-  "src/merged-imports.ts": {
-    "problems": [],
-    "text": "import type { Other, Shape  } from './types'
-
-/**
- * Pairs a shape with its id
- */
-export function pair(shape: Shape, other: Other): [Shape, Other] {
-  return [shape, other]
-}
-",
-  },
   "src/node.d.ts": {
     "problems": [],
     "text": "/**
@@ -491,16 +543,6 @@ export function schedule(report: (value: string) => void): string {
  * A type the other files import
  */
 export type Item = { name: string }
-
-/**
- * A type \`merged-imports.ts\` imports with an inline \`type\`
- */
-export type Other = { id: number }
-
-/**
- * A type \`merged-imports.ts\` imports with \`import type\`
- */
-export type Shape = { kind: string }
 ",
   },
   "tsconfig.json": {

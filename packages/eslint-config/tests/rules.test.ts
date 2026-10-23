@@ -124,11 +124,12 @@ describe('rules', () => {
       'export const z = C',
       '',
     ].join('\n')
-    // The default merge, `import type { A, type B, C }`, would make `C` type-only
+    // The stock merge, `import type { A, C, type B }`, would make `C` type-only
     const [result] = await eslint.lintText(code, { filePath: path.join(RULES_DIR, file) })
     const output = result?.output ?? code
     expect(output.match(/^import .*$/gm)).toEqual([
-      expect.stringMatching(/^import \{ type A, C, type B\s*\} from '\.\/types'$/),
+      expect.stringMatching(/^import type \{ A,\s*B\s*\} from '\.\/types'$/),
+      expect.stringMatching(/^import \{\s*C\s*\} from '\.\/types'$/),
     ])
     expect(fixtureTypeErrors(file, output)).toEqual([])
   })

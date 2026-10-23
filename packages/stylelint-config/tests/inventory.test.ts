@@ -1,7 +1,8 @@
 import path from 'node:path'
 import process from 'node:process'
 
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 import { defineConfig } from '@/index'
 

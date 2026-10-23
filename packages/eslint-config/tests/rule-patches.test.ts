@@ -1,5 +1,7 @@
-import { parseForESLint, type ParserOptions } from '@typescript-eslint/parser'
-import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils'
+import { parseForESLint } from '@typescript-eslint/parser'
+import type { ParserOptions } from '@typescript-eslint/parser'
+import { AST_NODE_TYPES } from '@typescript-eslint/utils'
+import type { TSESTree } from '@typescript-eslint/utils'
 import { Linter } from 'eslint'
 import eslintPluginImportX from 'eslint-plugin-import-x'
 

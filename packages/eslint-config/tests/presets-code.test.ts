@@ -2,13 +2,15 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import eslintPluginE18e from '@e18e/eslint-plugin'
-import { ESLint, Linter, type Rule } from 'eslint'
+import { ESLint, Linter } from 'eslint'
+import type { Rule } from 'eslint'
 import eslintPluginSlop from 'eslint-plugin-slop'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import { defineConfig as eslintDefineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 import { patchUnsafeFixes } from '@/internal/fixes'
 import { wrapSlopPlugin } from '@/internal/presets/antislop'
 
@@ -24,8 +26,8 @@ import {
   sharedESLint,
   warningsOf,
   withProject,
-  type ConfigOptions,
 } from './helpers'
+import type { ConfigOptions } from './helpers'
 
 function lineAndRuleOf(message: Linter.LintMessage): string {
   return `${String(message.line)}:${ruleIdOf(message)}`
@@ -708,13 +710,12 @@ describe('rules turned on after the presets', () => {
         { imports: { rules: { 'import-x/no-duplicates': 'off' } } },
         {
           rules: { 'import-x/no-duplicates': 'error' },
-          comment:
-            '/* eslint import-x/no-duplicates: ["error", { "prefer-inline": true }] -- on here */',
+          comment: '/* eslint import-x/no-duplicates: "error" -- on here */',
         },
         'src/array-from-map.ts',
-        "import { type A } from 'a'\nimport type { B } from 'a'\n\nexport type C = A | B\n",
+        "import type { B } from 'a'\nimport { type A } from 'a'\n\nexport type C = A | B\n",
       )
-      expect(output).not.toContain('type B')
+      expect(output).not.toContain('type A')
       expect(rules).not.toContain(null)
     },
   )

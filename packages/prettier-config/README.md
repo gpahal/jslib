@@ -259,7 +259,7 @@ prettier --check --cache .
 | `root` | unset | Absolute path of an existing folder. Relative `tailwindcss.entryPoint` paths, dot-prefixed plugin paths and plugin package names resolve from it, and a relative `entryPoint` must exist when the config loads. A plugin name that isn't installed at or above it is left as it is. Without it, Prettier and the Tailwind plugin resolve them, as [Tailwind CSS][] describes |
 | `astro` | off | Adds `prettier-plugin-astro`. An object is options for `.astro` files |
 | `tailwindcss` | off | Adds `prettier-plugin-tailwindcss`. Keys: `entryPoint`, `functions`, `attributes`, `preserveWhitespace`. The plugin's other options, such as `tailwindPreserveDuplicates`, go in `options` |
-| `sortImports` | on | Sorts imports with `@ianvs/prettier-plugin-sort-imports`. Takes `importOrder` and the sorter's other exported options, checked against the sorter Prettier loads: with `tailwindcss`, the copy the Tailwind plugin finds. Unknown keys throw |
+| `sortImports` | on | Sorts imports with `@ianvs/prettier-plugin-sort-imports`, and merges the imports of a module, keeping `import type` apart from value imports, as `@gpahal/eslint-config` writes them. Takes `importOrder` and the sorter's other exported options, checked against the sorter Prettier loads: with `tailwindcss`, the copy the Tailwind plugin finds. Unknown keys throw |
 | `githubAlerts` | on | Keeps a GitHub alert marker such as `> [!NOTE]` on its own line |
 | `packageJson` | on | Sorts `package.json` keys with `prettier-plugin-packagejson`, and some nested fields, such as `scripts` |
 | `markdown` |  | Options for the [Markdown files][]. `true` and `false` throw; to leave Markdown files unformatted, list them in `.prettierignore` |

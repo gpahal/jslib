@@ -4,7 +4,8 @@ import { pathToFileURL } from 'node:url'
 
 import { resolve } from 'import-meta-resolve'
 import postcss from 'postcss'
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 import { compile } from 'tailwindcss'
 
 import { withTmpProject, writeFiles } from '@gpahal/internal/node/testing'

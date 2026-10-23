@@ -1,6 +1,7 @@
 import path from 'node:path'
 
-import { build, type UserConfig } from 'tsdown'
+import { build } from 'tsdown'
+import type { UserConfig } from 'tsdown'
 
 import { withPeerProject } from './peer-project'
 

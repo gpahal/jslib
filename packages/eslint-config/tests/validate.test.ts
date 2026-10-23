@@ -7,14 +7,8 @@ import * as eslintPluginRegexp from 'eslint-plugin-regexp'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
-import {
-  defineConfig,
-  files,
-  untyped,
-  withoutFormattingRules,
-  type ConfigNames,
-  type TypedRules,
-} from '@/index'
+import { defineConfig, files, untyped, withoutFormattingRules } from '@/index'
+import type { ConfigNames, TypedRules } from '@/index'
 
 import { eslintWith, FIXTURES_DIR } from './helpers'
 

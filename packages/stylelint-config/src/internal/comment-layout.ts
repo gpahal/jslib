@@ -3,8 +3,10 @@
  * rule of the same name lays out doc blocks. The package README lists the exceptions
  */
 
-import postcss, { type Comment } from 'postcss'
-import stylelint, { type Plugin, type Rule } from 'stylelint'
+import postcss from 'postcss'
+import type { Comment } from 'postcss'
+import stylelint from 'stylelint'
+import type { Plugin, Rule } from 'stylelint'
 
 import {
   getBlockCommentLines,

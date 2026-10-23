@@ -8,12 +8,8 @@
  * `@ts-ignore` applies to, and Astro scripts get neither.
  */
 
-import {
-  AST_NODE_TYPES,
-  AST_TOKEN_TYPES,
-  type TSESLint,
-  type TSESTree,
-} from '@typescript-eslint/utils'
+import { AST_NODE_TYPES, AST_TOKEN_TYPES } from '@typescript-eslint/utils'
+import type { TSESLint, TSESTree } from '@typescript-eslint/utils'
 
 import { getBlockCommentLines } from '@gpahal/internal/comments'
 import { trimBlankLines } from '@gpahal/std/strings'

@@ -1,4 +1,5 @@
-import { configDefaults, defineConfig, type ViteUserConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
+import type { ViteUserConfig } from 'vitest/config'
 
 const resolve: NonNullable<ViteUserConfig['resolve']> = { tsconfigPaths: true }
 

@@ -30,12 +30,8 @@ import {
   ownConfig,
   resolveModulePath,
 } from '@/internal/paths'
-import {
-  mergeDeepWith,
-  type StylelintExtendedConfig,
-  type StylelintExtends,
-  type StylelintOverride,
-} from '@/internal/rules'
+import { mergeDeepWith } from '@/internal/rules'
+import type { StylelintExtendedConfig, StylelintExtends, StylelintOverride } from '@/internal/rules'
 import { TAILWIND_APPLY, tailwindApply } from '@/internal/tailwind-apply'
 
 export const REPORT_KEYS = [

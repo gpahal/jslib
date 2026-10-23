@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import stylelint, { type Plugin } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Plugin } from 'stylelint'
 
 import { commentLayout } from '@/internal/comment-layout'
 import { customPropertyEmptyLineBefore } from '@/internal/custom-property-empty-line-before'

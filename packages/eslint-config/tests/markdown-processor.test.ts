@@ -8,7 +8,8 @@ import type { EslintConfigOptions } from '@/index'
 import { parseUncached } from '@/internal/markdown/language'
 import { createMarkdownProcessor } from '@/internal/markdown/processor'
 
-import { CORE_AREAS_OFF, createESLint, sharedESLint, type ConfigOptions } from './helpers'
+import { CORE_AREAS_OFF, createESLint, sharedESLint } from './helpers'
+import type { ConfigOptions } from './helpers'
 
 /**
  * The options of every ESLint here: Markdown, and of the core areas only `imports` and `unicorn`,

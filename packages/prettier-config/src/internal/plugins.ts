@@ -7,10 +7,8 @@ import {
   missingPeersError,
   resolveFromNodeModules,
   resolvePath,
-  type PackageFolder,
-  type Resolve,
-  type ResolvedModule,
 } from '@gpahal/internal/node/resolve'
+import type { PackageFolder, Resolve, ResolvedModule } from '@gpahal/internal/node/resolve'
 import {
   describeNewerThanRange,
   formatInstallHint,

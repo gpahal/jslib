@@ -6,7 +6,8 @@
  */
 
 import type { AtRule, ChildNode, Container, Declaration } from 'postcss'
-import stylelint, { type Plugin, type PostcssResult, type Rule } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Plugin, PostcssResult, Rule } from 'stylelint'
 
 import {
   atRulePrelude,
@@ -14,8 +15,8 @@ import {
   FUNCTION_AT_RULES,
   functionCalls,
   segment,
-  type Part,
 } from '@/internal/tailwind-values'
+import type { Part } from '@/internal/tailwind-values'
 
 const {
   createPlugin,

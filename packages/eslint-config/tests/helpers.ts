@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto'
 import path from 'node:path'
 
-import { ESLint, type Linter } from 'eslint'
+import { ESLint } from 'eslint'
+import type { Linter } from 'eslint'
 import ts from 'typescript'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 import { resolveOptions } from '@/internal/resolve'
 
 export const FIXTURES_DIR = path.join(import.meta.dirname, 'fixtures')

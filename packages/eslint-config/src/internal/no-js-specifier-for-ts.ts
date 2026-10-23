@@ -9,7 +9,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { AST_NODE_TYPES, ASTUtils, TSESLint, type TSESTree } from '@typescript-eslint/utils'
+import { AST_NODE_TYPES, ASTUtils, TSESLint } from '@typescript-eslint/utils'
+import type { TSESTree } from '@typescript-eslint/utils'
 
 import { getDocsUrl } from '@/internal/utils'
 

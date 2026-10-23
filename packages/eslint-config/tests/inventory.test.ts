@@ -16,8 +16,8 @@ import {
   getAllPresetsConfigs,
   inventoryOf,
   listOf,
-  type ConfigOptions,
 } from './helpers'
+import type { ConfigOptions } from './helpers'
 
 // The rules on for each kind of file, so a change to the presets or an upgrade of a plugin shows up
 // as a snapshot diff. Update it with `vitest -u` after checking the diff

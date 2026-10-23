@@ -14,11 +14,11 @@ import {
   isTokenOpenParen,
   isTokenWhitespace,
   tokenize,
-  type CSSToken,
-  type TokenDelim,
 } from '@csstools/css-tokenizer'
+import type { CSSToken, TokenDelim } from '@csstools/css-tokenizer'
 import type { AtRule } from 'postcss'
-import stylelint, { type Plugin, type Rule } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Plugin, Rule } from 'stylelint'
 
 const {
   createPlugin,

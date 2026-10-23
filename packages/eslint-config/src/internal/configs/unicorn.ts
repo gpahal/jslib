@@ -2,7 +2,8 @@ import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 
 import { FILENAME_CASE_IGNORES } from '@/internal/configs/constants'
 import { JSX_FILES } from '@/internal/files'
-import { intersectFiles, type FileSpecs } from '@/internal/globs'
+import { intersectFiles } from '@/internal/globs'
+import type { FileSpecs } from '@/internal/globs'
 import { named } from '@/internal/naming'
 import type { TypedConfig } from '@/internal/types'
 
