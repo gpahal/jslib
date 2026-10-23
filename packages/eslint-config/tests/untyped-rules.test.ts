@@ -8,7 +8,7 @@ import {
   type TypedConfig,
 } from '@/index'
 
-import { FIXTURES_DIR } from './helpers'
+import { CORE_AREAS_OFF, FIXTURES_DIR } from './helpers'
 
 const root = path.join(FIXTURES_DIR, 'rules')
 
@@ -26,7 +26,7 @@ async function build(
   config: TypedConfig,
   options: Partial<EslintConfigOptions> = {},
 ): Promise<unknown> {
-  return defineConfig({ root, isInEditor: false, ...options, configs: [config] })
+  return defineConfig({ root, isInEditor: false, ...CORE_AREAS_OFF, ...options, configs: [config] })
 }
 
 const JAVASCRIPT_FIX = 'Set `typeAware: { javascript: true }` or remove the rule'
@@ -110,7 +110,7 @@ describe('a type-aware rule in a config whose files get no type information', ()
       (composer) => composer.onResolved((configs) => [...configs, typedRuleConfig(['**/*.js'])]),
     ],
   ])('throws through %s', async (_method, change) => {
-    const composer = defineConfig({ root, isInEditor: false })
+    const composer = defineConfig({ root, isInEditor: false, ...CORE_AREAS_OFF })
     await expect(change(composer)).rejects.toThrow(
       `\`${RULE}\`: needs type information, which \`**/*.js\` files don't get. ${JAVASCRIPT_FIX}`,
     )

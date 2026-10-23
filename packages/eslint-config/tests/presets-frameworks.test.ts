@@ -4,6 +4,7 @@ import type { ESLint, Linter } from 'eslint'
 
 import { defineConfig } from '@/index'
 
+import { createFocusedESLint } from './fix-helpers'
 import {
   createESLint,
   eslintWith,
@@ -64,7 +65,11 @@ describe('html and astro code blocks', () => {
 
 describe('astro preset', () => {
   it('lints .astro files at the root of root and below it', async () => {
-    const eslint = await sharedESLint('astro-untyped', { astro: true })
+    const eslint = await createFocusedESLint(
+      'astro-untyped',
+      new Set(['astro/no-conflict-set-directives']),
+      { astro: true },
+    )
     for (const file of ['page.astro', 'src/pages/page.astro']) {
       expect(await eslint.isPathIgnored(file), file).toBe(false)
       expect(await ruleSeverity(eslint, file, 'astro/no-conflict-set-directives'), file).toBe(2)
@@ -103,7 +108,11 @@ describe('astro preset', () => {
 
 describe('astro <script> blocks', () => {
   it('are browser code without the browser option', async () => {
-    const eslint = await sharedESLint('astro', { astro: true, node: true })
+    const eslint = await createFocusedESLint(
+      'astro',
+      (ruleId) => ruleId.startsWith('n/') || ruleId.startsWith('@gpahal/no-node-'),
+      { astro: true, node: true },
+    )
     const config = (await eslint.calculateConfigForFile('script.astro/0_0.ts')) as Linter.Config
     const nodeRules = Object.entries(config.rules ?? {}).filter(
       ([name, entry]) => name.startsWith('n/') && severityOf(entry) !== 0,
@@ -216,20 +225,21 @@ describe('nextjs preset', () => {
   })
 
   it('limits the React rules to `nextjs.scope` without `react.scope`', async () => {
-    const eslint = await sharedESLint('react', {
+    const rule = '@eslint-react/dom-no-missing-button-type'
+    const rules = new Set([rule])
+    const eslint = await createFocusedESLint('react', rules, {
       nextjs: { scope: ['apps/web/**'] },
       typeAware: false,
     })
-    const rule = '@eslint-react/dom-no-missing-button-type'
     expect(await ruleSeverity(eslint, 'apps/web/page.jsx', rule)).toBe(2)
     expect(await ruleSeverity(eslint, 'apps/docs/page.jsx', rule)).toBeUndefined()
-    const withReactScope = await sharedESLint('react', {
+    const withReactScope = await createFocusedESLint('react', rules, {
       react: { scope: ['apps/**'] },
       nextjs: { scope: ['apps/web/**'] },
       typeAware: false,
     })
     expect(await ruleSeverity(withReactScope, 'apps/docs/page.jsx', rule)).toBe(2)
-    const withReact = await sharedESLint('react', {
+    const withReact = await createFocusedESLint('react', rules, {
       react: true,
       nextjs: { scope: ['apps/web/**'] },
       typeAware: false,
@@ -240,11 +250,11 @@ describe('nextjs preset', () => {
   })
 
   it("allows Next.js's page exports only in `nextjs`'s files", async () => {
-    const eslint = await sharedESLint('react', {
-      react: { scope: ['apps/**'] },
-      nextjs: { scope: ['apps/web/**'] },
-      typeAware: false,
-    })
+    const eslint = await createFocusedESLint(
+      'react',
+      new Set(['react-refresh/only-export-components']),
+      { react: { scope: ['apps/**'] }, nextjs: { scope: ['apps/web/**'] }, typeAware: false },
+    )
     const code = [
       "export const metadata = { title: 'Home' }",
       '',
@@ -344,13 +354,11 @@ describe('tailwindcss preset', () => {
   ] as const)(
     'fixes the whitespace of `%s` only where it separates no concatenated classes',
     async ([value, fixed], { expect }) => {
-      whitespaceFixer ??= createESLint(
+      whitespaceFixer ??= createFocusedESLint(
         'tailwindcss',
+        new Set(['better-tailwindcss/no-unnecessary-whitespace']),
         { tailwindcss, typeAware: false },
-        {
-          fix: true,
-          ruleFilter: ({ ruleId }) => ruleId === 'better-tailwindcss/no-unnecessary-whitespace',
-        },
+        { fix: true },
       )
       const eslint = await whitespaceFixer
       const header = 'declare const cond: boolean\ndeclare const extra: string\n'
@@ -515,11 +523,15 @@ async function runnersOf(eslint: ESLint, file: string): Promise<Array<string>> {
 
 describe('vitest and playwright files with exclusions', () => {
   it('keep the excluded files in Vitest', async () => {
-    const eslint = await createESLint(FIXTURES_DIR, {
-      vitest: { files: ['{src,e2e}/**/*.test.ts'] },
-      playwright: { files: ['e2e/**', '!e2e/unit/**', '!e2e/{int,perf}/**'] },
-      typeAware: false,
-    })
+    const eslint = await createFocusedESLint(
+      FIXTURES_DIR,
+      new Set(['vitest/no-focused-tests', 'playwright/no-focused-test']),
+      {
+        vitest: { files: ['{src,e2e}/**/*.test.ts'] },
+        playwright: { files: ['e2e/**', '!e2e/unit/**', '!e2e/{int,perf}/**'] },
+        typeAware: false,
+      },
+    )
     expect(await runnersOf(eslint, 'e2e/unit/a.test.ts')).toEqual(['vitest', 'vi'])
     expect(await runnersOf(eslint, 'e2e/int/a.test.ts')).toEqual(['vitest', 'vi'])
     expect(await runnersOf(eslint, 'e2e/perf/a.test.ts')).toEqual(['vitest', 'vi'])
@@ -544,7 +556,11 @@ describe('react preset React Compiler rules', () => {
     await using project = await withProject({
       'package.json': JSON.stringify({ name: 'a', private: true, type: 'module', devDependencies }),
     })
-    const eslint = await createESLint(project.dir, { react, typeAware: false, gitignore: false })
+    const eslint = await createFocusedESLint(
+      project.dir,
+      new Set([...compilerRules, 'react-hooks/purity']),
+      { react, typeAware: false, gitignore: false },
+    )
     return Object.fromEntries(
       await Promise.all(
         [...compilerRules, 'react-hooks/purity'].map(

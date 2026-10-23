@@ -310,25 +310,24 @@ const NEXTJS = '### Next.js with Tailwind CSS'
 const ASTRO = '### Astro with React, Tailwind CSS and Vitest'
 
 /**
- * An Astro page, with an island component imported into its frontmatter when `island` is set
+ * An Astro page that imports an island component into its frontmatter
  */
-function astroPage(island?: string): string {
-  return [
-    '---',
-    ...(island === undefined ? [] : [`import Greeting from '${island}'`, '']),
-    "const title='Home'",
-    '---',
-    '<h1 class="p-4 text-brand">{title}</h1>',
-    ...(island === undefined ? [] : ['<Greeting name="you" />']),
-    // `astro/no-unused-css-selector` reports a scoped style that no element uses
-    '<a href="/">Home</a>',
-    '<style>',
-    'h1{margin:var(--space)}',
-    CSS,
-    '</style>',
-    '',
-  ].join('\n')
-}
+const ASTRO_PAGE = [
+  '---',
+  "import Greeting from '../components/greeting.tsx'",
+  '',
+  "const title='Home'",
+  '---',
+  '<h1 class="p-4 text-brand">{title}</h1>',
+  '<Greeting name="you" />',
+  // `astro/no-unused-css-selector` reports a scoped style that no element uses
+  '<a href="/">Home</a>',
+  '<style>',
+  'h1{margin:var(--space)}',
+  CSS,
+  '</style>',
+  '',
+].join('\n')
 
 /**
  * A React island, which type-checks only against React's JSX
@@ -368,8 +367,26 @@ const REACT_STUB = {
   ].join('\n'),
 }
 
-const ASTRO_STYLES = {
-  'src/styles/global.css': "@import 'tailwindcss';\n\n@theme{--color-brand:#f00}\n",
+/**
+ * The sources of an app as `pnpm create astro --template minimal` starts it, which has no TypeScript
+ * file until `astro sync` writes `.astro/types.d.ts`. They're as the fixers leave them, since the
+ * Astro case runs the fixers on the recipe
+ */
+const ASTRO_ONLY_SOURCES = {
+  'src/pages/index.astro': [
+    '---',
+    "const title = 'Home'",
+    '---',
+    '',
+    '<h1 class="p-4 text-brand">{title}</h1>',
+    '<style>',
+    '  h1 {',
+    '    margin: var(--space);',
+    '  }',
+    '</style>',
+    '',
+  ].join('\n'),
+  'src/styles/global.css': "@import 'tailwindcss';\n\n@theme {\n  --color-brand: #f00;\n}\n",
 }
 
 /**
@@ -395,8 +412,7 @@ const REACT_PACKAGES = ['react', 'react-dom']
 
 const REACT_TYPES = ['@types/react', '@types/react-dom']
 
-type Case = {
-  name: string
+type Project = {
   heading: string
   /**
    * The packages the app installs before the recipe, which its command leaves out, in
@@ -411,6 +427,11 @@ type Case = {
    * The app's files before the recipe, such as its `.gitignore`, which the recipe's files replace
    */
   appFiles?: Record<string, string>
+  sources: Record<string, string>
+}
+
+type Case = Project & {
+  name: string
   /**
    * Its sources, unformatted, with a `let` for `prefer-const` to fix
    */
@@ -462,10 +483,10 @@ const CASES: Array<Case> = [
   {
     name: 'pnpm monorepo',
     heading: MONOREPO,
+    // No styled files, for the Stylelint commands' `--allow-empty-input`
     sources: {
       'packages/core/src/sum.ts':
         'export function sum(a:number,b:number):number{let total=a+b\nreturn total}\n',
-      'packages/core/src/styles.css': CSS,
       'packages/cli/src/index.ts': "const name=process.argv[2] ?? 'world'\nconsole.log(name)\n",
       // A package's config file, which the root `tsconfig.node.json` types
       'packages/cli/tsdown.config.ts': "export default {entry:['src/index.ts']}\n",
@@ -529,9 +550,9 @@ const CASES: Array<Case> = [
       'src/components/shout.ts':
         'export function shout(name:string):string{let text=name.toUpperCase()\nreturn text}\n',
       'src/pages/api/health.ts': "export function GET():Response{return new Response('ok')}\n",
-      'src/pages/index.astro': astroPage('../components/greeting.tsx'),
+      'src/pages/index.astro': ASTRO_PAGE,
       ...ASTRO_ISLAND,
-      ...ASTRO_STYLES,
+      'src/styles/global.css': "@import 'tailwindcss';\n\n@theme{--color-brand:#f00}\n",
     },
     invalidSource: {
       'src/pages/index.astro': '---\nconst title: string = 123\n---\n<h1>{title}</h1>\n',
@@ -545,20 +566,6 @@ const CASES: Array<Case> = [
       },
     ],
   },
-  {
-    // As `pnpm create astro --template minimal` starts: no TypeScript file until `astro sync`
-    // writes `.astro/types.d.ts`
-    name: 'Astro with only .astro sources',
-    heading: ASTRO,
-    ...ASTRO_APP,
-    sources: {
-      'src/pages/index.astro': astroPage(),
-      ...ASTRO_STYLES,
-    },
-    invalidSource: {
-      'src/pages/index.astro': '---\nconst title: string = 123\n---\n<h1>{title}</h1>\n',
-    },
-  },
 ]
 
 /**
@@ -569,8 +576,8 @@ const INVALID_CONFIG = { 'a.config.ts': 'export const title: string = 123\n' }
 const TYPE_ERROR = "Type 'number' is not assignable to type 'string'"
 
 /**
- * A project with the case's app, its recipe and its sources, in a temporary folder of its own, so
- * cases can run concurrently
+ * A project with the app, its recipe and its sources, in a temporary folder of its own, so cases can
+ * run concurrently
  */
 async function setUpRecipe({
   heading,
@@ -578,7 +585,7 @@ async function setUpRecipe({
   appDevDependencies = [],
   appFiles = {},
   sources,
-}: Case): Promise<AsyncDisposable & { dir: string }> {
+}: Project): Promise<AsyncDisposable & { dir: string }> {
   const recipe = readRecipe(heading)
   const project = await withTmpProject('setup-recipe')
   const { dir } = project
@@ -632,6 +639,30 @@ async function setUpRecipe({
   return project
 }
 
+/**
+ * Whether the test at `index` runs: every one, or with `RECIPE_SHARD=<k>/<n>`, which CI sets to
+ * split the recipes across jobs, every `n`th from the `k`th
+ */
+function isInShard(index: number): boolean {
+  const value = process.env['RECIPE_SHARD']
+  if (value === undefined || value === '') {
+    return true
+  }
+  const match = /^(?<k>[1-9]\d*)\/(?<n>[1-9]\d*)$/.exec(value)
+  const k = Number(match?.groups?.['k'])
+  const n = Number(match?.groups?.['n'])
+  if (match === null || k > n) {
+    throw new Error(
+      formatMessage(
+        '@gpahal/stylelint-config',
+        ['`RECIPE_SHARD`'],
+        `expected <k>/<n> with k from 1 to n, received ${describeValue(value)}`,
+      ),
+    )
+  }
+  return index % n === k - 1
+}
+
 beforeAll(async () => {
   for (const name of ['std', 'eslint-config', 'prettier-config', 'stylelint-config']) {
     await assertBuildIsCurrent(path.join(REPO_DIR, 'packages', name, 'build'))
@@ -644,7 +675,7 @@ test('the minimal recipe writes a .gitignore', () => {
 })
 
 // Each case runs in a temporary project of its own, whose child processes dominate its time
-test.concurrent.for(CASES)(
+test.concurrent.for(CASES.filter((_, index) => isInShard(index)))(
   'the README recipe for $name passes the fixers and then its checks',
   async (testCase, { expect }) => {
     await using project = await setUpRecipe(testCase)
@@ -689,3 +720,22 @@ test.concurrent.for(CASES)(
     expect(invalid.output.split(TYPE_ERROR).length - 1).toBeGreaterThanOrEqual(2)
   },
 )
+
+test
+  .skipIf(!isInShard(CASES.length))
+  .concurrent(
+    'the README recipe for Astro passes its checks with only .astro sources',
+    async ({ expect }) => {
+      await using project = await setUpRecipe({
+        heading: ASTRO,
+        ...ASTRO_APP,
+        sources: ASTRO_ONLY_SOURCES,
+      })
+      // Lays out the `package.json` that the test writes
+      const formatted = await runScript(project.dir, 'fix:prettier')
+      expect(formatted.status, formatted.output).toBe(0)
+      const checked = await runScript(project.dir, 'check')
+      expect(checked.status, checked.output).toBe(0)
+      expect(checked.output).not.toContain('GPAHAL_')
+    },
+  )

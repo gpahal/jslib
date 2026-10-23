@@ -217,10 +217,15 @@ const LAYOUT_RULES: Record<string, Array<string>> = {
   'html/index.html': TAILWIND,
 }
 
-describe('with every preset on', () => {
-  const configs = new Map<string, Linter.Config | undefined>()
-  beforeAll(async () => {
+/**
+ * Each file's config with every preset on, resolved once for the tests that read it
+ */
+const allPresetsConfigs: { promise?: Promise<Map<string, Linter.Config | undefined>> } = {}
+
+async function getAllPresetsConfigs(): Promise<Map<string, Linter.Config | undefined>> {
+  allPresetsConfigs.promise ??= (async () => {
     const eslint = await createAllPresetsESLint()
+    const configs = new Map<string, Linter.Config | undefined>()
     for (const file of FILES) {
       configs.set(
         file,
@@ -228,6 +233,15 @@ describe('with every preset on', () => {
           Linter.Config | undefined,
       )
     }
+    return configs
+  })()
+  return allPresetsConfigs.promise
+}
+
+describe('with every preset on', () => {
+  let configs = new Map<string, Linter.Config | undefined>()
+  beforeAll(async () => {
+    configs = await getAllPresetsConfigs()
   })
 
   it.each(FILES)('the rules on for %s', (file) => {
@@ -285,11 +299,7 @@ test(`the rules base alone turns on for ${REFERENCE_FILE}, as a difference from 
   const base = inventoryOf(
     (await eslint.calculateConfigForFile(path.join(dir, 'src/x.ts'))) as Linter.Config | undefined,
   )
-  const allPresets = inventoryOf(
-    (await (
-      await createAllPresetsESLint()
-    ).calculateConfigForFile(path.join(FIXTURES_DIR, REFERENCE_FILE))) as Linter.Config | undefined,
-  )
+  const allPresets = inventoryOf((await getAllPresetsConfigs()).get(REFERENCE_FILE))
   expect(diffOf(allPresets, base)).toMatchSnapshot()
 })
 

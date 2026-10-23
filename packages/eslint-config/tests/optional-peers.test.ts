@@ -98,32 +98,6 @@ type PackageJson = {
   peerDependenciesMeta: Record<string, { optional?: boolean }>
 }
 
-/**
- * Lints each case's file with its options and prints its messages or the error that building its
- * config threw. Run from a project whose `node_modules` holds a copy of the package and links to
- * only the peers given, so an optional peer that bundling pulled into the entry point, or that a
- * preset needs without the README saying so, fails to load
- */
-const SCRIPT = `
-const { defineConfig } = await import('@gpahal/eslint-config')
-const { ESLint } = await import('eslint')
-const results = []
-for (const { options, file } of JSON.parse(process.env.CASES)) {
-  try {
-    const eslint = new ESLint({
-      cwd: process.cwd(),
-      overrideConfigFile: true,
-      overrideConfig: await defineConfig({ root: process.cwd(), ...options }),
-    })
-    const [result] = await eslint.lintFiles([file])
-    results.push({ messages: result.messages.map((message) => message.ruleId ?? message.message) })
-  } catch (error) {
-    results.push({ error: error.message })
-  }
-}
-console.log(JSON.stringify(results))
-`
-
 const packageJson = JSON.parse(
   await fs.readFile(path.join(PACKAGE_DIR, 'package.json'), 'utf8'),
 ) as PackageJson
@@ -150,61 +124,174 @@ test('every optional peer dependency but typescript belongs to a preset', () => 
 type CaseResult = { messages?: Array<string>; error?: string }
 
 /**
- * Runs `script` on `presets`, with `defaults` under their options, from a project whose
- * `node_modules` holds the package, what it requires but `omitted`, and `peers`. The default
- * `defaults` turn off the type information and the areas that load no optional peer, since loading
- * them makes up most of the time a fresh process takes to build a config. The JavaScript-only
- * project's test passes `{}` to keep them on, to check that none of them needs an optional peer
+ * What a project's job does in the child process, from the folder of the project, with its copy of
+ * the package. `lint` lints each case's file with its options and gives its messages or the error
+ * that building its config threw
  */
-async function lintInProject<T = CaseResult>(
-  presets: Array<Preset>,
-  peers: Array<string>,
-  {
-    script = SCRIPT,
-    files = {},
-    omitted = [],
-    defaults = { typeAware: false, ...CORE_AREAS_OFF },
-  }: {
-    script?: string
-    files?: Record<string, string>
-    omitted?: Array<string>
-    defaults?: object
-  } = {},
-): Promise<Array<T>> {
-  await using project = await withProject({
-    'package.json': '{ "name": "project", "private": true, "type": "module" }\n',
-    'styles.css': "@import 'tailwindcss';\n",
-    ...Object.fromEntries(presets.map(({ file, code }) => [file, code])),
-    ...files,
-  })
-  const nodeModulesDir = path.join(project.dir, 'node_modules')
-  const copyDir = path.join(nodeModulesDir, '@gpahal/eslint-config')
-  await fs.mkdir(copyDir, { recursive: true })
-  await Promise.all([
-    fs.copyFile(path.join(PACKAGE_DIR, 'package.json'), path.join(copyDir, 'package.json')),
-    fs.cp(path.join(PACKAGE_DIR, 'build'), path.join(copyDir, 'build'), { recursive: true }),
-    ...[...required.filter((name) => !omitted.includes(name)), ...peers].map(async (name) => {
-      const link = path.join(nodeModulesDir, name)
-      await fs.mkdir(path.dirname(link), { recursive: true })
-      await fs.symlink(await fs.realpath(path.join(PACKAGE_DIR, 'node_modules', name)), link, 'dir')
-    }),
-  ])
-  const stdout = await runNodeOk(['--input-type=module', '--eval', script], {
-    cwd: project.dir,
-    env: {
-      CASES: JSON.stringify(
-        presets.map(({ options, file }) => ({ options: { ...defaults, ...options }, file })),
-      ),
-    },
-  })
-  return JSON.parse(stdout) as Array<T>
+type JobKind = 'lint' | 'astroWithoutJsxA11y' | 'rejections'
+
+/**
+ * Runs each project's job in one process, from the project's folder, with the `defineConfig` of the
+ * project's own copy of the package. Each copy loads its own modules, and resolves its imports from
+ * its project's `node_modules`, which links to only the packages the project gives it, so an
+ * optional peer that bundling pulled into the entry point, or that a preset needs without the README
+ * saying so, fails to load
+ */
+const SCRIPT = `
+import path from 'node:path'
+import { pathToFileURL } from 'node:url'
+
+const rejections = []
+process.on('unhandledRejection', (reason) => rejections.push(reason.message))
+const emitWarning = process.emitWarning
+
+const KINDS = {
+  async lint({ defineConfig, ESLint, cases }) {
+    const results = []
+    for (const { options, file } of cases) {
+      try {
+        const eslint = new ESLint({
+          cwd: process.cwd(),
+          overrideConfigFile: true,
+          overrideConfig: await defineConfig({ root: process.cwd(), ...options }),
+        })
+        const [result] = await eslint.lintFiles([file])
+        results.push({ messages: result.messages.map((message) => message.ruleId ?? message.message) })
+      } catch (error) {
+        results.push({ error: error.message })
+      }
+    }
+    return results
+  },
+  // Builds a config that silences the warning, which leaves it to the next config, then two more to
+  // check the warning is emitted once
+  async astroWithoutJsxA11y({ defineConfig, ESLint, cases: [{ options, file }] }) {
+    const warnings = []
+    process.emitWarning = (warning, options) => warnings.push([String(warning), options?.code])
+    let result
+    try {
+      for (const warningOptions of [{ GPAHAL_ASTRO_JSX_A11Y_MISSING: false }, {}, {}]) {
+        const config = await defineConfig({ root: process.cwd(), ...options, warnings: warningOptions })
+        const eslint = new ESLint({ cwd: process.cwd(), overrideConfigFile: true, overrideConfig: config })
+        const [lintResult] = await eslint.lintFiles([file])
+        result = {
+          a11yRules: config.flatMap((entry) => Object.keys(entry.rules ?? {})).filter((rule) => rule.startsWith('astro/jsx-a11y/')).length,
+          messages: lintResult.messages.map((message) => message.ruleId ?? message.message),
+        }
+      }
+    } finally {
+      process.emitWarning = emitWarning
+    }
+    return { result, warnings }
+  },
+  // A composer made after them loads the same modules in the same order, so once it settles, any
+  // of their presets' imports have failed too. The immediate runs after Node's check for unhandled
+  // rejections
+  async rejections({ defineConfig, cases: [{ options }] }) {
+    const start = rejections.length
+    let configError
+    try {
+      defineConfig({ root: process.cwd(), ...options, configs: [null] })
+    } catch (caught) {
+      configError = caught.message
+    }
+    const composer = defineConfig({ root: process.cwd(), ...options })
+    let argumentError
+    try {
+      composer.overrideRules(null)
+    } catch (caught) {
+      argumentError = caught.message
+    }
+    await defineConfig({ root: process.cwd(), ...options }).then(() => undefined, () => undefined)
+    await new Promise((resolve) => setImmediate(resolve))
+    const awaited = await composer.then(() => undefined, (caught) => caught.message)
+    return { configError, argumentError, rejections: rejections.slice(start), awaited }
+  },
 }
 
-test('the config of a JavaScript-only project loads without typescript', async () => {
-  expect(await lintInProject([BASE], [], { omitted: ['typescript'], defaults: {} })).toEqual([
-    { messages: [] },
-  ])
-})
+const output = []
+for (const { dir, kind, cases } of JSON.parse(process.env.JOBS)) {
+  process.chdir(dir)
+  const modules = path.join(dir, 'node_modules')
+  const { defineConfig } = await import(pathToFileURL(path.join(modules, '@gpahal/eslint-config/build/index.js')).href)
+  const { ESLint } = await import(pathToFileURL(path.join(modules, 'eslint/lib/api.js')).href)
+  output.push(await KINDS[kind]({ defineConfig, ESLint, cases }))
+}
+console.log(JSON.stringify(output))
+`
+
+type Job = {
+  kind?: JobKind
+  presets: Array<Preset>
+  peers: Array<string>
+  omitted?: Array<string>
+  /**
+   * Under each preset's options. The default turns off the type information and the areas that load
+   * no optional peer, since loading them makes up most of the time building a config takes. The
+   * JavaScript-only project's job passes `{}` to keep them on, to check that none of them needs an
+   * optional peer
+   */
+  defaults?: object
+}
+
+/**
+ * The output of each job, run in one child process from a project of its own, whose
+ * `node_modules` holds a copy of the package, what it requires but `omitted`, and `peers`
+ */
+async function runJobs(jobs: Array<Job>): Promise<Array<unknown>> {
+  const projects = await Promise.all(
+    jobs.map(async ({ presets, peers, omitted = [] }) => {
+      const project = await withProject({
+        'package.json': '{ "name": "project", "private": true, "type": "module" }\n',
+        'styles.css': "@import 'tailwindcss';\n",
+        ...Object.fromEntries(presets.map(({ file, code }) => [file, code])),
+      })
+      const nodeModulesDir = path.join(project.dir, 'node_modules')
+      const copyDir = path.join(nodeModulesDir, '@gpahal/eslint-config')
+      await fs.mkdir(copyDir, { recursive: true })
+      await Promise.all([
+        fs.copyFile(path.join(PACKAGE_DIR, 'package.json'), path.join(copyDir, 'package.json')),
+        fs.cp(path.join(PACKAGE_DIR, 'build'), path.join(copyDir, 'build'), { recursive: true }),
+        ...[...required.filter((name) => !omitted.includes(name)), ...peers].map(async (name) => {
+          const link = path.join(nodeModulesDir, name)
+          await fs.mkdir(path.dirname(link), { recursive: true })
+          await fs.symlink(
+            await fs.realpath(path.join(PACKAGE_DIR, 'node_modules', name)),
+            link,
+            'dir',
+          )
+        }),
+      ])
+      return project
+    }),
+  )
+  try {
+    const stdout = await runNodeOk(['--input-type=module', '--eval', SCRIPT], {
+      env: {
+        JOBS: JSON.stringify(
+          jobs.map(
+            (
+              { kind = 'lint', presets, defaults = { typeAware: false, ...CORE_AREAS_OFF } },
+              index,
+            ) => ({
+              dir: projects[index]!.dir,
+              kind,
+              cases: presets.map(({ options, file }) => ({
+                options: { ...defaults, ...options },
+                file,
+              })),
+            }),
+          ),
+        ),
+      },
+    })
+    return JSON.parse(stdout) as Array<unknown>
+  } finally {
+    await Promise.all(projects.map(async (project) => project[Symbol.asyncDispose]()))
+  }
+}
+
+const PRESETS_WITH_PEERS = PRESETS.filter(({ peers }) => peers.length > 0)
 
 test('checkTypescriptInstalled throws only when typescript is needed and missing', async () => {
   await using project = await withProject()
@@ -214,117 +301,101 @@ test('checkTypescriptInstalled throws only when typescript is needed and missing
   )
 })
 
-// Each preset with its peers needs a project of its own
-test.concurrent.each(
-  PRESETS.filter(({ peers }) => peers.length > 0).map(
-    (p) => [JSON.stringify(p.options), p] as const,
-  ),
-)('the config %s loads with only its documented peer dependencies', async (_name, p) => {
-  expect(await lintInProject([p], p.peers)).toEqual([{ messages: [] }])
-})
+describe('a project with some of the peer dependencies', () => {
+  // Every job's output. Each preset with its peers needs a project of its own
+  let outputs: {
+    javascriptOnly: Array<CaseResult>
+    withPeers: Array<Array<CaseResult>>
+    withoutPeers: Array<CaseResult>
+    astroWithoutJsxA11y: unknown
+    rejections: unknown
+  }
 
-describe('without any optional peer dependency', () => {
-  // One project and one process for every preset
-  let results: Array<CaseResult> = []
   beforeAll(async () => {
-    results = await lintInProject(PRESETS, [])
+    const [[javascriptOnly, rejections, withoutPeers, ...withPeers], [astroWithoutJsxA11y]] =
+      await Promise.all([
+        runJobs([
+          { presets: [BASE], peers: [], omitted: ['typescript'], defaults: {} },
+          { kind: 'rejections', presets: [preset('react')], peers: [] },
+          // One project for every preset
+          { presets: PRESETS, peers: [] },
+          ...PRESETS_WITH_PEERS.map((p) => ({ presets: [p], peers: p.peers })),
+        ]),
+        // A process of its own, since eslint-plugin-astro keeps what it found of jsx-a11y for the
+        // process
+        runJobs([
+          {
+            kind: 'astroWithoutJsxA11y',
+            presets: [preset('astro')],
+            peers: ['eslint-plugin-astro'],
+          },
+        ]),
+      ])
+    outputs = {
+      javascriptOnly: javascriptOnly as Array<CaseResult>,
+      withPeers: withPeers as Array<Array<CaseResult>>,
+      withoutPeers: withoutPeers as Array<CaseResult>,
+      astroWithoutJsxA11y,
+      rejections,
+    }
   })
+
+  it('loads the config of a JavaScript-only project without typescript', () => {
+    expect(outputs.javascriptOnly).toEqual([{ messages: [] }])
+  })
+
+  it.each(PRESETS_WITH_PEERS.map((p, index) => [JSON.stringify(p.options), index] as const))(
+    'loads the config %s with only its documented peer dependencies',
+    (_name, index) => {
+      expect(outputs.withPeers[index]).toEqual([{ messages: [] }])
+    },
+  )
 
   it.each(
     PRESETS.flatMap((p, index) =>
       p.peers.length > 0 ? [[JSON.stringify(p.options), p, index] as const] : [],
     ),
-  )('the config %s names the option and the packages to install', (_name, p, index) => {
-    const [option = ''] = Object.keys(p.options)
-    const error = results[index]?.error ?? ''
-    expect(error).toMatch(
-      new RegExp(
-        `^@gpahal/eslint-config: \`${option}\`: needs \`.+, which (?:isn't|aren't) installed\\. Install (?:it as a dev dependency|them as dev dependencies), as in \`pnpm add -D [^\`]+\`$`,
-      ),
-    )
-    expect(error).toContain(`\`${p.peers[0]!}\``)
-    const otherPeers = optionalPeers.filter((name) => !p.peers.includes(name))
-    for (const peer of otherPeers) {
-      expect(error).not.toContain(`\`${peer}\``)
-    }
-  })
-})
-
-test('astro without jsx-a11y where ESLint runs loads, warns once and leaves out the `astro/jsx-a11y/*` rules', async () => {
-  // Builds a config that silences the warning, which leaves it to the next config, then two more
-  // to check the warning is emitted once
-  const script = `
-const { defineConfig } = await import('@gpahal/eslint-config')
-const { ESLint } = await import('eslint')
-const warnings = []
-process.emitWarning = (warning, options) => warnings.push([String(warning), options?.code])
-const [{ options, file }] = JSON.parse(process.env.CASES)
-let result
-for (const warningOptions of [{ GPAHAL_ASTRO_JSX_A11Y_MISSING: false }, {}, {}]) {
-  const config = await defineConfig({ root: process.cwd(), ...options, warnings: warningOptions })
-  const eslint = new ESLint({ cwd: process.cwd(), overrideConfigFile: true, overrideConfig: config })
-  const [lintResult] = await eslint.lintFiles([file])
-  result = {
-    a11yRules: config.flatMap((entry) => Object.keys(entry.rules ?? {})).filter((rule) => rule.startsWith('astro/jsx-a11y/')).length,
-    messages: lintResult.messages.map((message) => message.ruleId ?? message.message),
-  }
-}
-console.log(JSON.stringify([{ result, warnings }]))
-`
-  const [output] = await lintInProject<{ result: unknown; warnings: unknown }>(
-    [preset('astro')],
-    ['eslint-plugin-astro'],
-    {
-      script,
+  )(
+    'names the option of the config %s and the packages to install without any optional peer dependency',
+    (_name, p, index) => {
+      const [option = ''] = Object.keys(p.options)
+      const error = outputs.withoutPeers[index]?.error ?? ''
+      expect(error).toMatch(
+        new RegExp(
+          `^@gpahal/eslint-config: \`${option}\`: needs \`.+, which (?:isn't|aren't) installed\\. Install (?:it as a dev dependency|them as dev dependencies), as in \`pnpm add -D [^\`]+\`$`,
+        ),
+      )
+      expect(error).toContain(`\`${p.peers[0]!}\``)
+      const otherPeers = optionalPeers.filter((name) => !p.peers.includes(name))
+      for (const peer of otherPeers) {
+        expect(error).not.toContain(`\`${peer}\``)
+      }
     },
   )
-  expect(output).toEqual({
-    result: { a11yRules: 0, messages: [] },
-    warnings: [
-      [
-        expect.stringMatching(
-          /^@gpahal\/eslint-config: `astro`: `eslint-plugin-jsx-a11y-x` or `eslint-plugin-jsx-a11y` isn't installed where ESLint runs, `\/.+`, so the `astro\/jsx-a11y\/\*` rules are off\. Install it as a dev dependency there, as in `pnpm add -D eslint-plugin-jsx-a11y-x`$/,
-        ),
-        'GPAHAL_ASTRO_JSX_A11Y_MISSING',
-      ],
-    ],
-  })
-})
 
-test('an invalid config of yours, or a composer argument that throws, leaves no rejection for a missing peer, which awaiting still gives', async () => {
-  // A composer made after them loads the same modules in the same order, so once it settles, any
-  // of their presets' imports have failed too. The immediate runs after Node's check for unhandled
-  // rejections
-  const script = `
-const { defineConfig } = await import('@gpahal/eslint-config')
-const rejections = []
-process.on('unhandledRejection', (reason) => rejections.push(reason.message))
-let configError
-try {
-  defineConfig({ root: process.cwd(), react: true, configs: [null] })
-} catch (caught) {
-  configError = caught.message
-}
-const composer = defineConfig({ root: process.cwd(), react: true })
-let argumentError
-try {
-  composer.overrideRules(null)
-} catch (caught) {
-  argumentError = caught.message
-}
-await defineConfig({ root: process.cwd(), react: true }).then(() => undefined, () => undefined)
-await new Promise((resolve) => setImmediate(resolve))
-const awaited = await composer.then(() => undefined, (caught) => caught.message)
-console.log(JSON.stringify([{ configError, argumentError, rejections, awaited }]))
-`
-  const [result] = await lintInProject([preset('react')], [], { script })
-  expect(result).toEqual({
-    configError:
-      '@gpahal/eslint-config: `configs[0]`: expected a config object or an array of them, received `null`',
-    argumentError:
-      '@gpahal/eslint-config: `.overrideRules()`: expected an object of rule entries, received `null`',
-    rejections: [],
-    awaited: expect.stringMatching(/^@gpahal\/eslint-config: `react`: needs `/) as unknown,
+  it('loads astro without jsx-a11y where ESLint runs, warns once and leaves out the `astro/jsx-a11y/*` rules', () => {
+    expect(outputs.astroWithoutJsxA11y).toEqual({
+      result: { a11yRules: 0, messages: [] },
+      warnings: [
+        [
+          expect.stringMatching(
+            /^@gpahal\/eslint-config: `astro`: `eslint-plugin-jsx-a11y-x` or `eslint-plugin-jsx-a11y` isn't installed where ESLint runs, `\/.+`, so the `astro\/jsx-a11y\/\*` rules are off\. Install it as a dev dependency there, as in `pnpm add -D eslint-plugin-jsx-a11y-x`$/,
+          ),
+          'GPAHAL_ASTRO_JSX_A11Y_MISSING',
+        ],
+      ],
+    })
+  })
+
+  it('leaves no rejection for a missing peer after an invalid config of yours or a composer argument that throws, which awaiting still gives', () => {
+    expect(outputs.rejections).toEqual({
+      configError:
+        '@gpahal/eslint-config: `configs[0]`: expected a config object or an array of them, received `null`',
+      argumentError:
+        '@gpahal/eslint-config: `.overrideRules()`: expected an object of rule entries, received `null`',
+      rejections: [],
+      awaited: expect.stringMatching(/^@gpahal\/eslint-config: `react`: needs `/) as unknown,
+    })
   })
 })
 

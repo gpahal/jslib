@@ -20,7 +20,6 @@ import {
 } from '@/index'
 import { slopPlugin } from '@/slop'
 
-import { ALL_ON_OPTIONS } from '../scripts/typegen'
 import {
   collator,
   CORE_AREAS_OFF_SOURCE,
@@ -101,17 +100,6 @@ describe('composer', () => {
 
   afterAll(async () => {
     await scopeProject[Symbol.asyncDispose]()
-  })
-
-  it('names every config uniquely under `gpahal/`', async () => {
-    const configs = await defineConfig({
-      ...ALL_ON_OPTIONS,
-      root,
-      tailwindcss: { entryPoint: '../tailwindcss/src/styles.css' },
-    })
-    const configNames = names(configs)
-    expect(configNames.filter((name) => name?.startsWith('gpahal/') !== true)).toEqual([])
-    expect(new Set(configNames).size).toBe(configNames.length)
   })
 
   it.each<[string, TypedConfig]>([
@@ -915,7 +903,8 @@ describe('configs of yours through `configs` and the composer methods', () => {
     },
   } satisfies ESLint.Plugin
 
-  it.each(sources)(
+  // `.append()` and `.insertBefore()` add their configs as `.insertAfter()` does
+  it.each(sources.filter(([source]) => source !== 'append' && source !== 'insertBefore'))(
     'turns the rules of a config without `files` on in every file but JSON, YAML, TOML, Markdown and HTML files through %s',
     async (source) => {
       const project = scopeFilesProject

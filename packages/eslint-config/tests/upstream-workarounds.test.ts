@@ -26,6 +26,7 @@ import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'
 import { DEFAULT_PROJECT_CONFLICT } from '@/internal/project-service'
 import { UNFLAGGED_TYPED_RULES } from '@/internal/rules'
 
+import { withRulesOnly } from './fix-helpers'
 import { collator } from './helpers'
 
 // Each test shows an upstream bug that a workaround in this package exists for, with the stock
@@ -543,19 +544,24 @@ console.log(JSON.stringify({ parser: base.languageOptions.parserOptions.parser ?
       'page.astro':
         '---\nconst items = [1, 2]\n---\n\n<ul>\n  {items.map((n) => <li>{n}</li>)}\n</ul>\n',
     })
+    const rule = '@typescript-eslint/no-unsafe-return'
     const eslint = new ESLint({
       cwd: project.dir,
       overrideConfigFile: true,
-      overrideConfig: [
-        ...(await defineConfig({ root: project.dir, astro: true, isInEditor: false })),
-        { files: ['**/*.astro'], rules: { '@typescript-eslint/no-unsafe-return': 'error' } },
-      ],
+      // Only the rule, which takes a fraction of the time to resolve and run
+      overrideConfig: withRulesOnly(
+        [
+          ...(await defineConfig({ root: project.dir, astro: true, isInEditor: false })),
+          { files: ['**/*.astro'], rules: { [rule]: 'error' } },
+        ],
+        new Set([rule]),
+      ),
     })
     const [result] = await eslint.lintFiles(['page.astro'])
     expect(
       result?.messages.map((message) => message.ruleId),
       'astro-eslint-parser types template JSX without `@types/react` now: drop the typescript-eslint rules of `ASTRO_TEMPLATE_RULES` in src/internal/presets/astro.ts',
-    ).toEqual(['@typescript-eslint/no-unsafe-return'])
+    ).toEqual([rule])
   })
 
   it("the import resolver's tinyglobby still misses the tsconfig files under its working directory, and finds node_modules ones", async () => {

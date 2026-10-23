@@ -90,14 +90,6 @@ describe('a pnpm consumer', () => {
     await project[Symbol.asyncDispose]()
   })
 
-  it('reports property order through defineConfig', async () => {
-    const { status, output } = await runStylelint(projectDir, DEFINE_CONFIG, {
-      'a.css': 'a {\n  color: red;\n  display: block;\n}\n',
-    })
-    expect(output).toContain('order/properties-order')
-    expect(status).toBe(2)
-  })
-
   it("reports the package's error for a rejected option in an extended config", async () => {
     const preset = await writePreset(projectDir, presetConfig('bogus: 1'))
     const { status, output } = await runStylelint(
@@ -138,6 +130,7 @@ describe('a pnpm consumer', () => {
         'a.html': ['property-no-unknown'],
         'a.md': ['property-no-unknown'],
         'a.css': ['property-no-unknown'],
+        'b.css': ['order/properties-order'],
       })
     })
 
@@ -188,13 +181,15 @@ function rulesByFile(output: string): Record<string, Array<string> | 'ignored'> 
 }
 
 /**
- * A file of each type that Stylelint lints with its own syntax, each with an unknown property
+ * A file of each type that Stylelint lints with its own syntax, each with an unknown property, and
+ * CSS out of order for the stylelint-order plugin, which the package resolves
  */
 const FILE_TYPES = {
   'a.astro': '<style>\n  a {\n    colr: red;\n  }\n</style>\n',
   'a.html': '<style>\n  a {\n    colr: red;\n  }\n</style>\n',
   'a.md': '# A\n\n```css\na {\n  colr: red;\n}\n```\n',
   'a.css': 'a {\n  colr: red;\n}\n',
+  'b.css': 'a {\n  color: red;\n  display: block;\n}\n',
 }
 
 // As above, without hoisting for postcss-markdown too, which loads `postcss-html` by name from the

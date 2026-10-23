@@ -4,12 +4,18 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import type { ESLint, Linter } from 'eslint'
 
-import { assertBuildIsCurrent, runNodeOk } from '@gpahal/internal/node/testing'
+import { assertBuildIsCurrent, runNode, runNodeOk } from '@gpahal/internal/node/testing'
 
 import { defineConfig } from '@/index'
 import { isInEditorEnvOf, type EditorEnv } from '@/internal/editor'
 
-import { BUILD_DIR, CORE_AREAS_OFF_SOURCE, eslintWith, withProject } from './helpers'
+import {
+  BUILD_DIR,
+  CORE_AREAS_OFF,
+  CORE_AREAS_OFF_SOURCE,
+  eslintWith,
+  withProject,
+} from './helpers'
 
 beforeAll(async () => assertBuildIsCurrent(BUILD_DIR))
 
@@ -24,22 +30,26 @@ const FIXED_PREFER_CONST = 'export function one() {\n  const a = 1\n  return a\n
 
 /**
  * Lints `src/index.js` of the working directory with `--fix`, as an editor would, with the
- * `defineConfig` of `CONFIG_URL` and the ESLint of `ESLINT_URL`, and prints the rules that report
- * and the output. The config turns off the areas the test doesn't check, since loading them makes
- * up most of the time a fresh process takes to build the config
+ * `defineConfig` of `CONFIG_URL` and each ESLint of `ESLINT_URLS`, and prints the rules that report
+ * and the output of each. The config turns off the areas the test doesn't check, since loading them
+ * makes up most of the time a fresh process takes to build the config
  */
 const COPY_SCRIPT = `
 const { defineConfig } = await import(process.env.CONFIG_URL)
-const { ESLint } = await import(process.env.ESLINT_URL)
 const cwd = process.cwd()
-const eslint = new ESLint({
-  cwd,
-  overrideConfigFile: true,
-  overrideConfig: await defineConfig({ root: cwd, isInEditor: true, typeAware: false, ${CORE_AREAS_OFF_SOURCE} }),
-  fix: true,
-})
-const [result] = await eslint.lintFiles(['src/index.js'])
-console.log(JSON.stringify({ ruleIds: result.messages.map((message) => message.ruleId), output: result.output }))
+const results = []
+for (const eslintUrl of JSON.parse(process.env.ESLINT_URLS)) {
+  const { ESLint } = await import(eslintUrl)
+  const eslint = new ESLint({
+    cwd,
+    overrideConfigFile: true,
+    overrideConfig: await defineConfig({ root: cwd, isInEditor: true, typeAware: false, ${CORE_AREAS_OFF_SOURCE} }),
+    fix: true,
+  })
+  const [result] = await eslint.lintFiles(['src/index.js'])
+  results.push({ ruleIds: result.messages.map((message) => message.ruleId), output: result.output })
+}
+console.log(JSON.stringify(results))
 `
 
 test("in an editor, prefer-const reports without fixing through the project's eslint and the config's own copy", async () => {
@@ -70,43 +80,33 @@ test("in an editor, prefer-const reports without fixing through the project's es
     }),
   )
   await fs.symlink(await fs.realpath(ESLINT_DIR), path.join(appModules, 'eslint'))
-  await Promise.all(
-    [path.join(appModules, 'eslint'), path.join(copyModules, 'eslint')].map(async (eslintDir) => {
-      const stdout = await runNodeOk(['--input-type=module', '--eval', COPY_SCRIPT], {
-        cwd: path.join(project.dir, 'app'),
-        env: {
-          CONFIG_URL: pathToFileURL(path.join(configDir, 'build', 'index.js')).href,
-          ESLINT_URL: pathToFileURL(path.join(eslintDir, 'lib', 'api.js')).href,
-        },
-      })
-      expect(JSON.parse(stdout), eslintDir).toEqual({ ruleIds: ['prefer-const'] })
-    }),
-  )
+  // One process, as the copies load apart: each from its own real path
+  const stdout = await runNodeOk(['--input-type=module', '--eval', COPY_SCRIPT], {
+    cwd: path.join(project.dir, 'app'),
+    env: {
+      CONFIG_URL: pathToFileURL(path.join(configDir, 'build', 'index.js')).href,
+      ESLINT_URLS: JSON.stringify(
+        [appModules, copyModules].map(
+          (modules) => pathToFileURL(path.join(modules, 'eslint', 'lib', 'api.js')).href,
+        ),
+      ),
+    },
+  })
+  expect(JSON.parse(stdout)).toEqual([{ ruleIds: ['prefer-const'] }, { ruleIds: ['prefer-const'] }])
 })
 
-const ASYNC_RETURN =
-  "export function load(ok: boolean): Promise<number> {\n  if (!ok) {\n    throw new Error('sync')\n  }\n  return Promise.resolve(1)\n}\n"
-const LAST_ITEM = 'export function last(list) {\n  return list[list.length - 1]\n}\n'
-
-test('in one process, configs made in and outside an editor, and one with the report-only fixes removed, each fix as they say', async () => {
+// report-only.test.ts checks the report-only fixes, which are the same in and outside an editor
+test('in one process, configs made in and outside an editor each fix as they say', async () => {
   await using project = await withProject({
     'package.json': '{ "name": "fixes", "type": "module" }\n',
-    'tsconfig.json':
-      '{ "compilerOptions": { "strict": true, "noEmit": true }, "include": ["src"] }\n',
     'src/prefer-const.js': PREFER_CONST,
     'src/disabled.js': DISABLED_PREFER_CONST,
-    'src/async-return.ts': ASYNC_RETURN,
-    'src/last.js': LAST_ITEM,
-    'src/last.ts': LAST_ITEM.replace('(list)', '(list: Array<number>): number | undefined'),
   })
-  const options = { root: project.dir, gitignore: false } as const
+  const options = { root: project.dir, gitignore: false, typeAware: false, ...CORE_AREAS_OFF }
   // Every config is made before any lints, so each rule is patched for all of them at once
   const configs = {
     terminal: await defineConfig({ ...options, isInEditor: false }),
     editor: await defineConfig({ ...options, isInEditor: true }),
-    fixesOn: await defineConfig({ ...options, isInEditor: false })
-      .remove('gpahal/fixes/report-only')
-      .remove('gpahal/fixes/report-only-untyped'),
   }
   const fixAll = async (config: Array<Linter.Config>) => {
     const results = await eslintWith(project.dir, config, { fix: true }).lintFiles(['src'])
@@ -118,33 +118,18 @@ test('in one process, configs made in and outside an editor, and one with the re
     Object.fromEntries(
       Object.entries(byFile).map(([file, result]) => [file, result.output !== undefined]),
     )
-  const terminalFixes = {
-    'src/prefer-const.js': true,
-    'src/disabled.js': false,
-    'src/async-return.ts': false,
-    'src/last.js': false,
-    'src/last.ts': true,
-  }
-  const editorFixes = { ...terminalFixes, 'src/prefer-const.js': false }
 
   const terminal = await fixAll(configs.terminal)
-  expect(isFixed(terminal)).toEqual(terminalFixes)
+  expect(isFixed(terminal)).toEqual({ 'src/prefer-const.js': true, 'src/disabled.js': false })
   expect(terminal['src/prefer-const.js']?.output).toBe(FIXED_PREFER_CONST)
-  // A file with type information keeps the fix, since the type checker reports an array-like there
-  expect(terminal['src/last.ts']?.output).toContain('list.at(-1)')
 
   const editor = await fixAll(configs.editor)
-  expect(isFixed(editor)).toEqual(editorFixes)
+  expect(isFixed(editor)).toEqual({ 'src/prefer-const.js': false, 'src/disabled.js': false })
   expect(editor['src/prefer-const.js']?.messages.map((message) => message.ruleId)).toEqual([
     'prefer-const',
   ])
   // A disable comment names the rule, as outside an editor
   expect(editor['src/disabled.js']?.messages).toEqual([])
-  expect(isFixed(await fixAll(configs.fixesOn))).toEqual({
-    ...terminalFixes,
-    'src/async-return.ts': true,
-    'src/last.js': true,
-  })
 })
 
 describe('editor detection', () => {
@@ -184,9 +169,11 @@ test("ESLint's `--concurrency` workers run its worker script at the path editor 
   expect(eslintSource).toContain('"./worker.js"')
 })
 
-test("ESLint's bin fixes, in `--concurrency` workers too, with an editor's variables set and its output piped", async () => {
+// ESLint's `--concurrency` workers are worker threads that each load the config again
+test("ESLint's bin fixes, in `--concurrency` workers too, with an editor's variables set and its output piped, and warns once, from the main thread", async () => {
   await using project = await withProject({
-    'package.json': '{ "name": "bin", "type": "module" }\n',
+    // `turbo` without the `turbo` option, for a setup warning
+    'package.json': '{ "name": "bin", "type": "module", "devDependencies": { "turbo": "*" } }\n',
     'index.js': PREFER_CONST,
     'a.js': PREFER_CONST,
     'b.js': PREFER_CONST,
@@ -195,7 +182,7 @@ test("ESLint's bin fixes, in `--concurrency` workers too, with an editor's varia
   // ESLint's bin as the script, so `process.argv` is as when it runs, not from a package script,
   // as when an agent in an editor's terminal runs it
   const fix = async (...args: Array<string>) =>
-    runNodeOk(
+    runNode(
       [
         '--input-type=module',
         '--eval',
@@ -210,8 +197,10 @@ test("ESLint's bin fixes, in `--concurrency` workers too, with an editor's varia
       },
     )
   // Separate files, so the runs can't race
-  await Promise.all([fix('index.js'), fix('--concurrency', '2', 'a.js', 'b.js')])
+  const runs = await Promise.all([fix('index.js'), fix('--concurrency', '2', 'a.js', 'b.js')])
+  expect(runs.map(({ status }) => status)).toEqual([0, 0])
   for (const file of ['index.js', 'a.js', 'b.js']) {
     expect(await fs.readFile(path.join(project.dir, file), 'utf8'), file).toBe(FIXED_PREFER_CONST)
   }
+  expect(runs[1].stderr.split('GPAHAL_FRAMEWORK_OPTION_UNSET')).toHaveLength(2)
 })

@@ -3,7 +3,7 @@ import { parser as tsEslintParser } from 'typescript-eslint'
 
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
 
-import { collator, createESLint, lint, withProject } from './helpers'
+import { collator, CORE_AREAS_OFF, createESLint, lint, withProject } from './helpers'
 
 const RULE = '@gpahal/nextjs-server-component'
 
@@ -89,10 +89,11 @@ test('checks the route entry files of the app folders of each `nextjs.rootDir`',
     'apps/docs/src/app/loading.tsx': page,
     'app/page.tsx': page,
   })
-  const eslint = await createESLint(project.dir, {
-    typeAware: false,
-    nextjs: { rootDir: ['apps/web', 'apps/docs'] },
-  })
+  const eslint = await createESLint(
+    project.dir,
+    { ...CORE_AREAS_OFF, typeAware: false, nextjs: { rootDir: ['apps/web', 'apps/docs'] } },
+    { ruleFilter: ({ ruleId }) => ruleId === RULE },
+  )
   const results = await lint(eslint, ['.'])
   expect(
     Object.entries(results)
@@ -112,11 +113,11 @@ test('leaves browser globals in the `server` files to `@gpahal/no-browser-global
     'app/page.tsx':
       "import { useState } from 'react'\n\nexport default function Page() {\n  const [n] = useState(window.innerWidth)\n  return <p>{n}</p>\n}\n",
   })
-  const eslint = await createESLint(project.dir, {
-    typeAware: false,
-    nextjs: true,
-    server: { files: ['app/**'] },
-  })
+  const eslint = await createESLint(
+    project.dir,
+    { ...CORE_AREAS_OFF, typeAware: false, nextjs: true, server: { files: ['app/**'] } },
+    { ruleFilter: ({ ruleId }) => ruleId.startsWith('@gpahal/') },
+  )
   const messages = (await lint(eslint, ['app/page.tsx']))['app/page.tsx'] ?? []
   expect(
     messages.filter((message) => /^@gpahal\/(?:nextjs-server-component|no-browser)/u.test(message)),

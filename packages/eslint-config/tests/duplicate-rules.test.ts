@@ -5,9 +5,10 @@ import { builtinRules } from 'eslint/use-at-your-own-risk'
 
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import { ALLOWED_OVERLAPS, DUPLICATE_REPORTS, DUPLICATE_RULES } from '@/internal/duplicate-rules'
-import { parseRuleId } from '@/internal/rules'
+import { isRuleOn, parseRuleId } from '@/internal/rules'
 
 import { ALL_ON_OPTIONS } from '../scripts/typegen'
+import { withRulesOnly } from './fix-helpers'
 import {
   createESLint,
   eslintWith,
@@ -17,15 +18,6 @@ import {
   severityOf,
   sharedESLint,
 } from './helpers'
-
-/**
- * Every preset with each type-information mode
- */
-const BASE_OPTION_SETS: Array<[string, EslintConfigOptions]> = [
-  ['every option on', ALL_ON_OPTIONS],
-  ['typeAware: false', { ...ALL_ON_OPTIONS, typeAware: false }],
-  ['typeAware.javascript', { ...ALL_ON_OPTIONS, typeAware: { javascript: true } }],
-]
 
 /**
  * The options that turn off the areas of the kept rules that can be turned off
@@ -80,34 +72,56 @@ const AREA_PAIR_FILES = PAIR_FILES.filter(
 )
 
 /**
- * The type-information modes don't change which areas are on, so only the first set turns each off
+ * Every preset with each type-information mode, and without the SonarJS area, where only
+ * `antislop`'s SonarJS configs run its kept rules, in some files. The other options of
+ * `KEPT_AREAS_OFF` leave the kept rules of their areas on nowhere, which the structural test below
+ * checks
  */
 const OPTION_SETS: Array<[string, EslintConfigOptions, ReadonlyArray<string>]> = [
-  ...BASE_OPTION_SETS.map(
-    ([name, options], index): [string, EslintConfigOptions, ReadonlyArray<string>] => [
-      name,
-      options,
-      index === 0 ? PAIR_FILES : AREA_PAIR_FILES,
-    ],
-  ),
-  ...KEPT_AREAS_OFF.map(
-    ([offName, offOptions]): [string, EslintConfigOptions, ReadonlyArray<string>] => [
-      `every option on, ${offName}`,
-      { ...ALL_ON_OPTIONS, ...offOptions },
-      AREA_PAIR_FILES,
-    ],
-  ),
+  ['every option on', ALL_ON_OPTIONS, PAIR_FILES],
+  ['typeAware: false', { ...ALL_ON_OPTIONS, typeAware: false }, AREA_PAIR_FILES],
+  ['typeAware.javascript', { ...ALL_ON_OPTIONS, typeAware: { javascript: true } }, AREA_PAIR_FILES],
+  ['every option on, sonarjs: false', { ...ALL_ON_OPTIONS, sonarjs: false }, AREA_PAIR_FILES],
 ]
+
+/**
+ * The rules of the duplicate pairs, the only ones whose severities the test reads
+ */
+const PAIR_RULES = new Set<string>(DUPLICATE_RULES.flatMap(({ kept, off }) => [...kept, off]))
+
+/**
+ * Whether `config` is one of the configs that turn twins off
+ */
+function isDuplicatesConfig(config: Linter.Config): boolean {
+  return config.name?.startsWith('gpahal/duplicates/') === true
+}
+
+test.each(KEPT_AREAS_OFF)(
+  'with every option on and %s, no twin is off whose kept rules no config turns on',
+  async (_name, offOptions) => {
+    const configs = await defineConfig({ ...ALL_ON_OPTIONS, ...offOptions })
+    const isOnAnywhere = (rule: string) =>
+      configs.some((config) => !isDuplicatesConfig(config) && isRuleOn(config.rules?.[rule]))
+    const twinsOff = new Set(
+      configs.filter(isDuplicatesConfig).flatMap((config) => Object.keys(config.rules ?? {})),
+    )
+    expect(
+      DUPLICATE_RULES.filter(({ kept, off }) => twinsOff.has(off) && !kept.some(isOnAnywhere)).map(
+        ({ kept, off }) => `${off} without ${kept.join(' or ')}`,
+      ),
+    ).toEqual([])
+  },
+)
 
 test.each(OPTION_SETS)(
   'no file has both rules of a duplicate pair on, nor a twin off without its kept rules: %s',
   async (_name, options, files) => {
-    const configs = await defineConfig(options)
+    const configs = withRulesOnly(await defineConfig(options), PAIR_RULES)
     const eslint = eslintWith(FIXTURES_DIR, configs)
     // The same configs with every twin left on
     const eslintWithTwins = eslintWith(
       FIXTURES_DIR,
-      configs.filter((config) => config.name?.startsWith('gpahal/duplicates/') !== true),
+      configs.filter((config) => !isDuplicatesConfig(config)),
     )
     const both: Array<string> = []
     const unkept: Array<string> = []

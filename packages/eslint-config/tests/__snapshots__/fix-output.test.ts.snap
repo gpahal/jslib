@@ -1,34 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`eslint --fix output with every preset on, as a difference from the defaults 1`] = `
-{
-  "index.html": {
-    "problems": [
-      "- not linted",
-      "+ 2:1 @html-eslint/require-lang",
-      "+ 3:3 @html-eslint/require-meta-viewport",
-      "+ 8:5 @html-eslint/require-img-alt",
-    ],
-  },
-  "src/app.tsx": {
-    "problems": [
-      "+ 1:19 better-tailwindcss/enforce-consistent-class-order",
-    ],
-  },
-  "src/page.astro": {
-    "problems": [
-      "- not linted",
-      "+ 3:19 better-tailwindcss/enforce-consistent-class-order",
-    ],
-    "text": [
-      "-2: let title = 'Page'",
-      "+2: const title = 'Page'",
-    ],
-  },
-}
-`;
-
-exports[`eslint --fix output with the defaults 1`] = `
+exports[`eslint --fix output with every preset on 1`] = `
 {
   "config.toml": {
     "problems": [],
@@ -96,7 +68,11 @@ const c = 1
 ",
   },
   "index.html": {
-    "problems": "not linted",
+    "problems": [
+      "2:1 @html-eslint/require-lang",
+      "3:3 @html-eslint/require-meta-viewport",
+      "8:5 @html-eslint/require-img-alt",
+    ],
     "text": "<!doctype html>
 <html>
   <head>
@@ -119,7 +95,9 @@ const c = 1
 ",
   },
   "src/app.tsx": {
-    "problems": [],
+    "problems": [
+      "1:19 better-tailwindcss/enforce-consistent-class-order",
+    ],
     "text": "const className = 'p-4 flex text-red-500'
 
 /**
@@ -316,9 +294,11 @@ declare module 'node:fs/promises' {
 ",
   },
   "src/page.astro": {
-    "problems": "not linted",
+    "problems": [
+      "3:19 better-tailwindcss/enforce-consistent-class-order",
+    ],
     "text": "---
-let title = 'Page'
+const title = 'Page'
 const className = 'p-4 flex text-red-500'
 ---
 
@@ -387,68 +367,6 @@ export type Shape = { kind: string }
   "tasks": {}
 }
 ",
-  },
-}
-`;
-
-exports[`eslint --fix output with typeAware: false in an editor, as a difference from the defaults 1`] = `
-{
-  "docs.md": {
-    "problems": [
-      "+ 6:5 prefer-const",
-      "+ 18:5 prefer-const",
-    ],
-    "text": [
-      "-6: const a = 1",
-      "+6: let a = 1",
-      "-18: const c = 1",
-      "+18: let c = 1",
-    ],
-  },
-  "src/app.tsx": {
-    "problems": [
-      "+ 7:7 prefer-const",
-    ],
-    "text": [
-      "-7:   const title = 'App'",
-      "+7:   let title = 'App'",
-    ],
-  },
-  "src/has-own.ts": {
-    "problems": [
-      "- 13:32 @typescript-eslint/no-unnecessary-condition",
-    ],
-  },
-  "src/index.ts": {
-    "problems": [
-      "- 9:17 unicorn/prefer-spread",
-      "- 9:17 e18e/prefer-spread-syntax",
-      "+ 9:7 prefer-const",
-      "+ 9:15 unicorn/prefer-spread",
-      "+ 9:15 e18e/prefer-spread-syntax",
-    ],
-    "text": [
-      "-9:   const items = Array.from(nodes)",
-      "+9:   let items = Array.from(nodes)",
-    ],
-  },
-  "src/legacy.cjs": {
-    "problems": [
-      "+ 4:5 prefer-const",
-    ],
-    "text": [
-      "-4: const count = 1",
-      "+4: let count = 1",
-    ],
-  },
-  "src/legacy.js": {
-    "problems": [
-      "+ 2:5 prefer-const",
-    ],
-    "text": [
-      "-2: const count = 1",
-      "+2: let count = 1",
-    ],
   },
 }
 `;

@@ -882,7 +882,7 @@ pnpm build
 pnpm check
 ```
 
-Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate, and [CI](.github/workflows/ci.yml) runs it and `pnpm audit --prod` on Linux with read-only access and no secrets. `main` takes only squash-merged pull requests with signed commits and a passing `check`. A PR doesn't have to be up to date with `main`, but on a push to `main`, CI skips the checks only when a passing run on the merged PR's head tested the same files, which requires the PR to contain the latest `main`; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
+Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate. [CI](.github/workflows/ci.yml) runs the same tasks split across parallel jobs, with eslint-config's tests in Vitest shards, and `pnpm audit --prod`, on Linux with read-only access and no secrets; a `check` job passes when they all do. `main` takes only squash-merged pull requests with signed commits and a passing `check`. A PR doesn't have to be up to date with `main`, but on a push to `main`, CI skips the checks only when a passing run on the merged PR's head tested the same files, which requires the PR to contain the latest `main`; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
 
 ## Releasing
 

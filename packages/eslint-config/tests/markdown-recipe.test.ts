@@ -7,7 +7,7 @@ import { defineConfig as definePrettierConfig } from '@gpahal/prettier-config'
 
 import { REPORT_ONLY_RULES } from '@/internal/fix-policy'
 
-import { createESLint } from './helpers'
+import { CORE_AREAS_OFF, createESLint } from './helpers'
 
 // One run each of `eslint --fix` and Prettier settles Markdown that breaks every fixable Markdown
 // rule. The report-only rules' fixes are on, except `definitions-last`'s, which breaks adjacent
@@ -131,9 +131,14 @@ describe('eslint --fix, then Prettier', () => {
         (rule) => [rule, false],
       ),
     )
+    // The core areas lint none of the Markdown
     eslint = await createESLint(
       'markdown',
-      { configs: [{ settings: { '@gpahal/report-only': fixes } }] },
+      {
+        ...CORE_AREAS_OFF,
+        markdown: true,
+        configs: [{ settings: { '@gpahal/report-only': fixes } }],
+      },
       { fix: true },
     )
   })

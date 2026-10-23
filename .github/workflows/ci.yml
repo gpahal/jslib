@@ -21,11 +21,42 @@ jobs:
       contents: read
       pull-requests: read
 
-  check:
+  # The tasks of `pnpm check`, split across runners. A 4-vCPU runner takes about 7 minutes for all
+  # of them, mostly eslint-config's tests and lint and the README recipes, so those are split
+  # further. The `typecheck` job fails when `pnpm check` and these jobs run different tasks
+  tasks:
+    name: ${{ matrix.name }}
     needs: gate
     if: needs.gate.outputs.tested != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: typecheck
+            tasks: build typecheck typecheck-root typecheck-release
+          - name: lint eslint-config
+            tasks: lint-check --filter=@gpahal/eslint-config
+          # With the root tasks, which the filter keeps
+          - name: lint others
+            tasks: lint-check lint-check-root fmt-check knip --filter=!@gpahal/eslint-config
+          - name: test others
+            tasks: test --filter=!@gpahal/eslint-config
+          # Vitest splits the test files into shards; the `--` passes the flag to `vitest run`
+          - name: test eslint-config 1/3
+            tasks: test --filter=@gpahal/eslint-config -- --shard=1/3
+          - name: test eslint-config 2/3
+            tasks: test --filter=@gpahal/eslint-config -- --shard=2/3
+          - name: test eslint-config 3/3
+            tasks: test --filter=@gpahal/eslint-config -- --shard=3/3
+          # The recipes are in one test file, so `setup-recipes.test.ts` splits them itself
+          - name: test-recipes 1/2
+            tasks: test-recipes
+            recipe_shard: 1/2
+          - name: test-recipes 2/2
+            tasks: test-recipes
+            recipe_shard: 2/2
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,9 +69,36 @@ jobs:
           check-latest: true
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - if: matrix.name == 'typecheck'
+        name: Check that the jobs run the tasks of `pnpm check`
+        run: |
+          check="$(node -p "require('./package.json').scripts.check.split(' ').filter((word) => /^[a-z]/.test(word)).slice(2).sort().join(' ')")"
+          jobs="build fmt-check knip lint-check lint-check-root test test-recipes typecheck typecheck-release typecheck-root"
+          if [ "$check" != "$jobs" ]; then
+            echo "pnpm check runs '$check', but the CI jobs run '$jobs'. Update the matrix in ci.yml"
+            exit 1
+          fi
       # Only shipped dependencies gate CI, so a new dev-only advisory doesn't block unrelated PRs
-      - run: pnpm audit --prod
-      # No remote Turbo cache, so every task runs from this checkout
-      - run: pnpm check
+      - if: matrix.name == 'typecheck'
+        run: pnpm audit --prod
+      # No remote Turbo cache, so every job builds what its tasks need
+      - run: pnpm turbo run --continue=dependencies-successful ${{ matrix.tasks }}
+        env:
+          RECIPE_SHARD: ${{ matrix.recipe_shard }}
       # The build rewrites `package.json` exports when entry points change
       - run: ./scripts/verify-no-git-changes.sh
+
+  # The status check that the `main` ruleset requires. It passes when every job of `tasks` passed,
+  # or when `gate` skipped them
+  check:
+    needs: [gate, tasks]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          GATE: ${{ needs.gate.result }}
+          TASKS: ${{ needs.tasks.result }}
+        run: |
+          echo "gate: $GATE, tasks: $TASKS"
+          [ "$GATE" = success ] && { [ "$TASKS" = success ] || [ "$TASKS" = skipped ]; }

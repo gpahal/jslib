@@ -126,7 +126,7 @@ describe('markdown linting', () => {
   })
 
   it('fixes a code-block problem and a Markdown problem in one run, but not bare URLs', async () => {
-    const eslint = await createESLint('markdown', {}, { fix: true })
+    const eslint = await sharedESLint('markdown', {}, { fix: true })
     const markdown = [
       '# Title',
       '',
@@ -411,7 +411,7 @@ describe('the language columns of a rule that reports JavaScript columns', () =>
 
 describe('markdown code block fixes', () => {
   it('leaves an object-literal excerpt, which parses as a labelled block', async () => {
-    const eslint = await createESLint('markdown', {}, { fix: true })
+    const eslint = await sharedESLint('markdown', {}, { fix: true })
     const code =
       "# T\n\n```js\nresolve: {\n  alias: [\n    { find: 'a', replacement: 'b' }\n  ]\n}\n```\n"
     const [result] = await eslint.lintText(code, { filePath: 'docs.md' })
@@ -443,7 +443,7 @@ describe('markdown code block fixes', () => {
   })
 
   it('parses a TypeScript block of a JavaScript-only project, without typescript-eslint rules', async () => {
-    const eslint = await createESLint('markdown', {}, { fix: true })
+    const eslint = await sharedESLint('markdown', {}, { fix: true })
     const [result] = await eslint.lintText(MODULE_BLOCK, { filePath: 'docs.md' })
     expect(result?.output).toBeUndefined()
     expect(result?.messages.map((message) => message.ruleId)).toEqual([])

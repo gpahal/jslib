@@ -8,7 +8,7 @@ import { withTmpProject } from '@gpahal/internal/node/testing'
 import { defineConfig, type EslintConfigOptions } from '@/index'
 import { AUDITED_SAFE_FIXES, UNFIXED_FIXABLE_RULES } from '@/internal/fix-policy'
 
-import { fixFiles, typeCheck } from './fix-helpers'
+import { fixFiles, typeCheck, withRulesOnly } from './fix-helpers'
 import { collator, FIXTURES_DIR } from './helpers'
 
 // An audited rule's fixture, `<variant>/<rule ID>` plus extensions or a folder of that name, snapshots
@@ -99,6 +99,14 @@ const FIXTURE_UNFIXED_RULES = UNFIXED_FIXABLE_RULES.filter(
 )
 
 /**
+ * The rules that run on the fixtures, which alone the configs keep
+ */
+const FIXTURE_RULES: ReadonlySet<string> = new Set([
+  ...FIXTURE_AUDITED_RULES,
+  ...FIXTURE_UNFIXED_RULES,
+])
+
+/**
  * Each fixture file by its `/`-separated path in the fixture, sorted
  */
 async function listFixtures(): Promise<Array<string>> {
@@ -149,7 +157,7 @@ describe('audited fixes', () => {
     if (variantConfigs === undefined) {
       variantConfigs = Promise.resolve(
         defineConfig({ root: dir, isInEditor: false, gitignore: false, ...VARIANTS[variant] }),
-      )
+      ).then((all) => withRulesOnly(all, FIXTURE_RULES))
       configs.set(variant, variantConfigs)
     }
     return variantConfigs

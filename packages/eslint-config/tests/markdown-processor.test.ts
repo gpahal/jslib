@@ -10,13 +10,19 @@ import type { EslintConfigOptions } from '@/index'
 import { parseUncached } from '@/internal/markdown/language'
 import { createMarkdownProcessor } from '@/internal/markdown/processor'
 
-import { createESLint, sharedESLint, type ConfigOptions } from './helpers'
+import { CORE_AREAS_OFF, createESLint, sharedESLint, type ConfigOptions } from './helpers'
+
+/**
+ * The options of every ESLint here: Markdown, and of the core areas only `imports` and `unicorn`,
+ * whose multi-line fixes in code blocks some tests apply
+ */
+const OPTIONS = { ...CORE_AREAS_OFF, imports: true, unicorn: true, markdown: true } as const
 
 /**
  * `markdown` after `eslint --fix` as `docs.md`. Throws when a second pass changes it again
  */
 async function fix(markdown: string, options: ConfigOptions = {}): Promise<string> {
-  const eslint = await sharedESLint('markdown', options, { fix: true })
+  const eslint = await sharedESLint('markdown', { ...OPTIONS, ...options }, { fix: true })
   const [first] = await eslint.lintText(markdown, { filePath: 'docs.md' })
   const output = first?.output ?? markdown
   const [second] = await eslint.lintText(output, { filePath: 'docs.md' })
@@ -30,7 +36,7 @@ async function fix(markdown: string, options: ConfigOptions = {}): Promise<strin
  * `code` after `eslint --fix` as a code block's virtual file of its own
  */
 async function fixCode(code: string): Promise<string> {
-  const eslint = await sharedESLint('markdown', {}, { fix: true })
+  const eslint = await sharedESLint('markdown', OPTIONS, { fix: true })
   const [result] = await eslint.lintText(code, { filePath: 'docs.md/0.js' })
   return result?.output ?? code
 }
@@ -43,7 +49,7 @@ async function problemsOf(
   markdown: string,
   options: Partial<EslintConfigOptions> = {},
 ): Promise<Array<string>> {
-  const eslint = await sharedESLint('markdown', options)
+  const eslint = await sharedESLint('markdown', { ...OPTIONS, ...options })
   const results = await eslint.lintText(markdown, { filePath: 'docs.md' })
   return results.flatMap((result) =>
     result.messages.map(
@@ -290,8 +296,12 @@ const MARKDOWN_CASES = CONTAINERS.flatMap(([container, wrap], containerIndex) =>
 
 describe('markdown processor fixes', () => {
   it('map reports to the right position and fixes into the block, in any container', async () => {
-    const eslint = await createESLint('markdown', { extraConfigs: PROBE_CONFIGS })
-    const fixing = await createESLint('markdown', { extraConfigs: PROBE_CONFIGS }, { fix: true })
+    const eslint = await createESLint('markdown', { ...OPTIONS, extraConfigs: PROBE_CONFIGS })
+    const fixing = await createESLint(
+      'markdown',
+      { ...OPTIONS, extraConfigs: PROBE_CONFIGS },
+      { fix: true },
+    )
     const failures: Array<string> = []
     for (const { name, eol, markdown } of MARKDOWN_CASES) {
       const [result] = await eslint.lintText(markdown, { filePath: 'docs.md' })
@@ -456,6 +466,7 @@ describe('markdown processor blocks', () => {
 describe('markdown processor directives before a code block', () => {
   it("apply to a block for a rule of a config of yours's plugin, which the Markdown file knows too", async () => {
     const eslint = await createESLint('markdown', {
+      ...OPTIONS,
       configs: [
         { plugins: { probe: { rules: { mark: MARK_RULE } } }, rules: { 'probe/mark': 'error' } },
       ],
@@ -615,7 +626,7 @@ describe('`@gpahal/markdown/directive-placement`', () => {
    * message`, with ` fatal` for a fatal one and ` fix` for one with a fix
    */
   async function messagesOf(markdown: string, options: ConfigOptions = {}): Promise<Array<string>> {
-    const eslint = await sharedESLint('markdown', options)
+    const eslint = await sharedESLint('markdown', { ...OPTIONS, ...options })
     const results = await eslint.lintText(markdown, { filePath: 'docs.md' })
     return results.flatMap((result) =>
       result.messages.map(

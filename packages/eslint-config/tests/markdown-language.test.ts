@@ -1,15 +1,35 @@
 import markdown from '@eslint/markdown'
 import { Linter } from 'eslint'
 import type { Root } from 'mdast'
+import type * as FromMarkdown from 'mdast-util-from-markdown'
 import type { Node } from 'unist'
 import { visit } from 'unist-util-visit'
 
 import { GpahalMarkdownLanguage } from '@/internal/markdown/language'
 import { MARKDOWN_PLUGIN } from '@/internal/markdown/plugin'
 
-import { createESLint, lintText, sharedESLint } from './helpers'
+import { CORE_AREAS_OFF, createESLint, lintText, sharedESLint } from './helpers'
+
+const parses = vi.hoisted(() => ({ count: 0 }))
+
+// Counts the parses of this package's Markdown language and processor
+vi.mock('mdast-util-from-markdown', async (importOriginal) => {
+  const original = await importOriginal<typeof FromMarkdown>()
+  return {
+    ...original,
+    fromMarkdown: (...args: Parameters<typeof original.fromMarkdown>) => {
+      parses.count++
+      return original.fromMarkdown(...args)
+    },
+  }
+})
 
 const language = new GpahalMarkdownLanguage()
+
+/**
+ * Markdown, without the core areas, which lint none of it
+ */
+const OPTIONS = { ...CORE_AREAS_OFF, markdown: true } as const
 
 function parse(text: string, languageOptions: Record<string, unknown> = {}): Root {
   const result = language.parse(
@@ -70,7 +90,7 @@ describe('markdown language', () => {
     })
 
     it('let --fix leave them as they are', async () => {
-      const eslint = await createESLint('markdown', { markdown: true }, { fix: true })
+      const eslint = await createESLint('markdown', OPTIONS, { fix: true })
       for (const markdown of LITERALS_IN_TEXT) {
         const [result] = await eslint.lintText(`# T\n\n${markdown}`, { filePath: 'doc.md' })
         expect(result?.output, markdown).toBeUndefined()
@@ -79,8 +99,8 @@ describe('markdown language', () => {
   })
 
   it('reports nesting too deep to walk as a parse error rather than crash', async () => {
-    const eslint = await sharedESLint('markdown')
-    const markdown = `# Title\n\n${'> '.repeat(20_000)}x\n\n\`\`\`js\nvar a = 1\n\`\`\`\n`
+    const eslint = await sharedESLint('markdown', OPTIONS)
+    const markdown = `# Title\n\n${'> '.repeat(2000)}x\n\n\`\`\`js\nvar a = 1\n\`\`\`\n`
     expect(await lintText(eslint, 'docs.md', markdown)).toEqual([
       'fatal: Parsing error: Markdown nested more than 1000 levels deep',
     ])
@@ -133,5 +153,18 @@ describe('markdown language', () => {
       const [{ fix } = {}] = messages
       expect(fix && text.slice(...fix.range)).toBe(comment)
     })
+  })
+})
+
+describe('the Markdown parse', () => {
+  it('runs once per file, shared by the processor and the language', async () => {
+    const eslint = await sharedESLint('markdown', OPTIONS)
+    const markdown = '# Title\n\n```js\nconst a = 1\na()\n```\n'
+    // The first lint loads the configs
+    await eslint.lintText(markdown, { filePath: 'first.md' })
+    parses.count = 0
+    const [result] = await eslint.lintText(`${markdown}\nText.\n`, { filePath: 'docs.md' })
+    expect(result?.messages).toEqual([])
+    expect(parses.count).toBe(1)
   })
 })

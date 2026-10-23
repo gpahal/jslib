@@ -4,6 +4,10 @@ import path from 'node:path'
 import { ESLint, type Linter } from 'eslint'
 import ts from 'typescript'
 
+import { defineConfig } from '@/index'
+
+import { eslintWith, FIXTURES_DIR, type ConfigOptions } from './helpers'
+
 /**
  * A file's output after `--fix`, `undefined` when the fix leaves it, and the rules left reporting in
  * it, or a fatal message's text
@@ -62,6 +66,56 @@ async function lintFiles(
       result,
     ]),
   )
+}
+
+/**
+ * The rules a test reads, by name or by a test of the name
+ */
+type RuleSelection = ReadonlySet<string> | ((ruleId: string) => boolean)
+
+function isSelected(rules: RuleSelection, ruleId: string): boolean {
+  return typeof rules === 'function' ? rules(ruleId) : rules.has(ruleId)
+}
+
+/**
+ * `configs` with only the entries of `rules` in their `rules`. The severity and options of a rule
+ * don't depend on the others' entries, and resolving a file's config merges and validates each
+ * entry, which takes several times as long with every rule
+ */
+export function withRulesOnly(
+  configs: ReadonlyArray<Linter.Config>,
+  rules: RuleSelection,
+): Array<Linter.Config> {
+  return configs.map((config) =>
+    config.rules === undefined
+      ? config
+      : {
+          ...config,
+          rules: Object.fromEntries(
+            Object.entries(config.rules).filter(([ruleId]) => isSelected(rules, ruleId)),
+          ),
+        },
+  )
+}
+
+/**
+ * ESLint as `createESLint` makes it, with only `rules` in the configs and running. For a test that
+ * reads only those rules' reports and entries: a twin that `DUPLICATE_REPORTS` drops where its kept
+ * rule reports needs that rule selected too
+ */
+export async function createFocusedESLint(
+  dir: string,
+  rules: RuleSelection,
+  options: ConfigOptions = {},
+  eslintOptions: ESLint.Options = {},
+): Promise<ESLint> {
+  const cwd = path.resolve(FIXTURES_DIR, dir)
+  const { extraConfigs = [], root = cwd, ...configOptions } = options
+  const configs = await defineConfig({ root, isInEditor: false, ...configOptions })
+  return eslintWith(cwd, withRulesOnly([...configs, ...extraConfigs], rules), {
+    ruleFilter: ({ ruleId }) => isSelected(rules, ruleId),
+    ...eslintOptions,
+  })
 }
 
 function rulesOf(messages: ReadonlyArray<Linter.LintMessage>): Array<string> {

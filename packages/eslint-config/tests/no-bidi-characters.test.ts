@@ -2,7 +2,7 @@ import { RuleTester } from 'eslint'
 
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
 
-import { createESLint, lint, withProject } from './helpers'
+import { CORE_AREAS_OFF, createESLint, lint, withProject } from './helpers'
 
 const RULE = '@gpahal/no-bidi-characters'
 
@@ -49,7 +49,10 @@ test('reports each bidi control once in every language the config lints, off wit
     'index.html': `<!doctype html>\n<html lang="en">\n  <head>\n    <title>${RLO}</title>\n  </head>\n</html>\n`,
     'src/page.astro': `---\nconsole.warn('${RLO}')\n---\n\n<p>Text</p>\n\n<script>\n  console.warn('${PDI}')\n</script>\n`,
   })
-  const eslint = await createESLint(project.dir, { typeAware: false, html: true, astro: true })
+  // Only the rule runs, in each language's configs
+  const options = { ...CORE_AREAS_OFF, markdown: true, typeAware: false, html: true, astro: true }
+  const ruleFilter = ({ ruleId }: { ruleId: string }) => ruleId === RULE
+  const eslint = await createESLint(project.dir, options, { ruleFilter })
   const results = await lint(eslint, ['.'])
   expect(
     Object.fromEntries(
@@ -68,12 +71,11 @@ test('reports each bidi control once in every language the config lints, off wit
     'index.html': 1,
     'src/page.astro': 2,
   })
-  const off = await createESLint(project.dir, {
-    typeAware: false,
-    html: true,
-    astro: true,
-    javascript: { rules: { [RULE]: 'off' } },
-  })
+  const off = await createESLint(
+    project.dir,
+    { ...options, javascript: { rules: { [RULE]: 'off' } } },
+    { ruleFilter },
+  )
   const offResults = await lint(off, ['.'])
   expect(
     Object.values(offResults)
