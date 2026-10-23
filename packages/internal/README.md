@@ -16,7 +16,7 @@ Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.brow
 | `node/json` | `readJsonFile` | Node |
 | `node/package-manager` | `detectPackageManager`, `formatInstallCommand` | Node |
 | `node/paths` | `resolvePathOrFileUrl`, `isRelativePath`, the `PATH_OR_FILE_URL_*` messages | Node |
-| `node/resolve` | `resolvePath`, `isResolvable`, `resolveFromNodeModules`, `resolveFile`, `findInstalledPackage`, `missingPeersError`, `formatPeerSpecifier` | Node |
+| `node/resolve` | `resolvePath`, `isResolvable`, `resolveFromNodeModules`, `resolveFile`, `findInstalledPackage`, `findNodeModulesManifest`, `missingPeersError`, `formatPeerSpecifier` | Node |
 | `node/root` | `checkRoot` | Node |
 | `node/source-maps` | `isSourceMap`, `resolveSourcePath`, `isPublishedFile`, `dropSources` | Node, builds and tests only |
 | `node/testing` | `runNode`, `runNodeOk`, `withTmpProject`, `writeFiles`, `minCpuMs`, `readMarkdownSection`, `readCodeBlocks`, `splitFileNameComment` | Node, tests only |

@@ -273,31 +273,45 @@ function findManifest(
   parentPath: string,
   prefix: string,
 ): { dir: string; packageDir: string; manifest: unknown } | undefined {
-  for (let dir = path.dirname(parentPath); ;) {
-    const packageJsonPath = path.join(dir, 'node_modules', name, 'package.json')
-    if (path.basename(dir) !== 'node_modules' && fs.existsSync(packageJsonPath)) {
-      try {
-        return {
-          dir,
-          packageDir: path.dirname(packageJsonPath),
-          manifest: readJsonFile(packageJsonPath),
-        }
-      } catch (error) {
-        throw new Error(
-          formatMessage(
-            prefix,
-            [formatNames([packageJsonPath])],
-            `reading ${formatNames([name])}'s manifest failed: ${getErrorReason(error)}`,
-          ),
-          { cause: error },
-        )
-      }
+  const found = findNodeModulesManifest(name, path.dirname(parentPath))
+  if (found === undefined) {
+    return undefined
+  }
+  const { dir, file } = found
+  try {
+    return { dir, packageDir: path.dirname(file), manifest: readJsonFile(file) }
+  } catch (error) {
+    throw new Error(
+      formatMessage(
+        prefix,
+        [formatNames([file])],
+        `reading ${formatNames([name])}'s manifest failed: ${getErrorReason(error)}`,
+      ),
+      { cause: error },
+    )
+  }
+}
+
+/**
+ * The `package.json` path of `name` in the nearest `node_modules` folder at or above `dir`, with
+ * the folder it was found from, as Node's resolvers walk the folders. It skips a `node_modules`
+ * folder's own `node_modules`, as Node does, and never falls back to `NODE_PATH` or global folders.
+ * `dir` is used as given, so pass it resolved
+ */
+export function findNodeModulesManifest(
+  name: string,
+  dir: string,
+): { dir: string; file: string } | undefined {
+  for (let current = dir; ;) {
+    const file = path.join(current, 'node_modules', name, 'package.json')
+    if (path.basename(current) !== 'node_modules' && fs.existsSync(file)) {
+      return { dir: current, file }
     }
-    const parent = path.dirname(dir)
-    if (parent === dir) {
+    const parent = path.dirname(current)
+    if (parent === current) {
       return undefined
     }
-    dir = parent
+    current = parent
   }
 }
 

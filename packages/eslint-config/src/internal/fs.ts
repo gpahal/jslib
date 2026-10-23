@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { readJsonFile as readJsonFileOrThrow } from '@gpahal/internal/node/json'
+import { findNodeModulesManifest } from '@gpahal/internal/node/resolve'
 import { isRecord } from '@gpahal/std/objects'
 
 /**
@@ -15,18 +16,7 @@ export function findPackageJson(name: string, dir: string): string | undefined {
   if (scope !== undefined && isSelfNamed(scope, name)) {
     return scope
   }
-  for (let current = path.resolve(dir); ;) {
-    const candidate = path.join(current, 'node_modules', name, 'package.json')
-    // Node skips a `node_modules` folder's own `node_modules`
-    if (path.basename(current) !== 'node_modules' && fs.existsSync(candidate)) {
-      return candidate
-    }
-    const parent = path.dirname(current)
-    if (parent === current) {
-      return undefined
-    }
-    current = parent
-  }
+  return findNodeModulesManifest(name, path.resolve(dir))?.file
 }
 
 function isSelfNamed(file: string, name: string): boolean {
