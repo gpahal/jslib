@@ -225,7 +225,7 @@ import teamConfig from './team.prettier.config.mjs'
 export default mergeConfigs(defineConfig({ root: import.meta.dirname }), teamConfig)
 ```
 
-Later options win, overrides concatenate in order, and plugins are deduplicated and ordered as with `tailwindcss`. Pass a module's default export: a module namespace, as `import * as teamConfig` gives, throws. [Merging configs][] covers plugins and overrides.
+Later options win, overrides concatenate in order, and plugins are deduplicated and ordered as with `tailwindcss`. Pass a module's default export: a module namespace, as `import * as teamConfig` gives, throws. So does a plugin given by name that `defineConfig` already adds, such as `prettier-plugin-packagejson`. [Merging configs][] covers plugins and overrides.
 
 ### Use a CommonJS config
 
@@ -329,7 +329,7 @@ The plugins are recognized by package name, by a path into their package, or by 
 
 ### Merging configs
 
-The root README's [Lists and merging](https://github.com/gpahal/jslib#lists-and-merging) summarizes the merge rules. A later config can't remove an earlier config's plugins. A plugin name that `defineConfig` resolved from `root` counts once with another config's same name, when `mergeConfigs` gets the config `defineConfig` returned rather than a copy. Turn the Tailwind plugin on with `defineConfig`'s `tailwindcss` rather than in a merged config: `mergeConfigs` throws on a Tailwind plugin when a config's import sorter is the wrapper that `defineConfig` adds without `tailwindcss`, which the Tailwind plugin can't compose. It throws on the plugins in [Plugins that conflict][] too, across all the configs.
+The root README's [Lists and merging](https://github.com/gpahal/jslib#lists-and-merging) summarizes the merge rules. A later config can't remove an earlier config's plugins. A plugin name that `defineConfig` resolved from `root` counts once with another config's same name, when `mergeConfigs` gets the config `defineConfig` returned rather than a copy. Turn the Tailwind plugin on with `defineConfig`'s `tailwindcss` rather than in a merged config: `mergeConfigs` throws on a Tailwind plugin when a config's import sorter is the wrapper that `defineConfig` adds without `tailwindcss`, which the Tailwind plugin can't compose. It throws on the plugins in [Plugins that conflict][] too, across all the configs, and on a plugin given by name that a `defineConfig` config adds itself: the import sorter, `prettier-plugin-packagejson`, `prettier-plugin-astro` or `prettier-plugin-tailwindcss`. Prettier would load both copies, and the named one would replace the preset's, such as the import sorter's wrapper. Configs that `defineConfig` returned merge, each of their plugins kept once.
 
 An override's `plugins` add to the merged config's plugins, including those of later configs. Here, the files in `docs/` get a local plugin and keep import sorting and the team config's plugins:
 

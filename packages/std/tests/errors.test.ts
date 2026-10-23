@@ -186,6 +186,18 @@ describe('getErrorMessage', () => {
     ).toBe('request failed')
   })
 
+  // A letter outside the Basic Multilingual Plane is two UTF-16 units, neither a letter alone
+  it('keeps an inner message that touches a letter outside the BMP in its own message', () => {
+    expect(getErrorMessage(new AggregateError([new Error('野家')], '吉野家 failed'))).toBe(
+      '吉野家 failed: 野家',
+    )
+    expect(getErrorMessage(new AggregateError([new Error('野家')], '𠮷野家 failed'))).toBe(
+      '𠮷野家 failed: 野家',
+    )
+    expect(getErrorMessage(new AggregateError([new Error('x')], 'x𝐀 failed'))).toBe('x𝐀 failed: x')
+    expect(getErrorMessage(new AggregateError([new Error('𝐀')], 'x𝐀 failed'))).toBe('x𝐀 failed: 𝐀')
+  })
+
   it('appends the error and the suppressed error of a failed DisposableStack disposal', () => {
     const stack = new DisposableStack()
     stack.defer(() => {

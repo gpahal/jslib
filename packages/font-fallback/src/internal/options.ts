@@ -160,7 +160,9 @@ function isClosed(value: string): boolean {
       const isUnquotedUrl =
         char === '(' &&
         UNQUOTED_URL_REGEX.test(value.slice(0, index + 1)) &&
-        !/^\s*'/.test(value.slice(index + 1))
+        // CSS whitespace, not JavaScript's `\s`, which also matches U+00A0 and U+3000. CR and FF are
+        // controls, which are rejected
+        !/^[ \t\n]*'/.test(value.slice(index + 1))
       if (isUnquotedUrl) {
         return false
       }

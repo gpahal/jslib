@@ -353,11 +353,12 @@ function isHeldBy(outerMessage: string, message: string, aggregates: AggregatesS
   return tail !== undefined && holdsWords(outerMessage, tail, aggregates)
 }
 
-const WORD_CHAR_REGEX = /[\p{L}\p{N}_]/u
-
-function isWordCharAt(value: string, index: number): boolean {
-  return WORD_CHAR_REGEX.test(value.at(index) ?? '')
-}
+/**
+ * Tested on whole code points, since a letter outside the Basic Multilingual Plane is two UTF-16
+ * units, neither of them a letter
+ */
+const STARTS_WITH_WORD_CHAR_REGEX = /^[\p{L}\p{N}_]/u
+const ENDS_WITH_WORD_CHAR_REGEX = /[\p{L}\p{N}_]$/u
 
 /**
  * A search retries from each match whose ends touch other word characters, so it can take time
@@ -379,6 +380,8 @@ function holdsWords(text: string, part: string, aggregates: AggregatesState): bo
   if (text.length > MAX_HELD_TEXT_LENGTH || part.length > MAX_HELD_TEXT_LENGTH) {
     return false
   }
+  const startsWithWord = STARTS_WITH_WORD_CHAR_REGEX.test(part)
+  const endsWithWord = ENDS_WITH_WORD_CHAR_REGEX.test(part.slice(-2))
   let from = 0
   while (aggregates.searchBudget > 0) {
     const index = text.indexOf(part, from)
@@ -389,8 +392,9 @@ function holdsWords(text: string, part: string, aggregates: AggregatesState): bo
     from = index + 1
     const end = index + part.length
     if (
-      (index === 0 || !isWordCharAt(part, 0) || !isWordCharAt(text, index - 1)) &&
-      (end === text.length || !isWordCharAt(part, -1) || !isWordCharAt(text, end))
+      (!startsWithWord ||
+        !ENDS_WITH_WORD_CHAR_REGEX.test(text.slice(Math.max(0, index - 2), index))) &&
+      (!endsWithWord || !STARTS_WITH_WORD_CHAR_REGEX.test(text.slice(end, end + 2)))
     ) {
       return true
     }

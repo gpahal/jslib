@@ -672,43 +672,43 @@ The owner decided to leave these alone. Don't do them, even partly; mention any 
 
 The implementing agent keeps this table current. Status values are `todo`, `in progress`, `done` and `skipped: <reason>`.
 
-| Item                                                | Stream | Status |
-| --------------------------------------------------- | ------ | ------ |
-| A1 canaries via Vitest projects, CI-only            | A      | done   |
-| A2 warning codes into eslint-config's Vitest config | A      | done   |
-| A3 stylelint-config shared modules                  | A      | done   |
-| A4 tsconfig release-check task                      | A      | done   |
-| A5 private `packages/recipes`                       | A      | done   |
-| A6 Turbo cache in CI                                | A      | done   |
-| A7 AGENTS.md updates                                | A      | done   |
-| B-E2 declarator docs                                | B      | todo   |
-| B-E3 commented-out members                          | B      | todo   |
-| B-E4 Astro module header                            | B      | todo   |
-| B-E5 JSX expression container                       | B      | todo   |
-| B-E6 html U+2028 line mapping                       | B      | todo   |
-| B-E7 negated extglob segments                       | B      | todo   |
-| B-E8 folder-glob language configs                   | B      | todo   |
-| B-P2 interface fix report-only (replaces E1)        | B      | todo   |
-| B-P4 contradicting rule pairs in config             | B      | todo   |
-| B-P5 drop shim exemption                            | B      | todo   |
-| B-C1 – B-C11 cleanups                               | B      | todo   |
-| C-S1 extended preset layers                         | C      | done   |
-| C-S2 validateApply through extends                  | C      | done   |
-| C-S3 `theme()` keyword case                         | C      | done   |
-| C-S4 default-theme paths                            | C      | done   |
-| C-S5 `@utility` compile                             | C      | done   |
-| C-P6 cheaper referenceFiles check                   | C      | done   |
-| C-T1, C-T2 stylelint test trims                     | C      | done   |
-| D1 zod dead code                                    | D      | todo   |
-| D2 resolver via import-meta-resolve (conditional)   | D      | todo   |
-| D3 mergeConfigs wrapped-plugin error                | D      | todo   |
-| D4 getErrorMessage code points                      | D      | todo   |
-| D5 font-fallback CSS whitespace                     | D      | todo   |
-| D6 std doctests in one program                      | D      | todo   |
-| D7 prettier test lockfile                           | D      | todo   |
-| E1 – E8 eslint-config test trims                    | E      | todo   |
-| F1 shared entryPoint helper                         | F      | todo   |
-| F2 shared semver checker (fixes P2)                 | F      | todo   |
-| Phase 3 top-level type imports                      | 3      | todo   |
-| Phase 4 final verification and report               | 4      | todo   |
-| Phase 4 temporary files and plan file deleted       | 4      | todo   |
+| Item | Stream | Status |
+| --- | --- | --- |
+| A1 canaries via Vitest projects, CI-only | A | done |
+| A2 warning codes into eslint-config's Vitest config | A | done |
+| A3 stylelint-config shared modules | A | done |
+| A4 tsconfig release-check task | A | done |
+| A5 private `packages/recipes` | A | done |
+| A6 Turbo cache in CI | A | done |
+| A7 AGENTS.md updates | A | done |
+| B-E2 declarator docs | B | todo |
+| B-E3 commented-out members | B | todo |
+| B-E4 Astro module header | B | todo |
+| B-E5 JSX expression container | B | todo |
+| B-E6 html U+2028 line mapping | B | todo |
+| B-E7 negated extglob segments | B | todo |
+| B-E8 folder-glob language configs | B | todo |
+| B-P2 interface fix report-only (replaces E1) | B | todo |
+| B-P4 contradicting rule pairs in config | B | todo |
+| B-P5 drop shim exemption | B | todo |
+| B-C1 – B-C11 cleanups | B | todo |
+| C-S1 extended preset layers | C | done |
+| C-S2 validateApply through extends | C | done |
+| C-S3 `theme()` keyword case | C | done |
+| C-S4 default-theme paths | C | done |
+| C-S5 `@utility` compile | C | done |
+| C-P6 cheaper referenceFiles check | C | done |
+| C-T1, C-T2 stylelint test trims | C | done |
+| D1 zod dead code | D | done |
+| D2 resolver via import-meta-resolve (conditional) | D | skipped: import-meta-resolve lacks bundler-style main fields, folder-index and extension probing the callers rely on, and its errors lose the tested reasons; rebuilding them exceeds 60 lines |
+| D3 mergeConfigs wrapped-plugin error | D | done |
+| D4 getErrorMessage code points | D | done |
+| D5 font-fallback CSS whitespace | D | done |
+| D6 std doctests in one program | D | done |
+| D7 prettier test lockfile | D | done |
+| E1 – E8 eslint-config test trims | E | todo |
+| F1 shared entryPoint helper | F | todo |
+| F2 shared semver checker (fixes P2) | F | todo |
+| Phase 3 top-level type imports | 3 | todo |
+| Phase 4 final verification and report | 4 | todo |
+| Phase 4 temporary files and plan file deleted | 4 | todo |

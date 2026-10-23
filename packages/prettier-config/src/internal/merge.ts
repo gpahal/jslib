@@ -402,8 +402,9 @@ const SORTER_PARSER_PLUGINS: ReadonlySet<string> = new Set([
 export type SorterEntry = 'none' | 'wrapper' | 'sorter'
 
 /**
- * The sorter itself wins over the wrapper. A wrapper counts from any installed copy of this
- * package, since a shared config may be built by another
+ * The sorter itself wins over the wrapper. `mergeConfigs` throws on a sorter given by name next to
+ * the wrapper, so both are there only for a sorter given by path or as a plugin object. A wrapper
+ * counts from any installed copy of this package, since a shared config may be built by another
  */
 function sorterOf(plugins: ReadonlyArray<PluginEntry>, sorterWrapper: string): SorterEntry {
   const isSorter = (plugin: PluginEntry) =>
@@ -436,6 +437,85 @@ function isSorterWrapper(plugin: PluginEntry, sorterWrapper: string): boolean {
     /^sort-imports\.[cm]?[jt]s$/.test(file) &&
     packageOfSpecifier(pluginPath) === PACKAGE_NAME
   )
+}
+
+/**
+ * The plugins that `defineConfig` adds by path, or for the import sorter by its wrapper's path
+ */
+const PRESET_PLUGINS: ReadonlySet<string> = new Set([
+  SORT_IMPORTS_PLUGIN,
+  'prettier-plugin-packagejson',
+  'prettier-plugin-astro',
+  TAILWIND_PLUGIN,
+])
+
+/**
+ * The package of {@link PRESET_PLUGINS} that a plugin given by path or URL loads, as `defineConfig`
+ * adds them, or `undefined`
+ */
+function presetPluginOf(plugin: PluginEntry, sorterWrapper: string): string | undefined {
+  if (isSorterWrapper(plugin, sorterWrapper)) {
+    return SORT_IMPORTS_PLUGIN
+  }
+  if (typeof plugin === 'string' && isPackageSpecifier(plugin)) {
+    return undefined
+  }
+  const name = packageOfPlugin(plugin)
+  return name !== undefined && PRESET_PLUGINS.has(name) ? name : undefined
+}
+
+/**
+ * A plugin given by its package name, or a path relative to it, which Prettier resolves itself
+ */
+export function isPackageSpecifier(plugin: string): boolean {
+  return !path.isAbsolute(plugin) && !/^[a-z][\d+.a-z-]*:/i.test(plugin)
+}
+
+/**
+ * Prettier would load a plugin given by name next to the copy that a preset adds, and the plain
+ * one would replace the preset's, such as the import sorter's wrapper. A name that
+ * `defineConfig` resolved to the preset's path counts as that path
+ *
+ * @throws TypeError naming the plugin given by name, as its list's `subjectsOf` gives it.
+ */
+function checkPresetDuplicates(
+  configLists: ReadonlyArray<PluginList>,
+  lists: ReadonlyArray<PluginList & { config: number }>,
+  sorterWrapper: string,
+  pluginNames: PluginNames,
+): void {
+  const presets = new Map<string, { config: number; key: unknown }>()
+  for (const [config, { plugins = [] }] of configLists.entries()) {
+    for (const plugin of plugins) {
+      const name = presetPluginOf(plugin, sorterWrapper)
+      if (name !== undefined && !presets.has(name)) {
+        presets.set(name, { config, key: pluginKey(plugin, pluginNames) })
+      }
+    }
+  }
+  for (const { plugins = [], subjectsOf, config } of lists) {
+    for (const [index, plugin] of plugins.entries()) {
+      const name =
+        typeof plugin === 'string' && isPackageSpecifier(plugin)
+          ? packageOfPlugin(plugin)
+          : undefined
+      const preset = name === undefined ? undefined : presets.get(name)
+      if (
+        name !== undefined &&
+        preset !== undefined &&
+        preset.key !== pluginKey(plugin, pluginNames)
+      ) {
+        const owner = preset.config === config ? 'this config' : `config ${preset.config + 1}`
+        throw new TypeError(
+          formatMessage(
+            PREFIX,
+            subjectsOf(index),
+            `${formatNames([name])} is added by ${owner}'s preset. Remove it`,
+          ),
+        )
+      }
+    }
+  }
 }
 
 export type PluginList = {
@@ -606,8 +686,9 @@ function mergedConfigSubject(i: number): string {
 /**
  * Check the configs that `mergeConfigs` merges. Returns the copies to merge.
  *
- * @throws TypeError on an invalid config, plugin or override, a plugin conflict, or the Tailwind
- *   plugin with the import sorter's wrapper, which it can't compose.
+ * @throws TypeError on an invalid config, plugin or override, a plugin given by name that a
+ *   config's preset adds, a plugin conflict, or the Tailwind plugin with the import sorter's
+ *   wrapper, which it can't compose.
  */
 export function checkConfigsToMerge(
   configs: ReadonlyArray<ConfigInput>,
@@ -651,6 +732,8 @@ export function checkConfigsToMerge(
       ],
     })),
   )
+  const lists = [...configLists.map((list, i) => ({ ...list, config: i })), ...overrideLists]
+  checkPresetDuplicates(configLists, lists, sorterWrapper, pluginNames)
   const sorter = sorterOf(
     configLists.flatMap(({ plugins }) => plugins ?? []),
     sorterWrapper,
@@ -659,7 +742,6 @@ export function checkConfigsToMerge(
     const wrapperConfig = configLists.findIndex(
       ({ plugins }) => sorterOf(plugins ?? [], sorterWrapper) === 'wrapper',
     )
-    const lists = [...configLists.map((list, i) => ({ ...list, config: i })), ...overrideLists]
     for (const { plugins, subjectsOf, config } of lists) {
       const index = (plugins ?? []).findIndex((plugin) => isTailwindPlugin(plugin))
       if (index !== -1) {

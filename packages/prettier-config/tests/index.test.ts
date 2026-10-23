@@ -385,6 +385,55 @@ describe('mergeConfigs', () => {
     ])
   })
 
+  // Prettier would load both copies, and the plain one would replace the preset's, such as the
+  // import sorter's wrapper, which keeps a `@ts-expect-error` above its import
+  it.each([
+    [{}, '@ianvs/prettier-plugin-sort-imports'],
+    [{}, 'prettier-plugin-packagejson'],
+    [{ astro: true }, 'prettier-plugin-astro'],
+    [{ tailwindcss: TAILWINDCSS }, '@ianvs/prettier-plugin-sort-imports'],
+    [{ tailwindcss: TAILWINDCSS }, 'prettier-plugin-tailwindcss'],
+  ])(
+    'throws on a plugin that a preset adds, given by name in another config %#',
+    (options, name) => {
+      const preset = defineConfig({ root: ROOT, ...options })
+      const description = (config: string) =>
+        `\`${name}\` is added by ${config}'s preset. Remove it`
+      expect(() => mergeConfigs(preset, { plugins: ['a', name] })).toThrow(
+        new TypeError(
+          `${PREFIX}: config 2 given to \`mergeConfigs\`: \`plugins[1]\`: ${description('config 1')}`,
+        ),
+      )
+      expect(() => mergeConfigs({ plugins: [name] }, preset)).toThrow(
+        new TypeError(
+          `${PREFIX}: config 1 given to \`mergeConfigs\`: \`plugins[0]\`: ${description('config 2')}`,
+        ),
+      )
+      expect(() =>
+        mergeConfigs(preset, { overrides: [{ files: '*.ts', options: { plugins: [name] } }] }),
+      ).toThrow(
+        new TypeError(
+          `${PREFIX}: config 2 given to \`mergeConfigs\`: \`overrides[0].options.plugins[0]\`: ${description('config 1')}`,
+        ),
+      )
+      expect(() => mergeConfigs({ ...preset, plugins: [...(preset.plugins ?? []), name] })).toThrow(
+        new TypeError(
+          `${PREFIX}: config 1 given to \`mergeConfigs\`: \`plugins[${preset.plugins?.length ?? 0}]\`: ${description('this config')}`,
+        ),
+      )
+    },
+  )
+
+  it('merges configs that defineConfig built, which add the same plugins', () => {
+    const merged = mergeConfigs(baseConfig, defineConfig({ root: ROOT, astro: true }))
+    expect(merged.plugins).toEqual([
+      SORT_IMPORTS_WRAPPER,
+      GITHUB_ALERTS_PLUGIN,
+      PACKAGE_JSON_PLUGIN,
+      ASTRO_PLUGIN,
+    ])
+  })
+
   it.each([
     [
       [{}, { overrides: [{ files: '*.ts', options: { plugins: [1] } }] }],
@@ -444,11 +493,13 @@ async function loadTailwindResolver(): Promise<(base: string, id: string) => str
 }
 
 /**
- * A project with prettier-plugin-tailwindcss of `version` installed, and an environment that
- * resolves the plugin there
+ * A pnpm project with prettier-plugin-tailwindcss of `version` installed, and an environment that
+ * resolves the plugin there. The lockfile makes install commands name pnpm, which they would
+ * otherwise take from `npm_config_user_agent`
  */
 async function installTailwind(version: string | undefined) {
   const project = await withTmpProject('prettier-config', {
+    'pnpm-lock.yaml': "lockfileVersion: '9.0'\n",
     'node_modules/prettier-plugin-tailwindcss/package.json': JSON.stringify({
       name: 'prettier-plugin-tailwindcss',
       version,

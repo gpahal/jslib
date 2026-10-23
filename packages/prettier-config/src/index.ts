@@ -18,6 +18,7 @@ import {
   copyOptions,
   copyOverride,
   inheritPlugins,
+  isPackageSpecifier,
   mergeConfigList,
   NO_PLUGIN_NAMES,
   orderPlugins,
@@ -180,10 +181,6 @@ function resolvePluginPaths(
     pluginNames.set(resolved, plugin)
     return resolved
   })
-}
-
-function isPackageSpecifier(plugin: string): boolean {
-  return !path.isAbsolute(plugin) && !/^[a-z][\d+.a-z-]*:/i.test(plugin)
 }
 
 /**
