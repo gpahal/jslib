@@ -414,9 +414,13 @@ function sorterOf(plugins: ReadonlyArray<PluginEntry>, sorterWrapper: string): S
 }
 
 function isSorterWrapper(plugin: PluginEntry, sorterWrapper: string): boolean {
-  if (plugin === sorterWrapper) {
-    return true
-  }
+  return plugin === sorterWrapper || isOwnPluginModule(plugin, 'sort-imports')
+}
+
+/**
+ * A path or URL of the plugin module `internal/<name>` of any installed copy of this package
+ */
+function isOwnPluginModule(plugin: PluginEntry, name: string): boolean {
   let pluginPath: string
   if (plugin instanceof URL) {
     pluginPath = pathOfUrl(plugin)
@@ -429,9 +433,32 @@ function isSorterWrapper(plugin: PluginEntry, sorterWrapper: string): boolean {
   const [folder, file] = pluginPath.split(/[\\/]/).slice(-2)
   return (
     folder === 'internal' &&
-    file !== undefined &&
-    /^sort-imports\.[cm]?[jt]s$/.test(file) &&
+    /^(.+)\.[cm]?[jt]s$/.exec(file ?? '')?.[1] === name &&
     packageOfSpecifier(pluginPath) === PACKAGE_NAME
+  )
+}
+
+/**
+ * The configs that `defineConfig` returned
+ */
+const presetConfigs = new WeakSet<object>()
+
+/**
+ * Returns `config`
+ */
+export function withPreset<T extends Config>(config: T): T {
+  presetConfigs.add(config)
+  return config
+}
+
+/**
+ * Whether `plugins` have a plugin module that only `defineConfig` adds, the import sorter's wrapper
+ * or the GitHub alerts plugin, as a copy or merge of a config it returned does
+ */
+function hasPresetModule(plugins: ReadonlyArray<PluginEntry>, sorterWrapper: string): boolean {
+  return plugins.some(
+    (plugin) =>
+      isSorterWrapper(plugin, sorterWrapper) || isOwnPluginModule(plugin, 'github-alerts'),
   )
 }
 
@@ -468,20 +495,25 @@ export function isPackageSpecifier(plugin: string): boolean {
 }
 
 /**
- * Prettier would load a plugin given by name next to the copy that a preset adds, and the plain
- * one would replace the preset's, such as the import sorter's wrapper. A name that
- * `defineConfig` resolved to the preset's path counts as that path
- *
- * @throws TypeError naming the plugin given by name, as its list's `subjectsOf` gives it.
+ * A list of the config at `config`, and with `preset` its top-level `plugins` of a config that
+ * `defineConfig` built
  */
-function checkPresetDuplicates(
-  configLists: ReadonlyArray<PluginList>,
-  lists: ReadonlyArray<PluginList & { config: number }>,
+type IndexedPluginList = PluginList & { config: number; preset?: boolean }
+
+/**
+ * Each of {@link PRESET_PLUGINS} that the `plugins` of a list with `preset` add, by its first
+ * config and its key
+ */
+function presetPluginsOf(
+  lists: ReadonlyArray<IndexedPluginList>,
   sorterWrapper: string,
   pluginNames: PluginNames,
-): void {
+): Map<string, { config: number; key: unknown }> {
   const presets = new Map<string, { config: number; key: unknown }>()
-  for (const [config, { plugins = [] }] of configLists.entries()) {
+  for (const { plugins = [], config, preset = false } of lists) {
+    if (!preset) {
+      continue
+    }
     for (const plugin of plugins) {
       const name = presetPluginOf(plugin, sorterWrapper)
       if (name !== undefined && !presets.has(name)) {
@@ -489,6 +521,23 @@ function checkPresetDuplicates(
       }
     }
   }
+  return presets
+}
+
+/**
+ * Prettier would load a plugin given by name next to the copy that a preset adds, and the plain
+ * one would replace the preset's, such as the import sorter's wrapper. The preset's plugins are
+ * those of the `plugins` of a list with `preset`. A name that `defineConfig` resolved to the
+ * preset's path counts as that path
+ *
+ * @throws TypeError naming the plugin given by name, as its list's `subjectsOf` gives it.
+ */
+function checkPresetDuplicates(
+  lists: ReadonlyArray<IndexedPluginList>,
+  sorterWrapper: string,
+  pluginNames: PluginNames,
+): void {
+  const presets = presetPluginsOf(lists, sorterWrapper, pluginNames)
   for (const { plugins = [], subjectsOf, config } of lists) {
     for (const [index, plugin] of plugins.entries()) {
       const name =
@@ -691,6 +740,7 @@ export function checkConfigsToMerge(
   sorterWrapper: string,
   pluginNames: PluginNames,
 ): Array<ConfigInput> {
+  const built = configs.map((config) => presetConfigs.has(config))
   const checked = configs.map((config, i) => {
     const untypedConfig: unknown = config
     const subject = mergedConfigSubject(i)
@@ -716,6 +766,8 @@ export function checkConfigsToMerge(
   })
   const configLists = checked.map(({ plugins }, i) => ({
     plugins,
+    config: i,
+    preset: built[i] === true || hasPresetModule(plugins ?? [], sorterWrapper),
     subjectsOf: (index: number) => [mergedConfigSubject(i), formatNames([`plugins[${index}]`])],
   }))
   const overrideLists = checked.flatMap(({ overrides }, i) =>
@@ -728,8 +780,8 @@ export function checkConfigsToMerge(
       ],
     })),
   )
-  const lists = [...configLists.map((list, i) => ({ ...list, config: i })), ...overrideLists]
-  checkPresetDuplicates(configLists, lists, sorterWrapper, pluginNames)
+  const lists = [...configLists, ...overrideLists]
+  checkPresetDuplicates(lists, sorterWrapper, pluginNames)
   const sorter = sorterOf(
     configLists.flatMap(({ plugins }) => plugins ?? []),
     sorterWrapper,

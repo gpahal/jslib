@@ -14,7 +14,6 @@ import {
   formatInstallHint,
   isAtLeast,
   isInsidersVersion,
-  isNewerThanRange,
 } from '@gpahal/internal/node/versions'
 import {
   formatMessage,
@@ -164,6 +163,12 @@ export function resolvePeerPlugins(
 const TAILWIND_RANGE = '>=0.8.0 <0.9.0'
 
 /**
+ * The upper bound of {@link TAILWIND_RANGE}, from which on, prereleases included, the plugin is
+ * untested
+ */
+const UNTESTED_TAILWIND_VERSION = '0.9'
+
+/**
  * For the install command of a missing plugin. `tests/index.test.ts` checks them against
  * `peerDependencies`
  */
@@ -261,15 +266,16 @@ export function warnOfPrettierVersion(
 }
 
 /**
- * Warns once when the plugin is newer than {@link TAILWIND_RANGE}. An insiders build is newer than
- * any release, and is taken without a warning.
+ * Warns once when the plugin is newer than {@link TAILWIND_RANGE}, or a prerelease of
+ * {@link UNTESTED_TAILWIND_VERSION}. An insiders build is newer than any release, and is taken
+ * without a warning.
  *
  * @throws Error as {@link resolvePeerPlugin} does, and TypeError when the plugin is older than
  *   0.8. Its version is read from its `node_modules` folder, so it isn't checked without one.
  */
 export function resolveTailwindPlugin(
   environment: PluginEnvironment = DEFAULT_PLUGIN_ENVIRONMENT,
-  dir?: string,
+  dir: string = process.cwd(),
 ): string {
   const tailwindPath = resolvePeerPlugin('tailwindcss', TAILWIND_PLUGIN, environment, dir)
   // From its own file, the walk finds the plugin's own folder
@@ -283,11 +289,11 @@ export function resolveTailwindPlugin(
       formatMessage(
         PREFIX,
         ['`tailwindcss`'],
-        `${olderThan(TAILWIND_PLUGIN, version, MIN_TAILWIND_VERSION)}. Install a newer version, as in \`${formatInstallHint(TAILWIND_PLUGIN, `^${MIN_TAILWIND_VERSION}`, dir ?? process.cwd())}\``,
+        `${olderThan(TAILWIND_PLUGIN, version, MIN_TAILWIND_VERSION)}. Install a newer version, as in \`${formatInstallHint(TAILWIND_PLUGIN, `^${MIN_TAILWIND_VERSION}`, dir)}\``,
       ),
     )
   }
-  if (typeof version === 'string' && isNewerThanRange(version, TAILWIND_RANGE)) {
+  if (typeof version === 'string' && isAtLeast(version, UNTESTED_TAILWIND_VERSION)) {
     warnOnce(
       formatMessage(
         PREFIX,
@@ -297,7 +303,7 @@ export function resolveTailwindPlugin(
           version,
           range: TAILWIND_RANGE,
           effect: 'classes or imports may stay unsorted',
-          dir: dir ?? process.cwd(),
+          dir,
         }),
       ),
       'GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN',

@@ -26,6 +26,7 @@ import {
   pluginNamesOf,
   PREFIX,
   withPluginNames,
+  withPreset,
 } from '@/internal/merge'
 import {
   checkConfigOptions,
@@ -129,7 +130,7 @@ export function defineConfig(configOptions: PrettierConfigOptions): Config {
   }
   // Again after resolving paths, so a plugin given by a relative and an absolute path is kept once
   inheritPlugins(plugins, overrides, pluginNames)
-  return withPluginNames(config, pluginNames)
+  return withPluginNames(withPreset(config), pluginNames)
 }
 
 /**

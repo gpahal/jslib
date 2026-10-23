@@ -291,7 +291,7 @@ Some files get more:
 
 | Files | Settings |
 | --- | --- |
-| Code | Imports sorted into groups, with a blank line between groups: Node built-ins and other scheme imports, such as `bun:test` and `cloudflare:workers`; `react`, `react-dom`, `react-native`, `next` and `astro`, with `astro:` imports; other packages, with `npm:`, `jsr:` and `https:` imports; `@gpahal/*`; `@/public` and `@/common`; `@/types`, `@/config`, `@/lib`, `@/actions`, `@/contexts`, `@/hooks`, `@/layouts`, `@/pages`, `@/components/lib`, `@/components`, `@/styles`, `@/assets`, other `@/*`, `~/*` and `#*`; then relative imports. Type and value imports from one module merge |
+| Code | Imports sorted into groups, with a blank line between groups: Node built-ins and other scheme imports, such as `bun:test` and `cloudflare:workers`; `react`, `react-dom`, `react-native`, `next` and `astro`, with `astro:` imports; other packages, with `npm:`, `jsr:` and `https:` imports; `@gpahal/*`; `@/public` and `@/common`; `@/types`, `@/config`, `@/lib`, `@/actions`, `@/contexts`, `@/hooks`, `@/layouts`, `@/pages`, `@/components/lib`, `@/components`, `@/styles`, `@/assets`, other `@/*`, `~/*` and `#*`; then relative imports. Imports from one module merge, with `import type` kept apart from value imports |
 | [Markdown files][] | One line per paragraph (`proseWrap: 'never'`) |
 | [JSON with comments][] | No trailing commas |
 | `.mdx` | Left as they are unless they start with a `{/* @format */}` pragma, since Prettier's MDX parser reads MDX 1, and its output can render differently in MDX 2 and 3. To format them all, add the override `{ files: '*.mdx', options: { requirePragma: false } }` |
@@ -301,7 +301,7 @@ Some files get more:
 
 A relative `tailwindcss.entryPoint` resolves from `root` when it's set. Without `root`, the Tailwind plugin resolves it from the folder of the config file that Prettier finds by searching up from the formatted file, not from a config file given with `--config` or an editor's setting. There, set `root: import.meta.dirname`, or pass a `file:` URL, such as `import.meta.resolve('./src/styles/global.css')`. The file must exist.
 
-With Tailwind on, `defineConfig` throws a `TypeError` if `prettier-plugin-tailwindcss` is older than 0.8, or if it would load no import sorter, or one older than 4.7. An insiders build, versioned `0.0.0-insiders.<commit>`, is accepted. A version newer than the tested range, from 0.9.0 on, gets a warning, once, with the code `GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN`, since the config relies on how the plugin composes the import sorter.
+With Tailwind on, `defineConfig` throws a `TypeError` if `prettier-plugin-tailwindcss` is older than 0.8, or if it would load no import sorter, or one older than 4.7. An insiders build, versioned `0.0.0-insiders.<commit>`, is accepted. A version newer than the tested range, from 0.9.0 on, its prereleases included, gets a warning, once, with the code `GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN`, since the config relies on how the plugin composes the import sorter.
 
 The Tailwind plugin loads the sorter from its own folder. Under pnpm with `hoist: false`, `autoInstallPeers: false` and `dedupePeerDependents: false`, it can't, and `defineConfig` throws: install `@ianvs/prettier-plugin-sort-imports` directly or set `sortImports: false`.
 

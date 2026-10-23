@@ -426,6 +426,29 @@ describe('mergeConfigs', () => {
     },
   )
 
+  it('throws on a plugin given by name next to a config that defineConfig built without its own plugin modules', () => {
+    const preset = defineConfig({ root: ROOT, githubAlerts: false, tailwindcss: TAILWINDCSS })
+    expect(() => mergeConfigs(preset, { plugins: ['prettier-plugin-tailwindcss'] })).toThrow(
+      new TypeError(
+        `${PREFIX}: config 2 given to \`mergeConfigs\`: \`plugins[0]\`: \`prettier-plugin-tailwindcss\` is added by config 1's preset. Remove it`,
+      ),
+    )
+  })
+
+  // Neither config comes from `defineConfig`, so neither has a preset
+  it('merges a plugin given by path and by name in configs that defineConfig did not build', () => {
+    const byPath = { plugins: [PACKAGE_JSON_PLUGIN!] }
+    const byName = { plugins: ['prettier-plugin-packagejson'] }
+    expect(mergeConfigs(byPath, byName).plugins).toEqual([
+      PACKAGE_JSON_PLUGIN,
+      'prettier-plugin-packagejson',
+    ])
+    expect(mergeConfigs(byName, byPath).plugins).toEqual([
+      'prettier-plugin-packagejson',
+      PACKAGE_JSON_PLUGIN,
+    ])
+  })
+
   it('merges configs that defineConfig built, which add the same plugins', () => {
     const merged = mergeConfigs(baseConfig, defineConfig({ root: ROOT, astro: true }))
     expect(merged.plugins).toEqual([
@@ -575,6 +598,8 @@ describe('plugin resolution', () => {
 
   it.each([
     ['0.9.0', true],
+    ['0.9.0-beta.1', true],
+    ['0.8.9', false],
     ['0.0.0-insiders.5b27f94', false],
   ])(
     'warns once when the Tailwind plugin is %s, newer than the tested range: %s',
