@@ -52,7 +52,8 @@ jobs:
           persist-credentials: false
       # Installs the version in `package.json`'s `packageManager` field
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - id: node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.x
           check-latest: true
@@ -70,14 +71,17 @@ jobs:
       # Only shipped dependencies gate CI, so a new dev-only advisory doesn't block unrelated PRs
       - if: matrix.name == 'typecheck'
         run: pnpm audit --prod
-      # Turbo's local cache, one for each job, saved under the commit and restored from the latest
-      # save. GitHub scopes a pull request's caches to its ref, so a pull request reads main's cache
-      # but can't write it
+      # Turbo's local cache, one for each job and Node version, saved under the commit and restored
+      # from the latest save. Turbo's task hashes leave out the Node version, so a key without it
+      # would replay the previous release's passes after a new Node release. GitHub scopes a pull
+      # request's caches to its ref, so a pull request reads main's cache but can't write it. Main
+      # saves its cache only when `gate` doesn't skip these jobs, which it does after merging a pull
+      # request that passed, so main's cache can be older than main
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ matrix.name }}-${{ github.sha }}
-          restore-keys: turbo-${{ runner.os }}-${{ matrix.name }}-
+          key: turbo-${{ runner.os }}-node-${{ steps.node.outputs.node-version }}-${{ matrix.name }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-node-${{ steps.node.outputs.node-version }}-${{ matrix.name }}-
       - run: pnpm turbo run --continue=dependencies-successful ${{ matrix.tasks }}
       # The build rewrites `package.json` exports when entry points change, and a cache hit restores
       # them

@@ -7,24 +7,34 @@ import { describeValue, formatMessage } from '@gpahal/std/errors'
 
 // Lists the test files that each package's `test` and `test-canaries` scripts select through the
 // root Vitest config's projects: `test` runs no canary, and `test-canaries` runs all of them. The
-// scripts run with `VITEST_CANARIES=1` exported, which picked the canaries before the projects did
+// scripts run with `VITEST_CANARIES=1` exported, to check that such a variable doesn't change the
+// selection
 
 const REPO_DIR = path.join(import.meta.dirname, '../../..')
 
 const PACKAGES_DIR = path.join(REPO_DIR, 'packages')
 
-const VITEST = path.join(REPO_DIR, 'node_modules/.bin/vitest')
+/**
+ * Vitest's CLI, which the listings run with Node rather than through pnpm's `.bin` shim, since the
+ * shim sets `NODE_PATH` to pnpm's store
+ */
+const VITEST = path.join(REPO_DIR, 'node_modules/vitest/vitest.mjs')
 
 const execFileAsync = promisify(execFile)
 
 /**
- * The environment without the test runner's `VITEST*` variables and `NODE_OPTIONS`
+ * The environment without the test runner's `VITEST*` variables and `NODE_OPTIONS`, and with an
+ * empty `NODE_PATH`, which pnpm points at its store for package scripts and which would hide a
+ * missing dependency
  */
-const RUNNER_FREE_ENV = Object.fromEntries(
-  Object.entries(process.env).filter(
-    ([name]) => !name.startsWith('VITEST') && name !== 'NODE_OPTIONS',
+const RUNNER_FREE_ENV = {
+  ...Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([name]) => !name.startsWith('VITEST') && name !== 'NODE_OPTIONS',
+    ),
   ),
-)
+  NODE_PATH: '',
+}
 
 type Manifest = { name: string; scripts?: Record<string, string> }
 
@@ -72,8 +82,11 @@ async function listFiles(
       ),
     )
   }
-  const command = `${VITEST} list --filesOnly --json ${script.slice(RUN.length)}`
-  const { stdout } = await execFileAsync('sh', ['-c', command], {
+  // The shell gets Node's and Vitest's paths as `$0` and `$1`, so a space in them stays in one
+  // word. The listing turns off the module cache, which it would share with the package's own
+  // tests, since Vitest clears that cache under a running suite after a lockfile change
+  const command = `"$0" "$1" list --filesOnly --json --no-fsModuleCache ${script.slice(RUN.length)}`
+  const { stdout } = await execFileAsync('sh', ['-c', command, process.execPath, VITEST], {
     cwd: dir,
     env: { ...RUNNER_FREE_ENV, VITEST_CANARIES: '1' },
   })

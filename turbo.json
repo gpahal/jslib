@@ -1,6 +1,9 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "agentGuidance": false,
+  // Turbo evicts nothing by default, and CI restores each job's latest cache and saves it again
+  // under every commit, so the cache would only grow. A run that misses on every task adds a few MB
+  "cacheMaxSize": "100MB",
   "globalDependencies": [
     ".gitignore",
     "config/**",

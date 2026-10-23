@@ -4,13 +4,14 @@
   "tasks": {
     "test": {
       // `tests/readme-tables.test.ts` checks the root README's compatibility table against the
-      // manifests, and `tests/default-project-warnings.test.ts` reads tsconfig's Astro presets and
-      // the base they extend
+      // manifests, and `tests/default-project-warnings.test.ts` reads tsconfig's Astro presets, the
+      // base they extend and the Node preset
       "inputs": [
         "$TURBO_EXTENDS$",
         "$TURBO_ROOT$/README.md",
         "$TURBO_ROOT$/packages/*/package.json",
         "$TURBO_ROOT$/packages/tsconfig/base.json",
+        "$TURBO_ROOT$/packages/tsconfig/node.json",
         "$TURBO_ROOT$/packages/tsconfig/astro.json",
         "$TURBO_ROOT$/packages/tsconfig/astro-app.json"
       ]
