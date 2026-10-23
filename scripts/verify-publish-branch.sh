@@ -29,7 +29,9 @@ if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
   exit 1
 fi
 
-repo=$(gh repo view --json nameWithOwner -q .nameWithOwner) || {
+# The repository of `origin`, which HEAD was compared with. Without an argument, `gh` picks its own
+# default, such as an `upstream` remote
+repo=$(gh repo view "$(git remote get-url origin)" --json nameWithOwner -q .nameWithOwner) || {
   echo "Can't publish: couldn't find the GitHub repository"
   exit 1
 }

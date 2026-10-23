@@ -632,6 +632,24 @@ describe('comment-layout fixes', () => {
   })
 })
 
+describe('comment-layout on long input', () => {
+  // A spread of more items than the runtime's argument limit throws `RangeError: Maximum call
+  // stack size exceeded`; generated or imported text can hold runs this long
+  it.each([
+    `${'// text\n'.repeat(130_000)}const value = 1\n`,
+    `/**\n${' * line\n'.repeat(130_000)} */\n// text\nconst value = 1\n`,
+  ])('report a very long comment run without overflowing the call stack', (source) => {
+    const linter = new Linter({ configType: 'flat' })
+    const config: Linter.Config = {
+      plugins: { '@gpahal': GPAHAL_PLUGIN },
+      rules: { '@gpahal/comment-layout': 'error' },
+    }
+    expect(linter.verify(source, config, 'x.js').map(({ ruleId }) => ruleId)).toContain(
+      '@gpahal/comment-layout',
+    )
+  })
+})
+
 /**
  * Code that comments go into, at each whitespace or punctuation offset
  */

@@ -37,7 +37,7 @@ function readWarningCodes(): Array<string> {
   if (codes.length === 0) {
     // The repo's error shape, written by hand, since a root config imports no workspace package
     throw new Error(
-      `jslib: \`vitest.config.ts\`: \`${UTILS_PATH}\`: expected an \`export const WARNING_CODES = [...] as const\` of codes`,
+      `jslib: \`vitest.config.ts\`: \`${UTILS_PATH}\`: has no \`export const WARNING_CODES = [...] as const\` of codes. Write the list as quoted \`GPAHAL_*\` codes`,
     )
   }
   return codes
