@@ -1,12 +1,13 @@
 import path from 'node:path'
 
 import type { Config, Plugin } from 'stylelint'
-import * as z from 'zod/mini'
+import type * as z from 'zod/mini'
 
 import { expandBraces, scanBraces } from '@gpahal/internal/globs'
 import {
   booleanOr,
   deferred,
+  isStringOrStrings,
   listOption,
   optionsObject,
   required,
@@ -17,12 +18,14 @@ import {
 import {
   assertValid,
   expectedError,
+  loadZod,
   plainObject,
   stringOrStrings,
   typeCheck,
 } from '@gpahal/internal/node/zod'
 import { isArray, isArrayOf, toArray } from '@gpahal/std/arrays'
 import { describeValue, formatMessage, formatNames } from '@gpahal/std/errors'
+import { once } from '@gpahal/std/functions'
 import { isObject, isPlainObject, isRecord } from '@gpahal/std/objects'
 
 import type {
@@ -194,16 +197,6 @@ export type TailwindcssOptions = Extract<StylelintConfigOptions['tailwindcss'], 
 
 export const PREFIX = '@gpahal/stylelint-config'
 
-const TAILWINDCSS_CHECKS: OptionsShape<TailwindcssOptions> = {
-  functions: listOption(z.string(), 'functions'),
-  atRules: listOption(z.string(), 'at-rules'),
-  entryPoint: typeCheck<string | URL>(
-    (value) => typeof value === 'string' || value instanceof URL,
-    { expected: 'a string or a URL' },
-  ),
-  validateApply: z.boolean(),
-}
-
 /**
  * Whether `value` is a path, a package name or a plugin object, which a module imported whole holds
  * under `default`
@@ -211,47 +204,6 @@ const TAILWINDCSS_CHECKS: OptionsShape<TailwindcssOptions> = {
 function isPlugin(value: unknown): boolean {
   return typeof value === 'string' || isRecord(value)
 }
-
-const PLUGIN_SCHEMA = typeCheck<string | Plugin>(isPlugin, { expected: 'a plugin or a path' })
-
-/**
- * A plugin, or an array of them as a module of several plugins exports, which `defineConfig`
- * flattens
- */
-const PLUGIN_ITEM_SCHEMA = z.union([PLUGIN_SCHEMA, z.array(PLUGIN_SCHEMA)], {
-  error: expectedError('a plugin or a path, or an array of them'),
-})
-
-/**
- * What `plugins` takes, typed as the option, without the nested arrays `defineConfig` flattens
- */
-const PLUGINS_SCHEMA = deferred<StylelintPlugins>(
-  z.union([PLUGIN_SCHEMA, z.array(PLUGIN_ITEM_SCHEMA)], {
-    error: expectedError('a plugin or a path, or an array of them'),
-  }),
-)
-
-/**
- * Reference entries reject unknown keys before Stylelint can silently drop them
- */
-const REFERENCE_ENTRY_SCHEMA = optionsObject<StylelintReferenceFile>({
-  files: required(stringOrStrings()),
-  customSyntax: typeCheck<NonNullable<StylelintReferenceFile['customSyntax']>>(isCustomSyntax, {
-    expected: 'a package name or a PostCSS syntax',
-  }),
-  loader: typeCheck<NonNullable<StylelintReferenceFile['loader']>>(
-    (value) => typeof value === 'string' || typeof value === 'function' || isObject(value),
-    { expected: 'a string or a PostCSS plugin' },
-  ),
-})
-
-const REFERENCE_FILE_SCHEMA = z.union([z.string(), REFERENCE_ENTRY_SCHEMA], {
-  error: expectedError('a glob or an entry with `files`'),
-})
-
-const REFERENCE_FILES_SCHEMA = z.union([REFERENCE_FILE_SCHEMA, z.array(REFERENCE_FILE_SCHEMA)], {
-  error: expectedError('a glob or an entry with `files`, or an array of them'),
-})
 
 /**
  * Whether `value` is a package name or a PostCSS syntax, which can be a function, as `postcss-html`
@@ -289,90 +241,178 @@ function isDisableSettings(value: unknown): boolean {
   )
 }
 
-const DISABLE_SETTINGS_SCHEMA = typeCheck<Exclude<Config['reportNeedlessDisables'], undefined>>(
-  isDisableSettings,
-  {
-    expected: 'a boolean, or a boolean and an object of `except` and `severity`',
-  },
-)
-
 /**
- * Stylelint accepts config objects even though its types only list strings
+ * The schemas, built on first use rather than on import, so the static presets don't load Zod
  */
-const EXTENDS_ENTRY_SCHEMA = typeCheck<string | StylelintExtendedConfig>(
-  (value) => typeof value === 'string' || isPlainObject(value),
-  { expected: 'a config or a path or package name' },
-)
+const schemas = once(() => {
+  const z = loadZod()
+  const tailwindcssChecks: OptionsShape<TailwindcssOptions> = {
+    functions: listOption(z.string(), 'functions'),
+    atRules: listOption(z.string(), 'at-rules'),
+    entryPoint: typeCheck<string | URL>(
+      (value) => typeof value === 'string' || value instanceof URL,
+      { expected: 'a string or a URL' },
+    ),
+    validateApply: z.boolean(),
+  }
 
-const EXTENDS_SCHEMA = deferred<StylelintExtends>(
-  z.union([EXTENDS_ENTRY_SCHEMA, z.array(EXTENDS_ENTRY_SCHEMA)], {
-    error: expectedError('a config, a path or package name, or an array of them'),
-  }),
-)
+  const PLUGIN_SCHEMA = typeCheck<string | Plugin>(isPlugin, { expected: 'a plugin or a path' })
 
-const PROCESSORS_SCHEMA = z.array(z.string())
+  // A plugin, or an array of them as a module of several plugins exports, which `defineConfig`
+  // flattens
+  const PLUGIN_ITEM_SCHEMA = z.union([PLUGIN_SCHEMA, z.array(PLUGIN_SCHEMA)], {
+    error: expectedError('a plugin or a path, or an array of them'),
+  })
 
-/**
- * Typed so a key added to the options can't be left out
- */
-export const OPTION_CHECKS: OptionsShape<StylelintConfigOptions> = {
-  root: required(
-    typeCheck<string>((value) => typeof value === 'string' && path.isAbsolute(value), {
-      expected: 'an absolute path, such as `import.meta.dirname`',
+  // What `plugins` takes, typed as the option, without the nested arrays `defineConfig` flattens
+  const PLUGINS_SCHEMA = deferred<StylelintPlugins>(
+    z.union([PLUGIN_SCHEMA, z.array(PLUGIN_ITEM_SCHEMA)], {
+      error: expectedError('a plugin or a path, or an array of them'),
     }),
-  ),
-  tailwindcss: booleanOr(optionsObject<TailwindcssOptions>(TAILWINDCSS_CHECKS)),
-  astro: z.boolean(),
-  html: z.boolean(),
-  markdown: z.boolean(),
-  commentLayout: z.boolean(),
-  logical: z.boolean(),
-  plugins: PLUGINS_SCHEMA,
-  // Stylelint checks the rules' settings
-  rules: deferred(plainObject()),
-  // `checkOverrides` checks each override
-  overrides: z.array(deferred<StylelintOverride>(plainObject()), {
-    error: expectedError('an array of overrides'),
-  }),
-  // A function receives `[]`, since the disabled types' and extended configs' globs join separately
-  ignoreFiles: z.union(
-    [
-      z.string(),
-      z.array(z.string()),
-      typeCheck<ListTransform>((value) => typeof value === 'function', { expected: 'a function' }),
-    ],
+  )
+
+  // Reference entries reject unknown keys before Stylelint can silently drop them
+  const REFERENCE_ENTRY_SCHEMA = optionsObject<StylelintReferenceFile>({
+    files: required(stringOrStrings()),
+    customSyntax: typeCheck<NonNullable<StylelintReferenceFile['customSyntax']>>(isCustomSyntax, {
+      expected: 'a package name or a PostCSS syntax',
+    }),
+    loader: typeCheck<NonNullable<StylelintReferenceFile['loader']>>(
+      (value) => typeof value === 'string' || typeof value === 'function' || isObject(value),
+      { expected: 'a string or a PostCSS plugin' },
+    ),
+  })
+
+  const REFERENCE_FILE_SCHEMA = z.union([z.string(), REFERENCE_ENTRY_SCHEMA], {
+    error: expectedError('a glob or an entry with `files`'),
+  })
+
+  const REFERENCE_FILES_SCHEMA = z.union([REFERENCE_FILE_SCHEMA, z.array(REFERENCE_FILE_SCHEMA)], {
+    error: expectedError('a glob or an entry with `files`, or an array of them'),
+  })
+
+  const DISABLE_SETTINGS_SCHEMA = typeCheck<Exclude<Config['reportNeedlessDisables'], undefined>>(
+    isDisableSettings,
     {
-      error: expectedError(
-        'a glob, an array of globs, or a function that receives `[]` and returns them',
-      ),
+      expected: 'a boolean, or a boolean and an object of `except` and `severity`',
     },
-  ),
-  referenceFiles: REFERENCE_FILES_SCHEMA,
-  extends: EXTENDS_SCHEMA,
-  languageOptions: plainObject(),
-  defaultSeverity: z.literal(['warning', 'error']),
-  customSyntax: typeCheck<NonNullable<Config['customSyntax']>>(isCustomSyntax, {
-    expected: 'a package name or a PostCSS syntax',
-  }),
-  quiet: z.boolean(),
-  formatter: typeCheck<NonNullable<Config['formatter']>>(
-    (value) => typeof value === 'string' || typeof value === 'function',
-    { expected: 'a formatter name or function' },
-  ),
-  ignoreDisables: z.boolean(),
-  reportNeedlessDisables: DISABLE_SETTINGS_SCHEMA,
-  reportInvalidScopeDisables: DISABLE_SETTINGS_SCHEMA,
-  reportDescriptionlessDisables: DISABLE_SETTINGS_SCHEMA,
-  reportUnscopedDisables: DISABLE_SETTINGS_SCHEMA,
-  maxWarnings: typeCheck<number>(
-    (value) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0,
-    { expected: 'a non-negative integer' },
-  ),
-  computeEditInfo: z.boolean(),
-  configurationComment: z.string(),
-  processors: PROCESSORS_SCHEMA,
-  allowEmptyInput: z.boolean(),
-  cache: z.boolean(),
+  )
+
+  // Stylelint accepts config objects even though its types only list strings
+  const EXTENDS_ENTRY_SCHEMA = typeCheck<string | StylelintExtendedConfig>(
+    (value) => typeof value === 'string' || isPlainObject(value),
+    { expected: 'a config or a path or package name' },
+  )
+
+  const EXTENDS_SCHEMA = deferred<StylelintExtends>(
+    z.union([EXTENDS_ENTRY_SCHEMA, z.array(EXTENDS_ENTRY_SCHEMA)], {
+      error: expectedError('a config, a path or package name, or an array of them'),
+    }),
+  )
+
+  const PROCESSORS_SCHEMA = z.array(z.string())
+
+  // Typed so a key added to the options can't be left out
+  const optionChecks: OptionsShape<StylelintConfigOptions> = {
+    root: required(
+      typeCheck<string>((value) => typeof value === 'string' && path.isAbsolute(value), {
+        expected: 'an absolute path, such as `import.meta.dirname`',
+      }),
+    ),
+    tailwindcss: booleanOr(optionsObject<TailwindcssOptions>(tailwindcssChecks)),
+    astro: z.boolean(),
+    html: z.boolean(),
+    markdown: z.boolean(),
+    commentLayout: z.boolean(),
+    logical: z.boolean(),
+    plugins: PLUGINS_SCHEMA,
+    // Stylelint checks the rules' settings
+    rules: deferred(plainObject()),
+    // `checkOverrides` checks each override
+    overrides: z.array(deferred<StylelintOverride>(plainObject()), {
+      error: expectedError('an array of overrides'),
+    }),
+    // A function receives `[]`, since the disabled types' and extended configs' globs join separately
+    ignoreFiles: z.union(
+      [
+        z.string(),
+        z.array(z.string()),
+        typeCheck<ListTransform>((value) => typeof value === 'function', {
+          expected: 'a function',
+        }),
+      ],
+      {
+        error: expectedError(
+          'a glob, an array of globs, or a function that receives `[]` and returns them',
+        ),
+      },
+    ),
+    referenceFiles: REFERENCE_FILES_SCHEMA,
+    extends: EXTENDS_SCHEMA,
+    languageOptions: plainObject(),
+    defaultSeverity: z.literal(['warning', 'error']),
+    customSyntax: typeCheck<NonNullable<Config['customSyntax']>>(isCustomSyntax, {
+      expected: 'a package name or a PostCSS syntax',
+    }),
+    quiet: z.boolean(),
+    formatter: typeCheck<NonNullable<Config['formatter']>>(
+      (value) => typeof value === 'string' || typeof value === 'function',
+      { expected: 'a formatter name or function' },
+    ),
+    ignoreDisables: z.boolean(),
+    reportNeedlessDisables: DISABLE_SETTINGS_SCHEMA,
+    reportInvalidScopeDisables: DISABLE_SETTINGS_SCHEMA,
+    reportDescriptionlessDisables: DISABLE_SETTINGS_SCHEMA,
+    reportUnscopedDisables: DISABLE_SETTINGS_SCHEMA,
+    maxWarnings: typeCheck<number>(
+      (value) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0,
+      { expected: 'a non-negative integer' },
+    ),
+    computeEditInfo: z.boolean(),
+    configurationComment: z.string(),
+    processors: PROCESSORS_SCHEMA,
+    allowEmptyInput: z.boolean(),
+    cache: z.boolean(),
+  }
+
+  // Typed so a key Stylelint adds to its override type can't be left out. Stylelint checks the
+  // values of the deferred keys. The keys it sets itself (`_*`) or reads once per run (`formatter`,
+  // `maxWarnings`, `allowEmptyInput`, `cache`) do nothing in an override, so they're unknown
+  const overrideChecks: OptionsShape<StylelintOverride> = {
+    files: required(stringOrStrings()),
+    name: deferred(),
+    extends: EXTENDS_SCHEMA,
+    plugins: PLUGINS_SCHEMA,
+    ignoreFiles: stringOrStrings(),
+    rules: deferred(plainObject()),
+    quiet: deferred(),
+    defaultSeverity: deferred(),
+    ignoreDisables: deferred(),
+    reportNeedlessDisables: deferred(),
+    reportInvalidScopeDisables: deferred(),
+    reportDescriptionlessDisables: deferred(),
+    reportUnscopedDisables: deferred(),
+    configurationComment: deferred(),
+    customSyntax: deferred(),
+    processors: deferred(),
+    referenceFiles: REFERENCE_FILES_SCHEMA,
+    languageOptions: deferred(),
+    computeEditInfo: z.boolean(),
+    validate: z.boolean(),
+  }
+
+  return {
+    optionsSchema: optionsObject<StylelintConfigOptions>(optionChecks, {
+      expected: 'an object of options',
+    }),
+    overrideSchema: optionsObject<StylelintOverride>(overrideChecks),
+    referenceFilesSchema: REFERENCE_FILES_SCHEMA,
+    processorsSchema: PROCESSORS_SCHEMA,
+  }
+})
+
+export function optionsSchema(): z.ZodMiniType<StylelintConfigOptions, StylelintConfigOptions> {
+  return schemas().optionsSchema
 }
 
 /**
@@ -412,36 +452,6 @@ export function checkRejectedKeys(options: unknown): void {
   }
 }
 
-/**
- * Typed so a key Stylelint adds to its override type can't be left out. Stylelint checks the
- * values of the deferred keys. The keys it sets itself (`_*`) or reads once per run (`formatter`,
- * `maxWarnings`, `allowEmptyInput`, `cache`) do nothing in an override, so they're unknown
- */
-const OVERRIDE_CHECKS: OptionsShape<StylelintOverride> = {
-  files: required(stringOrStrings()),
-  name: deferred(),
-  extends: EXTENDS_SCHEMA,
-  plugins: PLUGINS_SCHEMA,
-  ignoreFiles: stringOrStrings(),
-  rules: deferred(plainObject()),
-  quiet: deferred(),
-  defaultSeverity: deferred(),
-  ignoreDisables: deferred(),
-  reportNeedlessDisables: deferred(),
-  reportInvalidScopeDisables: deferred(),
-  reportDescriptionlessDisables: deferred(),
-  reportUnscopedDisables: deferred(),
-  configurationComment: deferred(),
-  customSyntax: deferred(),
-  processors: deferred(),
-  referenceFiles: REFERENCE_FILES_SCHEMA,
-  languageOptions: deferred(),
-  computeEditInfo: z.boolean(),
-  validate: z.boolean(),
-}
-
-const OVERRIDE_SCHEMA = optionsObject<StylelintOverride>(OVERRIDE_CHECKS)
-
 const OVERRIDE_KEY_REJECTIONS: ReadonlyMap<string, string> = new Map([['fix', FIX_REJECTION]])
 
 /**
@@ -472,7 +482,7 @@ export function checkOverride(override: StylelintOverride, index: number): Style
     }
   }
   const untypedOverride: unknown = override
-  const checked = assertValid(OVERRIDE_SCHEMA, untypedOverride, {
+  const checked = assertValid(schemas().overrideSchema, untypedOverride, {
     prefix: PREFIX,
     path: ['overrides', index],
   })
@@ -607,7 +617,10 @@ export function checkOverrideFiles(files: string | ReadonlyArray<string>, name: 
  * Bound every ignore glob, including those read from shared configs
  */
 export function checkIgnoreGlobs(globs: string | ReadonlyArray<string>, name: string): void {
-  assertValid(stringOrStrings(), globs, { prefix: PREFIX, subject: formatNames([name]) })
+  // Zod only for a value it would reject, so the static presets don't load it
+  if (!isStringOrStrings(globs)) {
+    assertValid(stringOrStrings(), globs, { prefix: PREFIX, subject: formatNames([name]) })
+  }
   for (const [index, glob] of toArray(globs).entries()) {
     expandGlobBraces(glob, formatNames([typeof globs === 'string' ? name : `${name}[${index}]`]))
   }
@@ -617,7 +630,7 @@ export function checkIgnoreGlobs(globs: string | ReadonlyArray<string>, name: st
  * Check reference entries read from extended configs as strictly as public options
  */
 export function checkReferenceFiles(value: unknown, name: string): void {
-  const checked = assertValid(REFERENCE_FILES_SCHEMA, value, {
+  const checked = assertValid(schemas().referenceFilesSchema, value, {
     prefix: PREFIX,
     subject: formatNames([name]),
   })
@@ -628,5 +641,5 @@ export function checkReferenceFiles(value: unknown, name: string): void {
  * Validate loaded processor entries before path normalization
  */
 export function checkProcessors(value: unknown, name: string): void {
-  assertValid(PROCESSORS_SCHEMA, value, { prefix: PREFIX, subject: formatNames([name]) })
+  assertValid(schemas().processorsSchema, value, { prefix: PREFIX, subject: formatNames([name]) })
 }

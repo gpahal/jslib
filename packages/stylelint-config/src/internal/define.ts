@@ -1,7 +1,7 @@
 import type { Config } from 'stylelint'
 import useBaseline from 'stylelint-plugin-use-baseline'
 
-import { optionsObject, resolveListOption, type ListOption } from '@gpahal/internal/node/options'
+import { resolveListOption, type ListOption } from '@gpahal/internal/node/options'
 import { resolvePath } from '@gpahal/internal/node/resolve'
 import { checkRoot } from '@gpahal/internal/node/root'
 import { assertValid } from '@gpahal/internal/node/zod'
@@ -28,7 +28,7 @@ import {
   checkOverrides,
   checkReferenceGlobs,
   checkRejectedKeys,
-  OPTION_CHECKS,
+  optionsSchema,
   PREFIX,
   type StylelintConfigOptions,
 } from '@/internal/options'
@@ -74,10 +74,6 @@ type Override = NonNullable<Config['overrides']>[number]
 
 type ReferenceFile = Extract<NonNullable<Config['referenceFiles']>, Array<unknown>>[number]
 
-const OPTIONS_SCHEMA = optionsObject<StylelintConfigOptions>(OPTION_CHECKS, {
-  expected: 'an object of options',
-})
-
 function pickRules(
   rules: Readonly<Record<string, unknown>>,
   isKept: (name: string) => boolean,
@@ -113,7 +109,7 @@ function onceList(option: ListOption | undefined): ListOption | undefined {
 export async function defineConfig(options: StylelintConfigOptions): Promise<StylelintConfig> {
   const untypedOptions: unknown = options
   checkRejectedKeys(untypedOptions)
-  const validOptions = assertValid(OPTIONS_SCHEMA, untypedOptions, {
+  const validOptions = assertValid(optionsSchema(), untypedOptions, {
     prefix: PREFIX,
     rootSubject: 'options',
   })
@@ -282,7 +278,8 @@ function createConfigBuilder(
     processors,
     ...stylelintKeys
   } = validOptions
-  checkReferenceGlobs(referenceFiles, 'referenceFiles')
+  // `defineConfig` has checked `referenceFiles`, and the static presets have none. The overrides
+  // come with your `extends` configs' settings, so they're checked whole
   const overrides = checkOverrides(givenOverrides)
   const referenceEntries = [
     ...toArray(extendedOptions.referenceFiles ?? []),
@@ -660,12 +657,13 @@ function createConfigBuilder(
         : []
     },
   )
-  const presetReferenceLayer: Config = clonePlain({
+  // Not copied, since only `preserveConditionalOptions` reads it, which copies what it returns
+  const presetReferenceLayer: Config = {
     rules: Object.fromEntries(
       referenceRules.map((name) => [name, settingIn(preset, name) ?? null]),
     ),
     ...(presetReferenceTypeOverrides.length > 0 && { overrides: presetReferenceTypeOverrides }),
-  })
+  }
   const config: Config = {
     // Resolved here, since Stylelint resolves `extends` names from the project's config, and under
     // pnpm the project can't see this package's dependencies

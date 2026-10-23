@@ -11,12 +11,7 @@ import {
   optionsObject,
   type OptionsShape,
 } from '@gpahal/internal/node/options'
-import {
-  isRelativePath,
-  PATH_OR_FILE_URL_EXPECTED,
-  PATH_OR_FILE_URL_WITHOUT_ROOT_EXPECTED,
-  resolvePathOrFileUrl,
-} from '@gpahal/internal/node/paths'
+import { isRelativePath, resolvePathOption } from '@gpahal/internal/node/paths'
 import { checkRoot } from '@gpahal/internal/node/root'
 import { assertValid, loadZod, plainObject, typeCheck } from '@gpahal/internal/node/zod'
 import { formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
@@ -525,17 +520,9 @@ function resolveEntryPoint(root: string | undefined, entryPoint: string | URL): 
   if (root === undefined && typeof entryPoint === 'string' && isRelativePath(entryPoint)) {
     return entryPoint
   }
-  const file = resolvePathOrFileUrl(entryPoint, root, (cause) => {
-    // The whole value, not `describeValue`, which cuts a long path short and gives only the class
-    // of a `URL`
-    throw new TypeError(
-      formatMessage(
-        PREFIX,
-        ['`tailwindcss.entryPoint`'],
-        `expected ${root === undefined ? PATH_OR_FILE_URL_WITHOUT_ROOT_EXPECTED : PATH_OR_FILE_URL_EXPECTED}, received ${formatNames([String(entryPoint)])}`,
-      ),
-      cause === undefined ? undefined : { cause },
-    )
+  const file = resolvePathOption(entryPoint, root, {
+    prefix: PREFIX,
+    name: 'tailwindcss.entryPoint',
   })
   if (statPath('tailwindcss.entryPoint', file)?.isFile() !== true) {
     throw new TypeError(

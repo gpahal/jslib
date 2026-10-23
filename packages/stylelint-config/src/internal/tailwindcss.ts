@@ -23,11 +23,7 @@ import { AtRule, CssSyntaxError, parse, type Plugin } from 'postcss'
 import type { Config } from 'stylelint'
 
 import { resolveListOption } from '@gpahal/internal/node/options'
-import {
-  PATH_OR_FILE_URL_EXPECTED,
-  resolvePathOrFileUrl,
-  URL_SCHEME_REGEX,
-} from '@gpahal/internal/node/paths'
+import { resolvePathOption, URL_SCHEME_REGEX } from '@gpahal/internal/node/paths'
 import { resolveFile, resolveFromNodeModules } from '@gpahal/internal/node/resolve'
 import { formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
 
@@ -275,26 +271,6 @@ export function tailwindcssConfig(
     ),
   }
   return { syntax, rules }
-}
-
-/**
- * The path of `tailwindcss.entryPoint`
- *
- * @throws TypeError when `entryPoint` isn't a path or `file:` URL.
- */
-function entryPathOf(entryPoint: string | URL, root: string): string {
-  return resolvePathOrFileUrl(entryPoint, root, (cause) => {
-    // The whole value, not `describeValue`, which cuts a long path short and gives only the class
-    // of a `URL`
-    throw new TypeError(
-      formatMessage(
-        PREFIX,
-        ['`tailwindcss.entryPoint`'],
-        `expected ${PATH_OR_FILE_URL_EXPECTED}, received ${formatNames([String(entryPoint)])}`,
-      ),
-      cause === undefined ? undefined : { cause },
-    )
-  })
 }
 
 /**
@@ -833,7 +809,10 @@ export function tailwindReferenceFiles(
     const rootTheme = theme ?? failRoot()
     return { files: [rootTheme], prefix: undefined, theme: rootTheme }
   }
-  const entryPath = entryPathOf(entryPoint, root)
+  const entryPath = resolvePathOption(entryPoint, root, {
+    prefix: PREFIX,
+    name: 'tailwindcss.entryPoint',
+  })
   let entryCss: string | undefined
   try {
     // Stylelint would report a missing file only when it lints
