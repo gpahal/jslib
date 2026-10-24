@@ -1,14 +1,14 @@
 import path from 'node:path'
 
-import { PATH_OR_FILE_URL_EXPECTED, resolvePathOrFileUrl } from '@gpahal/internal/node/paths'
-import { describeValue } from '@gpahal/std/errors'
+import { resolvePathOption } from '@gpahal/internal/node/paths'
 
 import { ASTRO_FILES } from '@/internal/files'
-import { intersectFiles, type FileSpecs } from '@/internal/globs'
+import { intersectFiles } from '@/internal/globs'
+import type { FileSpecs } from '@/internal/globs'
 import { named, withSetup } from '@/internal/naming'
 import { assertInstalledIn, importPeers, interopDefault } from '@/internal/peers'
 import type { TypedConfig } from '@/internal/types'
-import { formatErrorMessage } from '@/internal/utils'
+import { PREFIX } from '@/internal/utils'
 
 const CLASS_ORDER_RULE = 'better-tailwindcss/enforce-consistent-class-order'
 
@@ -16,24 +16,6 @@ export const TAILWINDCSS_PEERS: Array<string> = ['eslint-plugin-better-tailwindc
 
 function resolveSetting(root: string, value: unknown): string | undefined {
   return typeof value === 'string' ? path.resolve(root, value) : undefined
-}
-
-/**
- * Relative to `root` or a `file:` URL
- *
- * @throws TypeError when it's another URL, or an empty string.
- */
-export function resolveEntryPoint(entryPoint: string | URL, root: string): string {
-  return resolvePathOrFileUrl(entryPoint, root, (cause) => {
-    // A `URL`'s text, since `describeValue` gives only the class of one
-    throw new TypeError(
-      formatErrorMessage(
-        ['`tailwindcss.entryPoint`'],
-        `expected ${PATH_OR_FILE_URL_EXPECTED}, received ${describeValue(entryPoint instanceof URL ? entryPoint.href : entryPoint)}`,
-      ),
-      cause === undefined ? undefined : { cause },
-    )
-  })
 }
 
 /**
@@ -63,7 +45,10 @@ export async function tailwindcss(
   const settings = {
     ...pluginSettings,
     cwd,
-    entryPoint: resolveEntryPoint(entryPoint, root),
+    entryPoint: resolvePathOption(entryPoint, root, {
+      prefix: PREFIX,
+      name: 'tailwindcss.entryPoint',
+    }),
   }
   const defaultSelectors = getDefaultSelectors()
   // prettier-plugin-tailwindcss sorts class attributes and `tailwindFunctions` calls, not variables

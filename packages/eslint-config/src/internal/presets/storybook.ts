@@ -2,7 +2,8 @@ import type { ESLint, Linter } from 'eslint'
 
 import { describeValue } from '@gpahal/std/errors'
 
-import { intersectFiles, type FileSpecs } from '@/internal/globs'
+import { intersectFiles } from '@/internal/globs'
+import type { FileSpecs } from '@/internal/globs'
 import { withSetup } from '@/internal/naming'
 import { importPeers, interopDefault } from '@/internal/peers'
 import { parseRuleId } from '@/internal/rules'

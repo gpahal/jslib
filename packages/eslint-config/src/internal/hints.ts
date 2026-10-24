@@ -6,11 +6,13 @@ import { trimEnd } from '@gpahal/std/strings'
 
 import { AREAS } from '@/internal/areas'
 import { createGlobMatcher, splitGlobs, withoutLeadingDotSlash } from '@/internal/globs'
-import { findListingManifest, getListedPackages, type ProjectManifest } from '@/internal/manifests'
+import { findListingManifest, getListedPackages } from '@/internal/manifests'
+import type { ProjectManifest } from '@/internal/manifests'
 import type { AreaName } from '@/internal/names'
 import { formatPeersInstallCommand, isInstalledIn } from '@/internal/peers'
 import type { EslintConfigOptions } from '@/internal/types'
-import { formatErrorMessage, warnOfSetupOnce, type GpahalWarningCode } from '@/internal/utils'
+import { formatErrorMessage, warnOfSetupOnce } from '@/internal/utils'
+import type { GpahalWarningCode } from '@/internal/utils'
 
 /**
  * As `<root>\0<option>`, so each warns once per process, as editors reload the config

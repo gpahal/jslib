@@ -36,9 +36,8 @@
     "build": "tsdown",
     "lint-check": "eslint . --max-warnings 0",
     "prepublishOnly": "../../scripts/verify-publish-tool.sh",
-    "test": "VITEST_CANARIES=0 vitest run --config ../../vitest.config.ts --exclude tests/setup-recipes.test.ts",
-    "test-canaries": "VITEST_CANARIES=1 vitest run --config ../../vitest.config.ts",
-    "test-recipes": "VITEST_CANARIES=0 vitest run --config ../../vitest.config.ts --test-timeout 600000 tests/setup-recipes.test.ts",
+    "test": "vitest run --project 'tests*'",
+    "test-canaries": "vitest run --project canaries",
     "typecheck": "tsc && tsc -p tests",
     "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
   },
@@ -58,25 +57,13 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.11",
-    "@gpahal/eslint-config": "workspace:*",
     "@gpahal/internal": "workspace:*",
     "@gpahal/prettier-config": "workspace:*",
-    "@gpahal/tsconfig": "workspace:*",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
-    "astro": "^7.4.1",
-    "eslint": "^10.13.0",
-    "next": "^16.4.2",
     "prettier": "^3.9.10",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
     "stylelint": "^17.16.0",
     "tailwindcss": "^4.3.3",
     "tsdown": "^0.23.1",
-    "typescript": "~6.0.3",
-    "vite": "^8.3.4"
+    "typescript": "~6.0.3"
   },
   "peerDependencies": {
     "stylelint": "^17.15",

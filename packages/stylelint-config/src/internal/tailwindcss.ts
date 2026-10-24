@@ -17,28 +17,32 @@ import {
   isTokenURL,
   isTokenWhiteSpaceOrComment,
   tokenize,
-  type CSSToken,
 } from '@csstools/css-tokenizer'
-import { AtRule, CssSyntaxError, parse, type Plugin } from 'postcss'
+import type { CSSToken } from '@csstools/css-tokenizer'
+import { AtRule, CssSyntaxError, parse } from 'postcss'
+import type { Plugin } from 'postcss'
 import type { Config } from 'stylelint'
 
 import { resolveListOption } from '@gpahal/internal/node/options'
-import { resolvePathOption, URL_SCHEME_REGEX } from '@gpahal/internal/node/paths'
+import { resolveFileOption, URL_SCHEME_REGEX } from '@gpahal/internal/node/paths'
 import { resolveFile, resolveFromNodeModules } from '@gpahal/internal/node/resolve'
 import { formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
 
 import { CUSTOM_PROPERTY_EMPTY_LINE_BEFORE } from '@/internal/custom-property-empty-line-before'
-import { PREFIX, type TailwindcssOptions } from '@/internal/options'
-import { mergeUserRules, type StylelintRules } from '@/internal/rules'
+import { PREFIX } from '@/internal/options'
+import type { TailwindcssOptions } from '@/internal/options'
+import { mergeUserRules } from '@/internal/rules'
+import type { StylelintRules } from '@/internal/rules'
 import { TAILWIND_APPLY } from '@/internal/tailwind-apply'
 import { TAILWIND_DIRECTIVES, untypedFunctionsPattern } from '@/internal/tailwind-directives'
 import {
   tailwindCompileOf,
   tailwindModulePath,
   tailwindStylesheetPath,
-  type TailwindCompile,
 } from '@/internal/tailwind-loader'
+import type { TailwindCompile } from '@/internal/tailwind-loader'
 import { isReset, recordUnprefixedName } from '@/internal/tailwind-theme-function'
+import { THEME_FUNCTIONS } from '@/internal/tailwind-values'
 
 type Syntax = NonNullable<NonNullable<Config['languageOptions']>['syntax']>
 
@@ -256,6 +260,8 @@ export function tailwindcssConfig(
           true,
           { ignoreFunctions: tailwindFunctions.filter((name) => !name.startsWith('--')) },
         ],
+        // Legacy key paths, such as `fontSize.sm`, and theme variable names are case-sensitive
+        'value-keyword-case': ['lower', { ignoreFunctions: [...THEME_FUNCTIONS] }],
         // `@apply` goes among declarations, and an entry file may group its at-rules with or
         // without blank lines, daisyUI's `@plugin` with an options block included
         'at-rule-empty-line-before': [
@@ -809,24 +815,19 @@ export function tailwindReferenceFiles(
     const rootTheme = theme ?? failRoot()
     return { files: [rootTheme], prefix: undefined, theme: rootTheme }
   }
-  const entryPath = resolvePathOption(entryPoint, root, {
+  // Stylelint would report a missing file only when it lints
+  const entryPath = resolveFileOption(entryPoint, root, {
     prefix: PREFIX,
     name: 'tailwindcss.entryPoint',
   })
-  let entryCss: string | undefined
+  let entryCss: string
   try {
-    // Stylelint would report a missing file only when it lints
-    if (fs.statSync(entryPath, { throwIfNoEntry: false })?.isFile() === true) {
-      entryCss = fs.readFileSync(entryPath, 'utf8')
-    }
+    entryCss = fs.readFileSync(entryPath, 'utf8')
   } catch (error) {
     return failEntryPoint(
       `reading ${formatNames([entryPath])} failed: ${getErrorReason(error)}`,
       error,
     )
-  }
-  if (entryCss === undefined) {
-    return failEntryPoint(`${formatNames([entryPath])} isn't a file`)
   }
   const { files, prefix, resets, realPaths } = importGraph(entryPath, entryCss)
   const notResolved = `\`tailwindcss/theme.css\` doesn't resolve from its folder, ${formatNames([path.dirname(entryPath)])}. Install Tailwind CSS v4 there`

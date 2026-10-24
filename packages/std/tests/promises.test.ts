@@ -13,9 +13,8 @@ import {
   sleep,
   sleepWithWakeup,
   withTimeout,
-  type RetryOptions,
-  type TrackedPromise,
 } from '@/promises'
+import type { RetryOptions, TrackedPromise } from '@/promises'
 
 beforeEach(() => {
   vi.useFakeTimers()

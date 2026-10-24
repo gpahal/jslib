@@ -1,16 +1,18 @@
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+import json from '@eslint/json'
 import type { Linter } from 'eslint'
 import * as eslintPluginRegexp from 'eslint-plugin-regexp'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
-import { defineConfig, files, untyped, withoutFormattingRules, type TypedRules } from '@/index'
+import { defineConfig, files, untyped, withoutFormattingRules } from '@/index'
+import type { ConfigNames, TypedRules } from '@/index'
 
-import { eslintWith } from './helpers'
+import { eslintWith, FIXTURES_DIR } from './helpers'
 
-const root = path.join(import.meta.dirname, 'fixtures', 'rules')
+const root = path.join(FIXTURES_DIR, 'rules')
 
 /**
  * An existing Tailwind CSS entry point, relative to `root`
@@ -24,134 +26,742 @@ function build(options: Record<string, unknown>) {
   return () => defineConfig({ root, ...options })
 }
 
-const ENTRY_POINT_EXPECTED =
-  "expected an absolute path or one relative to `root`, or a `file:` URL or URL string with an absolute path, such as `import.meta.resolve('./src/styles/global.css')`"
+type Composer = ReturnType<typeof defineConfig>
 
 /**
- * The message for a glob option of `name` that lists only negated globs
+ * The composer's methods as JavaScript callers can call them, with arguments the types reject
  */
-function onlyNegated(name: string): string {
-  return `@gpahal/eslint-config: \`${name}\`: lists only negated globs, so it would match no file. Add the globs of the files to match, as in \`['src/**', '!src/legacy/**']\``
+type UntypedComposer = Record<string, (...args: Array<unknown>) => Composer>
+
+function untypedComposer(): UntypedComposer {
+  const composer: unknown = defineConfig({ root })
+  return composer as UntypedComposer
 }
 
-test.each([
-  [
-    { typescript: { typeAwre: false } },
-    '@gpahal/eslint-config: `typescript.typeAwre`: unknown option. Known options: `rules`, `rulesTypeAware`, `library`, `exhaustiveSwitch`, `strictBooleanExpressions`',
-  ],
-  [
-    { root: 'packages/a' },
-    '@gpahal/eslint-config: `root`: expected an absolute path, such as `import.meta.dirname`, received `"packages/a"`',
-  ],
-  [
-    { ignores: 'dist' },
-    '@gpahal/eslint-config: `ignores`: expected an array of globs or a function of the defaults, received `"dist"`',
-  ],
-  [
-    { typescript: false },
-    "@gpahal/eslint-config: `typescript`: expected an object, received `false`. TypeScript's rules can't be turned off; `typeAware: false` lints without type information",
-  ],
-  [
-    { typescript: { exhaustiveSwitch: 'all' } },
-    '@gpahal/eslint-config: `typescript.exhaustiveSwitch`: expected `"default"` or `"strict"`, received `"all"`',
-  ],
-  [
-    { nextjs: true, react: false },
-    '@gpahal/eslint-config: `nextjs`: needs the `react` preset, which `react: false` turns off. Remove `react: false`',
-  ],
-  [
-    { nextjs: { rootDir: '../react' } },
-    "@gpahal/eslint-config: `nextjs.rootDir`: path `../react` isn't a folder under `root`",
-  ],
+/**
+ * The glob of the JSON, YAML, TOML, Markdown and HTML files, which the JavaScript rules of a
+ * config of yours skip
+ */
+const NON_CODE_FILES = '**/*.{json,jsonc,json5,yml,yaml,toml,md,markdown,html}'
+
+const CODE_FILES = '**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}'
+
+/**
+ * A plugin of one rule that runs only on JSON
+ */
+const jsonOnlyPlugin = {
+  rules: { json: { meta: { languages: ['json/json'] }, create: () => ({}) } },
+}
+
+/**
+ * A preset in a common shape: a config that registers the plugin, then configs of rules without
+ * `plugins`
+ */
+const FORMATTING_RULES = [
+  'react/jsx-indent',
+  'react/jsx-curly-spacing',
+  'react/jsx-max-props-per-line',
+]
+
+const reactPreset = [
+  {
+    name: 'react/base/setup',
+    plugins: {
+      react: {
+        rules: Object.fromEntries(
+          [...FORMATTING_RULES, 'react/no-danger'].map((rule) => [
+            rule.slice('react/'.length),
+            { create: () => ({}) },
+          ]),
+        ),
+      },
+    },
+  },
+  {
+    name: 'react/recommended/rules',
+    files: ['**/*.jsx'],
+    rules: Object.fromEntries(
+      [...FORMATTING_RULES, 'react/no-danger'].map((rule) => [rule, 'warn']),
+    ),
+  },
+]
+
+/**
+ * A rule that no plugin has, which the types would reject
+ */
+const misspelled = untyped({ rules: { 'no-consol': 'off' } })
+
+/**
+ * A config of the presets whose project service options a change may not set
+ */
+const LANGUAGE_OPTIONS = 'gpahal/javascript/language-options'
+
+/**
+ * Every check that rejects options, a config of yours or a composer call, each through one way in.
+ * The messages are in the snapshot, as `throws:` for a check when called and `rejects:` for one when
+ * awaited. The test below checks that every way of adding a config of yours runs the checks of a
+ * config
+ */
+const GUARD_RAILS: Array<[string, () => unknown]> = [
+  // The options
+  ['an unknown option', build({ typescript: { typeAwre: false } })],
+  ['a relative `root`', build({ root: 'packages/a' })],
+  ['`ignores` as a string', build({ ignores: 'dist' })],
+  ['`typescript: false`', build({ typescript: false })],
+  ['an unknown `typescript.exhaustiveSwitch`', build({ typescript: { exhaustiveSwitch: 'all' } })],
+  ['`nextjs` with `react: false`', build({ nextjs: true, react: false })],
+  ['a `nextjs.rootDir` outside `root`', build({ nextjs: { rootDir: '../react' } })],
   // Checked before the folders are looked up
+  ['an absolute `nextjs.rootDir`', build({ nextjs: { rootDir: '/apps/web' } })],
+  ['a glob in `nextjs.rootDir`', build({ nextjs: { rootDir: 'apps/*/' } })],
+  ['a `testFiles` glob of no code file', build({ testFiles: ['**/*.test.md'] })],
   [
-    { nextjs: { rootDir: '/apps/web' } },
-    '@gpahal/eslint-config: `nextjs.rootDir`: path `/apps/web` is absolute. Make it relative to `root`',
+    'a `tailwindcss.scope` glob of no code or `.astro` file',
+    build({ astro: true, tailwindcss: { scope: ['apps/**/*.html'], entryPoint } }),
+  ],
+  ['an empty `vitest.files`', build({ vitest: { files: [] } })],
+  ['only negated globs in `testFiles`', build({ testFiles: () => ['!**/fixtures/**'] })],
+  ['only negated globs in `server.files`', build({ server: { files: ['!src/client/**'] } })],
+  ['only negated globs in `node.scope`', build({ node: { scope: ['!apps/x/**'] } })],
+  ['a `commonjs.files` glob of no `.js` file', build({ commonjs: { files: ['src/**/*.ts'] } })],
+  ['an absolute `typeAware.ignores` glob', build({ typeAware: { ignores: ['/abs/**'] } })],
+  ['a `typeAware.ignores` glob of no code file', build({ typeAware: { ignores: ['src/*.css'] } })],
+  ['`typeAware.ignores` as a string', build({ typeAware: { ignores: 'src/**' } })],
+  ['`browser` as an array', build({ browser: ['src/client/**'] })],
+  [
+    'a `typeAware.allowDefaultProject` glob with `**`',
+    build({ typeAware: { allowDefaultProject: () => ['**/*.config.ts'] } }),
   ],
   [
-    { nextjs: { rootDir: 'apps/*/' } },
-    "@gpahal/eslint-config: `nextjs.rootDir`: path `apps/*/` is a glob, but this option lists folders, not globs. List each app, as in `['apps/web', 'apps/docs']`",
+    'a `typeAware.allowDefaultProject` glob of every root file',
+    build({ typeAware: { allowDefaultProject: ['*.config.ts', './*'] } }),
   ],
   [
-    { testFiles: ['**/*.test.md'] },
-    '@gpahal/eslint-config: `testFiles`: glob `**/*.test.md` matches no JavaScript or TypeScript file. End it in `*` or an extension of one, as in `**/*.test.ts`',
+    'a negated `typeAware.allowDefaultProject` glob',
+    build({ typeAware: { allowDefaultProject: ['!x.ts'] } }),
   ],
   [
-    { astro: true, tailwindcss: { scope: ['apps/**/*.html'], entryPoint } },
-    '@gpahal/eslint-config: `tailwindcss.scope`: glob `apps/**/*.html` matches no JavaScript, TypeScript or `.astro` file. End it in `*` or an extension of one, as in `apps/**/*.ts`',
+    '`typescript.rulesTypeAware` with `typeAware: false`',
+    build({ typeAware: false, typescript: { rulesTypeAware: { 'no-console': 'off' } } }),
   ],
   [
-    { vitest: { files: [] } },
-    '@gpahal/eslint-config: `vitest.files`: lists no globs, so it would match no file. Leave it out for the default',
+    '`antislop.cognitiveComplexity` with `antislop.sonarjs: false`',
+    build({ antislop: { sonarjs: false, cognitiveComplexity: 10 } }),
   ],
-  [{ testFiles: () => ['!**/fixtures/**'] }, onlyNegated('testFiles')],
-  [{ server: { files: ['!src/client/**'] } }, onlyNegated('server.files')],
-  [{ node: { scope: ['!apps/x/**'] } }, onlyNegated('node.scope')],
+  ['no `tailwindcss.entryPoint`', build({ tailwindcss: {} })],
+  ['`tailwindcss.settings.entryPoint`', build({ tailwindcss: { settings: { entryPoint } } })],
+  ['a rule of another area', build({ markdown: { rules: { 'unicorn/no-null': 'off' } } })],
   [
-    { commonjs: { files: ['src/**/*.ts'] } },
-    '@gpahal/eslint-config: `commonjs.files`: glob `src/**/*.ts` matches no `.js` file. End it in `*` or an extension of one, as in `src/**/*.js`',
-  ],
-  [
-    { typeAware: { ignores: ['/abs/**'] } },
-    '@gpahal/eslint-config: `typeAware.ignores`: glob `/abs/**` starts with `/`, but globs are relative to `root`. Write `abs/**`',
+    'an `allowFormattingRules` rule eslint-config-prettier keeps',
+    build({ allowFormattingRules: ['no-console'] }),
   ],
   [
-    { typeAware: { ignores: ['src/*.css'] } },
-    '@gpahal/eslint-config: `typeAware.ignores`: glob `src/*.css` matches no JavaScript or TypeScript file',
+    'an `allowFormattingRules` rule this package keeps on',
+    build({ allowFormattingRules: ['no-unexpected-multiline'] }),
   ],
   [
-    { typeAware: { ignores: 'src/**' } },
-    '@gpahal/eslint-config: `typeAware.ignores`: expected an array of globs or a function',
+    '`antislop` sub-options that turn off every rule',
+    build({ antislop: { slop: false, sonarjs: false } }),
   ],
   [
-    { browser: ['src/client/**'] },
-    '@gpahal/eslint-config: `browser`: expected an object with `files`, or `false`, received an array',
+    '`antislop` sub-options that turn off every rule, with `rules` turning one off',
+    build({
+      antislop: { slop: false, sonarjs: false, rules: { 'sonarjs/no-commented-code': 'off' } },
+    }),
   ],
   [
-    { typeAware: { allowDefaultProject: () => ['**/*.config.ts'] } },
-    '@gpahal/eslint-config: `typeAware.allowDefaultProject`: glob `**/*.config.ts` has `**`, which typescript-eslint rejects, since it would let the default project take too many files. List the files, as in `*.config.ts`',
+    '`e18e` sub-options that turn off every rule',
+    build({
+      e18e: { modernization: false, moduleReplacements: false, performanceImprovements: false },
+    }),
   ],
   [
-    { typeAware: false, typescript: { rulesTypeAware: { 'no-console': 'off' } } },
-    '@gpahal/eslint-config: `typescript.rulesTypeAware`: is for the files linted with type information, and `typeAware: false` lints without it. Remove one of them',
+    '`e18e` sub-options that turn off every rule, with `rules` turning one off',
+    build({
+      e18e: {
+        modernization: false,
+        moduleReplacements: false,
+        performanceImprovements: false,
+        rules: { 'e18e/prefer-timer-args': 'off' },
+      },
+    }),
+  ],
+  // @ts-expect-error -- Values the type rejects, to check what `defineConfig` does at runtime
+  ['`undefined` as the options', () => defineConfig(undefined)],
+  // @ts-expect-error -- As above
+  ['`null` as the options', () => defineConfig(null)],
+  // @ts-expect-error -- As above
+  ['a string as the options', () => defineConfig('tsconfig.json')],
+  // @ts-expect-error -- As above
+  ['an array as the options', () => defineConfig(['react'])],
+
+  // Globs and paths, which every glob option checks with `checkRelativeGlobsAt`, as the tests of
+  // each option below show
+  ['an empty glob', build({ testFiles: [''] })],
+  ['a `!` glob', build({ testFiles: ['!'] })],
+  ['a negated glob that starts with `/`', build({ testFiles: ['src/**', '!/lib/**'] })],
+  ['a glob that starts with `..`', build({ testFiles: ['./../x/*.ts'] })],
+  ['a glob with `\\` separators', build({ testFiles: [String.raw`src\**\*.ts`] })],
+  ['an absolute `gitignore.files` path', build({ gitignore: { files: ['/abs'] } })],
+  ['a `gitignore.files` path with `..`', build({ gitignore: { files: ['a/../../x'] } })],
+  ['brace alternatives of no code file', build({ testFiles: ['src/{a.css,{b,c}/d.css}'] })],
+  ['too many brace alternatives', build({ node: { scope: ['src/{1..5000}.ts'] } })],
+  [
+    'an AND entry of brace patterns with too many combinations',
+    build({
+      typeAware: false,
+      configs: [
+        {
+          files: [
+            ['env', 'region', 'component', 'version', 'name'].map(
+              (key) =>
+                `**/*{${[
+                  'dev',
+                  'test',
+                  'stage',
+                  'prod',
+                  'local',
+                  'qa',
+                  'uat',
+                  'demo',
+                  'perf',
+                  'canary',
+                ]
+                  .map((value) => `${key}-${value}`)
+                  .join(',')}}*.json`,
+            ),
+          ],
+          language: 'json/json',
+        },
+      ],
+    }),
   ],
   [
-    { antislop: { sonarjs: false, cognitiveComplexity: 10 } },
-    '@gpahal/eslint-config: `antislop.cognitiveComplexity`: is for the eslint-plugin-sonarjs rules, and `antislop.sonarjs: false` turns them off. Remove one of them',
+    'a glob with `..` in the `files` of a nested config of yours',
+    build({ configs: [[{ files: [['src/**', '../src/**']], rules: { 'no-console': 'off' } }]] }),
   ],
   [
-    { tailwindcss: {} },
-    `@gpahal/eslint-config: \`tailwindcss.entryPoint\`: ${ENTRY_POINT_EXPECTED}, received \`undefined\`. Set it, as in \`{ entryPoint: 'src/styles.css' }\``,
+    'a glob with `..` in the `ignores` of an `.override()`',
+    () => defineConfig({ root }).override('gpahal/javascript/rules', { ignores: ['../src/**'] }),
   ],
   [
-    { tailwindcss: { settings: { entryPoint } } },
-    '@gpahal/eslint-config: `tailwindcss.settings.entryPoint`: is set from `tailwindcss.entryPoint`, so `tailwindcss.settings` may not hold it. Set `tailwindcss.entryPoint` instead',
+    'an absolute glob in an `.override()` of a split config of yours',
+    () =>
+      defineConfig({
+        root,
+        configs: [{ name: 'user/split', rules: { 'no-console': 'off', eqeqeq: 'error' } }],
+      }).override('user/split' as ConfigNames, {
+        files: [`${root.split(path.sep).join('/')}/src/**`],
+      }),
+  ],
+
+  // Formatting rules
+  [
+    "the `html` preset plugin's layout rule",
+    build({ typeAware: false, html: { rules: { '@html-eslint/indent': 'error' } } }),
   ],
   [
-    { markdown: { rules: { 'unicorn/no-null': 'off' } } },
-    "@gpahal/eslint-config: `markdown.rules`: `unicorn/no-null`: isn't a rule of the `markdown` area, which takes `markdown/`, `@gpahal/markdown/` and `markdown-preferences/`. Put it in `unicorn.rules`",
+    "the `astro` preset plugin's layout rule",
+    build({ typeAware: false, astro: { rules: { 'astro/semi': 'error' } } }),
+  ],
+  ["a plugin's preset with formatting rules", build({ configs: reactPreset })],
+  [
+    'formatting rules that a config of yours extends',
+    build({ configs: [{ extends: [{ rules: { curly: 'error', semi: 'error' } }] }] }),
   ],
   [
-    { allowFormattingRules: ['no-console'] },
-    "@gpahal/eslint-config: `allowFormattingRules`: `no-console`: eslint-config-prettier doesn't turn this rule off",
+    '`.overrideRules()` of a formatting rule',
+    () => defineConfig({ root }).overrideRules({ curly: 'error' }),
+  ],
+
+  // Rule names and plugins
+  [
+    'a rule that no plugin has, turned off in an area',
+    build({ unicorn: { rules: { 'unicorn/no-nul': 'off' } } }),
   ],
   [
-    { allowFormattingRules: ['no-unexpected-multiline'] },
-    '@gpahal/eslint-config: `allowFormattingRules`: `no-unexpected-multiline`: stays on already; this package keeps it on',
+    'a rule that ESLint lacks, turned off in a config of yours',
+    build({ configs: [{}, untyped({ name: 'user/x', rules: { 'no-consol': 'off' } })] }),
   ],
-])('throws on %j', (options, message) => {
-  expect(build(options)).toThrow(message)
+  [
+    'a rule of a plugin no config registers',
+    build({ configs: [[{}, { files: ['**/*.ts'], rules: { 'some/rule': 'off' } }]] }),
+  ],
+  [
+    'a rule that ESLint lacks, in an `.override()`',
+    () =>
+      defineConfig({ root }).override('gpahal/javascript/rules', (config) => ({
+        ...config,
+        rules: { ...config.rules, ...misspelled.rules },
+      })),
+  ],
+  [
+    'a rule that no plugin has, in `.removeRules()`',
+    () => defineConfig({ root }).removeRules('unicorn/no-nul' as keyof TypedRules),
+  ],
+  [
+    'a rule that ESLint lacks, in `.disableRulesFix()`',
+    // @ts-expect-error -- No preset turns on a rule of this name
+    () => defineConfig({ root }).disableRulesFix('prefer-konst'),
+  ],
+  [
+    'a rule of a plugin that `antislop.slop: false` turns off',
+    build({ antislop: { slop: false }, configs: [{ rules: { 'slop/no-em-dash': 'off' } }] }),
+  ],
+  [
+    'a rule of a plugin that two options turn off',
+    build({
+      antislop: { sonarjs: false, rules: { 'sonarjs/no-commented-code': 'off' } },
+      sonarjs: false,
+    }),
+  ],
+  [
+    'a rule of a plugin that `unicorn: false` turns off',
+    build({
+      unicorn: false,
+      configs: [{ files: ['**/*.ts'], rules: { 'unicorn/no-null': 'error' } }],
+    }),
+  ],
+  [
+    'another plugin under a preset plugin name, in a nested config of yours',
+    () =>
+      defineConfig({
+        root: path.join(FIXTURES_DIR, 'markdown'),
+        configs: [[{}, { plugins: { 'package-json': { rules: {} } } }]],
+      }),
+  ],
+  [
+    'another plugin under the `@gpahal` name',
+    () =>
+      defineConfig({
+        root: path.join(FIXTURES_DIR, 'markdown'),
+        configs: [{ plugins: { '@gpahal': { rules: {} } } }],
+      }),
+  ],
+  [
+    'a `.remove()` of the config of a plugin whose rules other configs turn on',
+    () =>
+      defineConfig({
+        root,
+        typeAware: false,
+        configs: [
+          { name: 'user/plugin', plugins: { mine: { rules: { always: { create: () => ({}) } } } } },
+          untyped({ name: 'user/rules', files: ['**/*.js'], rules: { 'mine/always': 'error' } }),
+        ],
+      }).remove('user/plugin' as ConfigNames),
+  ],
+
+  // Where the rules of a config of yours can run
+  [
+    'a `package.json` rule in a config of yours without `files`',
+    build({ configs: [{ name: 'user/x', rules: { 'package-json/require-license': 'error' } }] }),
+  ],
+  [
+    'a YAML rule in a config of yours without `files`',
+    build({ configs: [{ name: 'user/x', rules: { 'yml/no-empty-key': 'error' } }] }),
+  ],
+  [
+    'a Markdown rule in a config of yours without `files`',
+    build({ configs: [{ name: 'user/x', rules: { 'markdown/no-html': 'error' } }] }),
+  ],
+  [
+    'an HTML rule in a config of yours without `files`',
+    build({ configs: [{ name: 'user/x', rules: { '@html-eslint/require-img-alt': 'error' } }] }),
+  ],
+  // Turned off beside a code rule, it goes to a part for every file, unless the config's
+  // `languageOptions` keep it with the code rules
+  [
+    'a YAML rule turned off beside a code rule in a config of yours with `languageOptions`',
+    build({
+      configs: [
+        {
+          languageOptions: { globals: {} },
+          rules: { 'yml/no-empty-key': 'off', 'no-console': 'error' },
+        },
+      ],
+    }),
+  ],
+  [
+    "a config of yours whose `files` match only files where a rule can't run",
+    // `\{a,b}.json` is the name `{a,b}.json`, not `a.json` or `b.json`
+    build({
+      configs: [
+        untyped({
+          files: [['**/a.json', String.raw`!**/\{a,b}.json`]],
+          rules: { 'unicorn/no-null': 'error' },
+        }),
+      ],
+    }),
+  ],
+  [
+    'a JSON rule in a config of yours for code files',
+    build({
+      configs: [untyped({ files: ['src/**'], rules: { 'json/no-duplicate-keys': 'error' } })],
+    }),
+  ],
+  [
+    'a Markdown rule in a config of yours for code files',
+    build({
+      configs: [untyped({ files: ['**/*.tsx'], rules: { 'markdown/no-bare-urls': 'error' } })],
+    }),
+  ],
+  [
+    'a `package.json` rule in a config of yours for every JSON file',
+    build({
+      configs: [
+        untyped({ files: ['**/*.json'], rules: { 'package-json/require-version': 'error' } }),
+      ],
+    }),
+  ],
+  [
+    'a rule whose `meta.languages` leaves out `js/js` in a config of yours for code files',
+    build({
+      configs: [
+        {
+          files: ['**/*.ts'],
+          plugins: { local: jsonOnlyPlugin },
+          rules: { 'local/json': 'error' },
+        },
+      ],
+    }),
+  ],
+  // The check of the configs that `scopeUserConfig` returns rejects these two
+  [
+    'a rule whose `meta.languages` leaves out `js/js` in a config of yours without `files`',
+    build({ configs: [{ plugins: { local: jsonOnlyPlugin }, rules: { 'local/json': 'error' } }] }),
+  ],
+  [
+    "a rule its language can't run in a config of yours with `language`",
+    build({
+      configs: [
+        { files: ['**/*.json'], language: 'json/json', rules: { 'unicorn/no-null': 'error' } },
+      ],
+    }),
+  ],
+  [
+    "an `.override()` without `files` that turns on a rule some files can't run",
+    () =>
+      defineConfig({ root }).override('gpahal/setup', (config) => ({
+        ...config,
+        rules: { 'unicorn/no-null': 'error' },
+      })),
+  ],
+  [
+    "an `.override()` of the code blocks config that turns on a rule JSON code blocks can't run",
+    () =>
+      defineConfig({ root }).override('gpahal/markdown/code-blocks', {
+        rules: { 'unicorn/no-null': 'error' },
+      }),
+  ],
+  [
+    "an `.override()` of a config with `language` that turns on a rule it can't run",
+    () =>
+      defineConfig({ root, typeAware: false }).override('gpahal/json/json', {
+        rules: { 'unicorn/no-null': 'error' },
+      }),
+  ],
+  [
+    "an `.override()` of a YAML config without `language` that turns on a rule YAML can't run",
+    () =>
+      defineConfig({ root, typeAware: false }).override('gpahal/yaml/rules', {
+        rules: { 'unicorn/no-null': 'error' },
+      }),
+  ],
+  [
+    'an `.override()` function that drops the `files` of a config for code files only',
+    () =>
+      defineConfig({ root }).override('gpahal/unicorn/rules', ({ files: _files, ...rest }) => rest),
+  ],
+  [
+    'an `.override()` that widens a config for code files only to every file',
+    () =>
+      defineConfig({ root, typeAware: false }).override('gpahal/unicorn/rules', {
+        files: ['**/*'],
+      }),
+  ],
+  // A negated glob matches every file but those it names, JSON and YAML files included
+  [
+    'an `.override()` that widens a config for code files only with a negated glob',
+    () =>
+      defineConfig({ root, typeAware: false }).override('gpahal/unicorn/rules', {
+        files: ['!**/*.md'],
+      }),
+  ],
+  [
+    'an `.override()` that adds a JSON rule to a config for code files only',
+    () =>
+      defineConfig({ root }).override('gpahal/javascript/rules', {
+        rules: { 'json/no-duplicate-keys': 'error' },
+      }),
+  ],
+  [
+    '`languageOptions.math` in a config of yours that can match Markdown files',
+    build({ configs: [{ files: ['docs/*.{md,ts}'], languageOptions: { math: true } }] }),
+  ],
+  [
+    'an `.override()` that changes `languageOptions.math` of a Markdown config',
+    () =>
+      defineConfig({ root, markdown: true }).override('gpahal/markdown/rules', {
+        languageOptions: { math: true },
+      }),
+  ],
+  [
+    'an `.onResolved()` callback that changes `languageOptions.math` of a Markdown config in place',
+    () =>
+      defineConfig({ root, markdown: true }).onResolved((configs) => {
+        const config = configs.find((found) => found.name === 'gpahal/markdown/rules')
+        Reflect.set(config?.languageOptions ?? {}, 'math', true)
+      }),
+  ],
+  [
+    'the project service in a config of yours',
+    build({
+      configs: [
+        untyped({
+          files: ['**/*.ts'],
+          languageOptions: { parserOptions: { projectService: false } },
+        }),
+      ],
+    }),
+  ],
+  [
+    '`tsconfigRootDir` in a config of yours',
+    build({
+      configs: [untyped({ languageOptions: { parserOptions: { tsconfigRootDir: root } } })],
+    }),
+  ],
+  [
+    'an `.override()` that sets the project service',
+    () =>
+      defineConfig({ root }).override(LANGUAGE_OPTIONS, {
+        languageOptions: { parserOptions: { projectService: { allowDefaultProject: ['x.ts'] } } },
+      }),
+  ],
+  [
+    'an `.onResolved()` callback that deletes `tsconfigRootDir` in place',
+    () =>
+      defineConfig({ root }).onResolved((configs) => {
+        const config = configs.find((found) => found.name === LANGUAGE_OPTIONS)
+        Reflect.deleteProperty(config?.languageOptions?.['parserOptions'] ?? {}, 'tsconfigRootDir')
+      }),
+  ],
+
+  // The shape of a config of yours
+  ['`undefined` in `configs`', build({ configs: [{}, undefined] })],
+  ['a string in a nested array of `configs`', build({ configs: [[{}, ['foo']]] })],
+  ['a `basePath` that is no string', build({ configs: [{ basePath: 1 }] })],
+  ['`files` that is no array', build({ configs: [{ files: '**/*.md' }] })],
+  ['`settings` that is no object', build({ configs: [{ settings: [] }] })],
+  [
+    'a string in `extends` of no registered plugin',
+    build({ configs: [{ extends: ['js/recommended'] }] }),
+  ],
+  [
+    'a string in `extends` of a missing config',
+    build({
+      configs: [
+        {
+          plugins: { local: { configs: {}, rules: { demo: { create: () => ({}) } } } },
+          extends: ['local/missing'],
+        },
+      ],
+    }),
+  ],
+  ['a nested `extends`', build({ configs: [{ extends: [{ extends: [{ rules: {} }] }] }] })],
+
+  // The composer's methods
+  [
+    'an `.override()` function that returns `undefined`',
+    () => untypedComposer()['override']!('gpahal/javascript/rules', () => undefined),
+  ],
+  [
+    'an `.onResolved()` callback that returns `null` in its array',
+    () => untypedComposer()['onResolved']!(() => [{}, null]),
+  ],
+  ['`.overrideRules()` of an array', () => untypedComposer()['overrideRules']!(['no-console'])],
+  ['`.override()` of no name', () => untypedComposer()['override']!(undefined, {})],
+  [
+    '`.overrideRules()` of an unknown severity',
+    () => untypedComposer()['overrideRules']!({ 'no-console': 'warning' }),
+  ],
+  [
+    '`.overrideRules()` of an unknown severity in an array',
+    () => untypedComposer()['overrideRules']!({ 'no-console': ['warning'] }),
+  ],
+  [
+    '`.overrideRules()` that turns on a rule no config turns on',
+    () => defineConfig({ root }).overrideRules({ 'no-plusplus': 'error' }),
+  ],
+  [
+    '`.disableRulesFix()` of no rule name',
+    // @ts-expect-error -- A rule name is a string
+    () => defineConfig({ root }).disableRulesFix('prefer-const', 1),
+  ],
+  ['`.remove()` of no name', () => defineConfig({ root }).remove()],
+  [
+    '`.remove()` of a name twice',
+    () => defineConfig({ root }).remove('gpahal/jsdoc/rules', 'gpahal/jsdoc/rules'),
+  ],
+  [
+    '`.override()` of a config of an option that is off',
+    () => defineConfig({ root }).override('gpahal/react/rules', {}),
+  ],
+  [
+    '`.remove()` of a config of an option that is off',
+    () => defineConfig({ root }).remove('gpahal/react/rules'),
+  ],
+  [
+    '`.insertBefore()` of a config of an option that is off',
+    () => defineConfig({ root }).insertBefore('gpahal/react/rules', {}),
+  ],
+  [
+    '`.insertAfter()` of a config of an option that is off',
+    () => defineConfig({ root }).insertAfter('gpahal/react/rules', {}),
+  ],
+  [
+    '`.remove()` of a config of an option that is on, without the setting that adds it',
+    () => defineConfig({ root }).remove('gpahal/typescript/library'),
+  ],
+  [
+    "`.remove()` of an area's user rules, without its `rules`",
+    () => defineConfig({ root }).remove('gpahal/unicorn/user-rules'),
+  ],
+  [
+    '`.remove()` of a type-aware config with `typeAware: false`',
+    () => defineConfig({ root, typeAware: false }).remove('gpahal/typescript/type-aware'),
+  ],
+  [
+    '`.remove()` of a name no config of the package has',
+    () => defineConfig({ root }).remove('gpahal/typescript/rulez' as ConfigNames),
+  ],
+  [
+    '`.override()` of a config an earlier `.remove()` removed',
+    () =>
+      defineConfig({ root })
+        .remove('gpahal/jsdoc/rules', 'gpahal/typescript/rules')
+        .override('gpahal/typescript/rules', {}),
+  ],
+]
+
+/**
+ * How `run` fails, as `throws: <message>` or `rejects: <message>`, with paths under the fixtures
+ * folder starting with `<fixtures>`
+ *
+ * @throws Error when it neither throws nor rejects.
+ */
+async function failureOf(run: () => unknown): Promise<string> {
+  const messageOf = (error: unknown) =>
+    (error instanceof Error ? error.message : String(error)).replaceAll(
+      FIXTURES_DIR.split(path.sep).join('/'),
+      '<fixtures>',
+    )
+  let result: unknown
+  try {
+    result = run()
+  } catch (error) {
+    return `throws: ${messageOf(error)}`
+  }
+  try {
+    await result
+  } catch (error) {
+    return `rejects: ${messageOf(error)}`
+  }
+  throw new Error('expected it to throw or reject')
+}
+
+test('rejects what no options, config of yours or composer call may hold, with these messages', async () => {
+  expect(new Set(GUARD_RAILS.map(([label]) => label)).size).toBe(GUARD_RAILS.length)
+  const failures: Record<string, string> = {}
+  for (const [label, run] of GUARD_RAILS) {
+    failures[label] = await failureOf(run)
+  }
+  expect(failures).toMatchSnapshot()
 })
 
-test.each([undefined, null, 'tsconfig.json', ['react']])(
-  'throws on %j as the options',
-  (options) => {
-    // @ts-expect-error -- A value the type rejects, to check what `defineConfig` does at runtime
-    expect(() => defineConfig(options)).toThrow(
-      /^@gpahal\/eslint-config: options: expected an object of options, received (?:`undefined`|`null`|`"tsconfig\.json"`|an array)$/,
+/**
+ * A config that each way of adding a config of yours must reject, as a config added as it is or as
+ * the change of a config, its message after the subject, and whether `defineConfig` throws on it
+ * in `configs` rather than rejecting when awaited
+ */
+const BAD_CONFIGS: Array<[string, Linter.Config, string, boolean]> = [
+  [
+    'a formatting rule',
+    { rules: { curly: 'error' } },
+    '`curly`: is a rule that eslint-config-prettier turns off',
+    true,
+  ],
+  // A check that needs the presets' plugins, which load when the composer is awaited
+  [
+    'another plugin under a preset plugin name',
+    { plugins: { unicorn: { rules: {} } } },
+    'registers `unicorn` again with a different plugin',
+    false,
+  ],
+]
+
+/**
+ * Each composer method that adds or changes a config of yours, with the subject of its errors
+ */
+const ADDERS: Array<[string, (config: Linter.Config) => unknown, string]> = [
+  ['`configs`', (config) => defineConfig({ root, configs: [config] }), '`configs[0]`'],
+  ['`.append()`', (config) => defineConfig({ root }).append(config), '`.append()`: item `[0]`'],
+  [
+    '`.insertBefore()`',
+    (config) => defineConfig({ root }).insertBefore('gpahal/config-files/console', config),
+    '`.insertBefore()`: item `[0]`',
+  ],
+  [
+    '`.insertAfter()`',
+    (config) => defineConfig({ root }).insertAfter('gpahal/config-files/console', config),
+    '`.insertAfter()`: item `[0]`',
+  ],
+  [
+    'an `.override()` object',
+    (config) => defineConfig({ root }).override('gpahal/javascript/rules', config),
+    "`.override('gpahal/javascript/rules')`",
+  ],
+  [
+    'an `.override()` function',
+    (config) =>
+      defineConfig({ root }).override('gpahal/javascript/rules', (original) => ({
+        ...original,
+        rules: { ...original.rules, ...config.rules },
+        plugins: { ...original.plugins, ...config.plugins },
+      })),
+    "`.override('gpahal/javascript/rules')`",
+  ],
+  [
+    'a config an `.onResolved()` callback adds',
+    (config) => defineConfig({ root }).onResolved((configs) => [...configs, config]),
+    '`.onResolved()`',
+  ],
+  [
+    'a change an `.onResolved()` callback makes in place',
+    (config) =>
+      defineConfig({ root }).onResolved((configs) => {
+        const found = configs.find(({ name }) => name === 'gpahal/javascript/rules')
+        if (found === undefined) {
+          return
+        }
+
+        found.rules = { ...found.rules, ...config.rules }
+        found.plugins = { ...found.plugins, ...config.plugins }
+      }),
+    '`.onResolved()` (`gpahal/javascript/rules`)',
+  ],
+]
+
+describe.each(BAD_CONFIGS)('rejects %s', (_, config, description, isSyncInConfigs) => {
+  it.each(ADDERS)('through %s', async (name, add, subject) => {
+    expect(await failureOf(() => add(config))).toMatch(
+      new RegExp(
+        // Without the subject's closing backtick, which a key such as `.plugins` may follow
+        `^${name === '`configs`' && isSyncInConfigs ? 'throws' : 'rejects'}: @gpahal/eslint-config: ${RegExp.escape(subject.slice(0, -1))}.*: ${RegExp.escape(description)}`,
+        'u',
+      ),
     )
-  },
-)
+  })
+})
 
 test.each([
   [{ antislop: { cognitiveComplexity: false } }],
@@ -159,6 +769,7 @@ test.each([
   [{ tailwindcss: { entryPoint: pathToFileURL(path.resolve(root, entryPoint)).href } }],
   [{ vitest: { files: ['tests/**', '!**/*.snap'] } }],
   [{ testFiles: ['tests/????'] }],
+  [{ testFiles: ['tests/!(fixtures)'] }],
   [{ astro: true, html: true, tailwindcss: { scope: ['apps/**/*.astro'], entryPoint } }],
   [{ isInEditor: undefined, markdown: undefined }],
 ])('accepts %j', async (options) => {
@@ -184,65 +795,30 @@ const GLOB_OPTIONS: Array<[string, (globs: Array<string>) => Record<string, unkn
   ['typeAware.allowDefaultProject', (globs) => ({ typeAware: { allowDefaultProject: globs } })],
 ]
 
-test.each(GLOB_OPTIONS)('throws on a malformed glob of `%s`', (name, optionsOf) => {
-  for (const [globs, glob, problem] of [
-    [[''], '', 'is empty'],
-    [['!'], '!', 'is a `!` with no glob'],
-    [
-      ['src/**', '!/lib/**'],
-      '!/lib/**',
-      'starts with `/`, but globs are relative to `root`. Write `!lib/**`',
-    ],
-    [
-      ['./../x/*.ts'],
-      './../x/*.ts',
-      'starts with `..`, but globs are relative to `root` and match only files under it',
-    ],
-    [
-      [String.raw`src\**\*.ts`],
-      String.raw`src\**\*.ts`,
-      'has a `\\` separator. Use `/` separators; a `\\` escapes a glob character, as in `\\*`',
-    ],
-  ] as const) {
-    expect(build(optionsOf([...globs]))).toThrow(
-      `@gpahal/eslint-config: \`${name}\`: glob \`${glob}\` ${problem}`,
+// The guard rails above check each kind of malformed glob through `testFiles`
+test.each(GLOB_OPTIONS)(
+  'checks the globs of `%s` as relative to `root`, taking escaped punctuation',
+  (name, optionsOf) => {
+    const absolute = `${root.split(path.sep).join('/')}/src/**`
+    // The guard rails above hold the whole message; the fix is relative to `root`
+    expect(build(optionsOf([absolute]))).toThrow(
+      new RegExp(
+        `^@gpahal/eslint-config: \`${RegExp.escape(name)}\`: glob \`${RegExp.escape(absolute)}\` .* Write \`src/\\*\\*\`$`,
+        'u',
+      ),
     )
-  }
-  // An escaped punctuation character, such as `\[`, `\,` or `\\`, matches it literally
-  expect(
-    build(
-      optionsOf([
-        String.raw`src/\[id\]/*.ts`,
-        String.raw`src/a\\b*.ts`,
-        String.raw`src/{a\,b,c}.ts`,
-      ]),
-    ),
-  ).not.toThrow()
-})
-
-test('throws on a malformed glob in the `files` or `ignores` of a config of yours', async () => {
-  const glob = '../src/**'
-  const message = (subjects: string, key: string) =>
-    `@gpahal/eslint-config: ${subjects}: \`${key}\`: glob \`${glob}\` starts with \`..\``
-  expect(
-    build({ configs: [[{ files: [['src/**', glob]], rules: { 'no-console': 'off' } }]] }),
-  ).toThrow(message('`configs[0][0]`', 'files'))
-  expect(build({ configs: [{ ignores: [glob], rules: { 'no-console': 'off' } }] })).toThrow(
-    message('`configs[0]`', 'ignores'),
-  )
-  await expect(
-    build({})().append({ files: [glob], rules: { 'no-console': 'off' } }),
-  ).rejects.toThrow(message('`.append()`: item `[0]`', 'files'))
-  await expect(
-    build({})().override('gpahal/javascript/rules', { ignores: [glob] }),
-  ).rejects.toThrow(message("`.override('gpahal/javascript/rules')`", 'ignores'))
-  await expect(
-    build({})().onResolved((configs) => [
-      ...configs,
-      { files: [glob], rules: { 'no-console': 'off' } },
-    ]),
-  ).rejects.toThrow(message('`.onResolved()`', 'files'))
-})
+    // An escaped punctuation character, such as `\[`, `\,` or `\\`, matches it literally
+    expect(
+      build(
+        optionsOf([
+          String.raw`src/\[id\]/*.ts`,
+          String.raw`src/a\\b*.ts`,
+          String.raw`src/{a\,b,c}.ts`,
+        ]),
+      ),
+    ).not.toThrow()
+  },
+)
 
 // An option of its own and one of an area
 test.each([GLOB_OPTIONS[0]!, GLOB_OPTIONS[2]!])(
@@ -267,35 +843,8 @@ test.each([GLOB_OPTIONS[0]!, GLOB_OPTIONS[2]!])(
   },
 )
 
-test.each([
-  [
-    { gitignore: { files: ['/abs'] } },
-    '@gpahal/eslint-config: `gitignore.files`: path `/abs` is absolute. Make it relative to `root`',
-  ],
-  [
-    { gitignore: { files: ['a/../../x'] } },
-    '@gpahal/eslint-config: `gitignore.files`: path `a/../../x` has a `..` segment, but the files are under `root`, relative to it',
-  ],
-  [
-    { typeAware: { allowDefaultProject: ['*.config.ts', './*'] } },
-    '@gpahal/eslint-config: `typeAware.allowDefaultProject[1]`: glob `./*` matches every file in the root, which typescript-eslint rejects. List the files',
-  ],
-  [
-    { typeAware: { allowDefaultProject: ['!x.ts'] } },
-    '@gpahal/eslint-config: `typeAware.allowDefaultProject`: glob `!x.ts` starts with `!`, but typescript-eslint takes only the globs of files to add. Leave the file out of the list',
-  ],
-])('throws on a path or glob outside root: %j', (options, message) => {
-  expect(build(options)).toThrow(message)
-})
-
-test('checks the brace alternatives of a glob', () => {
+test('takes brace alternatives of which one matches code files', () => {
   expect(build({ testFiles: ['src/{styles.css,{client,server}/{a.css,b.ts}}'] })).not.toThrow()
-  expect(build({ testFiles: ['src/{a.css,{b,c}/d.css}'] })).toThrow(
-    '@gpahal/eslint-config: `testFiles`: glob `src/{a.css,{b,c}/d.css}` matches no JavaScript or TypeScript file',
-  )
-  expect(build({ node: { scope: ['src/{1..5000}.ts'] } })).toThrow(
-    '@gpahal/eslint-config: `node.scope`: glob `src/{1..5000}.ts` expands to more than 1000 globs. List fewer alternatives',
-  )
 })
 
 function configNames(configs: Array<Linter.Config>): Array<string | undefined> {
@@ -397,11 +946,8 @@ test.each([
   ['html', '@html-eslint/indent'],
   ['astro', 'astro/semi'],
 ] as const)(
-  "rejects the `%s` preset plugin's layout rule `%s`, which Prettier owns",
+  "takes the `%s` preset plugin's layout rule `%s` that `allowFormattingRules` lists",
   async (area, rule) => {
-    expect(build({ typeAware: false, [area]: { rules: { [rule]: 'error' } } })).toThrow(
-      `@gpahal/eslint-config: \`${area}.rules\`: \`${rule}\`: is a layout rule for files that Prettier formats, so it conflicts with Prettier or is only safe with some options. Turn it off, or list it in \`allowFormattingRules\``,
-    )
     const configs = await build({
       typeAware: false,
       allowFormattingRules: [rule],
@@ -411,84 +957,32 @@ test.each([
   },
 )
 
-test('rejects a rule that no plugin has, turned off too', async () => {
-  await expect(build({ unicorn: { rules: { 'unicorn/no-nul': 'off' } } })()).rejects.toThrow(
-    "@gpahal/eslint-config: `unicorn.rules`: `unicorn/no-nul`: isn't a rule that the `unicorn` plugin this config loads has",
-  )
-  await expect(
-    build({ configs: [{}, untyped({ name: 'user/x', rules: { 'no-consol': 'off' } })] })(),
-  ).rejects.toThrow(
-    "@gpahal/eslint-config: `configs[1]` (`user/x`): `no-consol`: isn't a rule that ESLint has",
-  )
-  await expect(
-    build({ configs: [[{}, { files: ['**/*.ts'], rules: { 'some/rule': 'off' } }]] })(),
-  ).rejects.toThrow(
-    '@gpahal/eslint-config: `configs[0][1]`: `some/rule`: no config registers its plugin `some`',
-  )
+test('takes a rule of a plugin that a config of yours registers', async () => {
   const plugin = { rules: { rule: { create: () => ({}) } } }
   await expect(
     build({ configs: [{ plugins: { some: plugin }, rules: { 'some/rule': 'error' } }] })(),
   ).resolves.toBeInstanceOf(Array)
 })
 
-test('names the option that turns off the plugin of a rule', async () => {
-  await expect(
-    build({ antislop: { slop: false }, configs: [{ rules: { 'slop/no-em-dash': 'off' } }] })(),
-  ).rejects.toThrow(
-    '@gpahal/eslint-config: `configs[0]`: `slop/no-em-dash`: no config registers its plugin `slop`, which `antislop.slop: false` turns off',
-  )
-  await expect(
-    build({
-      antislop: { sonarjs: false, rules: { 'sonarjs/no-commented-code': 'off' } },
-      sonarjs: false,
-    })(),
-  ).rejects.toThrow(
-    '@gpahal/eslint-config: `antislop.rules`: `sonarjs/no-commented-code`: no config registers its plugin `sonarjs`, which `sonarjs: false` and `antislop.sonarjs: false` turn off',
-  )
-  // `sonarjs: true` still registers the plugin
+test('takes a SonarJS rule with only `antislop.sonarjs: false`, as `sonarjs: true` registers the plugin', async () => {
   await expect(
     build({
       antislop: { sonarjs: false },
       configs: [{ rules: { 'sonarjs/no-commented-code': 'off' } }],
     })(),
   ).resolves.toBeInstanceOf(Array)
-  await expect(
-    build({
-      unicorn: false,
-      configs: [{ files: ['**/*.ts'], rules: { 'unicorn/no-null': 'error' } }],
-    })(),
-  ).rejects.toThrow(
-    'no config registers its plugin `unicorn`. Turn on the `unicorn` option, which registers it',
-  )
 })
 
-test.each<[string, keyof typeof files, string, string]>([
-  ['package-json/require-license', 'json', '`package.json`', "`files: ['**/package.json']`"],
-  ['yml/no-empty-key', 'yaml', 'YAML', ''],
-  ['markdown/no-html', 'markdown', 'Markdown', ''],
-  ['@html-eslint/require-img-alt', 'html', 'HTML', ''],
+test.each<[string, keyof typeof files, boolean]>([
+  ['package-json/require-license', 'json', false],
+  ['yml/no-empty-key', 'yaml', true],
+  ['markdown/no-html', 'markdown', true],
+  ['@html-eslint/require-img-alt', 'html', true],
 ])(
-  'throws on `%s` turned on in a config of yours without `files`, and takes it with `files.%s` or turned off',
-  async (rule, kind, language, filesHint) => {
-    const hint =
-      filesHint === ''
-        ? `\`files: [...files.${kind}]\`, with \`files\` from this package`
-        : filesHint
-    const description = `is a rule for ${language} files, which a config of yours without \`files\` or \`language\` doesn't reach.${kind === 'html' ? ' The `html` preset lints `.html` files only, not HTML in template literals, so set `files` to target them.' : ''} Give it ${hint}`
-    expect(build({ configs: [{ name: 'user/x', rules: { [rule]: 'error' } }] })).toThrow(
-      `@gpahal/eslint-config: \`configs[0]\` (\`user/x\`): \`${rule}\`: ${description}`,
-    )
-    // Turned off beside a code rule, it goes to a part for every file, unless the config's
-    // `languageOptions` keep it with the code rules
-    expect(
-      build({
-        configs: [
-          { languageOptions: { globals: {} }, rules: { [rule]: 'off', 'no-console': 'error' } },
-        ],
-      }),
-    ).toThrow(`@gpahal/eslint-config: \`configs[0]\`: \`${rule}\`: ${description}`)
+  'takes `%s` in a config of yours with `files.%s`, or turned off without `files`',
+  async (rule, kind, isFilesHint) => {
     const options = { html: rule.startsWith('@html-eslint/') }
-    const ruleFiles = filesHint === '' ? [...files[kind]] : ['**/package.json']
+    const ruleFiles = isFilesHint ? [...files[kind]] : ['**/package.json']
     await expect(
       build({ ...options, configs: [{ files: ruleFiles, rules: { [rule]: 'error' } }] })(),
     ).resolves.toBeInstanceOf(Array)
@@ -500,39 +994,10 @@ test.each<[string, keyof typeof files, string, string]>([
   },
 )
 
-test.each([
-  [
-    [{}, undefined],
-    '`configs[1]`: expected a config object or an array of them, received `undefined`',
-  ],
-  [
-    [[{}, ['foo']]],
-    '`configs[0][1][0]`: expected a config object or an array of them, received `"foo"`',
-  ],
-])('throws on an item of `configs` that is no config: %j', (configs, message) => {
-  expect(build({ configs })).toThrow(`@gpahal/eslint-config: ${message}`)
-})
-
-test('throws on `languageOptions.math` in a config of yours that can match Markdown files', async () => {
-  const languageOptions = { math: true }
-  expect(build({ configs: [{ files: ['docs/*.{md,ts}'], languageOptions }] })).toThrow(
-    "@gpahal/eslint-config: `configs[0]`: `languageOptions.math`: can apply to Markdown files, whose parse this package's Markdown processor shares with the language. Set the `markdown.math` option instead",
-  )
+test('takes `languageOptions.math` in a config of yours that matches no Markdown file', async () => {
   await expect(
-    build({ configs: [{ files: ['**/*.ts'], languageOptions }] })(),
+    build({ configs: [{ files: ['**/*.ts'], languageOptions: { math: true } }] })(),
   ).resolves.toBeInstanceOf(Array)
-})
-
-test.each([
-  [{ basePath: 1 }, '`basePath`', 'a string', '`1`'],
-  [{ files: '**/*.md' }, '`files`', 'an array', '`"**/*.md"`'],
-  [{ settings: [] }, '`settings`', 'an object', 'an array'],
-])('rejects a config of yours of the wrong shape: %j', async (config, key, expected, received) => {
-  const message = `@gpahal/eslint-config: \`configs[0]\`: ${key}: expected ${expected}, received ${received}`
-  expect(build({ configs: [config] })).toThrow(message)
-  await expect(untypedComposer()['override']!('gpahal/javascript/rules', config)).rejects.toThrow(
-    message.replace('`configs[0]`', "`.override('gpahal/javascript/rules')`"),
-  )
 })
 
 test.each([
@@ -543,24 +1008,11 @@ test.each([
     { 'e18e/prefer-timer-args': 'error' },
   ],
 ] as const)(
-  'throws on `%s` sub-options that turn off every rule, unless `rules` turns one on',
+  'takes `%s` sub-options that turn off every rule when `rules` turns one on',
   async (area, subOptions, rules) => {
-    const message = `@gpahal/eslint-config: \`${area}\`: turns off every rule of the area. Use \`${area}: false\``
-    expect(build({ [area]: subOptions })).toThrow(message)
-    expect(
-      build({ [area]: { ...subOptions, rules: { [Object.keys(rules)[0] ?? '']: 'off' } } }),
-    ).toThrow(message)
     await expect(build({ [area]: { ...subOptions, rules } })()).resolves.toBeInstanceOf(Array)
   },
 )
-
-/**
- * The glob of the JSON, YAML, TOML, Markdown and HTML files, which the JavaScript rules of a
- * config of yours skip
- */
-const NON_CODE_FILES = '**/*.{json,jsonc,json5,yml,yaml,toml,md,markdown,html}'
-
-const CODE_FILES = '**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}'
 
 test('splits a config of yours with `files` by the files where each rule can run', async () => {
   const configs = await build({
@@ -662,16 +1114,6 @@ test('limits a JavaScript-only rule for `files.codeBlock` to the JavaScript and 
   ).toEqual(['8:unicorn/no-null'])
 })
 
-test("rejects a change to the code blocks config that turns on a rule JSON and YAML code blocks can't run", async () => {
-  await expect(
-    defineConfig({ root }).override('gpahal/markdown/code-blocks', {
-      rules: { 'unicorn/no-null': 'error' },
-    }),
-  ).rejects.toThrow(
-    "@gpahal/eslint-config: `.override('gpahal/markdown/code-blocks')`: `files`: can match JSON, YAML",
-  )
-})
-
 test('keeps the JavaScript rules of a config of yours out of the files another config of yours gives a language', async () => {
   await using project = await withTmpProject('eslint-config', {
     'src/a.ts': 'export const a = null\n',
@@ -708,6 +1150,75 @@ test('keeps the JavaScript rules of a config of yours out of the files another c
   }
 })
 
+test.each([['src/*'], ['src/!(legacy)']])(
+  'keeps the JavaScript rules of a config of yours with `files: [%j]` out of JSON files',
+  async (glob) => {
+    await using project = await withTmpProject('eslint-config', {
+      'src/a.ts': 'export const a = null\n',
+      'src/data.json': '{ "a": null }\n',
+    })
+    const configs = await defineConfig({
+      root: project.dir,
+      typeAware: false,
+      isInEditor: false,
+      configs: [{ files: [glob], rules: { 'unicorn/no-null': 'error' } }],
+    })
+    const results = await eslintWith(project.dir, configs).lintFiles(['src/a.ts', 'src/data.json'])
+    expect(results.map((result) => result.messages.map((message) => message.ruleId))).toEqual([
+      ['unicorn/no-null'],
+      [],
+    ])
+  },
+)
+
+test.each([{}, { files: ['cfg/**'] }])(
+  'keeps the JavaScript rules of a config of yours with %j out of a folder another config of yours gives a language',
+  async (scope) => {
+    await using project = await withTmpProject('eslint-config', {
+      'cfg/a.ts': 'export const a = null\n',
+      'cfg/app.code-workspace': '{\n  // folders\n  "folders": [null]\n}\n',
+    })
+    const configs = await defineConfig({
+      root: project.dir,
+      typeAware: false,
+      isInEditor: false,
+      configs: [
+        { files: ['cfg/*.code-workspace'], language: 'json/jsonc', plugins: { json } },
+        { ...scope, rules: { 'unicorn/no-null': 'error' } },
+      ],
+    })
+    const results = await eslintWith(project.dir, configs).lintFiles([
+      'cfg/a.ts',
+      'cfg/app.code-workspace',
+    ])
+    expect(results.map((result) => result.messages.map((message) => message.ruleId))).toEqual([
+      ['unicorn/no-null'],
+      [],
+    ])
+  },
+)
+
+test.each(['cfg/**', 'cfg/**/*', 'cfg/*'])(
+  'keeps the JavaScript rules of a config of yours without `files` outside `%s`, which another config of yours gives a language',
+  async (glob) => {
+    await using project = await withTmpProject('eslint-config', {
+      'src/a.ts': 'export const a = null\n',
+      'cfg/app.code-workspace': '{\n  // folders\n  "folders": [null]\n}\n',
+    })
+    const configs = await defineConfig({
+      root: project.dir,
+      typeAware: false,
+      isInEditor: false,
+      configs: [
+        { files: [glob], language: 'json/jsonc', plugins: { json } },
+        { rules: { 'unicorn/no-null': 'error' } },
+      ],
+    })
+    const [result] = await eslintWith(project.dir, configs).lintFiles(['src/a.ts'])
+    expect(result?.messages.map((message) => message.ruleId)).toEqual(['unicorn/no-null'])
+  },
+)
+
 test('keeps JSONC with trailing commas for `tsconfig.json` under a config of yours with `json/json`', async () => {
   await using project = await withTmpProject('eslint-config', {
     'tsconfig.json': '{\n  // options\n  "compilerOptions": { "strict": true, },\n}\n',
@@ -733,79 +1244,6 @@ test('keeps JSONC with trailing commas for `tsconfig.json` under a config of you
   ).toEqual({ 'data.json': ['json/no-duplicate-keys'], 'tsconfig.json': [] })
 })
 
-test("rejects a config of yours whose `files` can match only files where a rule can't run", async () => {
-  // `\{a,b}.json` is the name `{a,b}.json`, not `a.json` or `b.json`
-  const config = untyped({
-    files: [['**/a.json', String.raw`!**/\{a,b}.json`]],
-    rules: { 'unicorn/no-null': 'error' },
-  })
-  const message = `@gpahal/eslint-config: \`configs[0]\`: \`files\`: can match JSON files, where \`unicorn/no-null\` can't run. Limit it to code, as in \`files: [['src/**', '${CODE_FILES}']]\``
-  await expect(build({ configs: [config] })()).rejects.toThrow(message)
-  await expect(build({})().append(config)).rejects.toThrow(
-    message.replace('`configs[0]`', '`.append()`: item `[0]`'),
-  )
-})
-
-test.each<[Linter.Config, string]>([
-  [
-    { files: ['src/**'], rules: { 'json/no-duplicate-keys': 'error' } },
-    'Limit it to JSON files, as in `files: [...files.json]`, with `files` from this package',
-  ],
-  [
-    { files: ['**/*.tsx'], rules: { 'markdown/no-bare-urls': 'error' } },
-    'Limit it to Markdown files',
-  ],
-  [
-    { files: ['**/*.json'], rules: { 'package-json/require-version': 'error' } },
-    "Limit it to `package.json` files, as in `files: ['**/package.json']`",
-  ],
-])(
-  'rejects a rule for other files than code with a hint of its files: %j',
-  async (config, hint) => {
-    await expect(build({ configs: [untyped(config)] })()).rejects.toThrow(
-      new RegExp(String.raw`can't run\. ${RegExp.escape(hint)}`),
-    )
-  },
-)
-
-test("rejects a change without `files` that turns on a rule some files can't run", async () => {
-  await expect(
-    defineConfig({ root }).override('gpahal/setup', (config) => ({
-      ...config,
-      rules: { 'unicorn/no-null': 'error' },
-    })),
-  ).rejects.toThrow(
-    `@gpahal/eslint-config: \`.override('gpahal/setup')\`: has no \`files\`, so it applies to JSON, YAML, TOML and Markdown files, where \`unicorn/no-null\` can't run. Give it \`files\` limited to code, as in \`files: [['src/**', '${CODE_FILES}']]\``,
-  )
-})
-
-test("rejects a change to a config with `language` that turns on a rule its language can't run", async () => {
-  const name = 'gpahal/json/json'
-  await expect(
-    defineConfig({ root, typeAware: false }).override(name, {
-      rules: { 'unicorn/no-null': 'error' },
-    }),
-  ).rejects.toThrow(
-    `@gpahal/eslint-config: \`.override('${name}')\`: \`unicorn/no-null\`: can't run in the config's language`,
-  )
-  await expect(
-    defineConfig({ root, typeAware: false }).onResolved((configs) => {
-      const config = configs.find((found) => found.name === name)
-      if (config !== undefined) {
-        config.rules = { ...config.rules, 'unicorn/no-null': 'error' }
-      }
-    }),
-  ).rejects.toThrow("`unicorn/no-null`: can't run in the config's language")
-  // The YAML preset's config has no `language`, so `files` decides
-  await expect(
-    defineConfig({ root, typeAware: false }).override('gpahal/yaml/rules', {
-      rules: { 'unicorn/no-null': 'error' },
-    }),
-  ).rejects.toThrow(
-    "@gpahal/eslint-config: `.override('gpahal/yaml/rules')`: `files`: can match YAML files, where `unicorn/no-null` can't run",
-  )
-})
-
 test('accepts a rule without `meta.languages` in a config with `language`, as ESLint runs it', async () => {
   const plugin = { rules: { any: { create: () => ({}) } } }
   const configs = await defineConfig({
@@ -822,21 +1260,6 @@ test('accepts a rule without `meta.languages` in a config with `language`, as ES
     ],
   })
   expect(configs.find(({ name }) => name === 'user/json')?.rules).toEqual({ 'local/any': 'error' })
-})
-
-test('rejects a rule whose `meta.languages` leaves out `js/js` in a config for code files', async () => {
-  const plugin = {
-    rules: { json: { meta: { languages: ['json/json'] }, create: () => ({}) } },
-  }
-  await expect(
-    build({
-      configs: [
-        { files: ['**/*.ts'], plugins: { local: plugin }, rules: { 'local/json': 'error' } },
-      ],
-    })(),
-  ).rejects.toThrow(
-    "@gpahal/eslint-config: `configs[0]`: `files`: can match code files, where `local/json` can't run. Limit it to files in a language the rule supports, and set `language`",
-  )
 })
 
 test.each<[Record<string, unknown>, Linter.Config]>([
@@ -868,88 +1291,7 @@ test('takes an html-eslint rule in a config for code files, which lints HTML in 
   )
 })
 
-type Composer = ReturnType<typeof defineConfig>
-
-/**
- * A config whose rule no plugin has, which the types would reject
- */
-const misspelled = untyped({ rules: { 'no-consol': 'off' } })
-
-test.each<[string, (composer: Composer) => Composer, string]>([
-  [
-    '`.removeRules()`',
-    (composer) => composer.removeRules('unicorn/no-nul' as keyof TypedRules),
-    "`unicorn/no-nul`: isn't a rule that the `unicorn` plugin this config loads has",
-  ],
-  [
-    "`.override('gpahal/javascript/rules')`",
-    (composer) =>
-      composer.override('gpahal/javascript/rules', (config) => ({
-        ...config,
-        rules: { ...config.rules, ...misspelled.rules },
-      })),
-    "`no-consol`: isn't a rule that ESLint has",
-  ],
-])('rejects a rule that no plugin has in %s', async (subject, change, message) => {
-  await expect(change(defineConfig({ root }))).rejects.toThrow(
-    `@gpahal/eslint-config: ${subject}: ${message}`,
-  )
-})
-
-/**
- * The composer's methods as JavaScript callers can call them, with arguments the types reject
- */
-type UntypedComposer = Record<string, (...args: Array<unknown>) => Composer>
-
-function untypedComposer(): UntypedComposer {
-  const composer: unknown = defineConfig({ root })
-
-  return composer as UntypedComposer
-}
-
-test.each<[string, (composer: UntypedComposer) => Composer, string]>([
-  [
-    'an `.override()` function that returns `undefined`',
-    (composer) => composer['override']!('gpahal/javascript/rules', () => undefined),
-    "`.override('gpahal/javascript/rules')`: expected the function to return a config object, received `undefined`",
-  ],
-  [
-    'an `.onResolved()` callback that returns `null` in its array',
-    (composer) => composer['onResolved']!(() => [{}, null]),
-    '`.onResolved()`: returned item `[1]`: expected a config object, received `null`',
-  ],
-])('rejects %s', async (_, change, message) => {
-  await expect(change(untypedComposer())).rejects.toThrow(`@gpahal/eslint-config: ${message}`)
-})
-
-test.each<[(composer: UntypedComposer) => unknown, string]>([
-  [
-    (composer) => composer['overrideRules']!(['no-console']),
-    '`.overrideRules()`: expected an object of rule entries, received an array',
-  ],
-  [
-    (composer) => composer['override']!(undefined, {}),
-    '`.override()`: expected a config name, received `undefined`',
-  ],
-  [
-    (composer) => composer['overrideRules']!({ 'no-console': 'warning' }),
-    '`.overrideRules()`: `no-console`: expected a severity',
-  ],
-  [
-    (composer) => composer['overrideRules']!({ 'no-console': ['warning'] }),
-    '`.overrideRules()`: `no-console`: expected a severity',
-  ],
-])('throws on a wrong argument when called: %s', (call, message) => {
-  expect(() => call(untypedComposer())).toThrow(`@gpahal/eslint-config: ${message}`)
-})
-
-test('rejects `.overrideRules()` that changes nothing', async () => {
-  await expect(defineConfig({ root }).overrideRules({ curly: 'error' })).rejects.toThrow(
-    '@gpahal/eslint-config: `.overrideRules()`: `curly`: is a formatting rule, which the configs leave out unless `allowFormattingRules` lists it, so this changes nothing. List it in `allowFormattingRules`, and turn it on with `configs` or `.append()` if no preset does',
-  )
-  await expect(defineConfig({ root }).overrideRules({ 'no-plusplus': 'error' })).rejects.toThrow(
-    '@gpahal/eslint-config: `.overrideRules()`: `no-plusplus`: turns on a rule that no config turns on, so it changes nothing. Turn it on with `configs` or `.append()`',
-  )
+test('takes `.overrideRules()` that turns off or removes a rule no config turns on', async () => {
   // Off and `null` entries that match nothing change nothing either, as asked
   await expect(
     defineConfig({ root }).overrideRules({ 'no-plusplus': 'off', 'no-eval': null }),
@@ -983,176 +1325,53 @@ test.each([
   expect(() => defineConfig(input)).toThrow(TypeError)
 })
 
-test('throws on an AND entry of brace patterns with more than 1000 combinations', async () => {
-  const values = ['dev', 'test', 'stage', 'prod', 'local', 'qa', 'uat', 'demo', 'perf', 'canary']
-  const patterns = ['env', 'region', 'component', 'version', 'name'].map(
-    (key) => `**/*{${values.map((value) => `${key}-${value}`).join(',')}}*.json`,
-  )
-  await expect(
-    defineConfig({
-      root,
-      typeAware: false,
-      configs: [{ files: [patterns], language: 'json/json' }],
-    }),
-  ).rejects.toThrow(
-    /^@gpahal\/eslint-config: config `[^`]+`: `files\[0\]`: the brace alternatives of the globs that a file must all match make more than 1000 combinations\. Split the entry into entries with fewer alternatives each$/,
-  )
+test('removes formatting rules with `withoutFormattingRules`, from extended configs too, without changing the preset', async () => {
+  const configs = await defineConfig({
+    root,
+    typeAware: false,
+    configs: [
+      withoutFormattingRules(reactPreset),
+      withoutFormattingRules({ name: 'user/react', files: ['**/*.jsx'], extends: [reactPreset] }),
+    ],
+  })
+  for (const name of ['react/recommended/rules', 'user/react > react/recommended/rules']) {
+    const rules = configs.find((config) => config.name === name)?.rules
+    expect(Object.keys(rules ?? {})).toEqual(['react/no-danger'])
+  }
+  expect(reactPreset[1]?.rules).toHaveProperty('react/jsx-indent')
 })
 
-describe('a plugin preset with formatting rules', () => {
-  const FORMATTING_RULES = [
-    'react/jsx-indent',
-    'react/jsx-curly-spacing',
-    'react/jsx-max-props-per-line',
-  ]
-
-  // A preset in a common shape: a config that registers the plugin, then configs of rules without
-  // `plugins`
-  const preset = [
-    {
-      name: 'react/base/setup',
-      plugins: {
-        react: {
-          rules: Object.fromEntries(
-            [...FORMATTING_RULES, 'react/no-danger'].map((rule) => [
-              rule.slice('react/'.length),
-              { create: () => ({}) },
-            ]),
-          ),
-        },
-      },
-    },
-    {
-      name: 'react/recommended/rules',
-      files: ['**/*.jsx'],
-      rules: Object.fromEntries(
-        [...FORMATTING_RULES, 'react/no-danger'].map((rule) => [rule, 'warn']),
-      ),
-    },
-  ]
-
-  it('lists every formatting rule in one error', () => {
-    expect(build({ configs: preset })).toThrow(
-      [
-        '@gpahal/eslint-config: `configs[1]` (`react/recommended/rules`): 3 issues',
-        ...FORMATTING_RULES.map(
-          (rule) =>
-            `  \`${rule}\`: is a rule that eslint-config-prettier turns off, since it conflicts with Prettier or is only safe with some options`,
-        ),
-        "To use a plugin's preset that turns on such rules, wrap it in `withoutFormattingRules`. Turn them off, or list them in `allowFormattingRules`",
-      ].join('\n'),
-    )
-  })
-
-  it('removes them with `withoutFormattingRules`, from extended configs too, without changing the preset', async () => {
-    const configs = await defineConfig({
-      root,
-      typeAware: false,
-      configs: [
-        withoutFormattingRules(preset),
-        withoutFormattingRules({ name: 'user/react', files: ['**/*.jsx'], extends: [preset] }),
-      ],
-    })
-    for (const name of ['react/recommended/rules', 'user/react > react/recommended/rules']) {
-      const rules = configs.find((config) => config.name === name)?.rules
-      expect(Object.keys(rules ?? {})).toEqual(['react/no-danger'])
-    }
-    expect(preset[1]?.rules).toHaveProperty('react/jsx-indent')
-  })
-})
-
-describe('a string in `extends`', () => {
+test('accepts a string in `extends` naming a config of a plugin the config registers, imported as a module namespace too', async () => {
   const plugin = {
     configs: { base: { rules: { 'local/demo': 'error' as const } } },
     rules: { demo: { create: () => ({}) } },
   }
-
-  it.each<[Record<string, unknown>, string]>([
-    [
-      { extends: ['js/recommended'] },
-      '@gpahal/eslint-config: `configs[0]`: `extends[0]`: expected `<plugin>/<config>` naming a plugin this config registers, received `"js/recommended"`',
+  const configs = await build({
+    typeAware: false,
+    regexp: false,
+    configs: [
+      { files: ['src/**/*.ts'], plugins: { local: plugin }, extends: ['local/base'] },
+      {
+        files: ['src/**/*.ts'],
+        plugins: { regexp: eslintPluginRegexp },
+        extends: ['regexp/recommended'],
+      },
     ],
-    [
-      { plugins: { local: plugin }, extends: ['local/missing'] },
-      '@gpahal/eslint-config: `configs[0]`: `extends[0]`: plugin `local` has no config `missing`',
-    ],
-    [
-      { extends: [{ extends: [{ rules: {} }] }] },
-      "@gpahal/eslint-config: `configs[0]`: ESLint's `defineConfig` rejects it: Nested 'extends' is not allowed",
-    ],
-  ])('throws on %j', (config, message) => {
-    expect(build({ configs: [config] })).toThrow(message)
-  })
-
-  it('accepts a config of a plugin the config registers, imported as a module namespace too', async () => {
-    const configs = await build({
-      typeAware: false,
-      regexp: false,
-      configs: [
-        { files: ['src/**/*.ts'], plugins: { local: plugin }, extends: ['local/base'] },
-        {
-          files: ['src/**/*.ts'],
-          plugins: { regexp: eslintPluginRegexp },
-          extends: ['regexp/recommended'],
-        },
-      ],
-    })()
-    expect(configs.some((config) => config.rules?.['local/demo'] === 'error')).toBe(true)
-    expect(configs.some((config) => config.rules?.['regexp/no-empty-group'] === 'error')).toBe(true)
-  })
+  })()
+  expect(configs.some((config) => config.rules?.['local/demo'] === 'error')).toBe(true)
+  expect(configs.some((config) => config.rules?.['regexp/no-empty-group'] === 'error')).toBe(true)
 })
 
-describe('the project service options', () => {
-  const PROJECT_SERVICE_HINT =
-    'is set from `root` and `typeAware`, so a config of yours may not change it. List the files to lint with the default project in `typeAware.allowDefaultProject`, or those to lint without type information in `typeAware.ignores`'
-  const name = 'gpahal/javascript/language-options'
-
-  it('throws on a config of yours or a change that sets them', async () => {
-    expect(
-      build({
-        configs: [
-          untyped({
-            files: ['**/*.ts'],
-            languageOptions: { parserOptions: { projectService: false } },
-          }),
-        ],
-      }),
-    ).toThrow(
-      `@gpahal/eslint-config: \`configs[0]\`: \`languageOptions.parserOptions.projectService\`: ${PROJECT_SERVICE_HINT}`,
-    )
-    expect(
-      build({
-        configs: [untyped({ languageOptions: { parserOptions: { tsconfigRootDir: root } } })],
-      }),
-    ).toThrow(
-      '@gpahal/eslint-config: `configs[0]`: `languageOptions.parserOptions.tsconfigRootDir`: is set from `root`, so a config of yours may not change it. Set `root` to the folder of your `tsconfig.json`',
-    )
-    await expect(
-      build({})().override(name, {
-        languageOptions: { parserOptions: { projectService: { allowDefaultProject: ['x.ts'] } } },
-      }),
-    ).rejects.toThrow(
-      `@gpahal/eslint-config: \`.override('${name}')\`: \`languageOptions.parserOptions.projectService\`: ${PROJECT_SERVICE_HINT}`,
-    )
-    await expect(
-      build({})().onResolved((configs) => {
-        const config = configs.find((found) => found.name === name)
-        Reflect.deleteProperty(config?.languageOptions?.['parserOptions'] ?? {}, 'tsconfigRootDir')
-      }),
-    ).rejects.toThrow('`languageOptions.parserOptions.tsconfigRootDir`:')
-  })
-
-  it('accepts a change that keeps them, as a function override that spreads the config does', async () => {
-    const configs = await build({})().override(name, (config) => ({
-      ...config,
-      languageOptions: {
-        ...config.languageOptions,
-        parserOptions: {
-          ...(config.languageOptions?.['parserOptions'] as Linter.ParserOptions),
-          ecmaVersion: 2024,
-        },
+test('accepts a change that keeps the project service options, as a function override that spreads the config does', async () => {
+  const configs = await build({})().override(LANGUAGE_OPTIONS, (config) => ({
+    ...config,
+    languageOptions: {
+      ...config.languageOptions,
+      parserOptions: {
+        ...(config.languageOptions?.['parserOptions'] as Linter.ParserOptions),
+        ecmaVersion: 2024,
       },
-    }))
-    expect(configs.length).toBeGreaterThan(0)
-  })
+    },
+  }))
+  expect(configs.length).toBeGreaterThan(0)
 })

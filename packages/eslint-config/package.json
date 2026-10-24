@@ -49,8 +49,8 @@
     "inspect": "eslint-config-inspector --config ../../eslint.config.mjs",
     "lint-check": "eslint . --max-warnings 0",
     "prepublishOnly": "../../scripts/verify-publish-tool.sh",
-    "test": "VITEST_CANARIES=0 vitest run",
-    "test-canaries": "VITEST_CANARIES=1 vitest run",
+    "test": "vitest run --project 'tests*'",
+    "test-canaries": "vitest run --project canaries",
     "typecheck": "tsc && tsc -p tests",
     "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
   },
@@ -107,7 +107,6 @@
     "@types/estree": "^1.0.9",
     "@types/hast": "^3.0.5",
     "@types/mdast": "^4.0.4",
-    "@types/semver": "^7.8.0",
     "@types/unist": "^3.0.3",
     "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.13.0",

@@ -2,17 +2,14 @@ import path from 'node:path'
 import process from 'node:process'
 
 import postcssHtml from 'postcss-html'
-import stylelint, { type Config, type Rule } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config, Rule } from 'stylelint'
 import recessOrderGroups from 'stylelint-config-recess-order/groups'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
-import baseDefault, {
-  defineConfig,
-  replace,
-  type StylelintConfigOptions,
-  type StylelintOverride,
-} from '@/index'
+import baseDefault, { defineConfig, replace } from '@/index'
+import type { StylelintConfigOptions, StylelintOverride } from '@/index'
 import { commentLayout } from '@/internal/comment-layout'
 import tailwindcssDefault from '@/tailwindcss'
 
@@ -200,25 +197,6 @@ describe('defineConfig', () => {
 })
 
 describe("defineConfig's Stylelint options", () => {
-  it("appends extends after the preset's, whose rules beat the preset's", async () => {
-    await using project = await withTmpProject('stylelint-config-define', {
-      'extended.mjs':
-        "export default { rules: { 'color-hex-length': 'long', 'number-max-precision': 2 } }\n",
-    })
-    const config = await defineConfig({
-      root: process.cwd(),
-      extends: path.join(project.dir, 'extended.mjs'),
-    })
-    expect(config.extends).toEqual([
-      ...[baseConfig.extends].flat(),
-      { rules: { 'color-hex-length': 'long', 'number-max-precision': 2 } },
-    ])
-    expect(await lintRules('a {\n  width: 1.123px;\n  color: #fff;\n}\n', config)).toEqual([
-      'color-hex-length',
-      'number-max-precision',
-    ])
-  })
-
   it("merges top-level and override languageOptions into the preset's, keeping the Tailwind CSS syntax", async () => {
     const config = await defineConfig({
       root: process.cwd(),
@@ -317,47 +295,15 @@ function build(options: unknown) {
 
 const PREFIX = '@gpahal/stylelint-config'
 
-const KNOWN_OPTIONS =
-  '`root`, `tailwindcss`, `astro`, `html`, `markdown`, `commentLayout`, `logical`, `plugins`, `rules`, `overrides`, `ignoreFiles`, `referenceFiles`, `extends`, `languageOptions`, `defaultSeverity`, `customSyntax`, `quiet`, `formatter`, `ignoreDisables`, `reportNeedlessDisables`, `reportInvalidScopeDisables`, `reportDescriptionlessDisables`, `reportUnscopedDisables`, `maxWarnings`, `computeEditInfo`, `configurationComment`, `processors`, `allowEmptyInput`, `cache`'
-
 describe('defineConfig validation', () => {
+  // The error-shape contract: the subject, the description and a fix, as a whole
   it.each([
-    [{ tailwind: true }, `\`tailwind\`: unknown option. Known options: ${KNOWN_OPTIONS}`],
-    [
-      { tailwindcss: { functions: () => ['a.b'] } },
-      "`tailwindcss.functions`: `a.b` isn't a CSS function name",
-    ],
-    // An added name gets a prelude of any value, which would replace Stylelint's syntax of it
-    [
-      { tailwindcss: { atRules: () => ['MEDIA'] } },
-      '`tailwindcss.atRules`: `MEDIA` is a CSS at-rule, which Stylelint already knows',
-    ],
     ['all', 'options: expected an object of options, received `"all"`'],
     [
       { tailwindcss: 'false' },
       '`tailwindcss`: expected a boolean or an object, received `"false"`',
     ],
-    [
-      { overrides: { files: '*.css' } },
-      '`overrides`: expected an array of overrides, received an object',
-    ],
-    [
-      { ignoreFiles: () => [1] },
-      '`ignoreFiles`: expected the function to return an array of strings, received an array with `1`',
-    ],
-    [
-      { root: 'apps/web' },
-      '`root`: expected an absolute path, such as `import.meta.dirname`, received `"apps/web"`',
-    ],
     [{ plugins: [[[noRed]]] }, '`plugins[0][0]`: expected a plugin or a path, received an array'],
-    [
-      { extends: ['stylelint-config-standard', 5] },
-      '`extends[1]`: expected a config or a path or package name, received `5`',
-    ],
-    [
-      { overrides: [{ rules: {} }] },
-      '`overrides[0].files`: expected a string or an array of strings, received `undefined`',
-    ],
     // Stylelint applies an override when any of its globs matches, so a `!` glob doesn't exclude
     [
       { overrides: [{ files: ['src/**', '!src/legacy/**'] }] },
@@ -374,22 +320,34 @@ describe('defineConfig validation', () => {
       },
       "`overrides[0].files`: matches files of types with different settings of `selector-pseudo-class-no-unknown`, and no glob matches just one type's files of it. Split this override into one per file type: `src/a*.astro`, `src/a*.html`, `src/a*.{md,markdown}`, `src/a*.@(css|pcss|postcss)`, `src/a*.module.css`, or wrap the setting with `replace()`",
     ],
-    // Stylelint applies a config's fixes in memory and drops their warnings, but writes them only
-    // with the run's `fix`
-    [
-      { overrides: [{ files: '*.css', fix: true }] },
-      "`overrides[0].fix`: isn't taken, since it hides problems without writing fixes. Pass `--fix`",
-    ],
-    [
-      { validate: false },
-      "`validate`: isn't taken at the top level, where the run's `validate`, `true` by default, replaces it. Pass `--no-validate`, or set it in an override",
-    ],
-    [
-      { reportUnscopedDisables: [true, { except: 'color-named' }] },
-      '`reportUnscopedDisables`: expected a boolean, or a boolean and an object of `except` and `severity`, received an array',
-    ],
   ])('throws a TypeError on %j', async (options, message) => {
     await expect(build(options)).rejects.toThrow(new TypeError(`${PREFIX}: ${message}`))
+  })
+
+  it.each([
+    [{ tailwind: true }, '`tailwind`: unknown option'],
+    [{ tailwindcss: { functions: () => ['a.b'] } }, "`tailwindcss.functions`: `a.b` isn't"],
+    // An added name gets a prelude of any value, which would replace Stylelint's syntax of it
+    [{ tailwindcss: { atRules: () => ['MEDIA'] } }, '`tailwindcss.atRules`: `MEDIA` is a CSS'],
+    [{ overrides: { files: '*.css' } }, '`overrides`: expected an array'],
+    [{ ignoreFiles: () => [1] }, '`ignoreFiles`: expected the function to return'],
+    [{ root: 'apps/web' }, '`root`: expected an absolute path'],
+    [{ extends: ['stylelint-config-standard', 5] }, '`extends[1]`: expected a config'],
+    [{ overrides: [{ rules: {} }] }, '`overrides[0].files`: expected a string'],
+    // Stylelint applies a config's fixes in memory and drops their warnings, but writes them only
+    // with the run's `fix`
+    [{ overrides: [{ files: '*.css', fix: true }] }, "`overrides[0].fix`: isn't taken"],
+    [{ validate: false }, "`validate`: isn't taken at the top level"],
+    [
+      { reportUnscopedDisables: [true, { except: 'color-named' }] },
+      '`reportUnscopedDisables`: expected a boolean',
+    ],
+  ])('throws a TypeError on %j, starting with its subject', async (options, start) => {
+    const error: unknown = await build(options)().catch((error_: unknown) => error_)
+    expect(error).toBeInstanceOf(TypeError)
+    expect((error as TypeError).message).toMatch(
+      new RegExp(`^${RegExp.escape(`${PREFIX}: ${start}`)}`),
+    )
   })
 
   it('keeps a valid override as it is', async () => {

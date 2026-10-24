@@ -99,7 +99,7 @@ exports[`with tailwindcss > the rules on for a.css 1`] = `
   "string-no-newline: [true,{"ignore":["at-rule-preludes","declaration-values"]}]",
   "syntax-string-no-invalid: [true]",
   "unit-no-unknown: [true]",
-  "value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/"]}]",
+  "value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/"],"ignoreFunctions":["theme","--theme"]}]",
   "value-no-vendor-prefix: [true,{"ignoreValues":["box","inline-box"],"disableFix":true}]",
 ]
 `;
@@ -119,7 +119,7 @@ exports[`with tailwindcss > the rules on for a.module.css, as a difference from 
   "~ property-no-unknown: [true,{"ignoreProperties":["composes"],"ignoreSelectors":[":export","/^:import/"]}]",
   "~ selector-class-pattern: ["^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*|[a-z][a-zA-Z0-9]*)$",{"message":"<function>"}]",
   "~ selector-pseudo-class-no-unknown: [true,{"ignorePseudoClasses":["global","local","export","import"]}]",
-  "~ value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/","composes"],"ignoreKeywords":["/^(?!(?:currentColor|optimizeSpeed|optimizeQuality|optimizeLegibility|geometricPrecision|crispEdges|visiblePainted|visibleFill|visibleStroke|sRGB|linearRGB)$)[a-z][a-z0-9]*[A-Z]/"]}]",
+  "~ value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/","composes"],"ignoreKeywords":["/^(?!(?:currentColor|optimizeSpeed|optimizeQuality|optimizeLegibility|geometricPrecision|crispEdges|visiblePainted|visibleFill|visibleStroke|sRGB|linearRGB)$)[a-z][a-z0-9]*[A-Z]/"],"ignoreFunctions":["theme","--theme"]}]",
 ]
 `;
 
@@ -227,7 +227,7 @@ exports[`with tailwindcss, reference files and validateApply > the rules on for 
   "string-no-newline: [true,{"ignore":["at-rule-preludes","declaration-values"]}]",
   "syntax-string-no-invalid: [true]",
   "unit-no-unknown: [true]",
-  "value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/"]}]",
+  "value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/"],"ignoreFunctions":["theme","--theme"]}]",
   "value-no-vendor-prefix: [true,{"ignoreValues":["box","inline-box"],"disableFix":true}]",
 ]
 `;
@@ -252,7 +252,7 @@ exports[`with tailwindcss, reference files and validateApply > the rules on for 
   "~ property-no-unknown: [true,{"ignoreProperties":["composes"],"ignoreSelectors":[":export","/^:import/"]}]",
   "~ selector-class-pattern: ["^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*|[a-z][a-zA-Z0-9]*)$",{"message":"<function>"}]",
   "~ selector-pseudo-class-no-unknown: [true,{"ignorePseudoClasses":["global","local","export","import"]}]",
-  "~ value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/","composes"],"ignoreKeywords":["/^(?!(?:currentColor|optimizeSpeed|optimizeQuality|optimizeLegibility|geometricPrecision|crispEdges|visiblePainted|visibleFill|visibleStroke|sRGB|linearRGB)$)[a-z][a-z0-9]*[A-Z]/"]}]",
+  "~ value-keyword-case: ["lower",{"ignoreProperties":["/^--font-(?!weight-)/","composes"],"ignoreKeywords":["/^(?!(?:currentColor|optimizeSpeed|optimizeQuality|optimizeLegibility|geometricPrecision|crispEdges|visiblePainted|visibleFill|visibleStroke|sRGB|linearRGB)$)[a-z][a-z0-9]*[A-Z]/"],"ignoreFunctions":["theme","--theme"]}]",
 ]
 `;
 

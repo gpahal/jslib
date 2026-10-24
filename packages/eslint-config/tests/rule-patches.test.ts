@@ -1,12 +1,13 @@
-import { parseForESLint, type ParserOptions } from '@typescript-eslint/parser'
-import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils'
+import { parseForESLint } from '@typescript-eslint/parser'
+import type { ParserOptions } from '@typescript-eslint/parser'
+import { AST_NODE_TYPES } from '@typescript-eslint/utils'
+import type { TSESTree } from '@typescript-eslint/utils'
 import { Linter } from 'eslint'
 import eslintPluginImportX from 'eslint-plugin-import-x'
 
 import { patchUnsafeFixes } from '@/internal/fixes'
 
-import { createFocusedESLint } from './fix-helpers'
-import { FIXTURES_DIR, lintText } from './helpers'
+import { createFocusedESLint, FIXTURES_DIR, lintText } from './helpers'
 
 /**
  * The patched rules of the probes below, the only ones that run

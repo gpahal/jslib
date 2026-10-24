@@ -3,10 +3,10 @@ import path from 'node:path'
 
 import { ESLint } from 'eslint'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 
-import { typeCheck } from './fix-helpers'
-import { collator, FIXTURES_DIR, withProject } from './helpers'
+import { collator, FIXTURES_DIR, typeCheck, withProject } from './helpers'
 
 const FIXTURE_DIR = path.join(FIXTURES_DIR, 'fix-output')
 
@@ -100,6 +100,7 @@ test('eslint --fix output with every preset on', async () => {
     turbo: true,
     vitest: true,
     antislop: true,
+    imports: { removeUnused: true },
   })
   expect(diagnostics).toStrictEqual([])
   expect(files).toMatchSnapshot()

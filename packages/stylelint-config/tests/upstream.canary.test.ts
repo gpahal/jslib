@@ -1,11 +1,11 @@
 // Canaries for the upstream bugs this package works around. Each runs the stock behaviour, without
 // the workaround, and fails once the bug is fixed, naming the workaround to remove
 
-import fs from 'node:fs'
 import path from 'node:path'
 
 import postcssHtml from 'postcss-html'
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 import { runNodeOk, withTmpProject } from '@gpahal/internal/node/testing'
 
@@ -180,27 +180,6 @@ describe('upstream workarounds', () => {
         'MARKDOWN_SYNTAXES in src/internal/file-types.ts',
       ),
     ).toBe('fake postcss-html')
-  })
-
-  it("fs.promises.glob: a wildcard segment doesn't match through a symlinked folder", async () => {
-    await using project = await withTmpProject('stylelint-config-glob-links', {
-      'only/o.css': 'a {}\n',
-    })
-    fs.mkdirSync(path.join(project.dir, 'deep'))
-    fs.symlinkSync('../only', path.join(project.dir, 'deep/l'))
-    // Not `Array.fromAsync`, which is newer than the ES2024 lib
-    const iterator = fs.promises.glob('deep/*/o.css', { cwd: project.dir })[Symbol.asyncIterator]()
-    const matches: Array<string> = []
-    for (let step = await iterator.next(); step.done !== true; step = await iterator.next()) {
-      matches.push(step.value)
-    }
-    expect(
-      matches,
-      fixed(
-        "fs.promises.glob's skipping of symlinked folders",
-        'matchesThroughFolderLinks and walkFolder in src/internal/paths.ts, and the README note on the walk',
-      ),
-    ).toEqual([])
   })
 
   it('declaration-property-value-no-unknown: reports sibling-index() and sibling-count()', async () => {

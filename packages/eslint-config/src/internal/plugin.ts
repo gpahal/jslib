@@ -4,7 +4,7 @@ import type * as ESTree from 'estree'
 import { formatNames } from '@gpahal/std/errors'
 import { isRecord } from '@gpahal/std/objects'
 
-import { isNode } from '@/internal/ast'
+import { getPropertyName, isNode, TYPE_WRAPPER_TYPES } from '@/internal/ast'
 import { commentLayout } from '@/internal/comment-layout'
 import { getCoreRule } from '@/internal/core-rules'
 import { nextjsServerComponent } from '@/internal/nextjs-server-component'
@@ -77,32 +77,6 @@ const ALIAS_GLOBALS_SCHEMA: Rule.RuleMetaData['schema'] = {
     },
   ],
 }
-
-/**
- * Computed only from a string literal or a template literal without expressions
- */
-function getPropertyName(node: ESTree.MemberExpression): string | undefined {
-  const { property } = node
-  if (!node.computed && property.type === 'Identifier') {
-    return property.name
-  }
-  if (property.type === 'TemplateLiteral' && property.expressions.length === 0) {
-    return property.quasis[0]?.value.cooked ?? undefined
-  }
-  return property.type === 'Literal' && typeof property.value === 'string'
-    ? property.value
-    : undefined
-}
-
-/**
- * As in `process!` or `(process as any)`
- */
-const TYPE_WRAPPER_TYPES = new Set<string>([
-  'TSAsExpression',
-  'TSNonNullExpression',
-  'TSSatisfiesExpression',
-  'TSTypeAssertion',
-])
 
 function withoutTypeWrappers(node: ESTree.Node): ESTree.Node {
   let current = node

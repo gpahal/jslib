@@ -1,6 +1,7 @@
 import * as z from 'zod/mini'
 
-import { optionsObject, type OptionsShape } from '@gpahal/internal/node/options'
+import { optionsObject } from '@gpahal/internal/node/options'
+import type { OptionsShape } from '@gpahal/internal/node/options'
 import { assertValid, expectedError, plainObject, typeCheck } from '@gpahal/internal/node/zod'
 import { describeValue, formatMessage, formatNames } from '@gpahal/std/errors'
 
@@ -160,7 +161,9 @@ function isClosed(value: string): boolean {
       const isUnquotedUrl =
         char === '(' &&
         UNQUOTED_URL_REGEX.test(value.slice(0, index + 1)) &&
-        !/^\s*'/.test(value.slice(index + 1))
+        // Spaces only: CSS's other whitespace, tab, LF, CR and FF, are controls, which
+        // `UNSAFE_VALUE_REGEX` rejects first. Not JavaScript's `\s`, which also matches U+00A0
+        !/^ *'/.test(value.slice(index + 1))
       if (isUnquotedUrl) {
         return false
       }

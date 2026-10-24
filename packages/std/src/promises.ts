@@ -10,7 +10,8 @@ import { describeValue } from '@/internal/describe'
 import { stdMessage } from '@/internal/message'
 import { checkFunction, checkNumber, checkOptions } from '@/internal/options'
 import { MAX_TIMER_DELAY_MS } from '@/internal/timers'
-import { createQueue, type Queue } from '@/queue'
+import { createQueue } from '@/queue'
+import type { Queue } from '@/queue'
 
 export { MAX_TIMER_DELAY_MS } from '@/internal/timers'
 

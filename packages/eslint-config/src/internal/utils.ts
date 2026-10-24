@@ -24,7 +24,7 @@ export function fail(subjects: ReadonlyArray<string>, description: string): neve
 
 /**
  * From the `workerData` that ESLint's `lib/eslint/eslint.js` gives its `--concurrency` workers.
- * The `--concurrency` test of editor.test.ts, which checks the warning is given once, fails when it
+ * The worker-path test of editor.test.ts, which checks ESLint still passes these keys, fails when it
  * changes
  */
 function isESLintWorker(): boolean {

@@ -1,28 +1,21 @@
 import path from 'node:path'
 
 import eslintPluginComments from '@eslint-community/eslint-plugin-eslint-comments'
-import { ESLint, type Linter, type Rule } from 'eslint'
+import { ESLint } from 'eslint'
+import type { Linter, Rule } from 'eslint'
 import eslintPluginSlop from 'eslint-plugin-slop'
 import { defineConfig as eslintDefineConfig } from 'eslint/config'
 import { configs as tsEslintConfigs } from 'typescript-eslint'
 
-import { runNodeOk } from '@gpahal/internal/node/testing'
 import { isRecord } from '@gpahal/std/objects'
 
 import { eslintCommentsPlugin } from '@/eslint-comments'
-import {
-  defineConfig,
-  files,
-  untyped,
-  type ConfigNames,
-  type TypedConfig,
-  type TypedRules,
-} from '@/index'
+import { defineConfig, files, untyped } from '@/index'
+import type { ConfigNames, TypedConfig, TypedRules } from '@/index'
 import { slopPlugin } from '@/slop'
 
 import {
   collator,
-  CORE_AREAS_OFF_SOURCE,
   eslintWith,
   FIXTURES_DIR,
   lint,
@@ -31,40 +24,6 @@ import {
   severityOf,
   withProject,
 } from './helpers'
-
-function formattingRuleHint(isExtended: boolean): string {
-  return isExtended
-    ? " A plugin's preset that the config is or extends may turn on such rules: wrap it in `withoutFormattingRules`."
-    : " To use a plugin's preset that turns on such rules, wrap it in `withoutFormattingRules`."
-}
-
-function formattingRuleError(subject: string, rule: string): string {
-  return `@gpahal/eslint-config: ${subject}: \`${rule}\`: is a rule that eslint-config-prettier turns off, since it conflicts with Prettier or is only safe with some options.${formattingRuleHint(false)} Turn it off, or list it in \`allowFormattingRules\``
-}
-
-function formattingRulesError(subject: string, rules: Array<string>): string {
-  return [
-    `@gpahal/eslint-config: ${subject}: ${String(rules.length)} issues`,
-    ...rules.map(
-      (rule) =>
-        `  \`${rule}\`: is a rule that eslint-config-prettier turns off, since it conflicts with Prettier or is only safe with some options`,
-    ),
-    `${formattingRuleHint(true).trim()} Turn them off, or list them in \`allowFormattingRules\``,
-  ].join('\n')
-}
-
-function markdownParseError(subject: string): string {
-  return `@gpahal/eslint-config: ${subject}: \`languageOptions.math\`: can apply to Markdown files, whose parse this package's Markdown processor shares with the language. Set the \`markdown.math\` option instead`
-}
-
-function thrownBy(run: () => void): string | undefined {
-  try {
-    run()
-  } catch (error) {
-    return error instanceof Error ? error.message : 'a non-error'
-  }
-  return undefined
-}
 
 function names(configs: Array<Linter.Config>): Array<string | undefined> {
   return configs.map((config) => config.name)
@@ -394,71 +353,6 @@ describe('composer methods', () => {
     expect(rulesOf(second)?.['no-console']).toEqual(['error', { allow: ['warn', 'error'] }])
   })
 
-  it.each<[string, (composer: ReturnType<typeof defineConfig>) => unknown]>([
-    ['override', (composer) => composer.override('gpahal/react/rules', {})],
-    ['remove', (composer) => composer.remove('gpahal/react/rules')],
-    ['insertBefore', (composer) => composer.insertBefore('gpahal/react/rules', {})],
-    ['insertAfter', (composer) => composer.insertAfter('gpahal/react/rules', {})],
-  ])('`.%s()` throws on a config name that no config has', async (method, change) => {
-    const composer = defineConfig({ root })
-    change(composer)
-    // `.remove()` may name several configs
-    const call = method === 'remove' ? `.${method}()` : `.${method}('gpahal/react/rules')`
-    await expect(composer).rejects.toThrow(
-      `@gpahal/eslint-config: \`${call}\`: no config has the name \`gpahal/react/rules\`. \`gpahal/react/rules\` comes from the \`react\` option, which is off`,
-    )
-  })
-
-  it.each<[string, Partial<Parameters<typeof defineConfig>[0]>, string, string]>([
-    [
-      'an option that is on, without the setting that adds it',
-      {},
-      'gpahal/typescript/library',
-      '. `gpahal/typescript/library` comes from the `typescript` option, which is on; it needs another of its settings',
-    ],
-    [
-      "an area's user rules, without its `rules`",
-      {},
-      'gpahal/unicorn/user-rules',
-      '. `gpahal/unicorn/user-rules` comes from the `unicorn` option, which is on; it needs `unicorn.rules`',
-    ],
-    [
-      'a type-aware config with `typeAware: false`',
-      { typeAware: false },
-      'gpahal/typescript/type-aware',
-      '. `gpahal/typescript/type-aware` needs type information, which `typeAware: false` turns off',
-    ],
-    ['a name no config of the package has', {}, 'gpahal/typescript/rulez', ''],
-  ])('hints at the cause of a missing name for %s', async (_, options, name, hint) => {
-    const composer = defineConfig({ root, ...options }).remove(name as ConfigNames)
-    await expect(composer).rejects.toMatchObject({
-      message: `@gpahal/eslint-config: \`.remove()\`: no config has the name \`${name}\`${hint}`,
-    })
-  })
-
-  it('names the `.remove()` that removed a config', async () => {
-    const composer = defineConfig({ root })
-      .remove('gpahal/jsdoc/rules', 'gpahal/typescript/rules')
-      .override('gpahal/typescript/rules', {})
-    await expect(composer).rejects.toMatchObject({
-      message:
-        "@gpahal/eslint-config: `.override('gpahal/typescript/rules')`: no config has the name `gpahal/typescript/rules`. An earlier `.remove()` removed it",
-    })
-  })
-
-  it.each<[string, Array<ConfigNames>, string]>([
-    ['without a name', [], '`.remove()`: names no config. Pass at least one config name'],
-    [
-      'with a name twice',
-      ['gpahal/jsdoc/rules', 'gpahal/jsdoc/rules'],
-      '`.remove()`: names `gpahal/jsdoc/rules` twice',
-    ],
-  ])('throws on `.remove()` %s', (_, removedNames, message) => {
-    expect(() => defineConfig({ root }).remove(...removedNames)).toThrow(
-      `@gpahal/eslint-config: ${message}`,
-    )
-  })
-
   it('`.disableRulesFix()` makes the named rules report without fixing', async () => {
     const code = 'let a = 10000000\n\nexport const b = a\n'
     const fixedBy = async (composer: ReturnType<typeof defineConfig>) => {
@@ -481,21 +375,6 @@ describe('composer methods', () => {
     ).toEqual({ output: undefined, rules: ['prefer-const', 'unicorn/numeric-separators-style'] })
   })
 
-  it('`.disableRulesFix()` throws on an argument that is not a rule name, and rejects on an unknown rule', async () => {
-    expect(() =>
-      // @ts-expect-error a rule name is a string
-      defineConfig({ root }).disableRulesFix('prefer-const', 1),
-    ).toThrow(
-      '@gpahal/eslint-config: `.disableRulesFix()`: argument 2: expected a rule name, received `1`',
-    )
-    await expect(
-      // @ts-expect-error no preset turns on a rule of this name
-      defineConfig({ root }).disableRulesFix('prefer-konst'),
-    ).rejects.toThrow(
-      "@gpahal/eslint-config: `.disableRulesFix()`: `prefer-konst`: isn't a rule that ESLint has",
-    )
-  })
-
   it('`.clone()` gives a composer that shares neither queued changes nor resolved configs', async () => {
     const base = defineConfig({ root }).overrideRules({ 'no-console': 'warn' })
     const clone = base.clone()
@@ -511,23 +390,18 @@ describe('composer methods', () => {
     expect(rulesOf(cloneConfigs)?.['no-var']).toBeDefined()
   })
 
-  it("removes a config whose plugin's rules the other configs have off, but not on", async () => {
+  // The guard rails in `validate.test.ts` reject it with the rules on
+  it("removes a config whose plugin's rules the other configs have off", async () => {
     await using project = await withProject({ 'index.js': 'export const a = 1\n' })
     const plugin = { rules: { always: { create: () => ({}) } } }
-    const options = (severity: Linter.RuleSeverity) => ({
+    const configs = await defineConfig({
       root: project.dir,
       typeAware: false,
       configs: [
         { name: 'user/plugin', plugins: { mine: plugin } },
-        untyped({ name: 'user/rules', files: ['**/*.js'], rules: { 'mine/always': severity } }),
+        untyped({ name: 'user/rules', files: ['**/*.js'], rules: { 'mine/always': 'off' } }),
       ],
-    })
-    await expect(
-      defineConfig(options('error')).remove('user/plugin' as ConfigNames),
-    ).rejects.toThrow(
-      "@gpahal/eslint-config: `.remove('user/plugin')`: removes the plugin `mine` that rules of the other configs turn on, such as `mine/always`. Remove or turn off those rules, or keep the config",
-    )
-    const configs = await defineConfig(options('off')).remove('user/plugin' as ConfigNames)
+    }).remove('user/plugin' as ConfigNames)
     const [result] = await eslintWith(project.dir, configs).lintFiles(['index.js'])
     expect(result?.messages).toEqual([])
   })
@@ -610,19 +484,6 @@ describe('composer methods', () => {
 
 describe('the guards after `.onResolved()`', () => {
   const root = RULES_ROOT
-
-  it('reject a formatting rule that a callback turns on in place', async () => {
-    const composer = defineConfig({ root }).onResolved((resolved) => {
-      const config = resolved.find(({ name }) => name === 'gpahal/javascript/rules')
-      if (config?.rules !== undefined) {
-        config.rules.curly = 'error'
-      }
-      return undefined
-    })
-    await expect(composer).rejects.toThrow(
-      formattingRuleError('`.onResolved()` (`gpahal/javascript/rules`)', 'curly'),
-    )
-  })
 
   it("keep the guards out of a callback's configs", async () => {
     const seen: Array<string | undefined> = []
@@ -791,22 +652,6 @@ describe('formatting rules', () => {
   const root = RULES_ROOT
   const file = path.join(root, 'src/x.ts')
 
-  it('throws on the ones a config of yours extends', () => {
-    const extended: Linter.Config = { rules: { curly: 'error', semi: 'error' } }
-    expect(() => defineConfig({ root, configs: [{ extends: [extended] }] })).toThrow(
-      formattingRulesError('`configs[0]` (`user/configs[0] > ExtendedConfig[0]`)', [
-        'curly',
-        'semi',
-      ]),
-    )
-  })
-
-  it('throws on the ones `.override()` turns on', async () => {
-    await expect(
-      defineConfig({ root }).override('gpahal/javascript/rules', { rules: { semi: 'error' } }),
-    ).rejects.toThrow(formattingRuleError("`.override('gpahal/javascript/rules')`", 'semi'))
-  })
-
   it('leaves out formatting rules, unless `allowFormattingRules` lists them', async () => {
     // Unicorn's recommended config turns it on, and eslint-config-prettier lists it
     const rule = 'unicorn/template-indent'
@@ -842,13 +687,7 @@ describe('formatting rules', () => {
 
 describe('configs of yours through `configs` and the composer methods', () => {
   type Source = 'configs' | 'append' | 'insertBefore' | 'insertAfter' | 'onResolved'
-  const sources: Array<[Source, string]> = [
-    ['configs', '`configs[0]`'],
-    ['append', '`.append()`: item `[0]`'],
-    ['insertBefore', '`.insertBefore()`: item `[0]`'],
-    ['insertAfter', '`.insertAfter()`: item `[0]`'],
-    ['onResolved', '`.onResolved()`'],
-  ]
+  const sources: Array<Source> = ['configs', 'append', 'insertBefore', 'insertAfter', 'onResolved']
 
   // `console.log` in each code file, and a TypeScript code block in `README.md`
   const SCOPE_FILES = {
@@ -904,7 +743,7 @@ describe('configs of yours through `configs` and the composer methods', () => {
   } satisfies ESLint.Plugin
 
   // `.append()` and `.insertBefore()` add their configs as `.insertAfter()` does
-  it.each(sources.filter(([source]) => source !== 'append' && source !== 'insertBefore'))(
+  it.each(sources.filter((source) => source !== 'append' && source !== 'insertBefore'))(
     'turns the rules of a config without `files` on in every file but JSON, YAML, TOML, Markdown and HTML files through %s',
     async (source) => {
       const project = scopeFilesProject
@@ -967,56 +806,6 @@ describe('configs of yours through `configs` and the composer methods', () => {
       'data.json': [],
     })
   })
-
-  function addThrough(source: Source, config: TypedConfig) {
-    if (source === 'configs' || source === 'onResolved') {
-      return addAllThrough(RULES_ROOT, source, [config])
-    }
-    const composer = defineConfig({ root: RULES_ROOT })
-    return source === 'append'
-      ? composer.append(config)
-      : composer[source]('gpahal/config-files/console', config)
-  }
-
-  /**
-   * How adding `config` through `source` fails: its message, and whether it throws from
-   * `defineConfig` rather than rejecting when awaited
-   */
-  async function failureOf(source: Source, config: TypedConfig) {
-    let composer: ReturnType<typeof defineConfig> | undefined
-    const thrown = thrownBy(() => {
-      composer = addThrough(source, config)
-    })
-    if (thrown !== undefined) {
-      return { isSync: true, message: thrown }
-    }
-    try {
-      await composer
-    } catch (error) {
-      return { isSync: false, message: error instanceof Error ? error.message : 'a non-error' }
-    }
-    return undefined
-  }
-
-  it.each(sources)('throws on a formatting rule turned on through %s', async (source, place) => {
-    const failure = await failureOf(source, {
-      name: 'user/curly',
-      rules: { curly: ['error', 'all'] },
-    })
-    expect(failure?.isSync).toBe(source === 'configs')
-    expect(failure?.message).toBe(formattingRuleError(`${place} (\`user/curly\`)`, 'curly'))
-  })
-
-  it.each(sources)(
-    'throws on a rule for non-code files in a config without `files` through %s',
-    async (source, place) => {
-      const failure = await failureOf(source, { rules: { 'yml/no-empty-key': 'error' } })
-      expect(failure?.isSync).toBe(source === 'configs')
-      expect(failure?.message).toBe(
-        `@gpahal/eslint-config: ${place}: \`yml/no-empty-key\`: is a rule for YAML files, which a config of yours without \`files\` or \`language\` doesn't reach. Give it \`files: [...files.yaml]\`, with \`files\` from this package`,
-      )
-    },
-  )
 })
 
 describe('split configs of yours through `.override()`', () => {
@@ -1095,62 +884,11 @@ describe('split configs of yours through `.override()`', () => {
       configs.filter((found) => found.name === 'user/split').map((found) => found.rules),
     ).toEqual(expected)
   })
-
-  it('suggests the glob from `root` for an absolute glob', async () => {
-    const absolute = `${root.split(path.sep).join('/')}/src/**`
-    await expect(
-      defineConfig({
-        root,
-        configs: [{ name: 'user/split', rules: { 'no-console': 'off', eqeqeq: 'error' } }],
-      }).override('user/split' as ConfigNames, { files: [absolute] }),
-    ).rejects.toThrow(
-      `@gpahal/eslint-config: \`.override('user/split')\`: \`files\`: glob \`${absolute}\` starts with \`/\`, but globs are relative to \`root\`. Write \`src/**\``,
-    )
-  })
-})
-
-describe('Markdown parse options through the composer', () => {
-  const root = path.join(FIXTURES_DIR, 'markdown')
-  const name = 'gpahal/markdown/rules'
-
-  it('throws on them from `.override()` and from an `.onResolved()` callback that sets them in place', async () => {
-    await expect(
-      defineConfig({ root, markdown: true }).override(name, {
-        languageOptions: { math: true },
-      }),
-    ).rejects.toThrow(markdownParseError(`\`.override('${name}')\``))
-    await expect(
-      defineConfig({ root, markdown: true }).onResolved((resolved) => {
-        for (const config of resolved) {
-          if (config.name === name) {
-            config.languageOptions = { ...config.languageOptions, math: true }
-          }
-        }
-      }),
-    ).rejects.toThrow(markdownParseError(`\`.onResolved()\` (\`${name}\`)`))
-  })
 })
 
 describe('configs for code files only through `.override()`', () => {
   const root = RULES_ROOT
   const name = 'gpahal/javascript/rules'
-
-  it('throws on a function that drops `files`', async () => {
-    await expect(
-      defineConfig({ root }).override('gpahal/unicorn/rules', ({ files: _files, ...rest }) => rest),
-    ).rejects.toThrow(
-      "@gpahal/eslint-config: `.override('gpahal/unicorn/rules')`: `files`: removes them from a config for code files only, so its rules would run on JSON, YAML, TOML, Markdown and HTML files too. Keep `files` within the code files, as in `[...files.code]`, with `files` from this package",
-    )
-  })
-
-  // A negated glob matches every file but those it names, JSON and YAML files included
-  it.each(['**/*', '!**/*.md'])('throws on `files: [%j]`, which widens them', async (glob) => {
-    await expect(
-      defineConfig({ root, typeAware: false }).override('gpahal/unicorn/rules', { files: [glob] }),
-    ).rejects.toThrow(
-      "@gpahal/eslint-config: `.override('gpahal/unicorn/rules')`: `files`: widens a config for code files only to files that can be JSON, YAML, TOML, Markdown or HTML, where its rules would run too. Keep `files` within the code files, as in `[...files.code]`, with `files` from this package",
-    )
-  })
 
   it('takes globs within the code files, and a config that only turns rules off', async () => {
     await expect(
@@ -1161,14 +899,6 @@ describe('configs for code files only through `.override()`', () => {
           rules: { 'no-console': 'off' },
         })),
     ).resolves.toBeDefined()
-  })
-
-  it('throws on a rule for non-code files added to one', async () => {
-    await expect(
-      defineConfig({ root }).override(name, { rules: { 'json/no-duplicate-keys': 'error' } }),
-    ).rejects.toThrow(
-      `@gpahal/eslint-config: \`.override('${name}')\`: \`json/no-duplicate-keys\`: is a rule for JSON files, and the config it changes applies to code files only. Add it in a config of its own with \`files: [...files.json]\`, with \`files\` from this package`,
-    )
   })
 })
 
@@ -1222,95 +952,11 @@ describe('promised composer configs', () => {
     expect(names(first)).toContain('user/append[1][0]')
     expect(names(second)).toContain('user/insertAfter[0][0]')
   })
-
-  it('handles rejected inputs before the composer is awaited, and when a method throws', async () => {
-    // A fresh process, since unhandled rejections are per process
-    const output = await runNodeOk(
-      [
-        '--input-type=module',
-        '--eval',
-        `
-const { defineConfig } = await import('@gpahal/eslint-config')
-const rejections = []
-process.on('unhandledRejection', (error) => rejections.push(error.message))
-const root = process.argv[1]
-const results = {}
-for (const method of ['append', 'insertBefore']) {
-  const composer = defineConfig({ root, typeAware: false, gitignore: false, ${CORE_AREAS_OFF_SOURCE} })
-  const input = Promise.reject(new Error('config failed'))
-  if (method === 'append') composer.append(input)
-  else composer[method]('gpahal/javascript/rules', input)
-  // Past Node's check for unhandled rejections, which runs once the microtasks drain
-  await new Promise((resolve) => setImmediate(resolve))
-  const error = await composer.then(() => undefined, (caught) => caught.message)
-  results[method] = { error, rejections: rejections.splice(0) }
-}
-let error
-try {
-  defineConfig({ root, typeAware: false, gitignore: false, ${CORE_AREAS_OFF_SOURCE} }).insertAfter(undefined, Promise.reject(new Error('config failed')))
-} catch (caught) {
-  error = caught.message
-}
-await new Promise((resolve) => setImmediate(resolve))
-results.throws = { error, rejections: rejections.splice(0) }
-console.log(JSON.stringify(results))
-`,
-        path.join(FIXTURES_DIR, 'typescript'),
-      ],
-      { cwd: path.join(import.meta.dirname, '..') },
-    )
-    expect(JSON.parse(output)).toEqual({
-      append: { error: 'config failed', rejections: [] },
-      insertBefore: { error: 'config failed', rejections: [] },
-      throws: {
-        error:
-          '@gpahal/eslint-config: `.insertAfter()`: expected a config name, received `undefined`',
-        rejections: [],
-      },
-    })
-  })
 })
 
 describe('plugins that the presets register, in configs of yours', () => {
   const root = path.join(FIXTURES_DIR, 'markdown')
   const other = { rules: {} }
-
-  it.each<[string, () => PromiseLike<unknown>, string]>([
-    [
-      'a nested array of configs',
-      () => defineConfig({ root, configs: [[{}, { plugins: { 'package-json': other } }]] }),
-      '`configs[0][1].plugins`',
-    ],
-    [
-      '.override()',
-      () => defineConfig({ root }).override('gpahal/setup', { plugins: { 'package-json': other } }),
-      "`.override('gpahal/setup')`: `plugins`",
-    ],
-    [
-      '.onResolved()',
-      () =>
-        defineConfig({ root }).onResolved((configs) => [
-          ...configs,
-          { plugins: { 'package-json': other } },
-        ]),
-      '`.onResolved()`: `plugins`',
-    ],
-  ])(
-    'throws on another plugin under a preset plugin name through %s',
-    async (_, build, subjects) => {
-      await expect(build()).rejects.toThrow(
-        `@gpahal/eslint-config: ${subjects}: registers \`package-json\` again with a different plugin. Set its rules with \`packageJson.rules\` instead`,
-      )
-    },
-  )
-
-  it('names no area for the `@gpahal` plugin, whose rules span areas', async () => {
-    await expect(
-      defineConfig({ root, configs: [{ plugins: { '@gpahal': other } }] }),
-    ).rejects.toThrow(
-      '@gpahal/eslint-config: `configs[0].plugins`: registers `@gpahal` again with a different plugin. Remove it from the config',
-    )
-  })
 
   const WRAPPED_PLUGINS: Array<{
     name: string

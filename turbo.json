@@ -1,6 +1,9 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "agentGuidance": false,
+  // Turbo evicts nothing by default, and CI restores each job's latest cache and saves it again
+  // under every commit, so the cache would only grow. A run that misses on every task adds a few MB
+  "cacheMaxSize": "100MB",
   "globalDependencies": [
     ".gitignore",
     "config/**",
@@ -25,21 +28,13 @@
     },
     "test": {
       "dependsOn": ["build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/vitest.config.ts",
-        "$TURBO_ROOT$/packages/eslint-config/src/internal/utils.ts"
-      ]
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"]
     },
-    // The canaries, which fail once upstream fixes a bug that a workaround exists for
+    // The canaries, which fail once upstream fixes a bug that a workaround exists for. CI runs them
+    // in a job of their own, and `pnpm check` leaves them out
     "test-canaries": {
       "dependsOn": ["build"],
-      "env": ["VITEST_CANARIES"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/vitest.config.ts",
-        "$TURBO_ROOT$/packages/eslint-config/src/internal/utils.ts"
-      ]
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"]
     },
     // publint and `attw --pack` pack the package but read neither README.md nor a license file's
     // text, only whether one is there

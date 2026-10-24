@@ -2,17 +2,19 @@ import { createRequire } from 'node:module'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { formatInstallCommand } from '@gpahal/internal/node/package-manager'
 import {
   findInstalledPackage,
-  formatPeerSpecifier,
   missingPeersError,
   resolveFromNodeModules,
   resolvePath,
-  type PackageFolder,
-  type Resolve,
-  type ResolvedModule,
 } from '@gpahal/internal/node/resolve'
+import type { PackageFolder, Resolve, ResolvedModule } from '@gpahal/internal/node/resolve'
+import {
+  describeNewerThanRange,
+  formatInstallHint,
+  isAtLeast,
+  isInsidersVersion,
+} from '@gpahal/internal/node/versions'
 import {
   formatMessage,
   formatMessageList,
@@ -161,6 +163,12 @@ export function resolvePeerPlugins(
 const TAILWIND_RANGE = '>=0.8.0 <0.9.0'
 
 /**
+ * The upper bound of {@link TAILWIND_RANGE}, from which on, prereleases included, the plugin is
+ * untested
+ */
+const UNTESTED_TAILWIND_VERSION = '0.9'
+
+/**
  * For the install command of a missing plugin. `tests/index.test.ts` checks them against
  * `peerDependencies`
  */
@@ -207,43 +215,21 @@ export function resolvePeerPlugin(
   }
 }
 
-const MIN_SORT_IMPORTS_VERSION = [4, 7] as const
+const MIN_SORT_IMPORTS_VERSION = '4.7'
 
-const MIN_TAILWIND_VERSION = [0, 8] as const
+const MIN_TAILWIND_VERSION = '0.8'
 
-/**
- * An insiders build, such as `0.0.0-insiders.5b27f94`, is newer than any release
- */
-function isInsidersVersion(version: unknown): boolean {
-  return typeof version === 'string' && version.startsWith('0.0.0-')
-}
-
-function isAtLeast(version: unknown, [minMajor, minMinor]: readonly [number, number]): boolean {
-  const match = typeof version === 'string' ? /^(\d+)\.(\d+)\./.exec(version) : null
-  if (match === null) {
-    return false
-  }
-  const [major, minor] = [Number(match[1]), Number(match[2])]
-  return major > minMajor || (major === minMajor && minor >= minMinor)
-}
-
-function olderThan(
-  name: string,
-  version: unknown,
-  [minMajor, minMinor]: readonly [number, number],
-): string {
-  const needed = `the ${minMajor}.${minMinor} this config needs`
+function olderThan(name: string, version: unknown, minimum: string): string {
+  const needed = `the ${minimum} this config needs`
   return typeof version === 'string'
     ? `\`${name}\` ${version} is older than ${needed}`
     : `\`${name}\`'s version couldn't be read to check that it's at least ${needed}`
 }
 
-const UNTESTED_TAILWIND_VERSION = [0, 9] as const
-
 /**
  * The peer range's lower bound
  */
-const MIN_PRETTIER_VERSION = [3, 9] as const
+const MIN_PRETTIER_VERSION = '3.9'
 
 const warned = new Set<string>()
 
@@ -269,54 +255,56 @@ export function warnOfPrettierVersion(
   if (typeof version !== 'string' || isAtLeast(version, MIN_PRETTIER_VERSION)) {
     return
   }
-  const [minMajor, minMinor] = MIN_PRETTIER_VERSION
   warnOnce(
     formatMessage(
       PREFIX,
       ['`prettier`'],
-      `version ${version} is older than the ${minMajor}.${minMinor} this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`${formatInstallCommand([`prettier@^${minMajor}.${minMinor}`], dir ?? process.cwd())}\``,
+      `version ${version} is older than the ${MIN_PRETTIER_VERSION} this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`${formatInstallHint('prettier', `^${MIN_PRETTIER_VERSION}`, dir ?? process.cwd())}\``,
     ),
     'GPAHAL_PRETTIER_OLD_PRETTIER',
   )
 }
 
 /**
- * Warns once when the plugin is newer than {@link TAILWIND_RANGE}.
+ * Warns once when the plugin is newer than {@link TAILWIND_RANGE}, or a prerelease of
+ * {@link UNTESTED_TAILWIND_VERSION}. An insiders build is newer than any release, and is taken
+ * without a warning.
  *
  * @throws Error as {@link resolvePeerPlugin} does, and TypeError when the plugin is older than
  *   0.8. Its version is read from its `node_modules` folder, so it isn't checked without one.
  */
 export function resolveTailwindPlugin(
   environment: PluginEnvironment = DEFAULT_PLUGIN_ENVIRONMENT,
-  dir?: string,
+  dir: string = process.cwd(),
 ): string {
   const tailwindPath = resolvePeerPlugin('tailwindcss', TAILWIND_PLUGIN, environment, dir)
   // From its own file, the walk finds the plugin's own folder
   const tailwind = environment.findPackage(TAILWIND_PLUGIN, tailwindPath)
-  if (
-    tailwind !== undefined &&
-    !isInsidersVersion(tailwind.version) &&
-    !isAtLeast(tailwind.version, MIN_TAILWIND_VERSION)
-  ) {
-    const [minMajor, minMinor] = MIN_TAILWIND_VERSION
+  if (tailwind === undefined || isInsidersVersion(tailwind.version)) {
+    return tailwindPath
+  }
+  const { version } = tailwind
+  if (!isAtLeast(version, MIN_TAILWIND_VERSION)) {
     throw new TypeError(
       formatMessage(
         PREFIX,
         ['`tailwindcss`'],
-        `${olderThan(TAILWIND_PLUGIN, tailwind.version, MIN_TAILWIND_VERSION)}. Install a newer version, as in \`${formatInstallCommand([`${TAILWIND_PLUGIN}@^${minMajor}.${minMinor}`], dir ?? process.cwd())}\``,
+        `${olderThan(TAILWIND_PLUGIN, version, MIN_TAILWIND_VERSION)}. Install a newer version, as in \`${formatInstallHint(TAILWIND_PLUGIN, `^${MIN_TAILWIND_VERSION}`, dir)}\``,
       ),
     )
   }
-  if (
-    tailwind !== undefined &&
-    !isInsidersVersion(tailwind.version) &&
-    isAtLeast(tailwind.version, UNTESTED_TAILWIND_VERSION)
-  ) {
+  if (typeof version === 'string' && isAtLeast(version, UNTESTED_TAILWIND_VERSION)) {
     warnOnce(
       formatMessage(
         PREFIX,
         ['`tailwindcss`'],
-        `${TAILWIND_PLUGIN} ${String(tailwind.version)} is outside the tested range ${TAILWIND_RANGE}, so classes or imports may stay unsorted. If they do, install a version in the range, as in \`${formatInstallCommand([formatPeerSpecifier(TAILWIND_PLUGIN, TAILWIND_RANGE)], dir ?? process.cwd())}\``,
+        describeNewerThanRange({
+          name: TAILWIND_PLUGIN,
+          version,
+          range: TAILWIND_RANGE,
+          effect: 'classes or imports may stay unsorted',
+          dir,
+        }),
       ),
       'GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN',
     )
@@ -325,19 +313,19 @@ export function resolveTailwindPlugin(
 }
 
 /**
- * `specifier` is the package to install, with a range when one is installed but too old, since
- * adding a direct dependency without one keeps its existing range
+ * The sorter is installed with `range` when one is installed but too old, since adding a direct
+ * dependency without one keeps its existing range
  */
 function sortImportsError(
   description: string,
-  specifier: string,
+  range: string | undefined,
   dir: string | undefined,
 ): TypeError {
   return new TypeError(
     formatMessage(
       PREFIX,
       ['`sortImports`'],
-      `${description}, as in \`${formatInstallCommand([specifier], dir ?? process.cwd())}\`, or set \`sortImports: false\``,
+      `${description}, as in \`${formatInstallHint(SORT_IMPORTS_PLUGIN, range, dir ?? process.cwd())}\`, or set \`sortImports: false\``,
     ),
   )
 }
@@ -396,15 +384,14 @@ export function resolveSortImportsPlugin(
   if (sorter === undefined) {
     throw sortImportsError(
       `\`${TAILWIND_PLUGIN}\` can't load \`${SORT_IMPORTS_PLUGIN}\` from where it's installed, so imports would stay unsorted. Install it in your project`,
-      SORT_IMPORTS_PLUGIN,
+      undefined,
       dir,
     )
   }
   if (!isAtLeast(sorter.version, MIN_SORT_IMPORTS_VERSION)) {
-    const [minMajor, minMinor] = MIN_SORT_IMPORTS_VERSION
     throw sortImportsError(
       `\`${TAILWIND_PLUGIN}\` loads \`${SORT_IMPORTS_PLUGIN}\` from where it's installed, and ${olderThan(SORT_IMPORTS_PLUGIN, sorter.version, MIN_SORT_IMPORTS_VERSION)}. Install a newer version`,
-      `${SORT_IMPORTS_PLUGIN}@^${minMajor}.${minMinor}`,
+      `^${MIN_SORT_IMPORTS_VERSION}`,
       dir,
     )
   }

@@ -1,6 +1,6 @@
 # @gpahal/internal
 
-Unpublished code shared by the `@gpahal/*` packages. A package imports it as a dev dependency, and tsdown bundles its code and types into the package's build. Its own dependencies, such as `@gpahal/std`, `zod` and `brace-expansion`, stay external, so a package depends on what the modules it imports import. std can't use it, since it depends on std.
+Unpublished code shared by the `@gpahal/*` packages. A package imports it as a dev dependency, and tsdown bundles its code and types into the package's build. Its own dependencies, such as `@gpahal/std`, `zod`, `brace-expansion` and `semver`, stay external, so a package depends on what the modules it imports import. std can't use it, since it depends on std.
 
 ## Modules
 
@@ -10,14 +10,16 @@ Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.brow
 | --- | --- | --- |
 | `comments` | `getBlockCommentLines`, `hasMixedStarPrefixes`, `hasTextStar`, `hasUnusualLineTerminator`, `isStarredCommentLine` | Anywhere |
 | `globs` | `expandBraces`, `scanBraces` | Anywhere |
+| `lists` | `joinList`, `formatSomeNames` | Anywhere |
 | `node/options` | `optionsObject`, `required`, `deferred`, `booleanOr`, `listOption`, `resolveListOption`, `resolveSubOptions`, `isStringOrStrings` | Node |
 | `node/zod` | `assertValid`, `strictObject`, `plainObject`, `typeCheck`, `stringOrStrings`, `expectedError`, `loadZod` | Node |
 | `node/cli` | `readPackageVersion`, `formatCliError`, `getCauses` | Node |
 | `node/json` | `readJsonFile` | Node |
 | `node/package-manager` | `detectPackageManager`, `formatInstallCommand` | Node |
-| `node/paths` | `resolvePathOrFileUrl`, `resolvePathOption`, `isRelativePath`, the `PATH_OR_FILE_URL_*` messages | Node |
+| `node/paths` | `resolvePathOrFileUrl`, `resolvePathOption`, `resolveFileOption`, `isRelativePath`, the `PATH_OR_FILE_URL_*` messages | Node |
 | `node/resolve` | `resolvePath`, `isResolvable`, `resolveFromNodeModules`, `resolveFile`, `findInstalledPackage`, `findNodeModulesManifest`, `missingPeersError`, `formatPeerSpecifier` | Node |
 | `node/root` | `checkRoot` | Node |
+| `node/versions` | `isAtLeast`, `isInRange`, `isNewerThanRange`, `isInsidersVersion`, `formatInstallHint`, `describeNewerThanRange` | Node |
 | `node/source-maps` | `isSourceMap`, `resolveSourcePath`, `isPublishedFile`, `dropSources` | Node, builds and tests only |
 | `node/testing` | `runNode`, `runNodeOk`, `withTmpProject`, `writeFiles`, `minCpuMs`, `readMarkdownSection`, `readCodeBlocks`, `splitFileNameComment` | Node, tests only |
 
@@ -45,13 +47,8 @@ Neither module imports Zod. Their functions call `loadZod()`, which loads Zod Mi
 ```ts
 import * as z from 'zod/mini'
 
-import {
-  booleanOr,
-  listOption,
-  optionsObject,
-  required,
-  type ListOption,
-} from '@gpahal/internal/node/options'
+import { booleanOr, listOption, optionsObject, required } from '@gpahal/internal/node/options'
+import type { ListOption } from '@gpahal/internal/node/options'
 import { assertValid, expectedError } from '@gpahal/internal/node/zod'
 
 type Options = {

@@ -10,8 +10,10 @@
  * aside for the stock rule as `isStockRuleOn` describes
  */
 
-import postcss, { Result, type Root, type Warning } from 'postcss'
-import stylelint, { type Plugin, type PostcssResult, type Rule } from 'stylelint'
+import postcss, { Result } from 'postcss'
+import type { Root, Warning } from 'postcss'
+import stylelint from 'stylelint'
+import type { Plugin, PostcssResult, Rule } from 'stylelint'
 
 import { isRecord } from '@gpahal/std/objects'
 

@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
@@ -65,6 +66,44 @@ const project = await withTmpProject('stylelint-config-tailwind-apply', {
   'trailing-import/global.css':
     "@import 'tailwindcss';\n@import './utils.css';\n\n.a {\n  color: red;\n}\n",
   'trailing-import/utils.css': '@utility trailing-import-util {\n  color: red;\n}\n',
+  // Errors that Tailwind's `compile()` throws inside the design system's own at-rules
+  'utility-error/global.css': [
+    "@import 'tailwindcss';",
+    '',
+    '@utility bad {',
+    '  @apply nope;',
+    '}',
+    '',
+    '@utility bad-theme {',
+    '  color: theme(--color-nope);',
+    '',
+    '  @variant nope-variant {',
+    '    color: red;',
+    '  }',
+    '}',
+    '',
+    // Inside a known variant's block
+    '@utility bad-nested {',
+    '  @variant hover {',
+    '    color: theme(--color-nope);',
+    '',
+    '    @apply nested-nope;',
+    '',
+    '    @variant nested-nope-variant {',
+    '      color: red;',
+    '    }',
+    '  }',
+    '}',
+    '',
+    '@custom-variant bad-variant {',
+    '  @media (width >= theme(--breakpoint-nope)) {',
+    '    @apply also-nope;',
+    '',
+    '    @slot;',
+    '  }',
+    '}',
+    '',
+  ].join('\n'),
   // Tailwind would read `.env` as CSS, and its parse error would print the secret
   'secret/global.css': "@import 'tailwindcss';\n@import './secret.env';\n",
   'secret/secret.env': 'API_KEY={ topsecret\n',
@@ -215,6 +254,64 @@ describe('tailwindcss.validateApply', () => {
     } finally {
       await fs.writeFile(components, before)
     }
+  })
+
+  it.each([
+    ['without one', true],
+    ['with another', { entryPoint: 'prefixed/global.css', validateApply: true }],
+  ])(
+    'checks with your design system under an extended defineConfig-built config %s',
+    async (_name, tailwindcss) => {
+      const extending = await defineConfig({
+        root: project.dir,
+        extends: [await defineConfig({ root: project.dir, tailwindcss })],
+        tailwindcss: { entryPoint: 'src/global.css', validateApply: true },
+      })
+      expect(await reportsOf('.a {\n  @apply flex tab-4 nope;\n}\n', extending)).toEqual([
+        'Unexpected unknown utility class "nope" in "@apply"',
+      ])
+    },
+  )
+
+  it('checks with the design system of an extended defineConfig-built config', async () => {
+    const extending = await defineConfig({
+      root: project.dir,
+      extends: [
+        await defineConfig({
+          root: project.dir,
+          tailwindcss: { entryPoint: 'src/global.css', validateApply: true },
+        }),
+      ],
+      tailwindcss: true,
+    })
+    expect(await reportsOf('.a {\n  @apply flex tab-4 nope;\n}\n', extending)).toEqual([
+      'Unexpected unknown utility class "nope" in "@apply"',
+    ])
+    // Off in Markdown, as without the extends
+    expect(await reportsOf('```css\n.a {\n  @apply nope;\n}\n```\n', extending, 'a.md')).toEqual([])
+  })
+
+  it('loads an entry point whose @utility and @custom-variant bodies fail to compile, and reports them', async () => {
+    const entryPoint = path.join(project.dir, 'utility-error/global.css')
+    const loaded = await defineConfig({
+      root: project.dir,
+      tailwindcss: { entryPoint, validateApply: true },
+    })
+    expect(
+      await reportsOf(await fs.readFile(entryPoint, 'utf8'), loaded, '../utility-error/global.css'),
+    ).toEqual([
+      'Unexpected unknown utility class "nope" in "@apply"',
+      'Unexpected unknown variant "nope-variant" in "@variant"',
+      'Unexpected unknown utility class "nested-nope" in "@apply"',
+      'Unexpected unknown variant "nested-nope-variant" in "@variant"',
+      'Unexpected unknown utility class "also-nope" in "@apply"',
+    ])
+    expect(
+      await reportsOf(
+        '.a {\n  @apply bad bad-theme bad-nested bad-variant:flex nope;\n}\n',
+        loaded,
+      ),
+    ).toEqual(['Unexpected unknown utility class "nope" in "@apply"'])
   })
 
   it('throws when Tailwind fails to compile the entry point, with the error as the cause', async () => {

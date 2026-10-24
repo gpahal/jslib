@@ -26,12 +26,11 @@ import {
   routeSplitRules,
   SCOPE_KEYS,
   scopeUserConfig,
-  type Presets,
-  type UntypedKinds,
-  type UserConfigContext,
 } from '@/internal/user-configs'
+import type { Presets, UntypedKinds, UserConfigContext } from '@/internal/user-configs'
 import { fail, formatErrorMessage } from '@/internal/utils'
-import { checkRuleNames, type PluginOffOptions } from '@/internal/validate'
+import { checkRuleNames } from '@/internal/validate'
+import type { PluginOffOptions } from '@/internal/validate'
 
 type Awaitable<T> = T | Promise<T>
 

@@ -1,10 +1,17 @@
-import type { AST, Scope as ESLintScope, Linter, Rule, SourceCode } from 'eslint'
+import type { Linter, Rule, SourceCode } from 'eslint'
 import type * as ESTree from 'estree'
 import type TypeScriptModule from 'typescript'
 
 import { formatNames } from '@gpahal/std/errors'
 import { isRecord } from '@gpahal/std/objects'
 
+import {
+  isNodeOfType,
+  isRuleNode,
+  isTypeOnlyImport,
+  rangeOf,
+  TYPE_WRAPPER_TYPES,
+} from '@/internal/ast'
 import { getCoreRuleCopies } from '@/internal/core-rules'
 import { DUPLICATE_REPORTS } from '@/internal/duplicate-rules'
 import { CODE_BLOCK_FILES, MARKDOWN_EXTNS } from '@/internal/files'
@@ -19,7 +26,7 @@ import {
 import type { Scope } from '@/internal/globs'
 import { isRuleOn, parseRuleId } from '@/internal/rules'
 import type { TypedConfig } from '@/internal/types'
-import { formatErrorMessage, withCompanionContext, withReport } from '@/internal/utils'
+import { formatErrorMessage, withReport } from '@/internal/utils'
 
 /**
  * Names the rules that report without fixing, as in `{ 'prefer-const': true }`, or `'all'` for
@@ -121,10 +128,7 @@ function isAstroNativeClass(context: Rule.RuleContext, descriptor: Rule.ReportDe
 
 const VALUE_WRAPPER_TYPES: ReadonlySet<string> = new Set([
   'ParenthesizedExpression',
-  'TSAsExpression',
-  'TSNonNullExpression',
-  'TSSatisfiesExpression',
-  'TSTypeAssertion',
+  ...TYPE_WRAPPER_TYPES,
 ])
 
 /**
@@ -288,12 +292,6 @@ const RULES_OPTIONS_SETTINGS_KEY = '@gpahal/rules-options'
  * on or off doesn't change them
  */
 const RULES_ON_RULES: ReadonlyArray<string> = [
-  'e18e/prefer-regex-test',
-  'e18e/prefer-spread-syntax',
-  'unicorn/prefer-array-from-map',
-  'unicorn/prefer-iterator-to-array',
-  'unicorn/prefer-regexp-test',
-  'unicorn/prefer-spread',
   ...new Set(DUPLICATE_REPORTS.flatMap(({ kept }) => kept)),
   'unicorn/prefer-optional-catch-binding',
 ]
@@ -353,46 +351,14 @@ export function optionsInSettings(
 const DUPLICATES_PATCHED = Symbol('@gpahal/eslint-config no-duplicates fix')
 
 /**
- * `import { type A } from 'a'`, which `@typescript-eslint/no-import-type-side-effects` rewrites.
+ * A value import with an inline `type` specifier, as in `import { type A, b } from 'a'`.
  * `importKind` is TypeScript syntax, which the ESTree types lack
  */
-function isInlineTypeOnlyImport(node: ESTree.ImportDeclaration): boolean {
+function hasInlineTypeSpecifier(node: ESTree.ImportDeclaration): boolean {
   return (
-    Reflect.get(node, 'importKind') === 'value' &&
-    node.specifiers.length > 0 &&
-    node.specifiers.every(
-      (specifier) =>
-        specifier.type === 'ImportSpecifier' && Reflect.get(specifier, 'importKind') === 'type',
-    )
+    Reflect.get(node, 'importKind') !== 'type' &&
+    node.specifiers.some((specifier) => Reflect.get(specifier, 'importKind') === 'type')
   )
-}
-
-function isSideEffectImport(node: ESTree.ImportDeclaration): boolean {
-  return Reflect.get(node, 'importKind') !== 'type' && node.specifiers.length === 0
-}
-
-function isTypeOnlyImport(node: ESTree.ImportDeclaration): boolean {
-  return Reflect.get(node, 'importKind') === 'type' || isInlineTypeOnlyImport(node)
-}
-
-/**
- * Side-effect and type-only duplicates, whose merge and rewrite leave only `import type`, so the
- * module no longer loads
- */
-function dropsSideEffectImport(imports: ReadonlyArray<ESTree.ImportDeclaration>): boolean {
-  return (
-    imports.some(isSideEffectImport) &&
-    imports.some(isTypeOnlyImport) &&
-    imports.every((node) => isSideEffectImport(node) || isTypeOnlyImport(node))
-  )
-}
-
-function hasDefaultSpecifier(node: ESTree.ImportDeclaration): boolean {
-  return node.specifiers.some((specifier) => specifier.type === 'ImportDefaultSpecifier')
-}
-
-function rangeOf(nodeOrToken: ESTree.Node | AST.Token): AST.Range {
-  return nodeOrToken.range ?? [0, 0]
 }
 
 const RECORDING_FIXER: Rule.RuleFixer = {
@@ -417,108 +383,63 @@ function recordFix(fix: Rule.ReportFixer): Array<Rule.Fix> {
 }
 
 /**
- * With `prefer-inline`, merging `import type { A }` and `import B` gives `import B, type { A }`,
- * which doesn't parse. A merge that also takes named specifiers moves `type` into the braces and
- * stays
- */
-function keepsTypeBeforeDefault(
-  declaration: ESTree.ImportDeclaration,
-  groupHasDefault: boolean,
-  fix: Rule.ReportFixer,
-  sourceCode: SourceCode,
-): boolean {
-  const typeToken = sourceCode.getFirstToken(declaration, 1)
-  if (
-    !groupHasDefault ||
-    Reflect.get(declaration, 'importKind') !== 'type' ||
-    typeToken?.value !== 'type' ||
-    hasDefaultSpecifier(declaration)
-  ) {
-    return false
-  }
-  const [start] = rangeOf(typeToken)
-  return recordFix(fix).every(
-    ({ range, text }) => !(text === '' && range[0] <= start && start < range[1]),
-  )
-}
-
-/**
- * Drops `import-x/no-duplicates`' fix, keeping the report, where it leaves invalid code:
+ * Patches `import-x/no-duplicates`' fix, keeping the report:
  *
- * - With a value import of only inline `type` specifiers, ESLint applies the merge and the
- *   `no-import-type-side-effects` rewrite in one pass, writing `import type { A, type B }` (TS2206)
- * - When `keepsTypeBeforeDefault` says the merge writes `import B, type { A }`
- * - When `dropsSideEffectImport` says the module no longer loads
+ * - Drops it for a module with a duplicate holding an inline `type` specifier. The rule groups
+ *   `import { type A, b } from 'a'` with `import type { C } from 'a'`, and merges it into that,
+ *   writing `import type { C, type A, b }` (TS2206). `import-x/consistent-type-specifier-style`
+ *   moves the specifier into its own `import type`, after which the merge is safe
+ * - Starts it at the start of the declaration it merges into, so that it overlaps another rule's
+ *   fix of that declaration, which ESLint then applies in a later pass. Otherwise
+ *   `consistent-type-imports` turning `import { A } from 'a'` into `import type { A } from 'a'`
+ *   and the merge of `import { b } from 'a'` into it apply together as `import type { A, b }`
+ *   (TS1361)
  */
 function patchDuplicateImports(rule: Rule.RuleModule): void {
   patchCreateOnce(rule, DUPLICATES_PATCHED, (create) => (context) => {
     if (!hasPatchedFixes(context)) {
       return create(context)
     }
-    const reports: Array<Rule.ReportDescriptor> = []
-    const declarations: Array<ESTree.ImportDeclaration & Rule.NodeParentExtension> = []
+    const reports: Array<{ descriptor: Rule.ReportDescriptor; declaration: unknown }> = []
     const listeners = create(
       withReport(context, (descriptor) => {
-        reports.push(descriptor)
+        // The rule reports each duplicate's `source`
+        const node = 'node' in descriptor ? descriptor.node : undefined
+        reports.push({ descriptor, declaration: node && Reflect.get(node, 'parent') })
       }),
     )
-    const { ImportDeclaration: onImport, 'Program:exit': onExit } = listeners
+    const { 'Program:exit': onExit } = listeners
     return {
       ...listeners,
-      ImportDeclaration: (node) => {
-        declarations.push(node)
-        onImport?.(node)
-      },
       'Program:exit': (node) => {
         onExit?.(node)
-        // A file can hold thousands of reports, so the lookups are maps, built once
-        const bySource = new Map<unknown, ESTree.ImportDeclaration & Rule.NodeParentExtension>(
-          declarations.map((declaration) => [declaration.source, declaration]),
+        const unsafeModules = new Set(
+          reports.flatMap(({ descriptor, declaration }) =>
+            isNodeOfType(declaration, 'ImportDeclaration') && hasInlineTypeSpecifier(declaration)
+              ? [descriptor.data?.['module']]
+              : [],
+          ),
         )
-        const reported = reports.map((descriptor) => ({
-          declaration: 'node' in descriptor ? bySource.get(descriptor.node) : undefined,
-          module: descriptor.data?.['module'],
-        }))
-        const groups = new Map<unknown, Map<unknown, Array<ESTree.ImportDeclaration>>>()
-        for (const { declaration, module } of reported) {
-          if (declaration === undefined) {
-            continue
-          }
-          const byModule =
-            groups.get(declaration.parent) ?? new Map<unknown, Array<ESTree.ImportDeclaration>>()
-          groups.set(declaration.parent, byModule)
-          const group = byModule.get(module) ?? []
-          byModule.set(module, group)
-          group.push(declaration)
-        }
-        // Once per group, so many duplicates of one module stay linear
-        const facts = new Map<
-          ReadonlyArray<ESTree.ImportDeclaration>,
-          { isUnsafe: boolean; hasDefault: boolean }
-        >()
-        const factsOf = (group: ReadonlyArray<ESTree.ImportDeclaration>) => {
-          let found = facts.get(group)
-          if (found === undefined) {
-            found = {
-              isUnsafe: group.some(isInlineTypeOnlyImport) || dropsSideEffectImport(group),
-              hasDefault: group.some(hasDefaultSpecifier),
-            }
-            facts.set(group, found)
-          }
-          return found
-        }
-        for (const [index, descriptor] of reports.entries()) {
-          const { declaration, module } = reported[index] ?? {}
-          if (declaration === undefined || descriptor.fix == null) {
+        for (const { descriptor, declaration } of reports) {
+          const { fix } = descriptor
+          if (fix == null || !isNodeOfType(declaration, 'ImportDeclaration')) {
             context.report(descriptor)
-            continue
+          } else if (unsafeModules.has(descriptor.data?.['module'])) {
+            context.report({ ...descriptor, fix: undefined })
+          } else {
+            context.report({
+              ...descriptor,
+              fix: (fixer) => {
+                const fixes = fix(fixer)
+                return fixes == null
+                  ? fixes
+                  : [
+                      fixer.insertTextBefore(declaration, ''),
+                      ...('range' in fixes ? [fixes] : fixes),
+                    ]
+              },
+            })
           }
-          const group = groups.get(declaration.parent)?.get(module) ?? [declaration]
-          const { isUnsafe: isGroupUnsafe, hasDefault } = factsOf(group)
-          const isUnsafe =
-            isGroupUnsafe ||
-            keepsTypeBeforeDefault(declaration, hasDefault, descriptor.fix, context.sourceCode)
-          context.report(isUnsafe ? { ...descriptor, fix: undefined } : descriptor)
         }
       },
     }
@@ -534,13 +455,6 @@ const UNUSED_IMPORTS_PATCHED = Symbol('@gpahal/eslint-config no-unused-vars impo
 
 const REMOVE_SPECIFIER_MESSAGE = 'removeUnusedVar'
 const REMOVE_DECLARATION_MESSAGE = 'removeUnusedImportDeclaration'
-
-function isNodeOfType<T extends ESTree.Node['type']>(
-  value: unknown,
-  type: T,
-): value is Extract<ESTree.Node, { type: T }> {
-  return isRecord(value) && value['type'] === type
-}
 
 function isImportSpecifier(
   value: unknown,
@@ -728,7 +642,9 @@ export function removeUnusedImportsFixes({
   ]
 }
 
-const TYPE_DEFINITIONS_PATCHED = Symbol('@gpahal/eslint-config consistent-type-definitions merges')
+const TYPE_DEFINITIONS_PATCHED = Symbol(
+  '@gpahal/eslint-config consistent-type-definitions augmentations',
+)
 
 /**
  * In `declare global`, or an ambient `declare module` or `declare namespace`, only an interface
@@ -744,33 +660,6 @@ function isInAmbientModule(node: Rule.Node): boolean {
     }
   }
   return false
-}
-
-function mergesWithAnotherDeclaration(node: Rule.Node, sourceCode: SourceCode): boolean {
-  const scope = declaringScope(node, sourceCode)
-  // Exported namespace members can merge across blocks or files, which ESLint scopes don't
-  // connect, so without TypeScript's symbol table these interfaces stay
-  if (
-    node.parent?.type === 'ExportNamedDeclaration' &&
-    scope?.block.type === ('TSModuleDeclaration' as string)
-  ) {
-    return true
-  }
-  const name = interfaceName(node)
-  return name !== undefined && (scope?.set.get(name)?.defs.length ?? 0) > 1
-}
-
-/**
- * Skips the scope of the node's own type parameters
- */
-function declaringScope(node: Rule.Node, sourceCode: SourceCode): ESLintScope.Scope | null {
-  const scope = sourceCode.getScope(node)
-  return scope.block === node ? scope.upper : scope
-}
-
-function interfaceName(node: Rule.Node): string | undefined {
-  const id: unknown = Reflect.get(node, 'id')
-  return isRecord(id) && typeof id['name'] === 'string' ? id['name'] : undefined
 }
 
 /**
@@ -858,189 +747,9 @@ function isGlobalAugmentation(node: Rule.Node, sourceCode: SourceCode, filename:
   )
 }
 
-const DEFAULT_DECLARATIONS = new Set([
-  'ClassDeclaration',
-  'FunctionDeclaration',
-  'TSDeclareFunction',
-  'TSInterfaceDeclaration',
-])
-
 /**
- * An export list stops TypeScript from exporting a declaration file's unexported declarations
- */
-function isExportList(statement: ESTree.Node): boolean {
-  switch (statement.type as string) {
-    case 'ExportNamedDeclaration': {
-      return Reflect.get(statement, 'declaration') == null
-    }
-    case 'ExportAllDeclaration':
-    case 'TSExportAssignment': {
-      return true
-    }
-    case 'ExportDefaultDeclaration': {
-      const declaration: unknown = Reflect.get(statement, 'declaration')
-      return !isRecord(declaration) || !DEFAULT_DECLARATIONS.has(String(declaration['type']))
-    }
-    default: {
-      return false
-    }
-  }
-}
-
-const DECLARATION_FILE_REGEX = /\.d\.[cm]?ts$/u
-
-/**
- * Exported, global in a script file, top-level in a module declaration file without an export
- * list, where TypeScript exports every declaration, or in a declaration file's namespace, whose
- * members are exported without `export` and can merge across its blocks
- */
-function isVisibleOutsideFile(node: Rule.Node, sourceCode: SourceCode, filename: string): boolean {
-  const { parent } = node
-  if (
-    (parent?.type === 'ExportNamedDeclaration' || parent?.type === 'ExportDefaultDeclaration') &&
-    parent.parent.type === 'Program'
-  ) {
-    return true
-  }
-  const isDeclarationFile = DECLARATION_FILE_REGEX.test(filename)
-  if (
-    isDeclarationFile &&
-    declaringScope(node, sourceCode)?.block.type === ('TSModuleDeclaration' as string)
-  ) {
-    return true
-  }
-  if (parent?.type !== 'Program') {
-    return false
-  }
-  if (isScriptFile(sourceCode, filename)) {
-    return true
-  }
-  if (isDeclarationFile && !sourceCode.ast.body.some(isExportList)) {
-    return true
-  }
-  const name = interfaceName(node)
-  const variable = name === undefined ? undefined : declaringScope(node, sourceCode)?.set.get(name)
-  return (
-    variable?.references.some((reference) => {
-      const exporter: unknown = Reflect.get(reference.identifier, 'parent')
-      return (
-        isRecord(exporter) &&
-        (exporter['type'] === 'ExportSpecifier' || exporter['type'] === 'ExportDefaultDeclaration')
-      )
-    }) ?? false
-  )
-}
-
-function textOf(node: unknown, sourceCode: SourceCode): string | undefined {
-  const range = untypedRangeOf(node)
-  return range === undefined ? undefined : sourceCode.text.slice(range[0], range[1])
-}
-
-function untypedRangeOf(node: unknown): [number, number] | undefined {
-  const range: unknown = isRecord(node) ? node['range'] : undefined
-  return Array.isArray(range) && typeof range[0] === 'number' && typeof range[1] === 'number'
-    ? [range[0], range[1]]
-    : undefined
-}
-
-/**
- * As `interface Json extends Record<string, Json | string> {}`: a type alias can't refer to itself
- * there (TS2456). A mention that would compile is skipped too
- */
-function refersToItself(declaration: Rule.Node, sourceCode: SourceCode): boolean {
-  const name = interfaceName(declaration)
-  if (name === undefined) {
-    return false
-  }
-  const heritage: unknown = Reflect.get(declaration, 'extends')
-  const clauses: Array<unknown> = Array.isArray(heritage) ? heritage : []
-  const nodes = [...clauses, Reflect.get(declaration, 'typeParameters')]
-  const nameRegex = new RegExp(String.raw`(?<![\w$])${RegExp.escape(name)}(?![\w$])`, 'u')
-  return nodes.some((node) => nameRegex.test(textOf(node, sourceCode) ?? ''))
-}
-
-/**
- * A type alias can't use the polymorphic `this` type (TS2526)
- */
-function usesThisType(declaration: Rule.Node, sourceCode: SourceCode): boolean {
-  const visit = (node: unknown): boolean => {
-    if (!isRecord(node) || typeof node['type'] !== 'string') {
-      return false
-    }
-    if (node['type'] === 'TSThisType') {
-      return true
-    }
-    return (sourceCode.visitorKeys[node['type']] ?? []).some((key) => {
-      const child: unknown = node[key]
-      return Array.isArray(child) ? child.some(visit) : visit(child)
-    })
-  }
-  return visit(Reflect.get(declaration, 'body'))
-}
-
-/**
- * The stock fix replaces the span between the name and the body with ` = `
- */
-function hasHeritageComment(declaration: Rule.Node, sourceCode: SourceCode): boolean {
-  const start = untypedRangeOf(
-    Reflect.get(declaration, 'typeParameters') ?? Reflect.get(declaration, 'id'),
-  )?.[1]
-  const end = untypedRangeOf(Reflect.get(declaration, 'body'))?.[0]
-  return (
-    start === undefined ||
-    end === undefined ||
-    sourceCode
-      .getCommentsInside(declaration)
-      .some(
-        (comment) =>
-          comment.range !== undefined && comment.range[0] >= start && comment.range[1] <= end,
-      )
-  )
-}
-
-/**
- * A fix that writes the name and type parameters drops such a comment
- */
-function hasCommentBeforeName(declaration: Rule.Node, sourceCode: SourceCode): boolean {
-  const end =
-    untypedRangeOf(Reflect.get(declaration, 'typeParameters'))?.[0] ??
-    untypedRangeOf(Reflect.get(declaration, 'id'))?.[1]
-  return (
-    end === undefined ||
-    sourceCode
-      .getCommentsInside(declaration)
-      .some((comment) => comment.range !== undefined && comment.range[1] <= end)
-  )
-}
-
-/**
- * Fixes `interface A<T> extends B<T>, C {}` to `type A<T> = B<T> & C`, where the stock fix writes
- * `{} & B<T> & C`, which `no-empty-object-type` reports. `undefined` with a comment before the type
- * parameters, which the stock fix keeps
- */
-function emptyExtensionFix(node: Rule.Node, sourceCode: SourceCode): Rule.ReportFixer | undefined {
-  const heritage: unknown = Reflect.get(node, 'extends')
-  const types = Array.isArray(heritage)
-    ? heritage.map((type: unknown) => textOf(type, sourceCode))
-    : []
-  const name = interfaceName(node)
-  if (
-    name === undefined ||
-    types.length === 0 ||
-    hasCommentBeforeName(node, sourceCode) ||
-    types.includes(undefined) ||
-    !/^\{\s*\}$/u.test(textOf(Reflect.get(node, 'body'), sourceCode) ?? '')
-  ) {
-    return undefined
-  }
-  const parameters = textOf(Reflect.get(node, 'typeParameters'), sourceCode) ?? ''
-  return (fixer) => fixer.replaceText(node, `type ${name}${parameters} = ${types.join(' & ')}`)
-}
-
-/**
- * Drops `consistent-type-definitions`' report where only an interface can augment, and its fix
- * where a type alias can't safely replace the interface: it merges, is visible to other files,
- * refers to itself, uses `this`, or has a comment among its `extends` clauses
+ * Drops `consistent-type-definitions`' report where only an interface can augment. The rule is
+ * report-only, since a type alias can't replace every interface, as one that refers to itself
  */
 function patchTypeDefinitions(rule: Rule.RuleModule): void {
   patchCreateOnce(
@@ -1053,30 +762,12 @@ function patchTypeDefinitions(rule: Rule.RuleModule): void {
           : withReport(context, (descriptor) => {
               const node: unknown = 'node' in descriptor ? descriptor.node : undefined
               const declaration = isRuleNode(node) ? node.parent : undefined
-              if (declaration?.type !== ('TSInterfaceDeclaration' as string)) {
+              if (
+                declaration?.type !== ('TSInterfaceDeclaration' as string) ||
+                (!isInAmbientModule(declaration) &&
+                  !isGlobalAugmentation(declaration, context.sourceCode, context.filename))
+              ) {
                 context.report(descriptor)
-                return
-              }
-              if (
-                isInAmbientModule(declaration) ||
-                isGlobalAugmentation(declaration, context.sourceCode, context.filename)
-              ) {
-                return
-              }
-              if (
-                mergesWithAnotherDeclaration(declaration, context.sourceCode) ||
-                isVisibleOutsideFile(declaration, context.sourceCode, context.filename) ||
-                refersToItself(declaration, context.sourceCode) ||
-                usesThisType(declaration, context.sourceCode) ||
-                hasHeritageComment(declaration, context.sourceCode)
-              ) {
-                context.report({ ...descriptor, fix: undefined })
-              } else {
-                const fix =
-                  descriptor.fix == null
-                    ? undefined
-                    : emptyExtensionFix(declaration, context.sourceCode)
-                context.report(fix === undefined ? descriptor : { ...descriptor, fix })
               }
             }),
       ),
@@ -1095,9 +786,9 @@ export function hasPatchedFixes(context: Rule.RuleContext): boolean {
 
 /**
  * Patches fixes that leave invalid code or change what the code declares, and returns the config
- * that turns the patches on in every file. `import-x/no-duplicates`' fix can race another rule's
- * without checking that it's on, so with `no-import-type-side-effects` off, such a report never
- * gets a fix
+ * that turns the patches on in every file. `import-x/no-duplicates`' patch doesn't check that
+ * `consistent-type-specifier-style` is on, so with it off, a duplicate of a module imported with an
+ * inline `type` specifier never gets a fix
  */
 export function patchUnsafeFixes(
   configs: ReadonlyArray<Pick<Linter.Config, 'plugins'>>,
@@ -1115,115 +806,6 @@ export function patchUnsafeFixes(
   }
   return [{ name: 'gpahal/fixes/patched', settings: { [PATCHED_FIXES_SETTINGS_KEY]: true } }]
 }
-
-const PREFER_SPREAD_PATCHED = Symbol('@gpahal/eslint-config prefer-spread before map')
-
-export function isRuleNode(value: unknown): value is Rule.Node {
-  return isRecord(value) && typeof value['type'] === 'string' && 'parent' in value
-}
-
-const ARRAY_FROM_MESSAGES: Readonly<Record<string, string>> = {
-  'unicorn/prefer-spread': 'array-from',
-  'e18e/prefer-spread-syntax': 'preferSpreadArrayFrom',
-}
-
-/**
- * From the configs that `patchContradictingReports` last found it in
- */
-const arrayFromMapCompanions = new WeakMap<Rule.RuleModule, Rule.RuleModule>()
-
-/**
- * Type information says `x` has no `[Symbol.iterator]` in any union member, as for an `ArrayLike`,
- * so spreading it throws. `any` and `unknown` count as iterable
- */
-function isNonIterableArrayFrom(node: unknown, services: TypeServices): boolean {
-  const call: unknown = isRuleNode(node) && node.type !== 'CallExpression' ? node.parent : node
-  const [argument] = isNodeOfType(call, 'CallExpression') ? call.arguments : []
-  const tsNode = argument === undefined ? undefined : services.esTreeNodeToTSNodeMap.get(argument)
-  if (tsNode === undefined) {
-    return false
-  }
-  const checker = services.program.getTypeChecker()
-  const type = checker.getTypeAtLocation(tsNode)
-  const types = type.isUnion() ? type.types : [type]
-  return types.some((member) => {
-    const name = checker.typeToString(member)
-    return (
-      name !== 'any' &&
-      name !== 'unknown' &&
-      checker
-        .getApparentType(member)
-        .getProperties()
-        .every((property) => !property.getName().startsWith('__@iterator@'))
-    )
-  })
-}
-
-/**
- * Drops the report of an `Array.from(…).map(…)` that `unicorn/prefer-array-from-map` reports, which
- * suggests `Array.from(s, f)` instead, and with type information of an `Array.from(x)` whose `x`
- * has no iterator, since the spread would throw
- */
-function patchPreferSpread(rule: Rule.RuleModule): void {
-  patchCreateOnce(rule, PREFER_SPREAD_PATCHED, (create) => (context) => {
-    if (!isOnInSettings(context, context.id)) {
-      return create(context)
-    }
-    const arrayFromMap = arrayFromMapCompanions.get(rule)
-    const isMapOn =
-      arrayFromMap !== undefined && isOnInSettings(context, 'unicorn/prefer-array-from-map')
-    const services: unknown = context.sourceCode.parserServices
-    const typeServices = isTypeServices(services) ? services : undefined
-    if (!isMapOn && typeServices === undefined) {
-      return create(context)
-    }
-    const reports: Array<Rule.ReportDescriptor> = []
-    const mappedCalls = new Set<unknown>()
-    const listeners = create(
-      withReport(context, (descriptor) => {
-        reports.push(descriptor)
-      }),
-    )
-    const arrayFromMapListeners = isMapOn
-      ? arrayFromMap.create(
-          withCompanionContext(context, 'unicorn/prefer-array-from-map', (descriptor) => {
-            const node: unknown = 'node' in descriptor ? descriptor.node : undefined
-            const member = isRuleNode(node) ? node.parent : undefined
-            if (member?.type === 'MemberExpression' && member.property === node) {
-              mappedCalls.add(member.object)
-            }
-          }),
-        )
-      : {}
-    return mergeListeners(listeners, arrayFromMapListeners, () => {
-      for (const descriptor of reports) {
-        const node: unknown = 'node' in descriptor ? descriptor.node : undefined
-        const isArrayFrom =
-          'messageId' in descriptor && descriptor.messageId === ARRAY_FROM_MESSAGES[context.id]
-        const isDropped =
-          isArrayFrom &&
-          (mappedCalls.has(node) ||
-            (typeServices !== undefined && isNonIterableArrayFrom(node, typeServices)))
-        if (!isDropped) {
-          context.report(descriptor)
-        }
-      }
-    })
-  })
-}
-
-/**
- * Rules that ask for `re.test(s)` where `prefer-regexp-exec` asks for `re.exec(s)`, in order of
- * preference, with the message of their `s.match(re)` reports, or `undefined` for every report
- */
-const REGEXP_TEST_RULES: ReadonlyArray<{ ruleId: string; messageId: string | undefined }> = [
-  { ruleId: 'unicorn/prefer-regexp-test', messageId: 'string-match' },
-  { ruleId: 'e18e/prefer-regex-test', messageId: undefined },
-]
-
-const regexpTestCompanions = new WeakMap<Rule.RuleModule, ReadonlyMap<string, Rule.RuleModule>>()
-
-const REGEXP_EXEC_PATCHED = Symbol('@gpahal/eslint-config prefer-regexp-exec before regexp-test')
 
 /**
  * Calls `listeners`' first, then `onExit` after both of `Program:exit`
@@ -1249,143 +831,6 @@ export function mergeListeners(
     }
   }
   return merged
-}
-
-function findRegexpTestRule(
-  patched: Rule.RuleModule,
-  context: Rule.RuleContext,
-): { rule: Rule.RuleModule; ruleId: string; messageId: string | undefined } | undefined {
-  const companions = regexpTestCompanions.get(patched)
-  for (const { ruleId, messageId } of REGEXP_TEST_RULES) {
-    const rule = companions?.get(ruleId)
-    if (rule && isOnInSettings(context, ruleId)) {
-      return { rule, ruleId, messageId }
-    }
-  }
-  return undefined
-}
-
-/**
- * Drops `prefer-regexp-exec`'s report on a `s.match(re)` that a `REGEXP_TEST_RULES` rule reports,
- * since following it gets the other's report for `re.test(s)`
- */
-function patchRegexpExec(rule: Rule.RuleModule): void {
-  patchCreateOnce(rule, REGEXP_EXEC_PATCHED, (create) => (context) => {
-    const regexpTest = findRegexpTestRule(rule, context)
-    if (!regexpTest) {
-      return create(context)
-    }
-    const reports: Array<Rule.ReportDescriptor> = []
-    const testedCalls = new Set<unknown>()
-    const listeners = create(
-      withReport(context, (descriptor) => {
-        reports.push(descriptor)
-      }),
-    )
-    const testListeners = regexpTest.rule.create(
-      withCompanionContext(context, regexpTest.ruleId, (descriptor) => {
-        if (
-          regexpTest.messageId === undefined ||
-          ('messageId' in descriptor && descriptor.messageId === regexpTest.messageId)
-        ) {
-          testedCalls.add('node' in descriptor ? descriptor.node : undefined)
-        }
-      }),
-    )
-    return mergeListeners(listeners, testListeners, () => {
-      for (const descriptor of reports) {
-        // The ts rule reports the `match` of `s.match(re)`, whose grandparent is the call
-        const node: unknown = 'node' in descriptor ? descriptor.node : undefined
-        const call: unknown = isRuleNode(node) ? node.parent?.parent : undefined
-        if (!testedCalls.has(call)) {
-          context.report(descriptor)
-        }
-      }
-    })
-  })
-}
-
-const iteratorToArrayCompanions = new WeakMap<Rule.RuleModule, Rule.RuleModule>()
-
-const ARRAY_FROM_MAP_PATCHED = Symbol(
-  '@gpahal/eslint-config prefer-array-from-map after iterator-to-array',
-)
-
-/**
- * Drops `e18e/prefer-array-from-map`'s report on a `[...it].map(fn)` whose `[...it]`
- * `unicorn/prefer-iterator-to-array` reports, since each rule reports the other's advice
- */
-function patchArrayFromMap(rule: Rule.RuleModule): void {
-  patchCreateOnce(rule, ARRAY_FROM_MAP_PATCHED, (create) => (context) => {
-    const iteratorToArray = iteratorToArrayCompanions.get(rule)
-    if (!iteratorToArray || !isOnInSettings(context, 'unicorn/prefer-iterator-to-array')) {
-      return create(context)
-    }
-    const reports: Array<Rule.ReportDescriptor> = []
-    const reportedArrays = new Set<unknown>()
-    const listeners = create(
-      withReport(context, (descriptor) => {
-        reports.push(descriptor)
-      }),
-    )
-    const iteratorListeners = iteratorToArray.create(
-      withCompanionContext(context, 'unicorn/prefer-iterator-to-array', (descriptor) => {
-        reportedArrays.add('node' in descriptor ? descriptor.node : undefined)
-      }),
-    )
-    return mergeListeners(listeners, iteratorListeners, () => {
-      for (const descriptor of reports) {
-        const node: unknown = 'node' in descriptor ? descriptor.node : undefined
-        const array: unknown =
-          isRuleNode(node) &&
-          node.type === 'CallExpression' &&
-          node.callee.type === 'MemberExpression'
-            ? node.callee.object
-            : undefined
-        if (!reportedArrays.has(array)) {
-          context.report(descriptor)
-        }
-      }
-    })
-  })
-}
-
-/**
- * Patches rules whose reports contradict another rule's. Each patched rule runs the companion rules
- * from the same `configs`, so the two always agree. A rule object shared by configs with different
- * companion objects, which is rare, runs the last companions set
- */
-export function patchContradictingReports(
-  configs: ReadonlyArray<Pick<Linter.Config, 'plugins'>>,
-  root: string,
-): void {
-  const [arrayFromMap] = findPatchTargets('unicorn/prefer-array-from-map', configs, root)
-  for (const ruleId of Object.keys(ARRAY_FROM_MESSAGES)) {
-    for (const rule of findPatchTargets(ruleId, configs, root)) {
-      if (arrayFromMap) {
-        arrayFromMapCompanions.set(rule, arrayFromMap)
-      }
-      patchPreferSpread(rule)
-    }
-  }
-  const regexpTests = new Map<string, Rule.RuleModule>()
-  for (const { ruleId } of REGEXP_TEST_RULES) {
-    const [regexpTest] = findPatchTargets(ruleId, configs, root)
-    if (regexpTest) {
-      regexpTests.set(ruleId, regexpTest)
-    }
-  }
-  for (const rule of findPatchTargets('@typescript-eslint/prefer-regexp-exec', configs, root)) {
-    regexpTestCompanions.set(rule, regexpTests)
-    patchRegexpExec(rule)
-  }
-  const [iteratorToArray] = findPatchTargets('unicorn/prefer-iterator-to-array', configs, root)
-  for (const rule of findPatchTargets('e18e/prefer-array-from-map', configs, root)) {
-    if (iteratorToArray) {
-      iteratorToArrayCompanions.set(rule, iteratorToArray)
-    }
-    patchArrayFromMap(rule)
-  }
 }
 
 function reportOnlySettings(

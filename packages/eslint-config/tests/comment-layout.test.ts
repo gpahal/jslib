@@ -190,7 +190,24 @@ tester.run('comment-layout', GPAHAL_PLUGIN.rules['comment-layout'], {
       code('type U = Array<', "  | 'a'", '  // Note.', "  | 'b'", '>'),
       // Only ESLint's suppressing and environment directives are ambiguous in a multi-line block
       code('/**', ' * eslint config for the repo', ' */', 'export const a = 1'),
+      // TypeScript reads a doc block before a later declarator, on its own line or after code
+      code('export const a = 1,', '  /**', '   * Doc b.', '   */', '  b = 2'),
+      code('const a = 1,', '  /**', '   * Doc b.', '   */', '  b = 2'),
+      code('export const a = 1, /** Doc b. */ b = 2'),
+      // Commented-out members in code without semicolons
+      code('type U =', "  | 'a'", "  // | 'b'", "  | 'c'"),
+      code('type T = {', '  a: string', '  // b: number', '  c: string', '}'),
+      code('class C {', '  a = 1', '  // private b = 2', '  c = 3', '}'),
+      code('class C {', '  // async load(id: string): Promise<void>', '  c = 3', '}'),
+      code('enum E {', '  A,', '  // B,', '  C,', '}'),
+      code('interface I {', '  a: string', '  // b?: number', '  c: string', '}'),
     ].map((source) => ({ code: source, filename: 'x.ts' })),
+    // The opening `---` of an Astro file's frontmatter starts the file, so a block after it is the
+    // module header
+    {
+      code: code('---', '/**', ' * Header.', ' */', "import X from './x'", '---', '<X />'),
+      ...astroOptions,
+    },
   ],
   invalid: [
     // A prose `//` comment above a declaration or member may label a section, so only a
@@ -236,6 +253,47 @@ tester.run('comment-layout', GPAHAL_PLUGIN.rules['comment-layout'], {
         ['// x', 'export const a = 1', ''].join(eol),
         ['/**', ' * x', ' */', 'export const a = 1', ''].join(eol),
       ]),
+      // Prose with a colon isn't a commented-out member
+      ...[
+        'Note: x',
+        'Example: z',
+        'Options:',
+        'The cases are as follows:',
+        'note: keeps the order',
+        'public API: the exports',
+        'parse(): returns the tree',
+        'x = 0 means none',
+        'see: https://example.com/spec',
+      ].map((note) => [
+        code('interface I {', `  // ${note}`, '  a: string', '}'),
+        code('interface I {', '  /**', `   * ${note}`, '   */', '  a: string', '}'),
+      ]),
+      [
+        code(
+          '// Parses the header',
+          '// see: https://example.com/spec',
+          'export function parse() {}',
+        ),
+        code(
+          '/**',
+          ' * Parses the header',
+          ' * see: https://example.com/spec',
+          ' */',
+          'export function parse() {}',
+        ),
+      ],
+      [
+        code('interface I {', '  // See', '  // https://example.com', '  a: string', '}'),
+        code(
+          'interface I {',
+          '  /**',
+          '   * See',
+          '   * https://example.com',
+          '   */',
+          '  a: string',
+          '}',
+        ),
+      ],
     ].map(([source = '', output = '']) => toDoc(source, output)),
     toDoc(
       code('---', '// Doc.', 'const a = 1', '---', '', '<p>{a}</p>'),
@@ -441,6 +499,12 @@ tester.run('comment-layout', GPAHAL_PLUGIN.rules['comment-layout'], {
         code('type T = {', '  /**', '   * One.', '   *', '   * Two.', '   */', '  a: 1', '}'),
         'layout',
       ],
+      // A doc block before a later declarator stays one
+      [
+        code('export const a = 1,', '  /** doc b */', '  b = 2', ''),
+        code('export const a = 1,', '  /**', '   * doc b', '   */', '  b = 2', ''),
+        'layout',
+      ],
     ].map(([source = '', output = '', messageId = '']) => fixes(source, output, messageId)),
     {
       ...fixes(
@@ -468,6 +532,19 @@ tester.run('comment-layout', GPAHAL_PLUGIN.rules['comment-layout'], {
       ],
       [code('const x = <div>{/** */}</div>'), code('const x = <div>{/* */}</div>')],
       [code('const x = <div>{/** Note. */}</div>'), code('const x = <div>{/* Note. */}</div>')],
+      // A block on its own line inside an expression container
+      [
+        code('const x = <div title={', '    /** a', '     * b */', '    String(p.x)', '  } />'),
+        code(
+          'const x = <div title={',
+          '    /*',
+          '     * a',
+          '     * b',
+          '     */',
+          '    String(p.x)',
+          '  } />',
+        ),
+      ],
     ].map(([source = '', output = '']) =>
       fixes(source, output, 'jsxLayout', { filename: 'x.tsx' }),
     ),

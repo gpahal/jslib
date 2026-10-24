@@ -3,11 +3,15 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { resolve } from 'import-meta-resolve'
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 import { runNodeOk, withTmpProject } from '@gpahal/internal/node/testing'
 
-import { defineConfig, type StylelintExtendedConfig, type StylelintRules } from '@/index'
+import { defineConfig } from '@/index'
+import type { StylelintExtendedConfig } from '@/index'
+
+import { warningsOf } from './helpers'
 
 /**
  * The package's folder, which holds a `package.json`, as `root` requires
@@ -22,16 +26,6 @@ const syntax = (name: string) => ({ syntax: { atRules: { [name]: { prelude: '<id
 async function rulesAt(config: Config, file: string, code = 'a {\n  color: red;\n}\n') {
   const { results } = await stylelint.lint({ code, config, codeFilename: file })
   return results.flatMap((result) => result.warnings.map((warning) => warning.rule))
-}
-
-/**
- * The rule and severity of each warning that `config` reports on `code` in `file`
- */
-async function warningsOf(config: Config, file: string, code: string): Promise<Array<string>> {
-  const { results } = await stylelint.lint({ code, codeFilename: file, config })
-  return results.flatMap((result) =>
-    result.warnings.map((warning) => `${warning.rule}: ${warning.severity}`),
-  )
 }
 
 test('resolves references, ignores and overrides from a root with glob characters', async () => {
@@ -541,68 +535,6 @@ describe('resolves extended package configs as native Stylelint does', () => {
   })
 })
 
-describe('extends beat the preset, and your rules merge over them', () => {
-  it('merges your secondary options over the setting of an extended config', async () => {
-    await using project = await withTmpProject('stylelint-config-extends-precedence', {
-      'team.mjs': `export default { rules: {
-        'color-named': 'never',
-        'selector-pseudo-class-no-unknown': [true, { ignorePseudoClasses: ['export'] }],
-      } }`,
-    })
-    const rules: StylelintRules = {
-      'color-named': [undefined, { severity: 'warning' }],
-      'selector-pseudo-class-no-unknown': [undefined, { ignorePseudoClasses: ['deep'] }],
-    }
-    const file = path.join(project.dir, 'x.css')
-    for (const config of [
-      await defineConfig({ root: project.dir, extends: ['./team.mjs'], rules }),
-      await defineConfig({
-        root: project.dir,
-        overrides: [{ files: ['*.css'], extends: ['./team.mjs'], rules }],
-      }),
-    ]) {
-      const resolved = await stylelint.resolveConfig(file, { config })
-      expect(resolved?.rules?.['color-named']).toEqual(['never', { severity: 'warning' }])
-      expect(resolved?.rules?.['selector-pseudo-class-no-unknown']).toEqual([
-        true,
-        { ignorePseudoClasses: ['export', 'deep'] },
-      ])
-      expect(await warningsOf(config, file, 'a {\n  color: red;\n}\n')).toEqual([
-        'color-named: warning',
-      ])
-    }
-  })
-
-  it('gives the own rule that replaces a stock rule the extended setting of the stock rule', async () => {
-    await using project = await withTmpProject('stylelint-config-extends-own-rules', {
-      'team.mjs': "export default { rules: { 'declaration-empty-line-before': 'never' } }",
-    })
-    const config = await defineConfig({
-      root: project.dir,
-      tailwindcss: true,
-      extends: ['./team.mjs'],
-    })
-    const resolved = await stylelint.resolveConfig(path.join(project.dir, 'x.css'), { config })
-    expect(resolved?.rules?.['declaration-empty-line-before']).toBeNull()
-    expect(resolved?.rules?.['@gpahal/declaration-empty-line-before']).toEqual(['never'])
-  })
-
-  it('throws on a setting that keeps the primary option of a rule no config sets', async () => {
-    await expect(
-      defineConfig({
-        root: PACKAGE_ROOT,
-        overrides: [
-          { files: 'legacy/**', rules: { 'color-named': [undefined, { severity: 'warning' }] } },
-        ],
-      }),
-    ).rejects.toThrow(
-      new TypeError(
-        "@gpahal/stylelint-config: `overrides[0].rules.color-named`: keeps the primary option of a setting that no config sets, so Stylelint would turn the rule off. Set the primary option, as in ['always', { … }]",
-      ),
-    )
-  })
-})
-
 describe('the reference rules follow the precedence of the preset settings', () => {
   const missing = 'a {\n  color: var(--missing);\n}\n'
 
@@ -738,5 +670,60 @@ describe("skips the base configs the preset builds on when they're reached throu
       const resolved = await stylelint.resolveConfig(file, { config })
       expect(resolved?.rules?.['order/properties-order']).toEqual([['color', 'display']])
     }
+  })
+})
+
+describe("skips the preset's settings of an extended defineConfig-built config", () => {
+  it.each([
+    ['a config object', true],
+    ['a config file', false],
+  ])('keeps your Tailwind settings, with the extended config as %s', async (_name, isObject) => {
+    const defineShared = (options: string) =>
+      `import { defineConfig } from '@gpahal/stylelint-config'\nexport default defineConfig({ root: import.meta.dirname${options} })\n`
+    await using project = await projectWithBases({
+      'shared.mjs': defineShared(''),
+      'team.mjs': defineShared(", rules: { 'hue-degree-notation': 'angle' } "),
+    })
+    await fs.mkdir(path.join(project.dir, 'node_modules/@gpahal'))
+    await fs.symlink(PACKAGE_ROOT, path.join(project.dir, 'node_modules/@gpahal/stylelint-config'))
+    const shared = isObject ? await defineConfig({ root: project.dir }) : './shared.mjs'
+    for (const file of ['x.css', 'x.md']) {
+      const at = path.join(project.dir, file)
+      const plain = await resolvedRules({ root: project.dir, tailwindcss: true }, at)
+      // The static preset too, whose build the outer config doesn't share in this test
+      for (const extended of [shared, '@gpahal/stylelint-config']) {
+        expect(
+          await resolvedRules({ root: project.dir, extends: [extended], tailwindcss: true }, at),
+        ).toEqual(plain)
+      }
+    }
+    // A rule that the extended config sets itself still beats the preset's
+    const config = await defineConfig({
+      root: project.dir,
+      extends: ['./team.mjs'],
+      tailwindcss: true,
+    })
+    const resolved = await stylelint.resolveConfig(path.join(project.dir, 'x.css'), { config })
+    expect(resolved?.rules?.['hue-degree-notation']).toEqual(['angle'])
+  })
+
+  it('keeps your reference rules over the preset reference settings that its override references add', async () => {
+    await using project = await withTmpProject('stylelint-config-extends-preset-reference', {
+      'package.json': '{}',
+      'theme.css': ':root { --brand: red; }',
+    })
+    const extended = await defineConfig({
+      root: project.dir,
+      extends: [{ overrides: [{ files: ['src/b/**'], referenceFiles: ['theme.css'] }] }],
+    })
+    const config = await defineConfig({
+      root: project.dir,
+      referenceFiles: ['theme.css'],
+      extends: [extended],
+    })
+    const resolved = await stylelint.resolveConfig(path.join(project.dir, 'src/a.css'), {
+      config,
+    })
+    expect(resolved?.rules?.['no-unknown-custom-properties']).toEqual([true])
   })
 })

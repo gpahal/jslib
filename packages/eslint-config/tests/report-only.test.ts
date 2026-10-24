@@ -1,13 +1,21 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import type { ESLint, Linter } from 'eslint'
+
 import { writeFiles } from '@gpahal/internal/node/testing'
 
 import { defineConfig } from '@/index'
 import { REPORT_ONLY_RULES, UNTYPED_REPORT_ONLY_RULES } from '@/internal/fix-policy'
 
-import { fixFiles, reportFiles, withRulesOnly } from './fix-helpers'
-import { collator, CORE_AREAS_OFF, withProject } from './helpers'
+import {
+  collator,
+  CORE_AREAS_OFF,
+  createFocusedESLint,
+  focusedESLintWith,
+  ruleIdOf,
+  withProject,
+} from './helpers'
 
 // The report-only configs drop a report-only rule's fix and keep its report. Which rules are
 // report-only, and why, is in `src/internal/fix-policy.ts`
@@ -49,6 +57,31 @@ function listedRules(readme: string, summary: string): Array<string> {
     .toArray()
 }
 
+/**
+ * Each of `files`' output after `--fix`, `undefined` when the fix leaves it, the rules left
+ * reporting in it, and the rules among them that offer a fix, by its path relative to `dir`
+ */
+async function fixResults(
+  eslint: ESLint,
+  dir: string,
+  files: ReadonlyArray<string>,
+): Promise<
+  Record<string, { output: string | undefined; rules: Array<string>; fixing: Array<string> }>
+> {
+  const results = await eslint.lintFiles([...files])
+  const rulesOf = (messages: ReadonlyArray<Linter.LintMessage>) => messages.map(ruleIdOf)
+  return Object.fromEntries(
+    results.map((result) => [
+      path.relative(dir, result.filePath).split(path.sep).join('/'),
+      {
+        output: result.output,
+        rules: rulesOf(result.messages),
+        fixing: rulesOf(result.messages.filter((message) => message.fix !== undefined)),
+      },
+    ]),
+  )
+}
+
 describe('report-only fixes', () => {
   let dir: string
   let dispose: () => Promise<void>
@@ -76,28 +109,25 @@ describe('report-only fixes', () => {
   // them, the untyped case and the typed ones fix
   it('reports each case without fixing it, and fixes it without the report-only configs', async () => {
     const files = Object.keys(CASES)
-    const ruleIds = Object.values(CASES).map(({ rule }) => rule)
-    const options = { root: dir, isInEditor: false, gitignore: false, ...CORE_AREAS_OFF }
-    const reported = await reportFiles({
-      dir,
-      configs: withRulesOnly(await defineConfig(options), new Set(ruleIds)),
-      files,
-      ruleIds,
-    })
+    const ruleIds = new Set(Object.values(CASES).map(({ rule }) => rule))
+    const options = { gitignore: false, ...CORE_AREAS_OFF }
+    const reported = await fixResults(await createFocusedESLint(dir, ruleIds, options), dir, files)
     expect(reported).toEqual(
       Object.fromEntries(
-        Object.entries(CASES).map(([file, { rule }]) => [file, { rules: [rule], fixing: [] }]),
+        Object.entries(CASES).map(([file, { rule }]) => [
+          file,
+          { output: undefined, rules: [rule], fixing: [] },
+        ]),
       ),
     )
-    const configs = await defineConfig(options)
+    const configs = await defineConfig({ root: dir, isInEditor: false, ...options })
       .remove('gpahal/fixes/report-only')
       .remove('gpahal/fixes/report-only-untyped')
-    const fixed = await fixFiles({
+    const fixed = await fixResults(
+      focusedESLintWith(dir, configs, ruleIds, { fix: true }),
       dir,
-      configs: withRulesOnly(configs, new Set(ruleIds)),
       files,
-      ruleIds,
-    })
+    )
     expect(files.filter((file) => fixed[file]?.output === undefined)).toEqual([])
     expect(files.flatMap((file) => fixed[file]?.rules ?? [])).toEqual([])
   })
@@ -116,11 +146,13 @@ describe('report-only fixes', () => {
       files: ['src/fix-safety/lib/**/*.ts'],
     })
     const rules = ['@typescript-eslint/method-signature-style']
-    expect(await fixFiles({ dir, configs, files: Object.keys(files), ruleIds: rules })).toEqual({
-      'src/fix-safety/lib/server.ts': { output: undefined, rules },
+    const fixer = focusedESLintWith(dir, configs, new Set(rules), { fix: true })
+    expect(await fixResults(fixer, dir, Object.keys(files))).toEqual({
+      'src/fix-safety/lib/server.ts': { output: undefined, rules, fixing: [] },
       'src/fix-safety/app/server.ts': {
         output: 'export interface Server {\n  close: (callback: () => void) => void\n}\n',
         rules: [],
+        fixing: [],
       },
     })
   })

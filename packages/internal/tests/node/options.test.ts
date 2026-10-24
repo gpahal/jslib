@@ -9,10 +9,8 @@ import {
   required,
   resolveListOption,
   resolveSubOptions,
-  type ListOption,
-  type ListTransform,
-  type OptionsShape,
 } from '@/node/options'
+import type { ListOption, ListTransform, OptionsShape } from '@/node/options'
 import { assertValid, plainObject } from '@/node/zod'
 
 import { CONTEXT, getMessage } from './helpers'

@@ -1,4 +1,5 @@
 import { canMatchFile, canMatchOtherFile } from '@/internal/glob-match'
+import { rebaseGlob } from '@/internal/globs'
 
 const SUBJECTS = ['`files`']
 
@@ -22,6 +23,9 @@ test.each<[string, string, boolean]>([
   ['**/!(test).ts', 'json', false],
   ['**/!(test).ts', 'yaml', false],
   ['**/!(test).ts', 'md', false],
+  // A segment's leading `!(` starts an extglob, not a negation
+  ['tests/!(fixtures)', 'ts', true],
+  ['tests/!(fixtures).json', 'ts', false],
   ['**/*.{mts,cts}', 'mts', true],
   ['**/*.{mts,cts}', 'cts', true],
   ['**/*.{mts,cts}', 'json', false],
@@ -52,4 +56,11 @@ test.each([
   ['**/*[.]json', true],
 ])('tells whether %s can match a file other than JSON, YAML or Markdown: %s', (glob, expected) => {
   expect(canMatchOtherFile(SUBJECTS, glob, ['json', 'yaml', 'md'])).toBe(expected)
+})
+
+test.each<[string, string, Array<string>]>([
+  ['a/!(legacy)/**', 'a/legacy', []],
+  ['a/!(legacy)/**', 'a/src', ['**']],
+])('rebases %s down to %s as %j', (glob, folder, expected) => {
+  expect(rebaseGlob(glob, '/r', `/r/${folder}`)).toEqual(expected)
 })

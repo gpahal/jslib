@@ -5,13 +5,8 @@ import type { ESLint, Linter } from 'eslint'
 import tseslint from 'typescript-eslint'
 import * as z from 'zod/mini'
 
-import {
-  defineConfig,
-  untyped,
-  withoutFormattingRules,
-  type Composer,
-  type TypedConfig,
-} from '@/index'
+import { defineConfig, untyped, withoutFormattingRules } from '@/index'
+import type { Composer, TypedConfig } from '@/index'
 import type { AreaKeyChecks } from '@/internal/areas'
 
 const root = import.meta.dirname

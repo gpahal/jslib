@@ -1,11 +1,14 @@
+import { createHash } from 'node:crypto'
 import path from 'node:path'
 
-import { ESLint, type Linter } from 'eslint'
+import { ESLint } from 'eslint'
+import type { Linter } from 'eslint'
 import ts from 'typescript'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 import { resolveOptions } from '@/internal/resolve'
 
 export const FIXTURES_DIR = path.join(import.meta.dirname, 'fixtures')
@@ -128,6 +131,68 @@ export async function createESLint(
   )
 }
 
+/**
+ * The rules a test reads, by name or by a test of the name
+ */
+type RuleSelection = ReadonlySet<string> | ((ruleId: string) => boolean)
+
+function isSelected(rules: RuleSelection, ruleId: string): boolean {
+  return typeof rules === 'function' ? rules(ruleId) : rules.has(ruleId)
+}
+
+/**
+ * `configs` with only the entries of `rules` in their `rules`. The severity and options of a rule
+ * don't depend on the others' entries, and resolving a file's config merges and validates each
+ * entry, which takes several times as long with every rule
+ */
+export function withRulesOnly(
+  configs: ReadonlyArray<Linter.Config>,
+  rules: RuleSelection,
+): Array<Linter.Config> {
+  return configs.map((config) =>
+    config.rules === undefined
+      ? config
+      : {
+          ...config,
+          rules: Object.fromEntries(
+            Object.entries(config.rules).filter(([ruleId]) => isSelected(rules, ruleId)),
+          ),
+        },
+  )
+}
+
+/**
+ * ESLint run from `cwd` with `configs` as `eslintWith` takes them, with only `rules` in the configs
+ * and running. For a test that reads only those rules' reports and entries: a twin that
+ * `DUPLICATE_REPORTS` drops where its kept rule reports needs that rule selected too
+ */
+export function focusedESLintWith(
+  cwd: string,
+  configs: ReadonlyArray<Linter.Config>,
+  rules: RuleSelection,
+  options: ESLint.Options = {},
+): ESLint {
+  return eslintWith(cwd, withRulesOnly(configs, rules), {
+    ruleFilter: ({ ruleId }) => isSelected(rules, ruleId),
+    ...options,
+  })
+}
+
+/**
+ * ESLint as `createESLint` makes it, focused on `rules` as `focusedESLintWith` is
+ */
+export async function createFocusedESLint(
+  dir: string,
+  rules: RuleSelection,
+  options: ConfigOptions = {},
+  eslintOptions: ESLint.Options = {},
+): Promise<ESLint> {
+  const cwd = path.resolve(FIXTURES_DIR, dir)
+  const { extraConfigs = [], root = cwd, ...configOptions } = options
+  const configs = await defineConfig({ root, isInEditor: false, ...configOptions })
+  return focusedESLintWith(cwd, [...configs, ...extraConfigs], rules, eslintOptions)
+}
+
 const SHARED_ESLINTS = new Map<string, Promise<ESLint>>()
 
 /**
@@ -168,27 +233,133 @@ export function eslintWith(
 }
 
 /**
- * ESLint with every preset and option on, run from the fixtures
+ * Every preset and option on, for the fixtures
  */
-export async function createAllPresetsESLint(): Promise<ESLint> {
-  return createESLint(FIXTURES_DIR, {
-    typescript: { library: true },
-    browser: { files: ['browser/**'] },
-    server: { files: ['server/**'] },
-    antislop: true,
-    pnpm: true,
-    markdown: true,
-    react: true,
-    nextjs: true,
-    astro: true,
-    html: true,
-    node: { typeStripping: true },
-    turbo: true,
-    vitest: true,
-    playwright: true,
-    storybook: true,
-    tailwindcss: { entryPoint: 'tailwindcss/src/styles.css' },
+export const ALL_PRESETS_OPTIONS: Partial<EslintConfigOptions> = {
+  typescript: { library: true },
+  browser: { files: ['browser/**'] },
+  server: { files: ['server/**'] },
+  antislop: true,
+  pnpm: true,
+  markdown: true,
+  react: true,
+  nextjs: true,
+  astro: true,
+  html: true,
+  node: { typeStripping: true },
+  turbo: true,
+  vitest: true,
+  playwright: true,
+  storybook: true,
+  tailwindcss: { entryPoint: 'tailwindcss/src/styles.css' },
+}
+
+/**
+ * ESLint with `ALL_PRESETS_OPTIONS`, run from the fixtures, with `overrides` replacing those
+ * options
+ */
+export async function createAllPresetsESLint(overrides: ConfigOptions = {}): Promise<ESLint> {
+  return createESLint(FIXTURES_DIR, { ...ALL_PRESETS_OPTIONS, ...overrides })
+}
+
+/**
+ * Each file of `FILES`' config with every preset on, resolved once per worker for the tests that
+ * read it
+ */
+const allPresetsConfigs: { promise?: Promise<Map<string, Linter.Config | undefined>> } = {}
+
+export async function getAllPresetsConfigs(): Promise<Map<string, Linter.Config | undefined>> {
+  allPresetsConfigs.promise ??= (async () => {
+    const eslint = await createAllPresetsESLint()
+    const configs = new Map<string, Linter.Config | undefined>()
+    for (const file of FILES) {
+      configs.set(
+        file,
+        (await eslint.calculateConfigForFile(path.join(FIXTURES_DIR, file))) as
+          Linter.Config | undefined,
+      )
+    }
+    return configs
+  })()
+  return allPresetsConfigs.promise
+}
+
+/**
+ * Lists longer than this are snapshotted as a count and a hash: the browser globals from the
+ * `globals` package, over a thousand, would otherwise make up most of the snapshot
+ */
+const MAX_LISTED_ITEMS = 100
+
+/**
+ * `<N items, sha256 …>` for a list over {@link MAX_LISTED_ITEMS}, else `list`
+ */
+function abbreviated(list: Array<unknown>): unknown {
+  return list.length > MAX_LISTED_ITEMS
+    ? `<${String(list.length)} items, sha256 ${createHash('sha256')
+        .update(JSON.stringify(list, plain))
+        .digest('hex')
+        .slice(0, 12)}>`
+    : list
+}
+
+/**
+ * Regexes and functions, which JSON can't show, as text, and paths under the fixtures folder
+ * starting with `<fixtures>`, so the snapshot doesn't depend on where the repository is
+ */
+function plain(_key: string, value: unknown): unknown {
+  return typeof value === 'function' || value instanceof RegExp
+    ? String(value)
+    : typeof value === 'string'
+      ? value.replaceAll(FIXTURES_DIR, '<fixtures>')
+      : value
+}
+
+/**
+ * Each rule that is on, with its severity and options on one line
+ */
+export function inventoryOf(config: Linter.Config | undefined): Map<string, string> {
+  const entries = Object.entries(config?.rules ?? {}).flatMap(([rule, entry]) => {
+    const severity = severityOf(entry)
+    if (severity === undefined || severity === 0) {
+      return []
+    }
+    const options: Array<unknown> = Array.isArray(entry) ? entry.slice(1) : []
+    // Some rules take each list item as an option of its own
+    const shown = options.length > MAX_LISTED_ITEMS ? [abbreviated(options)] : options
+    const formatted = JSON.stringify([severity, ...shown], (key, value: unknown) =>
+      key !== '' && Array.isArray(value) ? abbreviated(value) : plain(key, value),
+    )
+    return [[rule, formatted] as const]
   })
+  return new Map(entries.toSorted(([a], [b]) => collator.compare(a, b)))
+}
+
+export function listOf(inventory: Map<string, string>): Array<string> {
+  return Array.from(inventory, ([rule, entry]) => `${rule}: ${entry}`)
+}
+
+/**
+ * The rules of `inventory` that differ from `reference`: `+ rule: entry` for one only `inventory`
+ * has on, `- rule` for one only `reference` has on, and `~ rule: entry` for one with another entry
+ */
+export function diffOf(
+  reference: Map<string, string>,
+  inventory: Map<string, string>,
+): Array<string> {
+  const lines: Array<string> = []
+  const rules = new Set([...reference.keys(), ...inventory.keys()])
+  for (const rule of rules) {
+    const before = reference.get(rule)
+    const after = inventory.get(rule)
+    if (after === undefined) {
+      lines.push(`- ${rule}`)
+    } else if (before === undefined) {
+      lines.push(`+ ${rule}: ${after}`)
+    } else if (before !== after) {
+      lines.push(`~ ${rule}: ${after}`)
+    }
+  }
+  return lines.toSorted((a, b) => collator.compare(a.slice(2), b.slice(2)))
 }
 
 /**
@@ -264,49 +435,31 @@ export async function lintRuleIds(
 }
 
 /**
- * The parsed files other than the checked one, such as TypeScript's libs, which every call of
- * `typeErrors` would parse again
+ * The diagnostics of type-checking `dir`'s TypeScript files with its `tsconfig.json`, so a fix that
+ * leaves invalid TypeScript fails, as in `TS1234 src/file.ts: message`
  */
-const TYPE_SOURCE_FILES = new Map<string, ts.SourceFile>()
-
-/**
- * The TypeScript errors in `code` type-checked in memory as `filePath` with `options`, as
- * `TS<code>: <message>`. `filePath` needn't exist. Declaration files aren't checked, which takes
- * most of the time and finds nothing in the code under test
- */
-export function typeErrors(
-  filePath: string,
-  code: string,
-  compilerOptions: ts.CompilerOptions,
-): Array<string> {
-  const options = { ...compilerOptions, skipLibCheck: true }
-  const host = ts.createCompilerHost(options)
-  const readFile = host.readFile.bind(host)
-  const fileExists = host.fileExists.bind(host)
-  const getSourceFile = host.getSourceFile.bind(host)
-  host.readFile = (name) => (path.resolve(name) === filePath ? code : readFile(name))
-  host.fileExists = (name) => path.resolve(name) === filePath || fileExists(name)
-  host.getSourceFile = (name, languageVersion, ...rest) => {
-    if (path.resolve(name) === filePath) {
-      return getSourceFile(name, languageVersion, ...rest)
-    }
-    const key = `${JSON.stringify(languageVersion)}:${path.resolve(name)}`
-    let sourceFile = TYPE_SOURCE_FILES.get(key)
-    if (sourceFile === undefined) {
-      sourceFile = getSourceFile(name, languageVersion, ...rest)
-      if (sourceFile !== undefined) {
-        TYPE_SOURCE_FILES.set(key, sourceFile)
-      }
-    }
-    return sourceFile
+export function typeCheck(dir: string): Array<string> {
+  const read = ts.readConfigFile(path.join(dir, 'tsconfig.json'), (file) => ts.sys.readFile(file))
+  if (read.error !== undefined) {
+    throw new Error(ts.flattenDiagnosticMessageText(read.error.messageText, '\n'))
   }
-  const program = ts.createProgram({ rootNames: [filePath], options, host })
-  return ts
-    .getPreEmitDiagnostics(program)
-    .map(
-      (diagnostic) =>
-        `TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')}`,
+  const config: unknown = read.config
+  const { options, fileNames, errors } = ts.parseJsonConfigFileContent(config, ts.sys, dir)
+  if (errors.length > 0) {
+    throw new Error(
+      errors.map((e) => ts.flattenDiagnosticMessageText(e.messageText, '\n')).join('\n'),
     )
+  }
+  const program = ts.createProgram({
+    rootNames: fileNames.filter((file) => /\.[cm]?tsx?$/u.test(file)),
+    // TypeScript's own libs can't hold an error that a fix made, and checking them takes most of
+    // the time
+    options: { ...options, noEmit: true, skipDefaultLibCheck: true },
+  })
+  return [...program.getSyntacticDiagnostics(), ...program.getSemanticDiagnostics()].map(
+    (diagnostic) =>
+      `TS${String(diagnostic.code)} ${diagnostic.file === undefined ? '' : path.relative(dir, diagnostic.file.fileName)}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')}`,
+  )
 }
 
 /**

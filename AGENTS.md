@@ -33,12 +33,13 @@ Run commands from the repository root. Read [README.md](README.md) for setup, pa
 
 - Keep comments for contracts, constraints and rationale. Use `/**` for declaration and member comments, `//` elsewhere. An `eslint-disable` needs a reason after `--`.
 - Describe current behavior. Keep Markdown paragraphs unwrapped and add a linked table of contents to READMEs over about 100 lines.
-- The root README's [setup recipes](README.md#setup-recipes) run in stylelint-config's `tests/setup-recipes.test.ts`, which writes each block under its first-line file-name comment into a pnpm-style project, runs the fixers, then the check with Stylelint at `--max-warnings 0`. It runs as the package's `test-recipes` task, which `pnpm check` runs and `pnpm test` leaves out; run it alone with `pnpm turbo run test-recipes`. Keep that comment on every recipe file block.
+- The root README's [setup recipes](README.md#setup-recipes) run in `tests/setup-recipes.test.ts` of the private [`packages/recipes`](packages/recipes/README.md), which writes each block under its first-line file-name comment into a pnpm-style project, runs the fixers, then the check with Stylelint at `--max-warnings 0`. It runs as that package's `test-recipes` task, which `pnpm check` runs and `pnpm test` leaves out; run it alone with `pnpm turbo run test-recipes`. Keep that comment on every recipe file block.
 - Each std module needs an input contract in its header. Its README examples run through [readme.test.ts](packages/std/tests/readme.test.ts); use the supported literal/error result comments. JSDoc examples must be self-contained and compile against the public declarations.
 - Tests must pass under the CPU contention of `pnpm check`. Don't give a test or hook its own timeout; the root `vitest.config.ts` limit only stops hangs, and the `test-recipes` task's script raises it for the recipes' child processes. Assert on CPU time with `minCpuMs`, never on wall-clock time. Wait on an event rather than a fixed delay, unless the code gives none.
 - A child process that doesn't test a core area's rules or loading turns them off with `CORE_AREAS_OFF` from eslint-config's `tests/helpers.ts`, which loads the config about four times as fast.
-- eslint-config's test files share modules within a worker, as its `vitest.config.ts` sets up. Add a file that uses `vi.mock`, sets typescript-eslint's project service options in-process, or expects a once-per-process warning to the isolated files there.
-- An upstream workaround needs a canary that fails when the bug is fixed and names what to remove, like the existing `tests/upstream*.canary.test.ts` and `tests/markdown-forks.canary.test.ts`. Canaries live in `tests/**/*.canary.test.ts` and run in the `test-canaries` task, which `pnpm check` runs and `pnpm test` leaves out; run them alone with `pnpm turbo run test-canaries`.
+- The test files of eslint-config and stylelint-config share modules within a worker, as `withSharedModules` in their `vitest.config.ts` sets up. Add a file that uses `vi.mock`, sets typescript-eslint's project service options in-process, or expects a once-per-process warning to the isolated files there.
+- eslint-config's `vitest.config.ts` stops its tests printing the `GPAHAL_*` warnings with `--disable-warning` flags, read from `WARNING_CODES` in `src/internal/utils.ts`; keep that list a literal of quoted codes.
+- An upstream workaround needs a canary that fails when the bug is fixed and names what to remove, like the existing `tests/upstream*.canary.test.ts` and `tests/markdown-forks.canary.test.ts`. Canaries live in `tests/**/*.canary.test.ts`, the root Vitest config's `canaries` project, which a package's `test-canaries` script selects and its `test` script, selecting `tests*`, leaves out. Only CI runs them, in its `test-canaries` job; run them with `pnpm turbo run test-canaries`. `packages/recipes`' `tests/test-selection.test.ts` checks the scripts select them so.
 
 ## Config packages
 
@@ -54,7 +55,7 @@ After changing Stylelint rules, run `pnpm --filter @gpahal/stylelint-config test
 
 ## New packages
 
-Copy a similar package's manifest, scripts and tsconfigs; test scripts pass `--config ../../vitest.config.ts`. Run `ln -s ../../LICENSE LICENSE` in the package. Add it to `workspaces` in [knip.jsonc][], and to `browser.files` in [eslint.config.mjs][] when it's browser-safe. Add a README with installation and usage, linked from the root README.
+Copy a similar package's manifest, scripts and tsconfigs; test scripts pass `--config ../../vitest.config.ts`, then `--project 'tests*'` for `test` and `--project canaries` for `test-canaries`, which only a package with canaries has. Run `ln -s ../../LICENSE LICENSE` in the package. Add it to `workspaces` in [knip.jsonc][], and to `browser.files` in [eslint.config.mjs][] when it's browser-safe. Add a README with installation and usage, linked from the root README.
 
 [eslint.config.mjs]: eslint.config.mjs
 [knip.jsonc]: knip.jsonc

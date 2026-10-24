@@ -2,7 +2,8 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { ESLint, type Linter } from 'eslint'
+import { ESLint } from 'eslint'
+import type { Linter } from 'eslint'
 
 import { withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 

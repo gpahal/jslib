@@ -1,4 +1,5 @@
-import markdownPlugin, { type MarkdownRuleDefinition } from '@eslint/markdown'
+import markdownPlugin from '@eslint/markdown'
+import type { MarkdownRuleDefinition } from '@eslint/markdown'
 
 import { isAutolinkableBareUrl, isLink } from '@/internal/markdown/rules/prefer-autolinks'
 import { RULE_DOCS_URL } from '@/internal/markdown/rules/utils'

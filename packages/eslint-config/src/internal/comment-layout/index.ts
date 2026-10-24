@@ -8,12 +8,8 @@
  * `@ts-ignore` applies to, and Astro scripts get neither.
  */
 
-import {
-  AST_NODE_TYPES,
-  AST_TOKEN_TYPES,
-  type TSESLint,
-  type TSESTree,
-} from '@typescript-eslint/utils'
+import { AST_NODE_TYPES, AST_TOKEN_TYPES } from '@typescript-eslint/utils'
+import type { TSESLint, TSESTree } from '@typescript-eslint/utils'
 
 import { getBlockCommentLines } from '@gpahal/internal/comments'
 import { trimBlankLines } from '@gpahal/std/strings'
@@ -431,8 +427,23 @@ export const commentLayout: TSESLint.RuleModule<MessageId> = {
 
     function addModuleDeclarations(body: Array<TSESTree.ProgramStatement>): void {
       for (const node of body) {
-        if (MODULE_DECLARATION_TYPES.has(node.type) && !isImport(node)) {
-          anchors.push(decoratorBefore(node) ?? node)
+        if (!MODULE_DECLARATION_TYPES.has(node.type) || isImport(node)) {
+          continue
+        }
+        anchors.push(decoratorBefore(node) ?? node)
+        addLaterDeclarators(node)
+      }
+    }
+
+    // The statement anchors the first declarator. TypeScript reads a doc block before a later one,
+    // also after code on its line
+    function addLaterDeclarators(node: TSESTree.ProgramStatement): void {
+      const declaration =
+        node.type === AST_NODE_TYPES.ExportNamedDeclaration ? node.declaration : node
+      if (declaration?.type === AST_NODE_TYPES.VariableDeclaration) {
+        for (const declarator of declaration.declarations.slice(1)) {
+          optionalAnchors.push(declarator)
+          sameLineAnchors.push(declarator)
         }
       }
     }
@@ -793,10 +804,14 @@ export const commentLayout: TSESLint.RuleModule<MessageId> = {
 
     // Only imports and directive prologues come before it, and a blank line parts it from an import
     // below. Astro's parser stretches the last frontmatter import over a comment, so the check is by
-    // position
+    // position, and gives the frontmatter's opening `---` as a token, which starts the file
     function isModuleHeader(comment: Comment): boolean {
       const previous = sourceCode.getTokenBefore(comment, { includeComments: true })
-      if (previous === null || (previous.type as string) === 'Shebang') {
+      if (
+        previous === null ||
+        (previous.type as string) === 'Shebang' ||
+        (previous.value === '---' && previous.range[0] === 0)
+      ) {
         return true
       }
       const nextIndex = countStatementsBefore(comment.range[1])

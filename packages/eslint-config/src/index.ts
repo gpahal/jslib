@@ -4,7 +4,8 @@ import { resolveSubOptions } from '@gpahal/internal/node/options'
 import { describeValue, formatNames, getErrorReason } from '@gpahal/std/errors'
 import { isRecord } from '@gpahal/std/objects'
 
-import { AREAS, type AreaBuild, type AreaDefinition } from '@/internal/areas'
+import { AREAS } from '@/internal/areas'
+import type { AreaBuild, AreaDefinition } from '@/internal/areas'
 import { Composer } from '@/internal/composer'
 import { commonjs, commonjsExemptions } from '@/internal/configs/commonjs'
 import { configFilesExemptions } from '@/internal/configs/config-files'
@@ -19,7 +20,6 @@ import {
 import { duplicateRulesConfigs } from '@/internal/duplicate-configs'
 import { CODE_BLOCK_FILES, CODE_FILES } from '@/internal/files'
 import {
-  patchContradictingReports,
   patchReportOnlyRules,
   patchUnsafeFixes,
   removeUnusedImportsFixes,
@@ -35,7 +35,8 @@ import { withSetupNamed } from '@/internal/naming'
 import { checkCorePeerVersions, checkPeerVersions, combinePeerErrors } from '@/internal/peers'
 import { GPAHAL_PLUGIN } from '@/internal/plugin'
 import { withPresetSlopPlugin } from '@/internal/presets/antislop'
-import { resolveOptions, type ResolvedOptions } from '@/internal/resolve'
+import { resolveOptions } from '@/internal/resolve'
+import type { ResolvedOptions } from '@/internal/resolve'
 import { createRootSpellingCheck } from '@/internal/root-spelling'
 import { patchRuleSet } from '@/internal/rule-patches'
 import { getPlugins, normalizeSeverities } from '@/internal/rules'
@@ -270,7 +271,6 @@ async function buildConfigs(resolved: ResolvedOptions): Promise<BuiltConfigs> {
     ),
   )
   const patchedFixes = patchUnsafeFixes(configs, root)
-  patchContradictingReports(configs, root)
   patchRuleSet(configs, root)
   const areaConfigs = (key: 'userRules' | 'exemptions' | 'codeBlockConfigs') =>
     areas.flatMap((area) => area[key] ?? [])

@@ -1,8 +1,11 @@
 import type { Linter } from 'eslint'
 
-import { parseMarkdown, parseUncached, type FrontmatterKind } from '@/internal/markdown/language'
-import { BOM, getBlocks, toCommentKey, type FileState } from '@/internal/markdown/processor/blocks'
-import { getFrontmatterRegex, type BlockOptions } from '@/internal/markdown/processor/comments'
+import { parseMarkdown, parseUncached } from '@/internal/markdown/language'
+import type { FrontmatterKind } from '@/internal/markdown/language'
+import { BOM, getBlocks, toCommentKey } from '@/internal/markdown/processor/blocks'
+import type { FileState } from '@/internal/markdown/processor/blocks'
+import { getFrontmatterRegex } from '@/internal/markdown/processor/comments'
+import type { BlockOptions } from '@/internal/markdown/processor/comments'
 import {
   adjustFileMessages,
   fixDirectiveRemovals,

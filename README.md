@@ -44,6 +44,7 @@ Libraries:
 Internal, never published:
 
 - [@gpahal/internal](packages/internal): code the packages share and bundle, such as their option schemas.
+- [@gpahal/recipes](packages/recipes): end-to-end checks of the [setup recipes](#setup-recipes) and of the packages' test scripts.
 
 ## Supported setups
 
@@ -811,7 +812,7 @@ These lists may be empty, which removes the defaults: ESLint's `ignores`, `typeA
 | eslint-config | [`configs`, `.append()`, `.insertBefore()`, `.insertAfter()`][ESLint composer] | Configs share validation and scoping: each is split into one config per scope, keeping its `name`, and the last config wins. |
 | eslint-config | [`.override(name, config)`][ESLint composer] | Selected objects merge into named configs; other keys replace. |
 | eslint-config | [`.overrideRules(rules)`][ESLint composer] | Changes enabled rules while preserving options for severity-only entries. |
-| prettier-config | [`mergeConfigs(a, b)`](packages/prettier-config/README.md#merge-with-another-config) | Later options win, and overrides concatenate. Plugins deduplicate, with Tailwind's after the others except `prettier-plugin-classnames` and `prettier-plugin-merge`, as with [`tailwindcss`](packages/prettier-config/README.md#options). An override's plugins add to the merged config's. |
+| prettier-config | [`mergeConfigs(a, b)`](packages/prettier-config/README.md#merge-with-another-config) | Later options win, and overrides concatenate. Plugins deduplicate, with Tailwind's after the others except `prettier-plugin-classnames` and `prettier-plugin-merge`, as with [`tailwindcss`](packages/prettier-config/README.md#options). A plugin given by name that a `defineConfig` config adds itself throws. An override's plugins add to the merged config's. |
 | prettier-config | [`options`, `overrides`](packages/prettier-config/README.md#change-an-option) | Options override defaults, file presets override options, and user overrides come last, and their plugins add to the preset's. |
 | stylelint-config | [`rules`, override `rules`](packages/stylelint-config/README.md#rule-merging) | Your settings merge over the preset's settings for each file type. |
 | stylelint-config | [`plugins`, `extends`, `overrides`][Stylelint options] | Extended configs load recursively, following Stylelint's precedence. Their rules and overrides beat the preset's, except those of the configs the preset builds on, such as stylelint-config-standard, which are skipped. Your `rules` merge over theirs. |
@@ -832,7 +833,7 @@ pnpm build
 pnpm check
 ```
 
-Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate. [CI](.github/workflows/ci.yml) runs the same tasks in five parallel jobs, typecheck, lint, test, test-canaries and test-recipes, and `pnpm audit --prod`, on Linux with read-only access and no secrets; a `check` job passes when they all do. `main` takes only squash-merged pull requests with signed commits and a passing `check`. A PR doesn't have to be up to date with `main`, but on a push to `main`, CI skips the checks only when a passing run on the merged PR's head tested the same files, which requires the PR to contain the latest `main`; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
+Build first: the packages resolve each other through their gitignored `build/` folders. `pnpm check` runs every gate but the canaries, tests that fail once upstream fixes a bug that a workaround exists for; `pnpm turbo run test-canaries` runs them. [CI](.github/workflows/ci.yml) runs the tasks of both in five parallel jobs, typecheck, lint, test, test-canaries and test-recipes, each with a Turbo cache of its own, and `pnpm audit --prod`, on Linux with read-only access and no secrets; a `check` job passes when they all do. `main` takes only squash-merged pull requests with signed commits and a passing `check`. A PR doesn't have to be up to date with `main`, but on a push to `main`, CI skips the checks only when a passing run on the merged PR's head tested the same files, which requires the PR to contain the latest `main`; see [gpahal/ci](https://github.com/gpahal/ci). [AGENTS.md](AGENTS.md) covers contributor conventions.
 
 ## Releasing
 

@@ -1,13 +1,8 @@
 import fs from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
-import {
-  dropSources,
-  isPublishedFile,
-  isSourceMap,
-  resolveSourcePath,
-  type SourceMap,
-} from '@/node/source-maps'
+import { dropSources, isPublishedFile, isSourceMap, resolveSourcePath } from '@/node/source-maps'
+import type { SourceMap } from '@/node/source-maps'
 
 describe('built source maps', () => {
   it.each(['js', 'd.ts'])('keeps published TypeScript sources in the %s map', async (extension) => {

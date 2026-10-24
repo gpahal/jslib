@@ -55,6 +55,12 @@ export function e18e({
     'e18e/prefer-array-to-spliced': 'off',
     // Hoisting every regex out of its function rarely matters outside hot paths
     'e18e/prefer-static-regex': 'off',
+    // `Array.from(s, fn)` for `[...s].map(fn)`, where `unicorn/prefer-iterator-to-array` asks for
+    // `s.values().toArray()`, and its fix maps what the mapper adds
+    'e18e/prefer-array-from-map': 'off',
+    // `prefer-object-spread` reports `Object.assign({}, a)`, `unicorn/prefer-spread`
+    // `Array.from(s)` and `a.concat(b)`, and `prefer-spread` `fn.apply(null, args)`
+    'e18e/prefer-spread-syntax': 'off',
   }
   return [
     {

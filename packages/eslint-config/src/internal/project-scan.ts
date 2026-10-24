@@ -4,6 +4,7 @@ import path from 'node:path'
 
 import type { ConfigObject, includeIgnoreFile as IncludeIgnoreFile } from 'eslint/config'
 
+import { joinList } from '@gpahal/internal/lists'
 import { resolveSubOptions } from '@gpahal/internal/node/options'
 import { formatNames, getErrorReason } from '@gpahal/std/errors'
 
@@ -26,7 +27,8 @@ import { createGlobMatcher, isInside, posixRelative, rebaseGlob } from '@/intern
 import { GITIGNORE_CONFIG_NAMES } from '@/internal/names'
 import type { EslintConfigOptions } from '@/internal/types'
 import { fail, formatErrorMessage, warnOfSetupOnce } from '@/internal/utils'
-import { createIgnoreCheck, IgnoreLayers, walkFolders, type IgnoreLayer } from '@/internal/walk'
+import { createIgnoreCheck, IgnoreLayers, walkFolders } from '@/internal/walk'
+import type { IgnoreLayer } from '@/internal/walk'
 
 /**
  * An ignore file's rules, or the submodule folders, as globs relative to `basePath`
@@ -93,9 +95,7 @@ function warnOfSkippedRules(file: string, root: string, lines: ReadonlyArray<num
   }
   const relativePath = posixRelative(root, file)
   const isOne = lines.length === 1
-  const numbers = lines.map(String)
-  const last = numbers.pop() ?? ''
-  const listed = numbers.length === 0 ? last : `${numbers.join(', ')} and ${last}`
+  const listed = joinList(lines.map(String), 'and')
   warnOfSetupOnce(
     warnedWildcardFiles,
     file,

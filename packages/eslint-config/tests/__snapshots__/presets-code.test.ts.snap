@@ -1,0 +1,54 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the commonjs and framework hints > warn at most once for @playwright/test 1`] = `
+[
+  [
+    "@gpahal/eslint-config: \`playwright\`: \`package.json\` lists @playwright/test, but the \`playwright\` option isn't set, so its rules are off. Set \`playwright: true\` and install its plugins, as in \`pnpm add -D "eslint-plugin-playwright@<version>"\`, or set \`playwright: false\` to turn this warning off",
+    "GPAHAL_FRAMEWORK_OPTION_UNSET",
+  ],
+]
+`;
+
+exports[`the commonjs and framework hints > warn at most once for a Next.js app 1`] = `
+[
+  [
+    "@gpahal/eslint-config: \`nextjs\`: \`package.json\` lists next, but the \`nextjs\` option isn't set, so its rules are off. Set \`nextjs: true\` and install its plugins, as in \`pnpm add -D "@eslint-react/eslint-plugin@<version>" "eslint-plugin-react-hooks@<version>" "eslint-plugin-jsx-a11y-x@<version>" "eslint-plugin-react-refresh@<version>" "@next/eslint-plugin-next@<version>"\`, or set \`nextjs: false\` to turn this warning off",
+    "GPAHAL_FRAMEWORK_OPTION_UNSET",
+  ],
+]
+`;
+
+exports[`the commonjs and framework hints > warn at most once for a package of "type": "commonjs" 1`] = `
+[
+  [
+    "@gpahal/eslint-config: \`commonjs\`: \`package.json\` sets \`"type": "commonjs"\`, so Node runs \`.js\` files as CommonJS, but they're linted as ES modules. Set \`commonjs: true\`, or \`commonjs: false\` to lint them as ES modules",
+    "GPAHAL_COMMONJS_PACKAGE",
+  ],
+]
+`;
+
+exports[`the commonjs and framework hints > warn at most once for a package without "type" 1`] = `
+[
+  [
+    "@gpahal/eslint-config: \`commonjs\`: \`package.json\` has no \`"type"\`, so Node runs \`.js\` files as CommonJS, but they're linted as ES modules. Set \`commonjs: true\`, or \`commonjs: false\` to lint them as ES modules, or set \`"type": "module"\` in \`package.json\`",
+    "GPAHAL_COMMONJS_PACKAGE",
+  ],
+]
+`;
+
+exports[`the commonjs and framework hints > warn at most once for commonjs: false 1`] = `[]`;
+
+exports[`the commonjs and framework hints > warn at most once for commonjs: true 1`] = `[]`;
+
+exports[`the commonjs and framework hints > warn at most once for react 1`] = `
+[
+  [
+    "@gpahal/eslint-config: \`react\`: \`package.json\` lists react, but the \`react\` option isn't set, so its rules are off. Set \`react: true\` and install its plugins, as in \`pnpm add -D "@eslint-react/eslint-plugin@<version>" "eslint-plugin-react-hooks@<version>" "eslint-plugin-jsx-a11y-x@<version>" "eslint-plugin-react-refresh@<version>"\`, or set \`react: false\` to turn this warning off",
+    "GPAHAL_FRAMEWORK_OPTION_UNSET",
+  ],
+]
+`;
+
+exports[`the commonjs and framework hints > warn at most once for vitest: false and react: false 1`] = `[]`;
+
+exports[`the commonjs and framework hints > warn at most once for vitest: true and react: true 1`] = `[]`;

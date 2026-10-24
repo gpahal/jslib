@@ -16,12 +16,8 @@ import { isRecord } from '@gpahal/std/objects'
 
 import { defineConfig } from '../build/index.js'
 import { DUPLICATE_RULES } from '../src/internal/duplicate-rules.ts'
-import {
-  AREA_RULE_PREFIXES,
-  GITIGNORE_CONFIG_NAMES,
-  hasRulePrefix,
-  type AreaName,
-} from '../src/internal/names.ts'
+import { AREA_RULE_PREFIXES, GITIGNORE_CONFIG_NAMES, hasRulePrefix } from '../src/internal/names.ts'
+import type { AreaName } from '../src/internal/names.ts'
 
 const PACKAGE_DIR = path.join(import.meta.dirname, '..')
 

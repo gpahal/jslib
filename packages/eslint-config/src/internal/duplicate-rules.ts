@@ -32,6 +32,12 @@ export const DUPLICATE_RULES: ReadonlyArray<DuplicateRule> = [
     reason: '`import { default as x }`',
   },
   {
+    kept: ['import-x/consistent-type-specifier-style'],
+    off: '@typescript-eslint/no-import-type-side-effects',
+    reason:
+      "`import { type A } from 'a'`. Only the import-x rule reports an inline `type` specifier beside a value one",
+  },
+  {
     kept: ['@typescript-eslint/no-this-alias'],
     off: 'unicorn/no-this-assignment',
     reason: '`const self = this`. The typescript-eslint rule runs in JavaScript files too',
@@ -261,10 +267,6 @@ export type DuplicateReport = {
    * `x as any`
    */
   match?: 'same' | 'asserted-type'
-  /**
-   * Kept, as `--fix` then clears both
-   */
-  keepsFixes?: true
   reason: string
 }
 
@@ -277,9 +279,8 @@ export const DUPLICATE_REPORTS: ReadonlyArray<DuplicateReport> = [
   {
     kept: ['@typescript-eslint/no-empty-object-type'],
     twin: '@typescript-eslint/consistent-type-definitions',
-    keepsFixes: true,
     reason:
-      "`interface A extends B {}`, which is `B` or `type A = B`. The twin's fix to a type alias stays, and `no-empty-object-type` only suggests it",
+      '`interface A extends B {}`, which is `B` or `type A = B`, as `no-empty-object-type` suggests',
   },
   {
     kept: ['unicorn/prefer-top-level-await', 'vitest/valid-expect'],
@@ -383,13 +384,6 @@ export const DUPLICATE_REPORTS: ReadonlyArray<DuplicateReport> = [
       '`x as any` and `<any>x`, where a disable comment for `no-explicit-any` covers both. Only the twin reports an assertion to a narrower type',
   },
   {
-    kept: ['prefer-object-spread'],
-    twin: 'e18e/prefer-spread-syntax',
-    match: 'same',
-    reason:
-      '`Object.assign({}, a)`. Only the e18e rule reports `Array.from()`, `concat()` and `fn.apply()`, and only the core rule `Object.assign({ a: 1 }, b)`',
-  },
-  {
     kept: ['@typescript-eslint/adjacent-overload-signatures'],
     twin: 'grouped-accessor-pairs',
     match: 'same',
@@ -424,16 +418,6 @@ export const ALLOWED_OVERLAPS: ReadonlyArray<{
       '`obj.hasOwnProperty(key)`. Neither covers the other: the core rule also reports `isPrototypeOf` and `propertyIsEnumerable`, and the e18e rule `Object.prototype.hasOwnProperty.call()`. Neither fixes it here: the e18e rule is report-only',
   },
   {
-    rules: ['prefer-spread', 'e18e/prefer-spread-syntax'],
-    reason:
-      '`fn.apply(null, args)`, where both ask for `fn(...args)`. The core rule also covers `obj.f.apply(obj, args)`, and the e18e rule `Array.from()`, `concat()` and `Object.assign({}, …)`',
-  },
-  {
-    rules: ['unicorn/prefer-spread', 'e18e/prefer-spread-syntax'],
-    reason:
-      '`Array.from(s)` and `a.concat(b)`. Only the e18e rule reports `Object.assign({}, a)`, which `DUPLICATE_REPORTS` leaves to `prefer-object-spread`. `patchPreferSpread` drops both reports of `Array.from(s).map(fn)` where `unicorn/prefer-array-from-map` reports',
-  },
-  {
     rules: ['import-x/no-anonymous-default-export', 'unicorn/no-anonymous-default-export'],
     reason:
       '`export default function () {}`, which `DUPLICATE_REPORTS` reports once. Only the import-x rule reports `export default {}`, and only the unicorn rule `module.exports = function () {}` in CommonJS',
@@ -464,16 +448,6 @@ export const ALLOWED_OVERLAPS: ReadonlyArray<{
       'Two `if` branches with the same code, as in `if (a) { f() } else if (b) { f() }`. Only the SonarJS rule reports `switch` cases, and only the unicorn rule a chain of one-line branches that ends in `else`, as in `if (a) { f(1) } else if (b) { f(1) } else { f(0) }`',
   },
   {
-    rules: ['unicorn/prefer-regexp-test', '@typescript-eslint/prefer-regexp-exec'],
-    reason:
-      '`s.match(re)`, which the typescript-eslint rule reports in files with type information and the unicorn rule as a condition. `patchRegexpExec` drops the typescript-eslint report where the unicorn rule reports, as its `exec()` gets a report from it',
-  },
-  {
-    rules: ['e18e/prefer-regex-test', '@typescript-eslint/prefer-regexp-exec'],
-    reason:
-      'As above, with `unicorn: false`, where the e18e rule runs in place of the unicorn one and `patchRegexpExec` drops the typescript-eslint report where it reports',
-  },
-  {
     rules: ['no-constant-condition', '@typescript-eslint/no-unnecessary-condition'],
     reason: '`if (true)`, which the core rule reports in every file',
   },
@@ -491,11 +465,6 @@ export const ALLOWED_OVERLAPS: ReadonlyArray<{
     rules: ['no-new-func', '@typescript-eslint/no-implied-eval'],
     reason:
       '`new Function()`. Only the core rule reports `Function.call()`, `Function.apply()` and `Function.bind()` with a string',
-  },
-  {
-    rules: ['unicorn/prefer-iterator-to-array', 'e18e/prefer-array-from-map'],
-    reason:
-      "`[...m.keys()].map(fn)`, where the unicorn rule asks for `m.keys().toArray()` and the e18e rule for `Array.from(m.keys(), fn)`. `patchArrayFromMap` drops the e18e report where the unicorn rule reports, which covers more spreads of an iterator. Neither covers the other: only the unicorn rule reports `[...m.keys()]`, and only the e18e rule `[...s].map(fn)` of a set or an array, and the unicorn rule is off in browser code, whose `lib` lacks ES2025's iterator helpers",
   },
   {
     rules: ['sonarjs/no-weak-cipher', 'sonarjs/encryption-secure-mode'],

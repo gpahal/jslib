@@ -2,7 +2,8 @@ import { configs as tsEslintConfigs } from 'typescript-eslint'
 
 import { untypedCoreConfigs, unusedVarsOptions } from '@/internal/configs/typescript-core'
 import { CODE_BLOCK_FILES, CONFIG_FILES, SCRIPT_FILES } from '@/internal/files'
-import { intersectFileSpecs, type FileSpecs, type Scope } from '@/internal/globs'
+import { intersectFileSpecs } from '@/internal/globs'
+import type { FileSpecs, Scope } from '@/internal/globs'
 import { named } from '@/internal/naming'
 import type { TypedConfig, TypedRules } from '@/internal/types'
 
@@ -115,22 +116,26 @@ export function typescript({
       files: typedFiles,
       rules: {
         '@typescript-eslint/array-type': ['error', { default: 'generic' }],
-        // `patchTypeDefinitions` drops the fix where other files can see, merge or augment one
+        // Report-only, as `REPORT_ONLY_RULES` records. `patchTypeDefinitions` drops the report where
+        // only an interface can augment
         '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
-        // `import { type A, B } from 'a'`, which `import-x/no-duplicates` merges to
+        // A separate `import type { A } from 'a'`, which drops with its specifiers when they go
+        // unused and never loads the module
         '@typescript-eslint/consistent-type-imports': [
           'error',
-          { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+          { prefer: 'type-imports', fixStyle: 'separate-type-imports' },
         ],
         // `import { type A } from 'a'` compiles to `import 'a'` under `verbatimModuleSyntax` and in
-        // bundlers such as esbuild
+        // bundlers such as esbuild. `import-x/consistent-type-specifier-style` replaces it where the
+        // imports area is on
         '@typescript-eslint/no-import-type-side-effects': 'error',
         // `method(): void` is bivariant in its parameters, `method: () => void` isn't
         '@typescript-eslint/method-signature-style': ['error', 'property'],
         '@typescript-eslint/prefer-readonly': 'error',
+        // A separate `export type { A }`, like the imports
         '@typescript-eslint/consistent-type-exports': [
           'error',
-          { fixMixedExportsWithInlineTypeSpecifier: true },
+          { fixMixedExportsWithInlineTypeSpecifier: false },
         ],
         '@typescript-eslint/no-unsafe-type-assertion': 'error',
         // `export { type A } from 'a'` compiles to the side-effect re-export `export {} from 'a'`
@@ -198,6 +203,10 @@ export function typescript({
               ],
               // A method taken off its object, as in `callback(this.handle)`, loses its `this`
               '@typescript-eslint/unbound-method': 'error',
+              // It asks for `re.exec(s)` where `unicorn/prefer-regexp-test` and
+              // `e18e/prefer-regex-test` ask for `re.test(s)` in a condition, and `s.match(re)` reads
+              // as well elsewhere
+              '@typescript-eslint/prefer-regexp-exec': 'off',
             },
           } satisfies TypedConfig,
           // Before the areas' `rules`, so `rulesTypeAware` options apply in tests too

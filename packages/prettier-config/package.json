@@ -36,8 +36,8 @@
     "build": "tsdown",
     "lint-check": "eslint . --max-warnings 0",
     "prepublishOnly": "../../scripts/verify-publish-tool.sh",
-    "test": "VITEST_CANARIES=0 vitest run --config ../../vitest.config.ts",
-    "test-canaries": "VITEST_CANARIES=1 vitest run --config ../../vitest.config.ts",
+    "test": "vitest run --config ../../vitest.config.ts --project 'tests*'",
+    "test-canaries": "vitest run --config ../../vitest.config.ts --project canaries",
     "typecheck": "tsc && tsc -p tests",
     "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
   },
@@ -45,6 +45,7 @@
     "@gpahal/std": "workspace:*",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "prettier-plugin-packagejson": "^3.0.2",
+    "semver": "^7.8.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {

@@ -2,7 +2,8 @@ import globals from 'globals'
 
 import { clonePlain } from '@gpahal/std/objects'
 
-import { intersectFileSpecs, type FileSpecs, type Scope } from '@/internal/globs'
+import { intersectFileSpecs } from '@/internal/globs'
+import type { FileSpecs, Scope } from '@/internal/globs'
 import type { TypedConfig, TypedRules } from '@/internal/types'
 
 const MESSAGE =

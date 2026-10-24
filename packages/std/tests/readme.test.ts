@@ -31,48 +31,60 @@ function getBlocks(markdown: string): Array<Block> {
 }
 
 /**
- * The type errors of the blocks, each compiled as a module of its own next to the tests, with the
- * tests' compiler options and `@gpahal/std/*` resolved to the sources
+ * The `ts` examples of the JSDoc in `src/`, by the file name each compiles as. `src/internal/` is
+ * included, since its public functions are re-exported
  */
-function typeCheckBlocks(codes: ReadonlyArray<string>): string {
-  const configPath = path.join(packageDir, 'tests', 'tsconfig.json')
-  const config = ts.getParsedCommandLineOfConfigFile(
-    configPath,
-    {},
-    {
-      ...ts.sys,
-      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
-        throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))
-      },
-    },
-  )
+function getJsdocExamples(): Map<string, string> {
+  const examples = new Map<string, string>()
+  const files = fs
+    .readdirSync(path.join(packageDir, 'src'), { recursive: true, encoding: 'utf8' })
+    .filter((name) => name.endsWith('.ts'))
+  for (const file of files) {
+    const source = fs.readFileSync(path.join(packageDir, 'src', file), 'utf8')
+    const comments = source.matchAll(/\/\*\*[\s\S]*?\*\//g)
+    let index = 0
+    for (const [comment] of comments) {
+      if (!comment.includes('@example')) continue
+      const markdown = comment.replaceAll(/^[\t ]*\* ?/gm, '')
+      for (const [, code] of markdown.matchAll(/```ts\n([\s\S]*?)```/g)) {
+        const name = path.join(
+          packageDir,
+          'examples',
+          `${file.replaceAll(/[/\\]/g, '-').replace(/\.ts$/, '')}-${index++}.mts`,
+        )
+        examples.set(name, code!)
+      }
+    }
+  }
+  return examples
+}
+
+/**
+ * The type errors of `files`, by path, in one program, so the libs are read once. Each file is an
+ * ES module of its own, so examples don't share their top-level names, and `@gpahal/std/*`
+ * resolves through the package's `exports` to the public declarations
+ */
+function typeCheck(files: ReadonlyMap<string, string>): string {
   const options: ts.CompilerOptions = {
-    ...config!.options,
+    strict: true,
+    exactOptionalPropertyTypes: true,
+    noUncheckedIndexedAccess: true,
+    noPropertyAccessFromIndexSignature: true,
+    // As the repo's tsconfigs set it. The libs and declarations are checked where they're built
+    skipLibCheck: true,
     noEmit: true,
-    incremental: false,
-    paths: { ...config!.options.paths, '@gpahal/std/*': [path.join(packageDir, 'src', '*')] },
+    target: ts.ScriptTarget.ES2024,
+    module: ts.ModuleKind.NodeNext,
+    types: [],
+    lib: ['lib.es2024.d.ts', 'lib.dom.d.ts'],
   }
-  // `export {}` makes each block a module, so blocks don't share their top-level names
-  const files = new Map(
-    codes.map((code, i) => [
-      path.join(packageDir, 'tests', `readme-block-${i}.ts`),
-      `${code}\nexport {}\n`,
-    ]),
-  )
-  const baseHost = ts.createCompilerHost(options)
-  const host: ts.CompilerHost = {
-    ...baseHost,
-    fileExists: (file) => files.has(file) || baseHost.fileExists(file),
-    readFile: (file) => files.get(file) ?? baseHost.readFile(file),
-    getSourceFile: (file, languageVersion, ...rest) => {
-      const code = files.get(file)
-      return code === undefined
-        ? baseHost.getSourceFile(file, languageVersion, ...rest)
-        : ts.createSourceFile(file, code, languageVersion)
-    },
-  }
+  const host = ts.createCompilerHost(options)
+  const readFile = host.readFile.bind(host)
+  const fileExists = host.fileExists.bind(host)
+  host.readFile = (file) => files.get(file) ?? readFile(file)
+  host.fileExists = (file) => files.has(file) || fileExists(file)
   const program = ts.createProgram([...files.keys()], options, host)
-  return ts.formatDiagnostics(ts.getPreEmitDiagnostics(program), {
+  return ts.formatDiagnosticsWithColorAndContext(ts.getPreEmitDiagnostics(program), {
     getCanonicalFileName: (file) => file,
     getCurrentDirectory: () => packageDir,
     getNewLine: () => '\n',
@@ -80,7 +92,18 @@ function typeCheckBlocks(codes: ReadonlyArray<string>): string {
 }
 
 const blocks = getBlocks(readme)
+const jsdocExamples = getJsdocExamples()
 const collator = new Intl.Collator()
+
+test('README and JSDoc examples compile against the public declarations', () => {
+  expect(blocks.length).toBeGreaterThan(0)
+  expect(jsdocExamples.size).toBeGreaterThan(0)
+  expect([...jsdocExamples.keys()]).toContainEqual(expect.stringContaining('internal-escape'))
+  const readmeFiles = blocks.map(
+    ({ code }, i) => [path.join(packageDir, 'examples', `readme-${i}.mts`), code] as const,
+  )
+  expect(typeCheck(new Map([...readmeFiles, ...jsdocExamples]))).toBe('')
+})
 
 describe('README examples', () => {
   it('has a block for each module', () => {
@@ -94,11 +117,27 @@ describe('README examples', () => {
     ).toEqual(modules)
   })
 
-  it('type-checks', () => {
-    expect(typeCheckBlocks(blocks.map(({ code }) => code))).toBe('')
+  it.each(blocks)('$heading', async ({ code }) => {
+    await expect(runExample(code)).resolves.toBeUndefined()
+  })
+})
+
+describe('JSDoc examples', () => {
+  beforeEach(() => {
+    // The examples fetch, which the tests don't
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('')),
+    )
   })
 
-  it.each(blocks)('$heading', async ({ code }) => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it.each(
+    Array.from(jsdocExamples, ([name, code]) => ({ name: path.basename(name, '.mts'), code })),
+  )('$name gives the results its comments state', async ({ code }) => {
     await expect(runExample(code)).resolves.toBeUndefined()
   })
 })

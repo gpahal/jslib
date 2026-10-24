@@ -225,7 +225,7 @@ import teamConfig from './team.prettier.config.mjs'
 export default mergeConfigs(defineConfig({ root: import.meta.dirname }), teamConfig)
 ```
 
-Later options win, overrides concatenate in order, and plugins are deduplicated and ordered as with `tailwindcss`. Pass a module's default export: a module namespace, as `import * as teamConfig` gives, throws. [Merging configs][] covers plugins and overrides.
+Later options win, overrides concatenate in order, and plugins are deduplicated and ordered as with `tailwindcss`. Pass a module's default export: a module namespace, as `import * as teamConfig` gives, throws. So does a plugin given by name that `defineConfig` already adds, such as `prettier-plugin-packagejson`. [Merging configs][] covers plugins and overrides.
 
 ### Use a CommonJS config
 
@@ -259,7 +259,7 @@ prettier --check --cache .
 | `root` | unset | Absolute path of an existing folder. Relative `tailwindcss.entryPoint` paths, dot-prefixed plugin paths and plugin package names resolve from it, and a relative `entryPoint` must exist when the config loads. A plugin name that isn't installed at or above it is left as it is. Without it, Prettier and the Tailwind plugin resolve them, as [Tailwind CSS][] describes |
 | `astro` | off | Adds `prettier-plugin-astro`. An object is options for `.astro` files |
 | `tailwindcss` | off | Adds `prettier-plugin-tailwindcss`. Keys: `entryPoint`, `functions`, `attributes`, `preserveWhitespace`. The plugin's other options, such as `tailwindPreserveDuplicates`, go in `options` |
-| `sortImports` | on | Sorts imports with `@ianvs/prettier-plugin-sort-imports`. Takes `importOrder` and the sorter's other exported options, checked against the sorter Prettier loads: with `tailwindcss`, the copy the Tailwind plugin finds. Unknown keys throw |
+| `sortImports` | on | Sorts imports with `@ianvs/prettier-plugin-sort-imports`, and merges the imports of a module, keeping `import type` apart from value imports, as `@gpahal/eslint-config` writes them. Takes `importOrder` and the sorter's other exported options, checked against the sorter Prettier loads: with `tailwindcss`, the copy the Tailwind plugin finds. Unknown keys throw |
 | `githubAlerts` | on | Keeps a GitHub alert marker such as `> [!NOTE]` on its own line |
 | `packageJson` | on | Sorts `package.json` keys with `prettier-plugin-packagejson`, and some nested fields, such as `scripts` |
 | `markdown` |  | Options for the [Markdown files][]. `true` and `false` throw; to leave Markdown files unformatted, list them in `.prettierignore` |
@@ -291,7 +291,7 @@ Some files get more:
 
 | Files | Settings |
 | --- | --- |
-| Code | Imports sorted into groups, with a blank line between groups: Node built-ins and other scheme imports, such as `bun:test` and `cloudflare:workers`; `react`, `react-dom`, `react-native`, `next` and `astro`, with `astro:` imports; other packages, with `npm:`, `jsr:` and `https:` imports; `@gpahal/*`; `@/public` and `@/common`; `@/types`, `@/config`, `@/lib`, `@/actions`, `@/contexts`, `@/hooks`, `@/layouts`, `@/pages`, `@/components/lib`, `@/components`, `@/styles`, `@/assets`, other `@/*`, `~/*` and `#*`; then relative imports. Type and value imports from one module merge |
+| Code | Imports sorted into groups, with a blank line between groups: Node built-ins and other scheme imports, such as `bun:test` and `cloudflare:workers`; `react`, `react-dom`, `react-native`, `next` and `astro`, with `astro:` imports; other packages, with `npm:`, `jsr:` and `https:` imports; `@gpahal/*`; `@/public` and `@/common`; `@/types`, `@/config`, `@/lib`, `@/actions`, `@/contexts`, `@/hooks`, `@/layouts`, `@/pages`, `@/components/lib`, `@/components`, `@/styles`, `@/assets`, other `@/*`, `~/*` and `#*`; then relative imports. Imports from one module merge, with `import type` kept apart from value imports |
 | [Markdown files][] | One line per paragraph (`proseWrap: 'never'`) |
 | [JSON with comments][] | No trailing commas |
 | `.mdx` | Left as they are unless they start with a `{/* @format */}` pragma, since Prettier's MDX parser reads MDX 1, and its output can render differently in MDX 2 and 3. To format them all, add the override `{ files: '*.mdx', options: { requirePragma: false } }` |
@@ -301,7 +301,7 @@ Some files get more:
 
 A relative `tailwindcss.entryPoint` resolves from `root` when it's set. Without `root`, the Tailwind plugin resolves it from the folder of the config file that Prettier finds by searching up from the formatted file, not from a config file given with `--config` or an editor's setting. There, set `root: import.meta.dirname`, or pass a `file:` URL, such as `import.meta.resolve('./src/styles/global.css')`. The file must exist.
 
-With Tailwind on, `defineConfig` throws a `TypeError` if `prettier-plugin-tailwindcss` is older than 0.8, or if it would load no import sorter, or one older than 4.7. An insiders build, versioned `0.0.0-insiders.<commit>`, is accepted. A version from 0.9 on gets a warning, once, with the code `GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN`, since the config relies on how the plugin composes the import sorter.
+With Tailwind on, `defineConfig` throws a `TypeError` if `prettier-plugin-tailwindcss` is older than 0.8, or if it would load no import sorter, or one older than 4.7. An insiders build, versioned `0.0.0-insiders.<commit>`, is accepted. A version newer than the tested range, from 0.9.0 on, its prereleases included, gets a warning, once, with the code `GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN`, since the config relies on how the plugin composes the import sorter.
 
 The Tailwind plugin loads the sorter from its own folder. Under pnpm with `hoist: false`, `autoInstallPeers: false` and `dedupePeerDependents: false`, it can't, and `defineConfig` throws: install `@ianvs/prettier-plugin-sort-imports` directly or set `sortImports: false`.
 
@@ -329,7 +329,7 @@ The plugins are recognized by package name, by a path into their package, or by 
 
 ### Merging configs
 
-The root README's [Lists and merging](https://github.com/gpahal/jslib#lists-and-merging) summarizes the merge rules. A later config can't remove an earlier config's plugins. A plugin name that `defineConfig` resolved from `root` counts once with another config's same name, when `mergeConfigs` gets the config `defineConfig` returned rather than a copy. Turn the Tailwind plugin on with `defineConfig`'s `tailwindcss` rather than in a merged config: `mergeConfigs` throws on a Tailwind plugin when a config's import sorter is the wrapper that `defineConfig` adds without `tailwindcss`, which the Tailwind plugin can't compose. It throws on the plugins in [Plugins that conflict][] too, across all the configs.
+The root README's [Lists and merging](https://github.com/gpahal/jslib#lists-and-merging) summarizes the merge rules. A later config can't remove an earlier config's plugins. A plugin name that `defineConfig` resolved from `root` counts once with another config's same name, when `mergeConfigs` gets the config `defineConfig` returned rather than a copy. Turn the Tailwind plugin on with `defineConfig`'s `tailwindcss` rather than in a merged config: `mergeConfigs` throws on a Tailwind plugin when a config's import sorter is the wrapper that `defineConfig` adds without `tailwindcss`, which the Tailwind plugin can't compose. It throws on the plugins in [Plugins that conflict][] too, across all the configs, and on a plugin given by name that a `defineConfig` config adds itself: the import sorter, `prettier-plugin-packagejson`, `prettier-plugin-astro` or `prettier-plugin-tailwindcss`. Prettier would load both copies, and the named one would replace the preset's, such as the import sorter's wrapper. Configs that `defineConfig` returned merge, each of their plugins kept once.
 
 An override's `plugins` add to the merged config's plugins, including those of later configs. Here, the files in `docs/` get a local plugin and keep import sorting and the team config's plugins:
 

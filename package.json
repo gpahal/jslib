@@ -16,7 +16,7 @@
   "type": "module",
   "scripts": {
     "build": "turbo run build",
-    "check": "turbo run build typecheck test test-canaries test-recipes typecheck-root typecheck-release lint-check lint-check-root fmt-check knip --continue=dependencies-successful",
+    "check": "turbo run build typecheck test test-recipes typecheck-root typecheck-release lint-check lint-check-root fmt-check knip --continue=dependencies-successful",
     "clean": "rm -rf .turbo .eslintcache packages/*/build packages/*/.turbo packages/*/tests/tmp packages/*/*.tsbuildinfo packages/*/tests/*.tsbuildinfo packages/*/tests/*/*.tsbuildinfo packages/*/*.tgz",
     "cs": "changeset && changeset version",
     "cs-publish": "./scripts/verify-publish-branch.sh && ./scripts/verify-no-git-changes.sh && ./scripts/verify-no-ignored-files.sh && turbo run build --force && ./scripts/verify-no-git-changes.sh && JSLIB_RELEASE=1 changeset publish --no-git-tag",

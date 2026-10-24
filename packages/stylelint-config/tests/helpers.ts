@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 /**
  * The real path of the package's Tailwind CSS
@@ -49,6 +50,20 @@ export async function tailwindProblemOf(css: string): Promise<string | undefined
   } finally {
     warn.mockRestore()
   }
+}
+
+/**
+ * The rule and severity of each warning that `config` reports on `code` in `file`
+ */
+export async function warningsOf(
+  config: Config,
+  file: string,
+  code: string,
+): Promise<Array<string>> {
+  const { results } = await stylelint.lint({ code, codeFilename: file, config })
+  return results.flatMap((result) =>
+    result.warnings.map((warning) => `${warning.rule}: ${warning.severity}`),
+  )
 }
 
 /**

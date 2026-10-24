@@ -117,44 +117,10 @@ export function App() {
 }
 ",
   },
-  "src/array-from-map.ts": {
-    "problems": [
-      "6:10 e18e/prefer-array-from-map",
-      "25:10 e18e/prefer-array-from-map",
-    ],
-    "text": "/**
- * The values of \`set\`, adding each one's successor to it as it goes. \`Array.from(set, fn)\` would
- * map the values added too, so \`[1, 2]\` would give \`[1, 2, 3, 4]\`
- */
-export function withSuccessors(set: Set<number>): Array<number> {
-  return [...set].map((value) => {
-    if (value < 3) {
-      set.add(value + 2)
-    }
-    return value
-  })
-}
-
-/**
- * The length of the array a value is mapped from, which \`Array.from\` doesn't pass
- */
-function sizeOf(_value: number, _index: number, all: Array<number> = []): number {
-  return all.length
-}
-
-/**
- * The size of \`set\` for each value, which \`Array.from(set, sizeOf)\` would make \`0\`
- */
-export function sizes(set: Set<number>): Array<number> {
-  return [...set].map(sizeOf)
-}
-",
-  },
   "src/array-likes.js": {
     "problems": [
       "5:15 unicorn/prefer-at",
       "12:10 unicorn/prefer-spread",
-      "12:10 e18e/prefer-spread-syntax",
     ],
     "text": "/**
  * The last of \`list\`, an array-like that may have no \`at\`
@@ -169,6 +135,69 @@ export function last(list) {
 export function items(list) {
   return Array.from(list)
 }
+",
+  },
+  "src/duplicate-imports/inline-before-type.ts": {
+    "problems": [],
+    "text": "import type {Other, Shape } from './module';
+
+/**
+ * Pairs a shape with its id
+ */
+export function pair(shape: Shape, other: Other): [Shape, Other] {
+  return [shape, other]
+}
+",
+  },
+  "src/duplicate-imports/inline-beside-type.ts": {
+    "problems": [],
+    "text": "import type { Shape,Other } from './module'
+import {  shape } from './module'
+
+/**
+ * The circle with an id
+ */
+export const pair: [Shape, Other] = [shape, { id: 1 }]
+",
+  },
+  "src/duplicate-imports/module.ts": {
+    "problems": [],
+    "text": "/**
+ * A shape
+ */
+export type Shape = { kind: string }
+
+/**
+ * An id
+ */
+export type Other = { id: number }
+
+/**
+ * A circle
+ */
+export const shape: Shape = { kind: 'circle' }
+",
+  },
+  "src/duplicate-imports/type-beside-value.ts": {
+    "problems": [],
+    "text": "import type { Shape } from './module'
+import { shape } from './module'
+
+/**
+ * A copy of the circle
+ */
+export const copy: Shape = { ...shape }
+",
+  },
+  "src/duplicate-imports/value-to-type.ts": {
+    "problems": [],
+    "text": "import type { Shape} from './module';
+import { shape  } from './module'
+
+/**
+ * A copy of the circle
+ */
+export const copy: Shape = { ...shape }
 ",
   },
   "src/has-own.ts": {
@@ -206,14 +235,12 @@ export function hasOwnKey(object: Record<string, unknown>): boolean {
   },
   "src/index.ts": {
     "problems": [
-      "1:10 @typescript-eslint/no-unused-vars",
       "9:17 unicorn/prefer-spread",
-      "9:17 e18e/prefer-spread-syntax",
       "13:1 @gpahal/comment-layout",
     ],
-    "text": "import { readFile } from 'node:fs/promises'
+    "text": "import 'node:fs/promises'
 
-import type { Item } from './types'
+import type {Item} from './types';
 
 /**
  * Lists the elements.
@@ -226,6 +253,140 @@ export function list(nodes: NodeListOf<Element>): Array<Element> {
 // The item's name
 export function nameOf(item: Item): string {
   return item.name
+}
+",
+  },
+  "src/interfaces/augmentations.ts": {
+    "problems": [
+      "18:11 @typescript-eslint/consistent-type-definitions",
+    ],
+    "text": "import { registry  } from './registry'
+import type {Register} from './registry';
+
+export const all: Register = { ...registry, b: '', c: true }
+
+declare module './registry' {
+  interface Register {
+    b: string
+  }
+}
+
+declare module './registry' {
+  interface Register {
+    c: boolean
+  }
+}
+
+interface Local {
+  d: number
+}
+
+export const local: Local = { d: 1 }
+",
+  },
+  "src/interfaces/b.ts": {
+    "problems": [],
+    "text": "export type B<T> = { b: T }
+",
+  },
+  "src/interfaces/intersection.ts": {
+    "problems": [
+      "5:11 @typescript-eslint/consistent-type-definitions",
+    ],
+    "text": "import type { B } from './b'
+
+type C = { c: string }
+
+interface A<T> extends B<T>, C {}
+
+export const a: A<number> = { b: 1, c: '' }
+",
+  },
+  "src/interfaces/merged.ts": {
+    "problems": [
+      "1:18 @typescript-eslint/consistent-type-definitions",
+      "4:18 @typescript-eslint/consistent-type-definitions",
+    ],
+    "text": "export interface A {
+  a: number
+}
+export interface A {
+  b: number
+}
+",
+  },
+  "src/interfaces/namespace.ts": {
+    "problems": [
+      "1:8 @typescript-eslint/no-namespace",
+      "2:20 @typescript-eslint/consistent-type-definitions",
+      "6:8 @typescript-eslint/no-namespace",
+      "7:20 @typescript-eslint/consistent-type-definitions",
+    ],
+    "text": "export namespace A {
+  export interface X {
+    a: string
+  }
+}
+export namespace A {
+  export interface X {
+    b: number
+  }
+}
+export const x: A.X = { a: 'a', b: 1 }
+",
+  },
+  "src/interfaces/registry.ts": {
+    "problems": [
+      "1:18 @typescript-eslint/consistent-type-definitions",
+    ],
+    "text": "export interface Register {
+  a: number
+}
+
+export declare const registry: Register
+",
+  },
+  "src/interfaces/self-reference.ts": {
+    "problems": [
+      "1:11 @typescript-eslint/consistent-type-definitions",
+    ],
+    "text": "interface Json extends Record<string, Json | string> {
+  x: string
+}
+
+export const json: Json = { x: 'a' }
+",
+  },
+  "src/interfaces/this-type.ts": {
+    "problems": [
+      "1:11 @typescript-eslint/consistent-type-definitions",
+      "2:3 @typescript-eslint/method-signature-style",
+    ],
+    "text": "interface Chain {
+  next(): this
+}
+
+export const chain: Chain = {
+  next() {
+    return this
+  },
+}
+",
+  },
+  "src/json.ts": {
+    "problems": [
+      "9:18 @typescript-eslint/consistent-type-definitions",
+    ],
+    "text": "/**
+ * A JSON value
+ */
+export type Json = string | number | boolean | null | Array<Json> | JsonObject
+
+/**
+ * A JSON object with a kind. As a type alias, it would refer to itself through \`Record\` (TS2456)
+ */
+export interface JsonObject extends Record<string, Json> {
+  kind: string
 }
 ",
   },
@@ -256,7 +417,6 @@ module.exports = { count }
     "problems": [
       "1:1 @gpahal/comment-layout",
       "10:10 unicorn/prefer-spread",
-      "10:10 e18e/prefer-spread-syntax",
     ],
     "text": "// The starting count
 const count = 1
@@ -268,18 +428,6 @@ export const total = count + 1
 
 export function first(nodes) {
   return Array.from(nodes)[0]
-}
-",
-  },
-  "src/merged-imports.ts": {
-    "problems": [],
-    "text": "import type { Other, Shape  } from './types'
-
-/**
- * Pairs a shape with its id
- */
-export function pair(shape: Shape, other: Other): [Shape, Other] {
-  return [shape, other]
 }
 ",
   },
@@ -303,6 +451,69 @@ const className = 'p-4 flex text-red-500'
 ---
 
 <h1 class={className}>{title}</h1>
+",
+  },
+  "src/remove-unused/all-specifiers.ts": {
+    "problems": [],
+    "text": "import './module'
+
+export const x = 1
+",
+  },
+  "src/remove-unused/default.ts": {
+    "problems": [
+      "3:1 unicorn/prefer-export-from",
+    ],
+    "text": "import { a } from './module'
+
+export const x = a
+",
+  },
+  "src/remove-unused/line-comment.ts": {
+    "problems": [
+      "1:8 @typescript-eslint/no-unused-vars",
+      "4:1 unicorn/prefer-export-from",
+    ],
+    "text": "import d // keep
+, { a } from './module'
+
+export const x = a
+",
+  },
+  "src/remove-unused/module.ts": {
+    "problems": [
+      "1:1 no-console",
+      "5:8 slop/no-trivial-type-aliases",
+      "7:1 import-x/no-anonymous-default-export",
+    ],
+    "text": "console.info('loaded')
+
+export const a = 1
+export const b = 2
+export type T = number
+
+export default 0
+",
+  },
+  "src/remove-unused/specifier.ts": {
+    "problems": [
+      "3:1 unicorn/prefer-export-from",
+    ],
+    "text": "import { a } from './module'
+
+export const x = a
+",
+  },
+  "src/remove-unused/type-beside-side-effect.ts": {
+    "problems": [],
+    "text": "import './module'
+
+export const x = 1
+",
+  },
+  "src/remove-unused/type-only.ts": {
+    "problems": [],
+    "text": "export const x = 1
 ",
   },
   "src/styles.css": {
@@ -332,16 +543,6 @@ export function schedule(report: (value: string) => void): string {
  * A type the other files import
  */
 export type Item = { name: string }
-
-/**
- * A type \`merged-imports.ts\` imports with an inline \`type\`
- */
-export type Other = { id: number }
-
-/**
- * A type \`merged-imports.ts\` imports with \`import type\`
- */
-export type Shape = { kind: string }
 ",
   },
   "tsconfig.json": {

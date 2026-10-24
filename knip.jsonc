@@ -30,29 +30,42 @@
       "project": ["src/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
       // Tailwind CSS is only for tests, which have no stylesheets for knip to find
       "tailwind": false,
-      // Imported by `@gpahal/internal/globs`, which the build bundles, so the published package
-      // imports it, but knip only sees the bundled module's source
-      "ignoreDependencies": ["brace-expansion"]
+      // Imported by `@gpahal/internal/globs` and `@gpahal/internal/node/versions`, which the build
+      // bundles, so the published package imports them, but knip only sees the bundled modules'
+      // source
+      "ignoreDependencies": ["brace-expansion", "semver"]
     },
     "packages/prettier-config": {
       "entry": ["src/*.ts", "tests/**/*.{test,test-d}.ts", "tests/exact-optional/*.ts"],
       "project": ["src/**/*.ts", "tests/**/*.ts"],
       "tailwind": false,
-      // Loaded by resolved path, which knip can't follow
-      "ignoreDependencies": ["prettier-plugin-packagejson"]
+      // `prettier-plugin-packagejson` is loaded by resolved path, which knip can't follow, and
+      // `semver` is imported by `@gpahal/internal/node/versions`, as in eslint-config
+      "ignoreDependencies": ["prettier-plugin-packagejson", "semver"]
     },
     "packages/stylelint-config": {
       "entry": ["src/*.ts", "tests/**/*.{test,test-d}.ts", "tests/exact-optional/*.ts"],
       "project": ["src/**/*.ts", "tests/**/*.ts"],
+      "tailwind": false,
+      // As in eslint-config
+      "ignoreDependencies": ["brace-expansion"]
+    },
+    "packages/font-fallback": {
+      "entry": ["src/*.ts", "tests/**/*.test.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.ts"],
+      // A system command, which a test runs to make a FIFO, since Node can't
+      "ignoreBinaries": ["mkfifo"]
+    },
+    "packages/recipes": {
+      "entry": ["tests/**/*.test.ts"],
+      "project": ["tests/**/*.ts"],
       // Astro runs only in the temporary setup-recipe projects
       "astro": false,
-      "tailwind": false,
-      // `brace-expansion`: as in eslint-config. `tests/setup-recipes.test.ts` copies eslint-config
-      // and tsconfig into its projects, depending on them so Turbo builds them first, and links the
-      // recipes' app packages into them by path
+      // `tests/setup-recipes.test.ts` copies the config packages into its projects, depending on them
+      // so Turbo builds them first, and links the recipes' app packages into them by path
       "ignoreDependencies": [
-        "brace-expansion",
         "@gpahal/eslint-config",
+        "@gpahal/stylelint-config",
         "@gpahal/tsconfig",
         "astro",
         "@astrojs/check",
@@ -64,12 +77,6 @@
         "vite",
         "@vitejs/plugin-react"
       ]
-    },
-    "packages/font-fallback": {
-      "entry": ["src/*.ts", "tests/**/*.test.ts"],
-      "project": ["src/**/*.ts", "tests/**/*.ts"],
-      // A system command, which a test runs to make a FIFO, since Node can't
-      "ignoreBinaries": ["mkfifo"]
     },
     "packages/tsconfig": {
       "entry": ["tests/**/*.test.ts"],

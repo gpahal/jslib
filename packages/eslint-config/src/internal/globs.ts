@@ -65,6 +65,38 @@ export function hasGlobMagic(glob: string): boolean {
   return compileGlob(glob).hasMagic()
 }
 
+/**
+ * A leading `!` of a single segment starts an extglob, as in `src/!(legacy)`, since only a whole
+ * glob's negates
+ */
+const SEGMENT_OPTIONS = { ...MINIMATCH_OPTIONS, nonegate: true } as const
+
+const COMPILED_SEGMENTS = new Map<string, Minimatch>()
+
+function compileSegment(segment: string): Minimatch {
+  let matcher = COMPILED_SEGMENTS.get(segment)
+  if (matcher === undefined) {
+    matcher = new Minimatch(segment, SEGMENT_OPTIONS)
+    COMPILED_SEGMENTS.set(segment, matcher)
+  }
+  return matcher
+}
+
+/**
+ * For a single path segment, such as a file name
+ */
+export function createSegmentMatcher(segment: string): (name: string) => boolean {
+  const matcher = compileSegment(segment)
+  return (name) => matcher.match(name)
+}
+
+/**
+ * For a single path segment, such as a file name
+ */
+export function hasSegmentMagic(segment: string): boolean {
+  return compileSegment(segment).hasMagic()
+}
+
 const GLOB_SPECIAL_CHAR = /[!()*+?@[\\\]{|}]/
 
 /**
@@ -157,7 +189,7 @@ export type Scope = {
  * Dotfiles match, as in ESLint
  */
 function matchesSegment(segment: string, name: string): boolean {
-  return createGlobMatcher(segment)(name)
+  return createSegmentMatcher(segment)(name)
 }
 
 /**

@@ -5,9 +5,10 @@
  */
 
 import fs from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 
-import { parse as parseYaml } from 'yaml'
+import type { parse } from 'yaml'
 
 import { isRecord } from '@gpahal/std/objects'
 import { trimEnd } from '@gpahal/std/strings'
@@ -44,13 +45,21 @@ const MAX_WORKSPACE_FOLDERS = 5000
 const MAX_WORKSPACE_DEPTH = 6
 
 /**
+ * On first use and synchronously, since only a `pnpm-workspace.yaml` needs it
+ */
+function loadYamlParse(): typeof parse {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- `require` returns `any`, and this is the `yaml` module
+  return (createRequire(import.meta.url)('yaml') as { parse: typeof parse }).parse
+}
+
+/**
  * None when it doesn't parse or `packages` isn't a list
  */
 function parsePnpmWorkspaceGlobs(text: string): Array<string> {
   let workspace: unknown
   try {
     // `error` throws on a parse error and skips the default level's warnings
-    workspace = parseYaml(text, { logLevel: 'error' })
+    workspace = loadYamlParse()(text, { logLevel: 'error' })
   } catch {
     return []
   }

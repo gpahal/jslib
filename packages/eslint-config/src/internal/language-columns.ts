@@ -9,7 +9,7 @@ type Position = { line: number; column: number }
  */
 const OTHER_LINE_BREAK = /\r(?!\n)|[\u{2028}\u{2029}]/u
 
-export function lfLineStarts(text: string): Array<number> {
+function lfLineStarts(text: string): Array<number> {
   const starts = [0]
   for (let index = text.indexOf('\n'); index !== -1; index = text.indexOf('\n', index + 1)) {
     starts.push(index + 1)
@@ -22,9 +22,9 @@ export function lfLineStarts(text: string): Array<number> {
  * a disable comment would miss the report otherwise. `keepsEnd` converts only the start. `lfLines`
  * remaps positions for a rule that counts only `\n` as a line break
  */
-function withLanguageColumns(
+export function withLanguageColumns(
   rule: Rule.RuleModule,
-  { keepsEnd, lfLines }: { keepsEnd: boolean; lfLines: boolean },
+  { keepsEnd = false, lfLines = false }: { keepsEnd?: boolean; lfLines?: boolean } = {},
 ): Rule.RuleModule {
   return {
     ...rule,

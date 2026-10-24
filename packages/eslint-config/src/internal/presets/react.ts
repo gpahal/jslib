@@ -8,13 +8,8 @@ import {
   untypedConfusingBrowserGlobalsConfig,
 } from '@/internal/configs/browser'
 import { COMMONJS_FILES, CONFIG_FILES, JSX_FILES } from '@/internal/files'
-import {
-  intersectFiles,
-  intersectFileSpecs,
-  isSameFiles,
-  type FileSpecs,
-  type Scope,
-} from '@/internal/globs'
+import { intersectFiles, intersectFileSpecs, isSameFiles } from '@/internal/globs'
+import type { FileSpecs, Scope } from '@/internal/globs'
 import { named, withSetup } from '@/internal/naming'
 import { importPeers, interopDefault } from '@/internal/peers'
 import type { TypedConfig, TypedRules } from '@/internal/types'

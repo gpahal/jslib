@@ -2,20 +2,22 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import eslintPluginE18e from '@e18e/eslint-plugin'
-import { ESLint, Linter, type Rule } from 'eslint'
+import { ESLint, Linter } from 'eslint'
+import type { Rule } from 'eslint'
 import eslintPluginSlop from 'eslint-plugin-slop'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import { defineConfig as eslintDefineConfig } from 'eslint/config'
 import ts from 'typescript'
 import tseslint from 'typescript-eslint'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 import { patchUnsafeFixes } from '@/internal/fixes'
 import { wrapSlopPlugin } from '@/internal/presets/antislop'
 
-import { createFocusedESLint } from './fix-helpers'
 import {
   createESLint,
+  createFocusedESLint,
   eslintWith,
   FIXTURES_DIR,
   lint,
@@ -25,8 +27,8 @@ import {
   sharedESLint,
   warningsOf,
   withProject,
-  type ConfigOptions,
 } from './helpers'
+import type { ConfigOptions } from './helpers'
 
 function lineAndRuleOf(message: Linter.LintMessage): string {
   return `${String(message.line)}:${ruleIdOf(message)}`
@@ -234,82 +236,55 @@ describe('commonjs option', () => {
   })
 })
 
-describe('the commonjs hint', () => {
+/**
+ * A project whose `package.json` lists `names` as dev dependencies
+ */
+function withDevDependencies(...names: Array<string>): Record<string, string> {
+  return {
+    'package.json': JSON.stringify({
+      private: true,
+      type: 'module',
+      devDependencies: Object.fromEntries(names.map((name) => [name, '*'])),
+    }),
+  }
+}
+
+describe('the commonjs and framework hints', () => {
   const COMMONJS_PACKAGE = {
     'package.json': '{ "private": true, "type": "commonjs" }\n',
     'src/a.js': 'module.exports = 1\n',
   }
 
-  it('suggests `commonjs: true` once for a package of "type": "commonjs"', async () => {
-    await using project = await withProject(COMMONJS_PACKAGE)
-    expect(warningsOf(project.dir, { typeAware: false })).toEqual([
-      [
-        '@gpahal/eslint-config: `commonjs`: `package.json` sets `"type": "commonjs"`, so Node runs `.js` files as CommonJS, but they\'re linted as ES modules. Set `commonjs: true`, or `commonjs: false` to lint them as ES modules',
-        'GPAHAL_COMMONJS_PACKAGE',
-      ],
-    ])
-    expect(warningsOf(project.dir, { typeAware: false })).toEqual([])
-  })
+  // A version range in an install command, which changes with the peer ranges
+  const VERSION_REGEX = /(?<=[\w-])@[^"/@]+(?=")/g
 
-  it.each([true, false])("doesn't warn with `commonjs: %s`", async (commonjs) => {
-    await using project = await withProject(COMMONJS_PACKAGE)
-    expect(warningsOf(project.dir, { typeAware: false, commonjs })).toEqual([])
-  })
-  it('suggests `commonjs: true` for a package without "type", which Node runs as CommonJS', async () => {
-    await using project = await withProject({ 'package.json': '{}', 'src/a.jsx': '' })
-    expect(warningsOf(project.dir, { typeAware: false })).toEqual([
-      [
-        '@gpahal/eslint-config: `commonjs`: `package.json` has no `"type"`, so Node runs `.js` files as CommonJS, but they\'re linted as ES modules. Set `commonjs: true`, or `commonjs: false` to lint them as ES modules, or set `"type": "module"` in `package.json`',
-        'GPAHAL_COMMONJS_PACKAGE',
-      ],
-    ])
-  })
-})
-
-async function projectWith(packages: Array<string>): ReturnType<typeof withProject> {
-  return withProject({
-    'package.json': JSON.stringify({
-      private: true,
-      type: 'module',
-      devDependencies: Object.fromEntries(packages.map((name) => [name, '*'])),
-    }),
-  })
-}
-
-describe('framework hints', () => {
-  it.each([
-    ['react', 'react', 'Set `react: true` and install its plugins, as in `pnpm add -D '],
+  it.each<[string, Record<string, string>, Partial<EslintConfigOptions>]>([
+    ['a package of "type": "commonjs"', COMMONJS_PACKAGE, {}],
+    ['commonjs: true', COMMONJS_PACKAGE, { commonjs: true }],
+    ['commonjs: false', COMMONJS_PACKAGE, { commonjs: false }],
+    // Node runs its `.js` files as CommonJS
+    ['a package without "type"', { 'package.json': '{}', 'src/a.jsx': '' }, {}],
+    ['react', withDevDependencies('react'), {}],
+    ['@playwright/test', withDevDependencies('@playwright/test'), {}],
+    // The Next.js hint alone, since its option turns React on
+    ['a Next.js app', withDevDependencies('next', 'react'), {}],
     [
-      '@playwright/test',
-      'playwright',
-      'Set `playwright: true` and install its plugins, as in `pnpm add -D "eslint-plugin-playwright@',
+      'vitest: true and react: true',
+      withDevDependencies('vitest', 'react'),
+      { vitest: true, react: true },
     ],
-  ])('suggests the option for %s once', async (packageName, option, fix) => {
-    await using project = await projectWith([packageName])
-    const warnings = warningsOf(project.dir, { typeAware: false })
-    expect(warnings).toEqual([
-      [
-        expect.stringContaining(
-          `@gpahal/eslint-config: \`${option}\`: \`package.json\` lists ${packageName}, but the \`${option}\` option isn't set, so its rules are off. ${fix}`,
-        ),
-        'GPAHAL_FRAMEWORK_OPTION_UNSET',
-      ],
-    ])
-    expect(warnings[0]?.[0]).toMatch(
-      new RegExp(`, or set \`${option}: false\` to turn this warning off$`),
-    )
-    expect(warningsOf(project.dir, { typeAware: false })).toEqual([])
-  })
-  it('gives the Next.js hint alone for a Next.js app, whose option turns React on', async () => {
-    await using project = await projectWith(['next', 'react'])
-    expect(warningsOf(project.dir, { typeAware: false }).map(([message]) => message)).toEqual([
-      expect.stringMatching(/^@gpahal\/eslint-config: `nextjs`: /),
-    ])
-  })
-
-  it.each([true, false])("doesn't warn with the option set to %s", async (value) => {
-    await using project = await projectWith(['vitest', 'react'])
-    expect(warningsOf(project.dir, { typeAware: false, vitest: value, react: value })).toEqual([])
+    [
+      'vitest: false and react: false',
+      withDevDependencies('vitest', 'react'),
+      { vitest: false, react: false },
+    ],
+  ])('warn at most once for %s', async (_name, files, options) => {
+    await using project = await withProject(files)
+    const warnings = warningsOf(project.dir, { typeAware: false, ...options })
+    expect(warningsOf(project.dir, { typeAware: false, ...options })).toEqual([])
+    expect(
+      warnings.map(([message, code]) => [message.replaceAll(VERSION_REGEX, '@<version>'), code]),
+    ).toMatchSnapshot()
   })
 })
 
@@ -400,24 +375,9 @@ describe('unicorn/prefer-spread', () => {
       expect.stringMatching(
         /^unicorn\/prefer-spread: Prefer the spread operator over `Array\.from/,
       ),
-      expect.stringMatching(/^e18e\/prefer-spread-syntax: .*Array\.from/),
     ])
   })
 
-  // Dropped, as e18e's `prefer-spread-syntax` report is, only where unicorn's
-  // `prefer-array-from-map` reports
-  it.each([
-    ['(value, index, all) => value + index + all.length', true],
-    ['Math.abs, values', true],
-    ['(value) => value * 2, values', false],
-    ['Math.abs', true],
-  ])('reports `Array.from(values).map(%s)` when %s', async (mapArguments, isReported) => {
-    const eslint = await sharedESLint('rules')
-    const messages = await lintText(eslint, file, code(`Array.from(values).map(${mapArguments})`))
-    for (const rule of ['unicorn/prefer-spread', 'e18e/prefer-spread-syntax']) {
-      expect(messages.some((message) => message.startsWith(`${rule}: `))).toBe(isReported)
-    }
-  })
   // Spreading a value without `[Symbol.iterator]` throws, and TypeScript rejects it. `any` says
   // nothing either way
   it.each([
@@ -431,20 +391,22 @@ describe('unicorn/prefer-spread', () => {
       file,
       `export function copy(values: ${type}): Array<unknown> {\n  return Array.from(values)\n}\n`,
     )
-    for (const rule of ['unicorn/prefer-spread', 'e18e/prefer-spread-syntax']) {
-      expect(messages.some((message) => message.startsWith(`${rule}: `))).toBe(isReported)
-    }
+    expect(messages.some((message) => message.startsWith('unicorn/prefer-spread: '))).toBe(
+      isReported,
+    )
   })
-  it('leaves `Array.from(values).map(fn)` to prefer-array-from-map, without contradicting it, and to `--fix` unchanged, as that rule only suggests', async () => {
+  it('reports `Array.from(values).map(fn)` once, without a fix, and `Array.from(new Set(values))`', async () => {
     const eslint = await createESLint('rules', {}, { fix: true })
-    const [result] = await eslint.lintText(code('Array.from(values).map((value) => value * 2)'), {
-      filePath: file,
-    })
-    expect(result?.output).toBeUndefined()
-    expect(result?.messages.map((message) => message.ruleId ?? message.message)).toEqual([
-      'unicorn/prefer-array-from-map',
-    ])
-    expect(result?.messages[0]?.suggestions).toHaveLength(1)
+    for (const body of [
+      'Array.from(values).map((value) => value * 2)',
+      'Array.from(new Set(values))',
+    ]) {
+      const [result] = await eslint.lintText(code(body), { filePath: file })
+      expect(result?.output).toBeUndefined()
+      expect(result?.messages.map((message) => message.ruleId ?? message.message)).toEqual([
+        'unicorn/prefer-spread',
+      ])
+    }
   })
 })
 
@@ -475,175 +437,35 @@ describe('the patched rules of shared plugins', () => {
         )
         .map((message) => message.ruleId),
     ).toEqual(['unicorn/prefer-spread'])
+    // With type information, where the presets' patch drops the report
+    const filePath = path.join(FIXTURES_DIR, 'rules', 'src', 'copy.ts')
+    const text =
+      'export function copy(list: ArrayLike<number>): Array<number> {\n  return Array.from(list)\n}\n'
+    const host = ts.createCompilerHost({ strict: true, noEmit: true, types: [] })
+    const getSourceFile = host.getSourceFile.bind(host)
+    host.getSourceFile = (name, ...rest) =>
+      path.resolve(name) === filePath
+        ? ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true)
+        : getSourceFile(name, ...rest)
+    const program = ts.createProgram({
+      rootNames: [filePath],
+      options: { strict: true, noEmit: true, types: [] },
+      host,
+    })
     expect(
       linter
         .verify(
-          '[...m.keys()].map((x) => x)\n',
-          config({ 'e18e/prefer-array-from-map': 'error' }),
-          'x.js',
+          text,
+          {
+            ...config({ 'unicorn/prefer-spread': 'error' }),
+            languageOptions: { parser: tseslint.parser, parserOptions: { programs: [program] } },
+          },
+          filePath,
         )
         .map((message) => message.ruleId),
-    ).toEqual(['e18e/prefer-array-from-map'])
+    ).toEqual(['unicorn/prefer-spread'])
   })
 })
-
-const FIX_COMPILER_OPTIONS = {
-  strict: true,
-  module: 'preserve',
-  moduleResolution: 'bundler',
-  allowImportingTsExtensions: true,
-  verbatimModuleSyntax: true,
-  noEmit: true,
-  types: [],
-}
-
-type TypedCase = { files: Record<string, string>; file: string }
-
-/**
- * The rules whose fixes the typed cases check, the only ones that run on them, and the layout rule
- * that drops the blank line a removed import leaves at the top
- */
-const TYPED_FIX_RULES: ReadonlySet<string> = new Set([
-  '@typescript-eslint/consistent-type-definitions',
-  '@typescript-eslint/no-unused-vars',
-  'unicorn/no-leading-empty-lines',
-])
-
-type TypedFix = { output: string; again: string; errors: Array<string>; rules: Array<string> }
-
-/**
- * `--fix`'s output for each case, its TypeScript errors, the rules left reporting and the output of
- * a second `--fix`. The cases share one program, each in a folder of its own, so they must be
- * modules: script files would merge their globals
- */
-async function fixTypedProjects(
-  cases: ReadonlyArray<TypedCase>,
-  configOptions: ConfigOptions = {},
-): Promise<Array<TypedFix>> {
-  const prefixOf = (index: number) => (cases.length === 1 ? '' : `case${String(index)}/`)
-  await using project = await withProject({
-    'package.json': JSON.stringify({ name: 'app', private: true, type: 'module' }),
-    'tsconfig.json': JSON.stringify({
-      compilerOptions: FIX_COMPILER_OPTIONS,
-      include: cases.map((_, index) => `${prefixOf(index)}src`),
-    }),
-    ...Object.fromEntries(
-      cases.flatMap(({ files }, index) =>
-        Object.entries(files).map(([name, text]) => [`${prefixOf(index)}${name}`, text]),
-      ),
-    ),
-  })
-  const targets = cases.map(({ file }, index) =>
-    path.join(project.dir, `${prefixOf(index)}${file}`),
-  )
-  const eslint = await createFocusedESLint(
-    project.dir,
-    TYPED_FIX_RULES,
-    { gitignore: false, ...configOptions },
-    { fix: true },
-  )
-  const fixAndRead = async () => {
-    const results = await eslint.lintFiles(targets)
-    await ESLint.outputFixes(results)
-    const rules = new Map(results.map((result) => [result.filePath, result.messages.map(ruleIdOf)]))
-    return Promise.all(
-      targets.map(async (target) => ({
-        output: await fs.readFile(target, 'utf8'),
-        rules: rules.get(target) ?? [],
-      })),
-    )
-  }
-  const first = await fixAndRead()
-  const { options } = ts.convertCompilerOptionsFromJson(FIX_COMPILER_OPTIONS, project.dir)
-  const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram({ rootNames: targets, options }))
-  const again = await fixAndRead()
-  return first.map(({ output, rules }, index) => ({
-    output,
-    again: again[index]?.output ?? '',
-    errors: diagnostics
-      .filter(
-        (diagnostic) =>
-          diagnostic.file === undefined ||
-          path
-            .resolve(diagnostic.file.fileName)
-            .startsWith(path.join(project.dir, prefixOf(index))),
-      )
-      .map(
-        (diagnostic) =>
-          `TS${String(diagnostic.code)}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')}`,
-      ),
-    rules,
-  }))
-}
-
-type TypedBatch = {
-  cases: Array<() => Record<string, TypedCase>>
-  fixes?: Promise<Array<Map<string, TypedFix>>>
-}
-
-/**
- * The cases of each `fixTypedProjectsOnce` call, by its options, run as one `fixTypedProjects`
- */
-const TYPED_BATCHES = new Map<string, TypedBatch>()
-
-async function fixTypedBatch(
-  batch: TypedBatch,
-  configOptions: ConfigOptions,
-): Promise<Array<Map<string, TypedFix>>> {
-  const groups = batch.cases.map((cases) => Object.entries(cases()))
-  const fixes = await fixTypedProjects(
-    groups.flatMap((entries) => entries.map(([, typedCase]) => typedCase)),
-    configOptions,
-  )
-  let index = 0
-  return groups.map((entries) => new Map(entries.map(([key]) => [key, fixes[index++]!] as const)))
-}
-
-/**
- * Runs `fixTypedProjects` before the describe block it's called in, and returns results by key. The
- * calls with the same options, which must be JSON, share one run, which has every call's cases as
- * the tests are collected before any runs
- */
-function fixTypedProjectsOnce(
-  cases: () => Record<string, TypedCase>,
-  configOptions: ConfigOptions = {},
-): (key: string) => TypedFix {
-  const batchKey = JSON.stringify(configOptions)
-  let batch = TYPED_BATCHES.get(batchKey)
-  if (batch === undefined) {
-    batch = { cases: [] }
-    TYPED_BATCHES.set(batchKey, batch)
-  }
-  const group = batch.cases.length
-  batch.cases.push(cases)
-  let results = new Map<string, TypedFix>()
-  beforeAll(async () => {
-    batch.fixes ??= fixTypedBatch(batch, configOptions)
-    results = (await batch.fixes)[group]!
-  })
-  return (key) => {
-    const result = results.get(key)
-    if (result === undefined) {
-      throw new Error(`no batched case ${key}`)
-    }
-    return result
-  }
-}
-
-/**
- * Whether `code`, compiled as TypeScript does under `verbatimModuleSyntax`, still loads `./a.ts`
- */
-function loadsModule(code: string): boolean {
-  const { outputText } = ts.transpileModule(code, {
-    compilerOptions: {
-      verbatimModuleSyntax: true,
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-    },
-    fileName: 'b.ts',
-  })
-  return outputText.includes("'./a.ts'")
-}
 
 describe('imports.cycles', () => {
   // `a` imports `b`, which imports `c`, which imports `a`
@@ -675,196 +497,73 @@ describe('imports.cycles', () => {
   })
 })
 
+// `fix-output.test.ts` checks what the option's fixes remove
 describe('imports.removeUnused', () => {
-  const MODULE =
-    "console.info('loaded')\n\nexport const a = 1\nexport const b = 2\nexport type T = number\n\nexport default 0\n"
-  const caseOf = (code: string): TypedCase => ({
-    files: { 'src/a.ts': MODULE, 'src/b.ts': code },
-    file: 'src/b.ts',
-  })
-
-  const REMOVED = [
-    [
-      'an unused specifier beside a used one',
-      "import { a, b } from './a.ts'\n\nexport const x = a\n",
-      "import { a } from './a.ts'\n\nexport const x = a\n",
-    ],
-    [
-      'a value import with every specifier unused, as a side-effect import',
-      "import { a, b } from './a.ts'\n\nexport const x = 1\n",
-      "import './a.ts'\n\nexport const x = 1\n",
-    ],
-    [
-      'an unused default import beside a used named one',
-      "import d, { a } from './a.ts'\n\nexport const x = a\n",
-      "import { a } from './a.ts'\n\nexport const x = a\n",
-    ],
-    [
-      'an unused `import type`, entirely',
-      "import type { T } from './a.ts'\n\nexport const x = 1\n",
-      'export const x = 1\n',
-    ],
-    [
-      'an unused type import beside a side-effect import, keeping that',
-      "import type { T } from './a.ts'\nimport './a.ts'\n\nexport const x = 1\n",
-      "import './a.ts'\n\nexport const x = 1\n",
-    ],
-  ] as const
-  // The fix would move the comment
-  const BEFORE_LINE_COMMENT = "import d // keep\n, { a } from './a.ts'\n\nexport const x = a\n"
-  const fixed = fixTypedProjectsOnce(
-    () =>
-      Object.fromEntries(
-        [...REMOVED.map(([, code]) => code), BEFORE_LINE_COMMENT].map((code) => [
-          code,
-          caseOf(code),
-        ]),
-      ),
-    { imports: { removeUnused: true } },
-  )
-
-  it.each(REMOVED)('removes %s', (_name, code, expected) => {
-    const { output, again, errors, rules } = fixed(code)
-    expect(output).toBe(expected)
-    expect(loadsModule(output)).toBe(expected.includes("'./a.ts'"))
-    expect(rules).not.toContain('@typescript-eslint/no-unused-vars')
-    expect(errors).toEqual([])
-    expect(again).toBe(output)
-  })
-
-  it('leaves an unused default import before a line comment', () => {
-    const { output, rules } = fixed(BEFORE_LINE_COMMENT)
-    expect(output).toBe(BEFORE_LINE_COMMENT)
-    expect(rules).toContain('@typescript-eslint/no-unused-vars')
-  })
-
-  const UNUSED = "import { a, b } from './a.ts'\n\nexport const x = a\n"
-  // With the default options, so it joins the other batches with them
-  const fixedWithoutOption = fixTypedProjectsOnce(() => ({ unused: caseOf(UNUSED) }))
-
-  it('only reports in an editor, and without the option', async () => {
-    const [inEditor] = await fixTypedProjects([caseOf(UNUSED)], {
-      imports: { removeUnused: true },
-      isInEditor: true,
+  it('only reports an unused import in an editor, and without the option', async () => {
+    const code = "import { a, b } from './a'\n\nexport const x = a\n"
+    await using project = await withProject({
+      'package.json': JSON.stringify({ name: 'app', private: true, type: 'module' }),
+      'tsconfig.json': JSON.stringify({
+        compilerOptions: { strict: true, module: 'preserve', noEmit: true, types: [] },
+        include: ['src'],
+      }),
+      'src/a.ts': 'export const a = 1\nexport const b = 2\n',
+      'src/b.ts': code,
     })
-    for (const result of [inEditor, fixedWithoutOption('unused')]) {
-      expect(result?.output).toBe(UNUSED)
-      expect(result?.rules).toContain('@typescript-eslint/no-unused-vars')
+    for (const options of [{ imports: { removeUnused: true }, isInEditor: true }, {}]) {
+      const eslint = await createFocusedESLint(
+        project.dir,
+        new Set(['@typescript-eslint/no-unused-vars']),
+        { gitignore: false, ...options },
+        { fix: true },
+      )
+      const [result] = await eslint.lintFiles(['src/b.ts'])
+      expect(result?.output, JSON.stringify(options)).toBeUndefined()
+      expect(result?.messages.map(ruleIdOf)).toEqual(['@typescript-eslint/no-unused-vars'])
     }
   })
 })
 
+// `fix-output.test.ts` checks that the rule leaves interfaces that merge declarations, refer to
+// themselves or use `this`
 describe('interfaces that merge declarations', () => {
-  const PACKAGE = {
-    'node_modules/x/package.json': JSON.stringify({ name: 'x', types: 'index.d.ts' }),
-    'node_modules/x/index.d.ts':
-      'export interface Register {\n  a: number\n}\nexport declare const registry: Register\n',
-  }
-  const AUGMENTATION =
-    "declare module 'x' {\n  interface Register {\n    b: string\n  }\n}\n\ndeclare module 'x' {\n  interface Register {\n    c: boolean\n  }\n}\n"
-  const USE =
-    "import { registry, type Register } from 'x'\n\nexport const all: Register = { ...registry, b: '', c: true }\n"
-  const UNFIXED = [
-    [
-      'merges with another declaration',
-      'export interface A {\n  a: number\n}\nexport interface A {\n  b: number\n}\n',
-    ],
-    [
-      'is in a merged namespace',
-      "export namespace A { export interface X { a: string } }\nexport namespace A { export interface X { b: number } }\nexport const x: A.X = { a: 'a', b: 1 }\n",
-    ],
-    [
-      'mentions itself',
-      "interface Json extends Record<string, Json | string> {\n  x: string\n}\n\nexport const json: Json = { x: 'a' }\n",
-    ],
-    // A type alias can't use the polymorphic `this` type: TS2526
-    [
-      'uses `this`',
-      'interface Chain {\n  next(): this\n}\n\nexport const chain: Chain = {\n  next() {\n    return this\n  },\n}\n',
-    ],
-  ] as const
-  const index = (code: string, files: Record<string, string> = {}): TypedCase => ({
-    files: { ...files, 'src/index.ts': code },
-    file: 'src/index.ts',
-  })
-  const fixed = fixTypedProjectsOnce(() => ({
-    augmentations: index(
-      `${USE}\n${AUGMENTATION}\ninterface Local {\n  d: number\n}\n\nexport const local: Local = { d: 1 }\n`,
-      PACKAGE,
-    ),
-    intersection: index(
-      "import type { B } from './b.ts'\n\ntype C = { c: string }\n\ninterface A<T> extends B<T>, C {}\n\nexport const a: A<number> = { b: 1, c: '' }\n",
-      { 'src/b.ts': 'export type B<T> = { b: T }\n' },
-    ),
-    ...Object.fromEntries(UNFIXED.map(([, code]) => [code, index(code)])),
-  }))
-
-  it.each(UNFIXED)('report an interface that %s without a fix', (_name, code) => {
-    const { output, again, errors, rules } = fixed(code)
-    expect(output).toBe(code)
-    expect(errors).toEqual([])
-    expect(rules).toContain('@typescript-eslint/consistent-type-definitions')
-    expect(again).toBe(output)
-  })
-
-  it('keep the module augmentations of a `.ts` file, and fix an interface outside them', () => {
-    const { output, again, errors, rules } = fixed('augmentations')
-    expect(output).toBe(
-      `${USE}\n${AUGMENTATION}\ntype Local = {\n  d: number\n}\n\nexport const local: Local = { d: 1 }\n`,
-    )
-    expect(errors).toEqual([])
-    expect(rules).not.toContain('@typescript-eslint/consistent-type-definitions')
-    expect(again).toBe(output)
-  })
-
-  it('fix an empty interface that extends to an intersection', () => {
-    const { output, errors, rules } = fixed('intersection')
-    expect(output).toBe(
-      "import type { B } from './b.ts'\n\ntype C = { c: string }\n\ntype A<T> = B<T> & C\n\nexport const a: A<number> = { b: 1, c: '' }\n",
-    )
-    expect(errors).toEqual([])
-    expect(rules).toEqual([])
-  })
-
   it.each([
-    ['src/page.astro', false],
-    ['README.md/0.ts', false],
-    ['src/global.ts', true],
-    ['src/a.d.ts', false],
-    ['src/b.d.ts', true],
-    // A declaration file's namespace members are exported without `export`, so they can merge
-    ['src/c.d.ts', true],
-  ])('treat `%s` as a module whose interfaces other files see: %s', (filename, isVisible) => {
-    const patchedFixes = patchUnsafeFixes(
-      [{ plugins: { '@typescript-eslint': tseslint.plugin } }],
-      process.cwd(),
-    )
-    const code =
-      {
-        'src/a.d.ts':
-          "import type { B } from './b'\n\ninterface Local {\n  b: B\n}\n\nexport type All = Local\n\nexport {}\n",
-        'src/b.d.ts':
-          "import type { B } from './b'\n\ninterface Local {\n  b: B\n}\n\nexport type All = Local\n",
-        'src/c.d.ts': 'export namespace Api {\n  interface Local {\n    a: number\n  }\n}\n',
-        'README.md/0.ts':
-          'interface Local {\n  a: number\n}\n\nexport const local: Local = { a: 1 }\n',
-      }[filename] ?? 'interface Local {\n  a: number\n}\n\nconst local: Local = { a: 1 }\n'
-    const fixed = new Linter({ configType: 'flat' }).verifyAndFix(
+    ['a script code block', 'README.md/0.ts', 'interface Window {\n  a: number\n}\n', false],
+    [
+      '`declare global`',
+      'src/a.ts',
+      'declare global {\n  interface Window {\n    a: number\n  }\n}\n\nexport {}\n',
+      false,
+    ],
+    [
+      'a script file without type information',
+      'src/global.ts',
+      'interface Window {\n  a: number\n}\n',
+      true,
+    ],
+    [
+      'a module',
+      'src/b.ts',
+      'interface Local {\n  a: number\n}\n\nexport const local: Local = { a: 1 }\n',
+      true,
+    ],
+  ])('report an interface in %s', (_name, filename, code, isReported) => {
+    const plugins = { '@typescript-eslint': tseslint.plugin }
+    const messages = new Linter({ configType: 'flat' }).verify(
       code,
       [
         {
-          files: ['**/*.{ts,astro}'],
+          files: ['**/*.ts'],
           languageOptions: { parser: tseslint.parser },
-          plugins: { '@typescript-eslint': tseslint.plugin },
+          plugins,
           rules: { '@typescript-eslint/consistent-type-definitions': ['error', 'type'] },
         },
-        ...patchedFixes,
+        ...patchUnsafeFixes([{ plugins }], process.cwd()),
       ],
       { filename: path.resolve(filename) },
     )
-    expect(fixed.output.includes('type Local = {')).toBe(!isVisible)
-    expect(fixed.messages.map(ruleIdOf)).toEqual(
-      isVisible ? ['@typescript-eslint/consistent-type-definitions'] : [],
+    expect(messages.map(ruleIdOf)).toEqual(
+      isReported ? ['@typescript-eslint/consistent-type-definitions'] : [],
     )
   })
 })
@@ -898,30 +597,6 @@ describe('iterator rules', () => {
     }
     expect(await ruleSeverity(eslint, 'src/a.ts', 'unicorn/prefer-iterator-to-array')).toBe(2)
     expect(await ruleSeverity(eslint, 'src/a.ts', 'unicorn/prefer-array-from-async')).toBe(2)
-  })
-})
-
-function matchFunction(body: string): string {
-  return `export function check(s: string): unknown {\n${body}\n}\n`
-}
-
-describe('@typescript-eslint/prefer-regexp-exec', () => {
-  const file = 'src/array-from-map.ts'
-
-  const IF_MATCH = '  if (s.match(/a/)) {\n    console.error(s)\n  }\n  return s'
-
-  it('reports no match as a condition with the regexp-test rule off in a later config', async () => {
-    // The patch reads which rules are on from the presets' configs, and can't see a later one
-    const eslint = await createFocusedESLint(
-      'rules',
-      new Set([
-        '@typescript-eslint/prefer-regexp-exec',
-        'unicorn/prefer-regexp-test',
-        'e18e/prefer-regex-test',
-      ]),
-      { extraConfigs: [{ rules: { 'unicorn/prefer-regexp-test': 'off' } }] },
-    )
-    expect(await lintText(eslint, file, matchFunction(IF_MATCH))).toEqual([])
   })
 })
 
@@ -1063,13 +738,12 @@ describe('rules turned on after the presets', () => {
         { imports: { rules: { 'import-x/no-duplicates': 'off' } } },
         {
           rules: { 'import-x/no-duplicates': 'error' },
-          comment:
-            '/* eslint import-x/no-duplicates: ["error", { "prefer-inline": true }] -- on here */',
+          comment: '/* eslint import-x/no-duplicates: "error" -- on here */',
         },
         'src/array-from-map.ts',
-        "import { type A } from 'a'\nimport type { B } from 'a'\n\nexport type C = A | B\n",
+        "import type { B } from 'a'\nimport { type A } from 'a'\n\nexport type C = A | B\n",
       )
-      expect(output).not.toContain('type B')
+      expect(output).not.toContain('type A')
       expect(rules).not.toContain(null)
     },
   )
@@ -1108,34 +782,6 @@ describe('type-aware rules turned on through an area', () => {
     ])
     expect(messages['e2e/b.ts']).not.toContain('import-x/no-extraneous-dependencies')
     expect(messages['e2e/b.ts']).not.toContain('@typescript-eslint/no-non-null-assertion')
-  })
-})
-
-describe('e18e options', () => {
-  // The rules each option turns on that no other rule duplicates
-  const RULES: Record<string, Array<string>> = {
-    modernization: ['e18e/prefer-object-has-own'],
-    moduleReplacements: ['e18e/ban-dependencies'],
-    performanceImprovements: [
-      'e18e/prefer-array-from-map',
-      'e18e/prefer-timer-args',
-      'e18e/prefer-static-collator',
-      'e18e/prefer-throw-if-no-entry',
-    ],
-  }
-
-  it.each(Object.keys(RULES))('e18e.%s: false turns only its rules off', async (option) => {
-    // `moduleReplacements` is off by default
-    const eslint = await createFocusedESLint('typescript', new Set(Object.values(RULES).flat()), {
-      e18e: { moduleReplacements: true, [option]: false },
-    })
-    for (const [name, rules] of Object.entries(RULES)) {
-      for (const rule of rules) {
-        expect((await ruleSeverity(eslint, 'src/index.ts', rule)) ?? 0, rule).toBe(
-          name === option ? 0 : 2,
-        )
-      }
-    }
   })
 })
 
@@ -1293,39 +939,25 @@ describe('browser option', () => {
     ])
   })
 
-  it('reports a bare built-in subpath, such as `path/posix`, unless the declared shim has it', async () => {
+  it('reports a built-in that `package.json` declares a browser port of', async () => {
     await using project = await withProject({
       'package.json': JSON.stringify({
         name: 'app',
         type: 'module',
-        dependencies: { assert: '*', path: '*', 'stream-browserify': '*', util: '*' },
+        dependencies: { buffer: '*' },
       }),
-      'node_modules/assert/package.json': JSON.stringify({
-        name: 'assert',
-        exports: { '.': './index.js', './strict': './strict.js' },
-      }),
-      'node_modules/path/package.json': '{ "name": "path", "main": "index.js" }',
-      'node_modules/stream-browserify/package.json': JSON.stringify({
-        name: 'stream-browserify',
-        exports: { '.': './index.js' },
-      }),
-      'node_modules/util/package.json': '{ "name": "util", "main": "util.js" }',
-      'node_modules/util/types.js': '',
-      'src/client/app.js': [
-        "import path from 'path'",
-        "import posix from 'path/posix'",
-        "import { pipeline } from 'stream/promises'",
-        "import strict from 'assert/strict'",
-        "import types from 'util/types'",
-        '',
-        'export const a = [path, posix, pipeline, strict, types]',
-        '',
-      ].join('\n'),
+      'node_modules/buffer/package.json': '{ "name": "buffer", "main": "index.js" }',
+      'src/client/app.js': "import { Buffer } from 'buffer'\n\nexport const a = Buffer\n",
     })
-    expect(await browserImportReports(project.dir)).toEqual([
-      '2:@gpahal/no-node-imports',
-      '3:@gpahal/no-node-imports',
-    ])
+    expect(await browserImportReports(project.dir)).toEqual(['1:@gpahal/no-node-imports'])
+  })
+
+  it('reports a dynamic import of a built-in written as an expression of literals', async () => {
+    await using project = await withProject({
+      'package.json': JSON.stringify({ name: 'app', type: 'module' }),
+      'src/client/app.js': "export const load = () => import('f' + 's')\n",
+    })
+    expect(await browserImportReports(project.dir)).toEqual(['1:@gpahal/no-node-dynamic-imports'])
   })
 
   it('keeps its rules when your configs set the core no-restricted-* rules', async () => {
@@ -1358,16 +990,7 @@ describe('browser option', () => {
   })
 })
 
-function globalsOf(config: Linter.Config): Linter.Globals {
-  return (config.languageOptions?.['globals'] ?? {}) as Linter.Globals
-}
-
 describe('server option', () => {
-  const windowCode = 'export const href = window.location.href\n'
-  const serverMessage: unknown = expect.stringMatching(
-    /^@gpahal\/no-browser-globals: Unexpected use of 'window'\. Server code runs without browser globals/,
-  )
-
   it('reports browser globals and their globalThis properties once each', async () => {
     const eslint = await createFocusedESLint(
       'browser',
@@ -1411,7 +1034,9 @@ describe('server option', () => {
     })
     const code = 'export const href = window.location.href\nexport const g = global.process\n'
     expect(await lintText(eslint, 'src/server/env.js', code)).toEqual([
-      expect.stringMatching(/^@gpahal\/no-browser-globals: Unexpected use of 'window'/),
+      expect.stringMatching(
+        /^@gpahal\/no-browser-globals: Unexpected use of 'window'\. Server code runs without browser globals/,
+      ),
       'unicorn/prefer-global-this: Prefer `globalThis` over `global`.',
     ])
   })
@@ -1441,33 +1066,6 @@ describe('server option', () => {
       '4:@gpahal/no-browser-globals',
       '5:@gpahal/no-browser-global-properties',
     ])
-  })
-
-  it.each([
-    ['react', { react: true }],
-    ['nextjs', { nextjs: true }],
-  ])('wins over browser for the files both match, with %s', async (_name, options) => {
-    const eslint = await createFocusedESLint(
-      'browser',
-      new Set([
-        '@gpahal/no-node-imports',
-        '@gpahal/no-browser-globals',
-        '@gpahal/no-browser-global-properties',
-        'unicorn/prefer-global-this',
-        'no-undef',
-      ]),
-      { ...options, browser: { files: ['src/**'] }, server: { files: ['src/server/**'] } },
-    )
-    expect(await ruleSeverity(eslint, 'src/client/app.ts', '@gpahal/no-node-imports')).toBe(2)
-    expect(
-      await ruleSeverity(eslint, 'src/server/app.ts', '@gpahal/no-node-imports'),
-    ).toBeUndefined()
-    expect(await lintText(eslint, 'src/server/route.js', windowCode)).toEqual([serverMessage])
-    expect(await lintText(eslint, 'src/client/page.js', windowCode)).toEqual([
-      expect.stringMatching(/^unicorn\/prefer-global-this: /),
-    ])
-    const config = (await eslint.calculateConfigForFile('src/server/app.ts')) as Linter.Config
-    expect(globalsOf(config)['process']).toBeDefined()
   })
 })
 

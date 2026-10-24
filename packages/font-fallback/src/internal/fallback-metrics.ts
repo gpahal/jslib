@@ -1,10 +1,5 @@
-import {
-  describeValue,
-  formatMessage,
-  formatMessageList,
-  formatNames,
-  type MessageItem,
-} from '@gpahal/std/errors'
+import { describeValue, formatMessage, formatMessageList, formatNames } from '@gpahal/std/errors'
+import type { MessageItem } from '@gpahal/std/errors'
 
 import { getFamilySubject } from '@/internal/families'
 import { PREFIX } from '@/internal/options'

@@ -4,19 +4,21 @@ import type TypeScriptModule from 'typescript'
 
 import { isPlainObject, isRecord } from '@gpahal/std/objects'
 
+import { isRuleNode, untypedRangeOf } from '@/internal/ast'
 import { FILENAME_CASE_IGNORES } from '@/internal/configs/constants'
-import { DUPLICATE_REPORTS, type DuplicateReport } from '@/internal/duplicate-rules'
+import { DUPLICATE_REPORTS } from '@/internal/duplicate-rules'
+import type { DuplicateReport } from '@/internal/duplicate-rules'
 import {
   findPatchTargets,
   hasPatchedFixes,
   isOnInSettings,
-  isRuleNode,
   isTypeServices,
   mergeListeners,
   optionsInSettings,
   patchCreateOnce,
-  type TypeServices,
 } from '@/internal/fixes'
+import type { TypeServices } from '@/internal/fixes'
+import { findFirstIndex } from '@/internal/search'
 import { withCompanionContext, withReport } from '@/internal/utils'
 
 const TWIN_PATCHED = Symbol('@gpahal/eslint-config duplicate reports')
@@ -36,19 +38,13 @@ type KeptCompanion = {
  */
 const keptCompanions = new WeakMap<Rule.RuleModule, ReadonlyMap<string, KeptCompanion>>()
 
-/**
- * As `DuplicateReport`'s `keepsFixes` says
- */
-const fixKeepingTwins = new WeakSet<Rule.RuleModule>()
-
-function rangeOf(
+function reportRangeOf(
   descriptor: Rule.ReportDescriptor,
   sourceCode: SourceCode,
 ): [number, number] | undefined {
-  const node: unknown = 'node' in descriptor ? descriptor.node : undefined
-  const range: unknown = isRecord(node) ? node['range'] : undefined
-  if (Array.isArray(range) && typeof range[0] === 'number' && typeof range[1] === 'number') {
-    return [range[0], range[1]]
+  const range = untypedRangeOf('node' in descriptor ? descriptor.node : undefined)
+  if (range !== undefined) {
+    return range
   }
   const loc: unknown = 'loc' in descriptor ? descriptor.loc : undefined
   if (!isRecord(loc)) {
@@ -109,17 +105,7 @@ function withRuleOptions(
 }
 
 function startsAfter(sorted: ReadonlyArray<[number, number]>, offset: number): number {
-  let low = 0
-  let high = sorted.length
-  while (low < high) {
-    const middle = (low + high) >>> 1
-    if ((sorted[middle]?.[0] ?? 0) <= offset) {
-      low = middle + 1
-    } else {
-      high = middle
-    }
-  }
-  return low
+  return findFirstIndex(sorted.length, (index) => (sorted[index]?.[0] ?? 0) > offset)
 }
 
 /**
@@ -173,10 +159,7 @@ function assertedTypeRangeOf(descriptor: Rule.ReportDescriptor): [number, number
   ) {
     return undefined
   }
-  const range: unknown = node['typeAnnotation']['range']
-  return Array.isArray(range) && typeof range[0] === 'number' && typeof range[1] === 'number'
-    ? [range[0], range[1]]
-    : undefined
+  return untypedRangeOf(node['typeAnnotation'])
 }
 
 /**
@@ -205,7 +188,7 @@ function patchTwin(rule: Rule.RuleModule): void {
       keptRule.create(
         withRuleOptions(
           withCompanionContext(context, ruleId, (descriptor) => {
-            const range = rangeOf(descriptor, sourceCode)
+            const range = reportRangeOf(descriptor, sourceCode)
             if (!range) {
               return
             }
@@ -229,13 +212,13 @@ function patchTwin(rule: Rule.RuleModule): void {
     return mergeListeners(listeners, companions, () => {
       const isNested = createNestingIndex(keptRanges)
       for (const descriptor of reports) {
-        const range = rangeOf(descriptor, sourceCode)
+        const range = reportRangeOf(descriptor, sourceCode)
         const isKept =
           range !== undefined &&
           (isNested(range) ||
             sameKeys.has(range.join(':')) ||
             assertedTypeKeys.has(assertedTypeRangeOf(descriptor)?.join(':') ?? ''))
-        if (!isKept || (fixKeepingTwins.has(rule) && typeof descriptor.fix === 'function')) {
+        if (!isKept) {
           context.report(descriptor)
         }
       }
@@ -423,6 +406,58 @@ function patchPromiseFunctionAsync(rule: Rule.RuleModule): void {
   })
 }
 
+const PREFER_SPREAD_PATCHED = Symbol('@gpahal/eslint-config prefer-spread of non-iterables')
+
+/**
+ * Type information says `x` of `Array.from(x)` has no `[Symbol.iterator]` in some union member, as
+ * for an `ArrayLike`, so spreading it throws. `any` and `unknown` count as iterable
+ */
+function isNonIterableArrayFrom(node: unknown, services: TypeServices): boolean {
+  const call: unknown = isRuleNode(node) && node.type !== 'CallExpression' ? node.parent : node
+  const argument =
+    isRuleNode(call) && call.type === 'CallExpression' ? call.arguments[0] : undefined
+  const tsNode = argument === undefined ? undefined : services.esTreeNodeToTSNodeMap.get(argument)
+  if (tsNode === undefined) {
+    return false
+  }
+  const checker = services.program.getTypeChecker()
+  const type = checker.getTypeAtLocation(tsNode)
+  const types = type.isUnion() ? type.types : [type]
+  return types.some((member) => {
+    const name = checker.typeToString(member)
+    return (
+      name !== 'any' &&
+      name !== 'unknown' &&
+      checker
+        .getApparentType(member)
+        .getProperties()
+        .every((property) => !property.getName().startsWith('__@iterator@'))
+    )
+  })
+}
+
+/**
+ * Drops `unicorn/prefer-spread`'s report of an `Array.from(x)` whose `x` has no iterator, since
+ * the spread would throw
+ */
+function patchPreferSpread(rule: Rule.RuleModule): void {
+  patchCreateOnce(rule, PREFER_SPREAD_PATCHED, (create) => (context) => {
+    const services: unknown = context.sourceCode.parserServices
+    if (!hasPatchedFixes(context) || !isTypeServices(services)) {
+      return create(context)
+    }
+    return create(
+      withReport(context, (descriptor) => {
+        const node: unknown = 'node' in descriptor ? descriptor.node : undefined
+        const isArrayFrom = 'messageId' in descriptor && descriptor.messageId === 'array-from'
+        if (!isArrayFrom || !isNonIterableArrayFrom(node, services)) {
+          context.report(descriptor)
+        }
+      }),
+    )
+  })
+}
+
 const PUBLISHING_PATCHED = Symbol('@gpahal/eslint-config private package hint')
 
 /**
@@ -497,6 +532,19 @@ const TLS_OPTION_ARGUMENTS: Readonly<
   ],
   'undici.Agent': [{ index: 0, path: ['connect'] }],
 }
+
+/**
+ * As `Agent` of `https.Agent`, which a member callee must name before its object is looked up
+ */
+const TLS_EXPORT_NAMES: ReadonlySet<string> = new Set(
+  Object.keys(TLS_OPTION_ARGUMENTS).map((name) => name.slice(name.indexOf('.') + 1)),
+)
+
+/**
+ * A file that binds a TLS module names it in a string, so one without these words has no call to
+ * check
+ */
+const TLS_MODULE_NAME_REGEX = /\b(?:https|tls|undici)\b/u
 
 /**
  * The module object, without `name`, or its export `name`
@@ -599,9 +647,12 @@ function tlsExportOf(sourceCode: SourceCode, callee: ESTree.Node): string | unde
   ) {
     return undefined
   }
-  const binding = moduleBindingOf(sourceCode, callee.object)
   const name = keyName(callee.property)
-  return name === undefined || binding === undefined || binding.name !== undefined
+  if (name === undefined || !TLS_EXPORT_NAMES.has(name)) {
+    return undefined
+  }
+  const binding = moduleBindingOf(sourceCode, callee.object)
+  return binding === undefined || binding.name !== undefined
     ? undefined
     : `${binding.module}.${name}`
 }
@@ -659,10 +710,10 @@ function disablesVerification(
  */
 function patchUnverifiedCertificate(rule: Rule.RuleModule): void {
   patchCreateOnce(rule, UNVERIFIED_CERTIFICATE_PATCHED, (create) => (context) => {
-    if (!hasPatchedFixes(context)) {
+    const { sourceCode } = context
+    if (!hasPatchedFixes(context) || !TLS_MODULE_NAME_REGEX.test(sourceCode.text)) {
       return create(context)
     }
-    const { sourceCode } = context
     // A fixed stock rule would report these as well
     const reported = new Set<unknown>()
     const listeners = create(
@@ -700,9 +751,6 @@ export function patchRuleSet(
   root: string,
 ): void {
   const twins = new Map<string, Map<string, KeptCompanion>>()
-  const fixKeepingTwinIds = new Set<string>(
-    DUPLICATE_REPORTS.filter(({ keepsFixes }) => keepsFixes).map(({ twin }) => twin),
-  )
   for (const { kept, twin, match } of DUPLICATE_REPORTS) {
     const companions = twins.get(twin) ?? new Map<string, KeptCompanion>()
     for (const ruleId of kept) {
@@ -716,9 +764,6 @@ export function patchRuleSet(
   for (const [twin, companions] of twins) {
     for (const rule of findPatchTargets(twin, configs, root)) {
       keptCompanions.set(rule, companions)
-      if (fixKeepingTwinIds.has(twin)) {
-        fixKeepingTwins.add(rule)
-      }
       patchTwin(rule)
     }
   }
@@ -740,6 +785,9 @@ export function patchRuleSet(
   }
   for (const rule of findPatchTargets('@typescript-eslint/promise-function-async', configs, root)) {
     patchPromiseFunctionAsync(rule)
+  }
+  for (const rule of findPatchTargets('unicorn/prefer-spread', configs, root)) {
+    patchPreferSpread(rule)
   }
   for (const rule of findPatchTargets('sonarjs/unverified-certificate', configs, root)) {
     patchUnverifiedCertificate(rule)

@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { build, type InlineConfig } from 'tsdown'
+import { build } from 'tsdown'
+import type { InlineConfig } from 'tsdown'
 
 import { withPeerProject } from './peer-project'
 
@@ -51,6 +52,6 @@ test.each([
 )
 
 test('onlyImport rejects an ordinary declaration import, so the canaries above test it', async () => {
-  await using project = await withCanaryProject('export { type Value } from "fixture-peer"')
+  await using project = await withCanaryProject('export type { Value } from "fixture-peer"')
   await expect(build(project.config)).rejects.toThrow('deps.onlyImport')
 })

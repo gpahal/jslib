@@ -3,7 +3,8 @@ import { entireMetricsCollection } from '@capsizecss/metrics/entireMetricsCollec
 
 import { describeValue } from '@gpahal/std/errors'
 
-import { DEFAULT_FALLBACKS, getFontFallbacks, type FontFallback } from '@/index'
+import { DEFAULT_FALLBACKS, getFontFallbacks } from '@/index'
+import type { FontFallback } from '@/index'
 import { renderFontFace, toFontFamilyName, toPercentage } from '@/internal/css'
 
 import { FIGTREE_PATH } from './fixtures'
@@ -370,10 +371,14 @@ describe('options', () => {
       { fontFaceProperties: { 'font-display': 1 } },
       '`fontFaceProperties["font-display"]`: expected a string, received `1`',
     ],
-    ...['swap;color:red', "'liga 1"].map((value): [unknown, string] => [
-      { fontFaceProperties: { 'font-display': value } },
-      `\`fontFaceProperties["font-display"]\`: expected ${DESCRIPTOR_VALUE_RULE}, received ${describeValue(value)}`,
-    ]),
+    // CSS whitespace is only space, tab and newline, so after `url(` a no-break or ideographic
+    // space starts an unquoted URL, in which the quotes don't nest
+    ...['swap;color:red', "'liga 1", "url(\u{A0}') (' )", "url(\u{3000}') (' )"].map(
+      (value): [unknown, string] => [
+        { fontFaceProperties: { 'font-display': value } },
+        `\`fontFaceProperties["font-display"]\`: expected ${DESCRIPTOR_VALUE_RULE}, received ${describeValue(value)}`,
+      ],
+    ),
     ...['105%', 200.1].map((sizeAdjust): [unknown, string] => [
       { sizeAdjust },
       `\`sizeAdjust\`: expected a percentage from 50 to 200, such as 105 for 105%, received ${describeValue(sizeAdjust)}`,
@@ -383,6 +388,15 @@ describe('options', () => {
     const error = await getRejection(getFontFallbacks('Inter', options))
     expect(error).toBeInstanceOf(TypeError)
     expect(error.message).toBe(`${PREFIX}: ${OPTIONS}: ${message}`)
+  })
+
+  it('takes a quoted `url()` argument after spaces', async () => {
+    const value = "url( 'a') url('b')"
+    const { fallbacks } = await getFontFallbacks('Figtree', {
+      fallbacks: ['Arial'],
+      fontFaceProperties: { 'font-feature-settings': value },
+    })
+    expect(fallbacks[0]?.css).toContain(`  font-feature-settings: ${value};\n`)
   })
 
   it('takes a name with underscores and periods, which a family name may not have', async () => {

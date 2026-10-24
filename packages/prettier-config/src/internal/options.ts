@@ -1,17 +1,11 @@
-import fs from 'node:fs'
 import path from 'node:path'
 
 import type { Config as PrettierConfig } from 'prettier'
 import type * as z from 'zod/mini'
 
-import {
-  booleanOr,
-  deferred,
-  listOption,
-  optionsObject,
-  type OptionsShape,
-} from '@gpahal/internal/node/options'
-import { isRelativePath, resolvePathOption } from '@gpahal/internal/node/paths'
+import { booleanOr, deferred, listOption, optionsObject } from '@gpahal/internal/node/options'
+import type { OptionsShape } from '@gpahal/internal/node/options'
+import { isRelativePath, resolveFileOption } from '@gpahal/internal/node/paths'
 import { checkRoot } from '@gpahal/internal/node/root'
 import { assertValid, loadZod, plainObject, typeCheck } from '@gpahal/internal/node/zod'
 import { formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
@@ -30,9 +24,8 @@ import {
   PREFIX,
   SORT_IMPORTS_PLUGIN,
   TAILWIND_PLUGIN_TAKEN,
-  type PluginList,
-  type SorterEntry,
 } from '@/internal/merge'
+import type { PluginList, SorterEntry } from '@/internal/merge'
 import { loadSorter } from '@/internal/plugins'
 import type {
   ConfigInput,
@@ -495,21 +488,6 @@ const getConfigOptionsSchema = once(
   },
 )
 
-function statPath(name: string, file: string): fs.Stats | undefined {
-  try {
-    return fs.statSync(file, { throwIfNoEntry: false })
-  } catch (error) {
-    throw new TypeError(
-      formatMessage(
-        PREFIX,
-        [formatNames([name])],
-        `reading ${formatNames([file])} failed: ${getErrorReason(error)}`,
-      ),
-      { cause: error },
-    )
-  }
-}
-
 /**
  * Without `root`, a relative path is returned as it is, for the Tailwind plugin to resolve from
  * the config file's folder, which isn't known here
@@ -520,20 +498,7 @@ function resolveEntryPoint(root: string | undefined, entryPoint: string | URL): 
   if (root === undefined && typeof entryPoint === 'string' && isRelativePath(entryPoint)) {
     return entryPoint
   }
-  const file = resolvePathOption(entryPoint, root, {
-    prefix: PREFIX,
-    name: 'tailwindcss.entryPoint',
-  })
-  if (statPath('tailwindcss.entryPoint', file)?.isFile() !== true) {
-    throw new TypeError(
-      formatMessage(
-        PREFIX,
-        ['`tailwindcss.entryPoint`'],
-        `path ${formatNames([file])} isn't a file`,
-      ),
-    )
-  }
-  return file
+  return resolveFileOption(entryPoint, root, { prefix: PREFIX, name: 'tailwindcss.entryPoint' })
 }
 
 /**

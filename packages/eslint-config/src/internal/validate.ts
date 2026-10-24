@@ -10,9 +10,9 @@ import {
   optionsObject,
   required,
   resolveSubOptions,
-  type OptionsShape,
 } from '@gpahal/internal/node/options'
-import { PATH_OR_FILE_URL_EXPECTED } from '@gpahal/internal/node/paths'
+import type { OptionsShape } from '@gpahal/internal/node/options'
+import { PATH_OR_FILE_URL_EXPECTED, resolveFileOption } from '@gpahal/internal/node/paths'
 import { checkRoot } from '@gpahal/internal/node/root'
 import {
   assertValid,
@@ -26,7 +26,8 @@ import { describeValue, formatNames } from '@gpahal/std/errors'
 import { isRecord } from '@gpahal/std/objects'
 import { trimEnd } from '@gpahal/std/strings'
 
-import { AREAS, getEnabledAreas, mapAreas, type AreaDefinition } from '@/internal/areas'
+import { AREAS, getEnabledAreas, mapAreas } from '@/internal/areas'
+import type { AreaDefinition } from '@/internal/areas'
 import { GLOB_LIST } from '@/internal/checks'
 import { E18E_RULE_SET_DEFAULTS } from '@/internal/configs/constants'
 import { getCoreRule } from '@/internal/core-rules'
@@ -35,8 +36,8 @@ import { checkFormattingRules, FORMATTING_RULES, KEPT_RULES } from '@/internal/f
 import { findUp } from '@/internal/fs'
 import { canMatchFile } from '@/internal/glob-match'
 import { hasGlobMagic, withoutLeadingDotSlash } from '@/internal/globs'
-import { AREA_RULE_PREFIXES, hasRulePrefix, PLUGIN_AREAS, type AreaName } from '@/internal/names'
-import { resolveEntryPoint } from '@/internal/presets/tailwindcss'
+import { AREA_RULE_PREFIXES, hasRulePrefix, PLUGIN_AREAS } from '@/internal/names'
+import type { AreaName } from '@/internal/names'
 import { checkRelativeGlobs } from '@/internal/relative-globs'
 import { getPlugins, isRuleOn, parseRuleId } from '@/internal/rules'
 import type {
@@ -352,12 +353,13 @@ function suggestCodeGlob(glob: string, target: GlobTarget): string {
 }
 
 /**
- * A list option is checked once resolved. `hasDefault` is whether leaving the option out gives it
- * defaults, which the error for no globs suggests
+ * A list option is checked once resolved. `root` is the options' root. `hasDefault` is whether
+ * leaving the option out gives it defaults, which the error for no globs suggests
  */
 export function checkCodeGlobs(
   name: string,
   globs: ReadonlyArray<string>,
+  root: string,
   target: GlobTarget = CODE_FILE_TARGET,
   hasDefault = true,
 ): void {
@@ -367,7 +369,7 @@ export function checkCodeGlobs(
       `lists no globs, so it would match no file. ${hasDefault ? 'Leave it out for the default' : 'List at least one glob'}`,
     )
   }
-  checkRelativeGlobs(name, globs)
+  checkRelativeGlobs(name, globs, root)
   if (globs.every((glob) => glob.startsWith('!'))) {
     fail(
       [formatNames([name])],
@@ -481,10 +483,7 @@ function checkTailwindcssEntryPoint(options: EslintConfigOptions): void {
       `expected ${PATH_OR_FILE_URL_EXPECTED}, received ${describeValue(entryPoint)}. Set it, as in \`{ entryPoint: 'src/styles.css' }\``,
     )
   }
-  const entryPath = resolveEntryPoint(entryPoint, options.root)
-  if (fs.statSync(entryPath, { throwIfNoEntry: false })?.isFile() !== true) {
-    fail(['`tailwindcss.entryPoint`'], `${formatNames([entryPath])} isn't a file`)
-  }
+  resolveFileOption(entryPoint, options.root, { prefix: PREFIX, name: 'tailwindcss.entryPoint' })
 }
 
 const AREA_RULE_SETS = [

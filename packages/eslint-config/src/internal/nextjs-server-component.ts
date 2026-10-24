@@ -5,6 +5,7 @@ import type * as ESTree from 'estree'
 
 import { isRecord } from '@gpahal/std/objects'
 
+import { getPropertyName, TYPE_WRAPPER_TYPES } from '@/internal/ast'
 import { BROWSER_ONLY_GLOBALS } from '@/internal/configs/browser'
 import { getDocsUrl } from '@/internal/utils'
 
@@ -50,16 +51,6 @@ const CLIENT_HOOKS: ReadonlySet<string> = new Set([
 
 const BROWSER_GLOBALS: ReadonlySet<string> = new Set(BROWSER_ONLY_GLOBALS)
 
-/**
- * As in `window!`
- */
-const TYPE_WRAPPER_TYPES: ReadonlySet<string> = new Set([
-  'TSAsExpression',
-  'TSNonNullExpression',
-  'TSSatisfiesExpression',
-  'TSTypeAssertion',
-])
-
 function hasUseClient(program: ESTree.Program): boolean {
   for (const statement of program.body) {
     if (statement.type !== 'ExpressionStatement' || !('directive' in statement)) {
@@ -95,19 +86,6 @@ function isTypeofOperand(ancestors: Array<ESTree.Node>): boolean {
  */
 function isChecked(name: string): boolean {
   return BROWSER_GLOBALS.has(name) || name === 'globalThis'
-}
-
-function getPropertyName(node: ESTree.MemberExpression): string | undefined {
-  const { property } = node
-  if (!node.computed && property.type === 'Identifier') {
-    return property.name
-  }
-  if (property.type === 'TemplateLiteral' && property.expressions.length === 0) {
-    return property.quasis[0]?.value.cooked ?? undefined
-  }
-  return property.type === 'Literal' && typeof property.value === 'string'
-    ? property.value
-    : undefined
 }
 
 /**

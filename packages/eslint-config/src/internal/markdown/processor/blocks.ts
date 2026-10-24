@@ -2,13 +2,13 @@ import type { Code, Html, Nodes, Root } from 'mdast'
 
 import { CODE_EXTNS } from '@/internal/files'
 import { MARKDOWN_LINE_BREAK_GLOBAL_REGEX } from '@/internal/markdown/line-breaks'
-import {
-  BLOCK_COMMENT_SYNTAX,
-  getCommentPlacement,
-  type BlockOptions,
-  type CommentSyntax,
-  type UnwritableReason,
+import { BLOCK_COMMENT_SYNTAX, getCommentPlacement } from '@/internal/markdown/processor/comments'
+import type {
+  BlockOptions,
+  CommentSyntax,
+  UnwritableReason,
 } from '@/internal/markdown/processor/comments'
+import { findFirstIndex } from '@/internal/search'
 
 export const BOM = '\u{FEFF}'
 
@@ -39,9 +39,11 @@ const LANGUAGE_REGEX = /^[\w+#-]*/u
 const JS_LINE_BREAK_REGEX = /\r\n|[\n\r\u{2028}\u{2029}]/gu
 
 /**
- * Other parsers, such as Markdown's, JSON's and YAML's, count only Markdown's line breaks
+ * The languages whose `SourceCode` counts JavaScript's line breaks: JavaScript's, and HTML's,
+ * whose parser runs on ESLint's JavaScript language. Other parsers, such as Markdown's, JSON's and
+ * YAML's, count only Markdown's line breaks
  */
-const JS_LINE_BREAK_EXTENSIONS: ReadonlySet<string> = new Set([...CODE_EXTNS, 'astro'])
+const JS_LINE_BREAK_EXTENSIONS: ReadonlySet<string> = new Set([...CODE_EXTNS, 'astro', 'html'])
 
 export type TextLine = {
   start: number
@@ -63,17 +65,7 @@ export function getLines(text: string): Array<TextLine> {
  * A binary search, since an HTML node's comments each look up a line of the same value
  */
 export function findLineIndex(lines: ReadonlyArray<TextLine>, index: number): number {
-  let low = 0
-  let high = lines.length
-  while (low < high) {
-    const middle = (low + high) >>> 1
-    if ((lines[middle]?.start ?? Infinity) <= index) {
-      low = middle + 1
-    } else {
-      high = middle
-    }
-  }
-  return low - 1
+  return findFirstIndex(lines.length, (line) => (lines[line]?.start ?? Infinity) > index) - 1
 }
 
 /**

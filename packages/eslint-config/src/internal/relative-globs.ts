@@ -10,21 +10,6 @@ import { trimEnd } from '@gpahal/std/strings'
 import { fail } from '@/internal/utils'
 
 /**
- * For the fix of an absolute glob. Set only while `resolveOptions` runs, which is synchronous
- */
-const optionsRoot: { current: string | undefined } = { current: undefined }
-
-export function withOptionsRoot<T>(root: string, fn: () => T): T {
-  const previous = optionsRoot.current
-  optionsRoot.current = root
-  try {
-    return fn()
-  } finally {
-    optionsRoot.current = previous
-  }
-}
-
-/**
  * Never matches a path relative to `root`, on any platform
  */
 const WINDOWS_ABSOLUTE_REGEX = /^(?:[a-z]:[/\\]|[/\\]{2}[^/\\])/i
@@ -61,19 +46,21 @@ function hasBackslashSeparator(glob: string): boolean {
 
 /**
  * A glob that starts with `/` or `..` would match nothing, since ESLint lints no file outside
- * `root`, and a `\` separator escapes the next character instead
+ * `root`, and a `\` separator escapes the next character instead. `root` is for the fix of a glob
+ * that starts with `/`
  */
-export function checkRelativeGlobs(name: string, globs: ReadonlyArray<string>): void {
-  checkRelativeGlobsAt([formatNames([name])], globs)
+export function checkRelativeGlobs(name: string, globs: ReadonlyArray<string>, root: string): void {
+  checkRelativeGlobsAt([formatNames([name])], globs, root)
 }
 
 /**
- * Also throws on a Windows drive letter or UNC prefix
+ * Also throws on a Windows drive letter or UNC prefix. Without `root`, the fix of a glob that
+ * starts with `/` drops the `/`
  */
 export function checkRelativeGlobsAt(
   subjects: ReadonlyArray<string>,
   globs: ReadonlyArray<string>,
-  root: string | undefined = optionsRoot.current,
+  root: string | undefined,
 ): void {
   for (const glob of globs) {
     if (glob === '' || glob === '!') {

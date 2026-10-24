@@ -4,7 +4,8 @@ import { toArray } from '@gpahal/std/arrays'
 import { clonePlain } from '@gpahal/std/objects'
 
 import type { ConfigBuilder } from '@/internal/define'
-import { REPORT_KEYS, type ExtendedOptions } from '@/internal/extends'
+import { markPresetLayer, REPORT_KEYS } from '@/internal/extends'
+import type { ExtendedOptions } from '@/internal/extends'
 import { toStylelintExtends } from '@/internal/overrides'
 import { overrideGlobs, ownConfig } from '@/internal/paths'
 import type { StylelintExtendedConfig, StylelintOverride } from '@/internal/rules'
@@ -242,12 +243,13 @@ export function preserveConditionalOptions(
         return copy
       })
     if (isReference) {
-      // Right after the preset's settings, whose reference rule settings it replaces
+      // Right after the preset's settings, whose reference rule settings it replaces. Part of
+      // them, so a config that extends this one skips it too
       const extended: Array<string | StylelintExtendedConfig> = toArray(result.extends ?? [])
       const presetIndex = extended.indexOf(builderFor(options).presetLayer)
       result.extends = toStylelintExtends([
         ...extended.slice(0, presetIndex + 1),
-        compile(mapTree(projected, ({ preset }) => ({ value: preset }))),
+        markPresetLayer(compile(mapTree(projected, ({ preset }) => ({ value: preset }))), {}),
         ...extended.slice(presetIndex + 1),
       ])
     }

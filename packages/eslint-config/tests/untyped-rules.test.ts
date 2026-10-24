@@ -1,12 +1,7 @@
 import path from 'node:path'
 
-import {
-  defineConfig,
-  files,
-  type ConfigNames,
-  type EslintConfigOptions,
-  type TypedConfig,
-} from '@/index'
+import { defineConfig, files } from '@/index'
+import type { ConfigNames, EslintConfigOptions, TypedConfig } from '@/index'
 
 import { CORE_AREAS_OFF, FIXTURES_DIR } from './helpers'
 

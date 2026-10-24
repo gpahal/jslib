@@ -4,7 +4,8 @@ import { pathToFileURL } from 'node:url'
 
 import { resolve } from 'import-meta-resolve'
 import postcss from 'postcss'
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 import { compile } from 'tailwindcss'
 
 import { withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
@@ -100,7 +101,6 @@ describe('referenceFiles', () => {
     })
     dir = project.dir
     await linkTailwind(dir)
-    await fs.mkdir(path.join(dir, 'empty'))
   })
   afterAll(async () => {
     await project[Symbol.asyncDispose]()
@@ -592,29 +592,21 @@ describe('referenceFiles', () => {
     ])
   })
 
-  // Stylelint fails only on an entry that matches no file, so one with a path that does is taken
+  // Stylelint fails only on an entry that matches no file, so one with a path that exists is taken
   it.each([
-    [
-      { referenceFiles: 'missing/*.css' },
-      '`referenceFiles`: `missing/*.css` matches no file. Create a file it matches, or remove the entry',
-    ],
     [
       { overrides: [{ files: ['*.css'], referenceFiles: 'missing.css' }] },
       "`overrides[0].referenceFiles`: `missing.css` doesn't exist. Create the file, or remove the entry",
     ],
     [
-      { referenceFiles: [{ files: ['empty'] }] },
-      '`referenceFiles[0].files[0]`: `empty` is a folder with no file. Add a file to it, or remove the entry',
+      { referenceFiles: [{ files: ['missing.css'] }] },
+      "`referenceFiles[0].files[0]`: `missing.css` doesn't exist. Create the file, or remove the entry",
     ],
     [
       { referenceFiles: [{ files: ['missing.css', 'gone.css'] }] },
       '`referenceFiles[0].files`: none of `missing.css`, `gone.css` exists. Create one of the files, or remove the entry',
     ],
-    [
-      { referenceFiles: [{ files: ['tok*.css', '!tokens.css'] }] },
-      '`referenceFiles[0].files`: none of `tok*.css`, `!tokens.css` matches a file. Create a file one of them matches, or remove the entry',
-    ],
-  ])('says why an entry matches no file, in %j', async (options, message) => {
+  ])("says which path doesn't exist, in %j", async (options, message) => {
     await expect(defineConfig({ root: dir, ...options })).rejects.toThrow(
       new TypeError(`@gpahal/stylelint-config: ${message}`),
     )

@@ -10,16 +10,13 @@ import { fileURLToPath } from 'node:url'
 
 import type * as z from 'zod/mini'
 
-import {
-  describeValue,
-  formatMessage,
-  formatMessageList,
-  formatNames,
-  type MessageItem,
-} from '@gpahal/std/errors'
+import { describeValue, formatMessage, formatMessageList, formatNames } from '@gpahal/std/errors'
+import type { MessageItem } from '@gpahal/std/errors'
 import { once } from '@gpahal/std/functions'
 import { isPlainObject } from '@gpahal/std/objects'
 import { escapeControls, shorten } from '@gpahal/std/strings'
+
+import { joinList } from '@/lists'
 
 /**
  * Zod Mini, loaded on the first call rather than on import, so a package whose import builds no
@@ -317,34 +314,16 @@ const getEnglishErrorMap = once(() => loadZod().locales.en().localeError)
 
 const TYPE_NAMES: Readonly<Record<string, string>> = {
   array: 'an array',
-  bigint: 'a bigint',
   boolean: 'a boolean',
-  date: 'a date',
-  file: 'a file',
-  function: 'a function',
-  int: 'an integer',
-  map: 'a `Map`',
-  nan: '`NaN`',
   // A required key whose schema takes any value, such as `deferred()`, left out or `undefined`
   nonoptional: 'a value',
   number: 'a number',
-  null: '`null`',
   object: 'an object',
-  promise: 'a promise',
-  set: 'a `Set`',
   string: 'a string',
-  symbol: 'a symbol',
-  undefined: '`undefined`',
 }
 
 function getTypeName(type: string): string {
   return (Object.hasOwn(TYPE_NAMES, type) ? TYPE_NAMES[type] : undefined) ?? codeName(type)
-}
-
-function joinOr(items: ReadonlyArray<string>): string {
-  return items.length < 2
-    ? items.join('')
-    : `${items.slice(0, -1).join(', ')} or ${items.at(-1) ?? ''}`
 }
 
 /**
@@ -354,13 +333,10 @@ function joinOr(items: ReadonlyArray<string>): string {
  */
 const ERROR_MAP: z.core.$ZodErrorMap = (issue) => {
   if (issue.code === 'invalid_type' || issue.code === 'invalid_value') {
-    return `expected ${joinOr(getExpected(issue))}, received ${describeValue(issue.input)}`
+    return `expected ${joinList(getExpected(issue), 'or')}, received ${describeValue(issue.input)}`
   }
   if (issue.code === 'invalid_union') {
     return describeUnion(issue)
-  }
-  if (issue.code === 'too_small' || issue.code === 'too_big') {
-    return describeBound(issue)
   }
   if (issue.code === 'unrecognized_keys') {
     // A record's enum keys; `toMessageItems` gives each key as the subject
@@ -396,89 +372,9 @@ function getExpected(issue: z.core.$ZodRawIssue | z.core.$ZodIssue): Array<strin
  * rejected the value's type. {@link toMessageItems} reports the branches' own issues otherwise
  */
 function describeUnion(issue: z.core.$ZodRawIssue<z.core.$ZodIssueInvalidUnion>): string {
-  const { discriminator, options, input } = issue
-  if (typeof discriminator === 'string' && Array.isArray(options)) {
-    // A discriminated union's issue has the discriminator's key as its path, and the object as its
-    // input
-    const value = isPlainObject(input) ? input[discriminator] : undefined
-    return `expected ${joinOr(options.map((option) => describeValue(option)))}, received ${describeValue(value)}`
-  }
-  const received = describeValue(input)
-  if (issue.inclusive === false) {
-    // `z.xor`, whose value more than one branch took
-    return `expected a value that only one type of the union takes, received ${received}`
-  }
+  const received = describeValue(issue.input)
   const expected = [...new Set(getExpected(issue))]
-  return `expected ${expected.length === 0 ? 'a valid value' : joinOr(expected)}, received ${received}`
-}
-
-const SIZE_UNITS: Readonly<Record<string, string>> = {
-  array: 'item',
-  file: 'byte',
-  set: 'item',
-  string: 'character',
-}
-
-function pluralize(count: number | bigint, unit: string): string {
-  return `${count} ${unit}${count === 1 || count === 1n ? '' : 's'}`
-}
-
-type Relations = {
-  exact: string
-  atLeast: string
-  moreThan: string
-  atMost: string
-  lessThan: string
-}
-
-const SIZE_RELATIONS: Relations = {
-  exact: 'exactly',
-  atLeast: 'at least',
-  moreThan: 'more than',
-  atMost: 'at most',
-  lessThan: 'fewer than',
-}
-
-const DATE_RELATIONS: Relations = {
-  exact: 'on',
-  atLeast: 'on or after',
-  moreThan: 'after',
-  atMost: 'on or before',
-  lessThan: 'before',
-}
-
-const NUMBER_RELATIONS: Relations = {
-  exact: 'equal to',
-  atLeast: 'greater than or equal to',
-  moreThan: 'greater than',
-  atMost: 'less than or equal to',
-  lessThan: 'less than',
-}
-
-function describeBound(
-  issue: z.core.$ZodRawIssue<z.core.$ZodIssueTooSmall | z.core.$ZodIssueTooBig>,
-): string {
-  const isMin = issue.code === 'too_small'
-  const bound = isMin ? issue.minimum : issue.maximum
-  const { inclusive = false, exact = false, input, origin } = issue
-  const type = getTypeName(origin)
-  const unit = Object.hasOwn(SIZE_UNITS, origin) ? SIZE_UNITS[origin] : undefined
-  const relations =
-    unit === undefined ? (origin === 'date' ? DATE_RELATIONS : NUMBER_RELATIONS) : SIZE_RELATIONS
-  const relation = exact
-    ? relations.exact
-    : relations[isMin ? (inclusive ? 'atLeast' : 'moreThan') : inclusive ? 'atMost' : 'lessThan']
-  if (unit !== undefined) {
-    const size = Array.isArray(input) ? input.length : input instanceof Set ? input.size : undefined
-    const received =
-      size === undefined ? describeValue(input) : `${type} of ${pluralize(size, unit)}`
-    return `expected ${type} of ${relation} ${pluralize(bound, unit)}, received ${received}`
-  }
-  if (origin === 'date') {
-    const received = input instanceof Date ? codeName(input.toISOString()) : describeValue(input)
-    return `expected ${type} ${relation} ${codeName(new Date(Number(bound)).toISOString())}, received ${received}`
-  }
-  return `expected ${type} ${relation} ${describeValue(bound)}, received ${describeValue(input)}`
+  return `expected ${expected.length === 0 ? 'a valid value' : joinList(expected, 'or')}, received ${received}`
 }
 
 /**

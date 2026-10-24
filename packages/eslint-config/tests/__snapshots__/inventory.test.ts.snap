@@ -1,5 +1,228 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`the rules and globals that differ from every preset with e18e.modernization: false 1`] = `
+{
+  "typescript/src/x.ts": [
+    "- e18e/prefer-object-has-own",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with e18e.moduleReplacements: true 1`] = `
+{
+  "typescript/src/x.ts": [
+    "+ e18e/ban-dependencies: [2,{}]",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with e18e.performanceImprovements: false 1`] = `
+{
+  "typescript/src/x.ts": [
+    "- e18e/no-spread-in-reduce",
+    "- e18e/prefer-static-collator",
+    "- e18e/prefer-throw-if-no-entry",
+    "- e18e/prefer-timer-args",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with nothing more, in a type test 1`] = `
+{
+  "typescript/src/x.test-d.ts against typescript/src/x.ts": [
+    "- @typescript-eslint/explicit-module-boundary-types",
+    "- @typescript-eslint/no-empty-function",
+    "+ @typescript-eslint/no-inferrable-types: [2]",
+    "- @typescript-eslint/no-non-null-assertion",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":false}]",
+    "- @typescript-eslint/no-unsafe-type-assertion",
+    "+ @typescript-eslint/non-nullable-type-assertion-style: [2]",
+    "- @typescript-eslint/unbound-method",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":true,"peerDependencies":true,"optionalDependencies":true}]",
+    "- import-x/no-relative-packages",
+    "- no-promise-executor-return",
+    "- sonarjs/no-identical-functions",
+    "- unicorn/consistent-function-scoping",
+    "- unicorn/no-global-object-property-assignment",
+    "+ vitest/*: 26 rules",
+    "+ globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with server.files matching browser files too 1`] = `
+{
+  "browser/src/x.ts": [
+    "+ @gpahal/no-browser-global-properties: [2,"<1139 items, sha256 5631a1bd20bc>"]",
+    "+ @gpahal/no-browser-globals: [2,"<1139 items, sha256 e83faa3751e4>"]",
+    "- @gpahal/no-node-dynamic-imports",
+    "- @gpahal/no-node-global-properties",
+    "- @gpahal/no-node-globals",
+    "- @gpahal/no-node-imports",
+    "- no-restricted-globals",
+    "+ unicorn/no-unnecessary-global-this: [2]",
+    "+ unicorn/prefer-array-from-async: [2]",
+    "+ unicorn/prefer-iterator-helpers: [2]",
+    "+ unicorn/prefer-iterator-to-array-at-end: [2]",
+    "+ unicorn/prefer-iterator-to-array: [2]",
+    "+ unicorn/prefer-node-protocol: [2]",
+    "+ unicorn/prefer-top-level-await: [2]",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with server.files matching browser files too, without nextjs 1`] = `
+{
+  "browser/src/x.ts against server/src/x.ts": [],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with testFiles adding to the defaults with a function 1`] = `
+{
+  "checks/a.ts": [
+    "- @typescript-eslint/explicit-module-boundary-types",
+    "- @typescript-eslint/no-empty-function",
+    "+ @typescript-eslint/no-inferrable-types: [2]",
+    "- @typescript-eslint/no-non-null-assertion",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":false}]",
+    "- @typescript-eslint/no-unsafe-type-assertion",
+    "+ @typescript-eslint/non-nullable-type-assertion-style: [2]",
+    "- @typescript-eslint/unbound-method",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":true,"peerDependencies":true,"optionalDependencies":true}]",
+    "- import-x/no-relative-packages",
+    "- no-promise-executor-return",
+    "- sonarjs/no-identical-functions",
+    "- unicorn/consistent-function-scoping",
+    "- unicorn/no-global-object-property-assignment",
+    "+ vitest/*: 26 rules",
+    "+ globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+  "tests/a.ts": [],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with testFiles and vitest.files leaving out files of each other 1`] = `
+{
+  "tests/a.test.ts": [
+    "- vitest/*: 26 rules",
+    "- globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+  "tests/fixtures/a.test.ts": [
+    "+ @typescript-eslint/explicit-module-boundary-types: [2]",
+    "+ @typescript-eslint/no-empty-function: [2,{"allow":[]}]",
+    "- @typescript-eslint/no-inferrable-types",
+    "+ @typescript-eslint/no-non-null-assertion: [2]",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":true}]",
+    "+ @typescript-eslint/no-unsafe-type-assertion: [2]",
+    "- @typescript-eslint/non-nullable-type-assertion-style",
+    "+ @typescript-eslint/unbound-method: [2]",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":false,"peerDependencies":true,"optionalDependencies":true}]",
+    "+ import-x/no-relative-packages: [2]",
+    "+ no-promise-executor-return: [2,{"allowVoid":false}]",
+    "+ sonarjs/no-identical-functions: [2,3]",
+    "+ unicorn/consistent-function-scoping: [2,{"checkArrowFunctions":true}]",
+    "+ unicorn/no-global-object-property-assignment: [2]",
+    "- vitest/*: 26 rules",
+    "- globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+  "unit/a.ts": [
+    "- @typescript-eslint/explicit-module-boundary-types",
+    "- @typescript-eslint/no-empty-function",
+    "+ @typescript-eslint/no-inferrable-types: [2]",
+    "- @typescript-eslint/no-non-null-assertion",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":false}]",
+    "- @typescript-eslint/no-unsafe-type-assertion",
+    "+ @typescript-eslint/non-nullable-type-assertion-style: [2]",
+    "- @typescript-eslint/unbound-method",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":true,"peerDependencies":true,"optionalDependencies":true}]",
+    "- import-x/no-relative-packages",
+    "- no-promise-executor-return",
+    "- sonarjs/no-identical-functions",
+    "- unicorn/consistent-function-scoping",
+    "- unicorn/no-global-object-property-assignment",
+    "+ vitest/*: 26 rules",
+    "+ globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with testFiles replacing the defaults with a list 1`] = `
+{
+  "checks/a.ts": [
+    "- @typescript-eslint/explicit-module-boundary-types",
+    "- @typescript-eslint/no-empty-function",
+    "+ @typescript-eslint/no-inferrable-types: [2]",
+    "- @typescript-eslint/no-non-null-assertion",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":false}]",
+    "- @typescript-eslint/no-unsafe-type-assertion",
+    "+ @typescript-eslint/non-nullable-type-assertion-style: [2]",
+    "- @typescript-eslint/unbound-method",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":true,"peerDependencies":true,"optionalDependencies":true}]",
+    "- import-x/no-relative-packages",
+    "- no-promise-executor-return",
+    "- sonarjs/no-identical-functions",
+    "- unicorn/consistent-function-scoping",
+    "- unicorn/no-global-object-property-assignment",
+    "+ vitest/*: 26 rules",
+    "+ globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+  "tests/a.ts": [
+    "+ @typescript-eslint/explicit-module-boundary-types: [2]",
+    "+ @typescript-eslint/no-empty-function: [2,{"allow":[]}]",
+    "- @typescript-eslint/no-inferrable-types",
+    "+ @typescript-eslint/no-non-null-assertion: [2]",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":true}]",
+    "+ @typescript-eslint/no-unsafe-type-assertion: [2]",
+    "- @typescript-eslint/non-nullable-type-assertion-style",
+    "+ @typescript-eslint/unbound-method: [2]",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":false,"peerDependencies":true,"optionalDependencies":true}]",
+    "+ import-x/no-relative-packages: [2]",
+    "+ no-promise-executor-return: [2,{"allowVoid":false}]",
+    "+ sonarjs/no-identical-functions: [2,3]",
+    "+ unicorn/consistent-function-scoping: [2,{"checkArrowFunctions":true}]",
+    "+ unicorn/no-global-object-property-assignment: [2]",
+    "- vitest/*: 26 rules",
+    "- globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with vitest.files as a function of the resolved testFiles 1`] = `
+{
+  "tests/a.test.ts": [
+    "- vitest/*: 26 rules",
+    "- globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+  "unit/a.ts": [
+    "- @typescript-eslint/explicit-module-boundary-types",
+    "- @typescript-eslint/no-empty-function",
+    "+ @typescript-eslint/no-inferrable-types: [2]",
+    "- @typescript-eslint/no-non-null-assertion",
+    "~ @typescript-eslint/no-unnecessary-condition: [2,{"checkTypePredicates":false}]",
+    "- @typescript-eslint/no-unsafe-type-assertion",
+    "+ @typescript-eslint/non-nullable-type-assertion-style: [2]",
+    "- @typescript-eslint/unbound-method",
+    "~ import-x/no-extraneous-dependencies: [2,{"devDependencies":true,"peerDependencies":true,"optionalDependencies":true}]",
+    "- import-x/no-relative-packages",
+    "- no-promise-executor-return",
+    "- sonarjs/no-identical-functions",
+    "- unicorn/consistent-function-scoping",
+    "- unicorn/no-global-object-property-assignment",
+    "+ vitest/*: 26 rules",
+    "+ globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+}
+`;
+
+exports[`the rules and globals that differ from every preset with vitest.files as a list 1`] = `
+{
+  "tests/integration/a.test.ts": [
+    "- vitest/*: 26 rules",
+    "- globals: afterAll, afterEach, assert, assertType, beforeAll, beforeEach, chai, describe, expect, expectTypeOf, it, onTestFailed, onTestFinished, suite, test, vi, vitest",
+  ],
+}
+`;
+
 exports[`the rules base alone turns on for typescript/src/x.ts, as a difference from every preset 1`] = `
 [
   "- @eslint-react/dom-no-dangerously-set-innerhtml",
@@ -435,7 +658,6 @@ exports[`with every preset on > the rules on for astro/page.astro/0_0.ts 1`] = `
   "- @typescript-eslint/prefer-promise-reject-errors",
   "- @typescript-eslint/prefer-readonly",
   "- @typescript-eslint/prefer-reduce-type-parameter",
-  "- @typescript-eslint/prefer-regexp-exec",
   "- @typescript-eslint/prefer-return-this-type",
   "- @typescript-eslint/prefer-string-starts-ends-with",
   "- @typescript-eslint/promise-function-async",
@@ -513,7 +735,6 @@ exports[`with every preset on > the rules on for cjs/x.cjs 1`] = `
   "- @typescript-eslint/no-for-in-array",
   "- @typescript-eslint/no-generated-empty-object-type",
   "- @typescript-eslint/no-implied-eval",
-  "- @typescript-eslint/no-import-type-side-effects",
   "+ @typescript-eslint/no-inferrable-types: [2]",
   "- @typescript-eslint/no-meaningless-void-operator",
   "- @typescript-eslint/no-misused-promises",
@@ -547,7 +768,6 @@ exports[`with every preset on > the rules on for cjs/x.cjs 1`] = `
   "- @typescript-eslint/prefer-promise-reject-errors",
   "- @typescript-eslint/prefer-readonly",
   "- @typescript-eslint/prefer-reduce-type-parameter",
-  "- @typescript-eslint/prefer-regexp-exec",
   "- @typescript-eslint/prefer-return-this-type",
   "- @typescript-eslint/prefer-string-starts-ends-with",
   "- @typescript-eslint/promise-function-async",
@@ -562,13 +782,13 @@ exports[`with every preset on > the rules on for cjs/x.cjs 1`] = `
   "+ constructor-super: [2]",
   "+ dot-notation: [2,{"allowKeywords":true,"allowPattern":""}]",
   "+ getter-return: [2,{"allowImplicit":false}]",
+  "- import-x/consistent-type-specifier-style",
   "+ import-x/default: [2]",
   "+ import-x/export: [2]",
   "- import-x/first",
   "+ import-x/named: [2]",
   "+ import-x/namespace: [2]",
   "- import-x/newline-after-import",
-  "~ import-x/no-duplicates: [2,{"considerQueryString":true}]",
   "+ import-x/no-named-as-default-member: [2]",
   "+ import-x/no-named-as-default: [2]",
   "+ import-x/no-unresolved: [2,{"ignore":["^astro:"],"caseSensitive":true}]",
@@ -792,7 +1012,6 @@ exports[`with every preset on > the rules on for markdown/README.md/0.tsx 1`] = 
   "- @typescript-eslint/prefer-promise-reject-errors",
   "- @typescript-eslint/prefer-readonly",
   "- @typescript-eslint/prefer-reduce-type-parameter",
-  "- @typescript-eslint/prefer-regexp-exec",
   "- @typescript-eslint/prefer-return-this-type",
   "- @typescript-eslint/prefer-string-starts-ends-with",
   "- @typescript-eslint/promise-function-async",
@@ -805,9 +1024,7 @@ exports[`with every preset on > the rules on for markdown/README.md/0.tsx 1`] = 
   "- @typescript-eslint/unbound-method",
   "- @typescript-eslint/use-unknown-in-catch-callback-variable",
   "- e18e/no-spread-in-reduce",
-  "- e18e/prefer-array-from-map",
   "- e18e/prefer-object-has-own",
-  "- e18e/prefer-spread-syntax",
   "- e18e/prefer-static-collator",
   "- e18e/prefer-throw-if-no-entry",
   "- e18e/prefer-timer-args",
@@ -904,7 +1121,6 @@ exports[`with every preset on > the rules on for react/src/x.jsx 1`] = `
   "- @typescript-eslint/no-for-in-array",
   "- @typescript-eslint/no-generated-empty-object-type",
   "- @typescript-eslint/no-implied-eval",
-  "- @typescript-eslint/no-import-type-side-effects",
   "+ @typescript-eslint/no-inferrable-types: [2]",
   "- @typescript-eslint/no-meaningless-void-operator",
   "- @typescript-eslint/no-misused-promises",
@@ -937,7 +1153,6 @@ exports[`with every preset on > the rules on for react/src/x.jsx 1`] = `
   "- @typescript-eslint/prefer-promise-reject-errors",
   "- @typescript-eslint/prefer-readonly",
   "- @typescript-eslint/prefer-reduce-type-parameter",
-  "- @typescript-eslint/prefer-regexp-exec",
   "- @typescript-eslint/prefer-return-this-type",
   "- @typescript-eslint/prefer-string-starts-ends-with",
   "- @typescript-eslint/promise-function-async",
@@ -952,11 +1167,11 @@ exports[`with every preset on > the rules on for react/src/x.jsx 1`] = `
   "+ constructor-super: [2]",
   "+ dot-notation: [2,{"allowKeywords":true,"allowPattern":""}]",
   "+ getter-return: [2,{"allowImplicit":false}]",
+  "- import-x/consistent-type-specifier-style",
   "+ import-x/default: [2]",
   "+ import-x/export: [2]",
   "+ import-x/named: [2]",
   "+ import-x/namespace: [2]",
-  "~ import-x/no-duplicates: [2,{"considerQueryString":true}]",
   "+ import-x/no-named-as-default-member: [2]",
   "+ import-x/no-named-as-default: [2]",
   "+ import-x/no-unresolved: [2,{"ignore":["^astro:"],"caseSensitive":true}]",
@@ -1311,8 +1526,8 @@ exports[`with every preset on > the rules on for typescript/src/x.ts 1`] = `
   "@typescript-eslint/consistent-indexed-object-style: [2]",
   "@typescript-eslint/consistent-type-assertions: [2]",
   "@typescript-eslint/consistent-type-definitions: [2,"type"]",
-  "@typescript-eslint/consistent-type-exports: [2,{"fixMixedExportsWithInlineTypeSpecifier":true}]",
-  "@typescript-eslint/consistent-type-imports: [2,{"prefer":"type-imports","fixStyle":"inline-type-imports"}]",
+  "@typescript-eslint/consistent-type-exports: [2,{"fixMixedExportsWithInlineTypeSpecifier":false}]",
+  "@typescript-eslint/consistent-type-imports: [2,{"prefer":"type-imports","fixStyle":"separate-type-imports"}]",
   "@typescript-eslint/default-param-last: [2]",
   "@typescript-eslint/dot-notation: [2,{"allowIndexSignaturePropertyAccess":false,"allowKeywords":true,"allowPattern":"","allowPrivateClassPropertyAccess":false,"allowProtectedClassPropertyAccess":false}]",
   "@typescript-eslint/explicit-module-boundary-types: [2]",
@@ -1335,7 +1550,6 @@ exports[`with every preset on > the rules on for typescript/src/x.ts 1`] = `
   "@typescript-eslint/no-for-in-array: [2]",
   "@typescript-eslint/no-generated-empty-object-type: [2]",
   "@typescript-eslint/no-implied-eval: [2]",
-  "@typescript-eslint/no-import-type-side-effects: [2]",
   "@typescript-eslint/no-invalid-void-type: [2]",
   "@typescript-eslint/no-meaningless-void-operator: [2]",
   "@typescript-eslint/no-misused-new: [2]",
@@ -1387,7 +1601,6 @@ exports[`with every preset on > the rules on for typescript/src/x.ts 1`] = `
   "@typescript-eslint/prefer-promise-reject-errors: [2]",
   "@typescript-eslint/prefer-readonly: [2]",
   "@typescript-eslint/prefer-reduce-type-parameter: [2]",
-  "@typescript-eslint/prefer-regexp-exec: [2]",
   "@typescript-eslint/prefer-return-this-type: [2]",
   "@typescript-eslint/prefer-string-starts-ends-with: [2]",
   "@typescript-eslint/promise-function-async: [2]",
@@ -1413,9 +1626,7 @@ exports[`with every preset on > the rules on for typescript/src/x.ts 1`] = `
   "better-tailwindcss/no-unnecessary-whitespace: [2]",
   "default-case-last: [2]",
   "e18e/no-spread-in-reduce: [2]",
-  "e18e/prefer-array-from-map: [2]",
   "e18e/prefer-object-has-own: [2]",
-  "e18e/prefer-spread-syntax: [2]",
   "e18e/prefer-static-collator: [2]",
   "e18e/prefer-throw-if-no-entry: [2]",
   "e18e/prefer-timer-args: [2]",
@@ -1423,12 +1634,13 @@ exports[`with every preset on > the rules on for typescript/src/x.ts 1`] = `
   "for-direction: [2]",
   "grouped-accessor-pairs: [2,"anyOrder",{"enforceForTSTypes":false}]",
   "guard-for-in: [2]",
+  "import-x/consistent-type-specifier-style: [2,"prefer-top-level"]",
   "import-x/first: [2]",
   "import-x/newline-after-import: [2]",
   "import-x/no-absolute-path: [2]",
   "import-x/no-amd: [2]",
   "import-x/no-anonymous-default-export: [2]",
-  "import-x/no-duplicates: [2,{"considerQueryString":true,"prefer-inline":true}]",
+  "import-x/no-duplicates: [2,{"considerQueryString":true}]",
   "import-x/no-extraneous-dependencies: [2,{"devDependencies":false,"peerDependencies":true,"optionalDependencies":true}]",
   "import-x/no-mutable-exports: [2]",
   "import-x/no-named-default: [2]",
@@ -1851,7 +2063,6 @@ exports[`with every preset on > the rules on for typescript/src/x.ts 1`] = `
   "unicorn/prefer-array-find: [2,{"checkFromLast":true}]",
   "unicorn/prefer-array-flat: [2,{"functions":[]}]",
   "unicorn/prefer-array-flat-map: [2]",
-  "unicorn/prefer-array-from-map: [2]",
   "unicorn/prefer-array-from-range: [2]",
   "unicorn/prefer-array-index-of: [2]",
   "unicorn/prefer-array-iterable-methods: [2]",
@@ -2022,7 +2233,6 @@ exports[`with every preset on > the rules on for x.js 1`] = `
   "- @typescript-eslint/no-for-in-array",
   "- @typescript-eslint/no-generated-empty-object-type",
   "- @typescript-eslint/no-implied-eval",
-  "- @typescript-eslint/no-import-type-side-effects",
   "+ @typescript-eslint/no-inferrable-types: [2]",
   "- @typescript-eslint/no-meaningless-void-operator",
   "- @typescript-eslint/no-misused-promises",
@@ -2055,7 +2265,6 @@ exports[`with every preset on > the rules on for x.js 1`] = `
   "- @typescript-eslint/prefer-promise-reject-errors",
   "- @typescript-eslint/prefer-readonly",
   "- @typescript-eslint/prefer-reduce-type-parameter",
-  "- @typescript-eslint/prefer-regexp-exec",
   "- @typescript-eslint/prefer-return-this-type",
   "- @typescript-eslint/prefer-string-starts-ends-with",
   "- @typescript-eslint/promise-function-async",
@@ -2070,11 +2279,11 @@ exports[`with every preset on > the rules on for x.js 1`] = `
   "+ constructor-super: [2]",
   "+ dot-notation: [2,{"allowKeywords":true,"allowPattern":""}]",
   "+ getter-return: [2,{"allowImplicit":false}]",
+  "- import-x/consistent-type-specifier-style",
   "+ import-x/default: [2]",
   "+ import-x/export: [2]",
   "+ import-x/named: [2]",
   "+ import-x/namespace: [2]",
-  "~ import-x/no-duplicates: [2,{"considerQueryString":true}]",
   "+ import-x/no-named-as-default-member: [2]",
   "+ import-x/no-named-as-default: [2]",
   "+ import-x/no-unresolved: [2,{"ignore":["^astro:"],"caseSensitive":true}]",
@@ -2142,7 +2351,6 @@ exports[`with every preset on > the rules on for x.mjs 1`] = `
   "- @typescript-eslint/no-for-in-array",
   "- @typescript-eslint/no-generated-empty-object-type",
   "- @typescript-eslint/no-implied-eval",
-  "- @typescript-eslint/no-import-type-side-effects",
   "+ @typescript-eslint/no-inferrable-types: [2]",
   "- @typescript-eslint/no-meaningless-void-operator",
   "- @typescript-eslint/no-misused-promises",
@@ -2175,7 +2383,6 @@ exports[`with every preset on > the rules on for x.mjs 1`] = `
   "- @typescript-eslint/prefer-promise-reject-errors",
   "- @typescript-eslint/prefer-readonly",
   "- @typescript-eslint/prefer-reduce-type-parameter",
-  "- @typescript-eslint/prefer-regexp-exec",
   "- @typescript-eslint/prefer-return-this-type",
   "- @typescript-eslint/prefer-string-starts-ends-with",
   "- @typescript-eslint/promise-function-async",
@@ -2190,11 +2397,11 @@ exports[`with every preset on > the rules on for x.mjs 1`] = `
   "+ constructor-super: [2]",
   "+ dot-notation: [2,{"allowKeywords":true,"allowPattern":""}]",
   "+ getter-return: [2,{"allowImplicit":false}]",
+  "- import-x/consistent-type-specifier-style",
   "+ import-x/default: [2]",
   "+ import-x/export: [2]",
   "+ import-x/named: [2]",
   "+ import-x/namespace: [2]",
-  "~ import-x/no-duplicates: [2,{"considerQueryString":true}]",
   "+ import-x/no-named-as-default-member: [2]",
   "+ import-x/no-named-as-default: [2]",
   "+ import-x/no-unresolved: [2,{"ignore":["^astro:"],"caseSensitive":true}]",

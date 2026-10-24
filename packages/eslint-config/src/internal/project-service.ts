@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { meta, parseForESLint, type ParserOptions } from '@typescript-eslint/parser'
+import { meta, parseForESLint } from '@typescript-eslint/parser'
+import type { ParserOptions } from '@typescript-eslint/parser'
 import type TypeScriptModule from 'typescript'
 import { parser as tsEslintParser } from 'typescript-eslint'
 

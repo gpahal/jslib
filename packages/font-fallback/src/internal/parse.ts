@@ -1,6 +1,7 @@
 import { brotliDecompressSync } from 'node:zlib'
 
-import { create, type Os2Table, type Font as ParsedFont } from 'fontkitten'
+import { create } from 'fontkitten'
+import type { Os2Table, Font as ParsedFont } from 'fontkitten'
 
 import { describeValue, formatMessage, formatNames, getErrorCode } from '@gpahal/std/errors'
 

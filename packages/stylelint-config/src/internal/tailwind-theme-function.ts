@@ -1,21 +1,30 @@
 /**
  * The `@gpahal/tailwind-theme-function` rule: each `theme()` and `--theme()` call without a
  * fallback names a variable that an `@theme` block of the file or the reference files defines, and
- * no later `initial` value or namespace reset removes, as Tailwind's build requires. A legacy key path such as `colors.red.500` is checked as the variable
- * it maps to through {@link LEGACY_NAMESPACES}. A file with `@config` or `@plugin`, whose
- * JavaScript can add theme keys, is skipped
+ * no later `initial` value or namespace reset removes, as Tailwind's build requires. A legacy key
+ * path such as `colors.red.500` is checked as the variable it maps to through
+ * {@link LEGACY_NAMESPACES}, or else as a path of Tailwind's JavaScript default theme, which
+ * Tailwind falls back to. A file with `@config` or `@plugin`, whose JavaScript can add theme keys,
+ * is skipped
  */
 
+import { createRequire } from 'node:module'
+import path from 'node:path'
+
 import type { AtRule, Declaration, Root } from 'postcss'
-import stylelint, { type Plugin, type Rule } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Plugin, Rule } from 'stylelint'
+
+import { isRecord } from '@gpahal/std/objects'
 
 import {
   atRulePrelude,
   declarationValue,
   FUNCTION_AT_RULES,
   functionCalls,
-  type Part,
+  THEME_FUNCTIONS,
 } from '@/internal/tailwind-values'
+import type { Part } from '@/internal/tailwind-values'
 
 const {
   createPlugin,
@@ -168,6 +177,58 @@ function readTheme(root: Root, names: Set<string>): boolean {
   return hasJavaScript
 }
 
+/**
+ * Tailwind's JavaScript default theme, by the path of a `theme.css` it resolves from, or
+ * `undefined` where it doesn't resolve
+ */
+const defaultThemes = new Map<string, Readonly<Record<string, unknown>> | undefined>()
+
+/**
+ * The JavaScript default theme of the Tailwind whose `theme.css` is a reference file, which is the
+ * one installed at or above the entry point or `root`
+ */
+function defaultThemeOf(referenceRoots: ReadonlyArray<Root>): Readonly<Record<string, unknown>> {
+  for (const reference of referenceRoots) {
+    const file = reference.source?.input.file
+    if (file === undefined || path.basename(file) !== 'theme.css') {
+      continue
+    }
+    if (!defaultThemes.has(file)) {
+      let theme: Readonly<Record<string, unknown>> | undefined
+      try {
+        const loaded: unknown = createRequire(file)('tailwindcss/defaultTheme')
+        const exported: unknown =
+          isRecord(loaded) && 'default' in loaded ? loaded['default'] : loaded
+        theme = isRecord(exported) ? exported : undefined
+      } catch {
+        theme = undefined
+      }
+      defaultThemes.set(file, theme)
+    }
+    const theme = defaultThemes.get(file)
+    if (theme !== undefined) {
+      return theme
+    }
+  }
+  return {}
+}
+
+/**
+ * Whether Tailwind's default theme resolves `keyPath` to a value. Tailwind takes `colors` only from
+ * the CSS theme
+ */
+function isDefaultThemePath(theme: Readonly<Record<string, unknown>>, keyPath: string): boolean {
+  const [first = '', ...rest] = keyPath.split('.')
+  if (first === 'colors') {
+    return false
+  }
+  let value: unknown = theme
+  for (const key of [first, ...rest]) {
+    value = isRecord(value) || Array.isArray(value) ? Reflect.get(value, key) : undefined
+  }
+  return typeof value === 'string' || typeof value === 'number' || Array.isArray(value)
+}
+
 function unquote(text: string): string {
   const quote = text[0]
   if ((quote !== '"' && quote !== "'") || text.at(-1) !== quote || text.length < 2) {
@@ -211,8 +272,6 @@ function variableOf(
  */
 const MAX_VARIABLE_ARGUMENT_LENGTH = 512
 
-const FUNCTIONS: ReadonlySet<string> = new Set(['theme', '--theme'])
-
 const ruleFunction: Rule = (primary: unknown) => (root, result) => {
   if (!validateOptions(result, ruleName, { actual: primary, possible: [true] })) {
     return
@@ -223,11 +282,12 @@ const ruleFunction: Rule = (primary: unknown) => (root, result) => {
     return
   }
   let known: ReturnType<typeof themeOf> | undefined
+  let defaultTheme: Readonly<Record<string, unknown>> | undefined
   const check = (node: Declaration | AtRule, { text, index: offset }: Part): void => {
     if (!text.includes('theme(')) {
       return
     }
-    for (const call of functionCalls(text, FUNCTIONS)) {
+    for (const call of functionCalls(text, THEME_FUNCTIONS)) {
       const [first] = call.args
       // A fallback argument, even an empty one, silences Tailwind's error
       if (first === undefined || call.args.length > 1) {
@@ -244,6 +304,10 @@ const ruleFunction: Rule = (primary: unknown) => (root, result) => {
       }
       known ??= themeOf(root, referenceRoots)
       if (known.hasJavaScript || known.names.has(variable.name)) {
+        continue
+      }
+      defaultTheme ??= defaultThemeOf(referenceRoots)
+      if (variable.keyPath !== undefined && isDefaultThemePath(defaultTheme, variable.keyPath)) {
         continue
       }
       report({

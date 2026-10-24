@@ -8,7 +8,8 @@ import type { EslintConfigOptions } from '@/index'
 import { parseUncached } from '@/internal/markdown/language'
 import { createMarkdownProcessor } from '@/internal/markdown/processor'
 
-import { CORE_AREAS_OFF, createESLint, sharedESLint, type ConfigOptions } from './helpers'
+import { CORE_AREAS_OFF, createESLint, sharedESLint } from './helpers'
+import type { ConfigOptions } from './helpers'
 
 /**
  * The options of every ESLint here: Markdown, and of the core areas only `imports` and `unicorn`,
@@ -216,6 +217,12 @@ describe('markdown processor offsets', () => {
     expect(fixedCode).not.toBe(`${code}\n`)
     expect(await problemsOf(markdown)).toEqual(problems)
     expect(await fix(markdown)).toBe(toMarkdown(fixedCode.slice(0, -1)))
+  })
+
+  // The HTML parser runs on ESLint's JavaScript language, which counts U+2028 as a line break
+  it('map a report after a line separator in an html block', async () => {
+    const markdown = '# T\n\n```html\n<p>a\u{2028}b</p>\n<img src="a.png" />\n```\n'
+    expect(await problemsOf(markdown, { html: true })).toEqual(['5:1 @html-eslint/require-img-alt'])
   })
 
   it('report a fatal message before the first line of a block on its opening fence', () => {

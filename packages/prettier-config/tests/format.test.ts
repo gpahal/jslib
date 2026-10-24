@@ -3,7 +3,8 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { format, getSupportInfo, resolveConfig, type Config } from 'prettier'
+import { format, getSupportInfo, resolveConfig } from 'prettier'
+import type { Config } from 'prettier'
 
 import { runNode, runNodeOk, withTmpProject, writeFiles } from '@gpahal/internal/node/testing'
 
@@ -103,7 +104,7 @@ export const values = [path, React, x, z, a, b, c, v, d, t, h]
 `)
   })
 
-  it('merges type and value imports from one module, and sorts files with decorators', async () => {
+  it('keeps type and value imports from one module apart, and sorts files with decorators', async () => {
     const source = `import { b } from 'z'
 import type { A } from 'z'
 import { customElement } from 'lit/decorators.js'
@@ -118,7 +119,8 @@ export const c: A | typeof b = b
     expect(await formatWith(baseConfig, 'index.ts', source)).toBe(`import path from 'node:path'
 
 import { customElement } from 'lit/decorators.js'
-import { b, type A } from 'z'
+import { b } from 'z'
+import type { A } from 'z'
 
 @customElement('x-a')
 export class A extends HTMLElement {

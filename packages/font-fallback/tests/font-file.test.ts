@@ -8,7 +8,8 @@ import { create } from 'fontkitten'
 
 import { minCpuMs, runNode, withTmpProject } from '@gpahal/internal/node/testing'
 
-import { getFontFallbacks, type FontFallback } from '@/index'
+import { getFontFallbacks } from '@/index'
+import type { FontFallback } from '@/index'
 import { readFontFile } from '@/internal/parse'
 import { LATIN_WEIGHTINGS } from '@/internal/weightings'
 

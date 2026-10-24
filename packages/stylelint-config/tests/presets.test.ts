@@ -3,7 +3,8 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import stylelint, { type Config } from 'stylelint'
+import stylelint from 'stylelint'
+import type { Config } from 'stylelint'
 
 import { withTmpProject } from '@gpahal/internal/node/testing'
 
@@ -226,6 +227,21 @@ test('a value with a Tailwind function skips value checks, so a typo in it passe
 async function lintAstro(code: string) {
   return lintRules(code, tailwindcssConfig, 'src/page.astro')
 }
+
+test("the tailwindcss preset keeps the case of theme() paths and --theme() variables, which --fix doesn't lowercase", async () => {
+  const css =
+    '.a {\n  font-size: theme(fontSize.sm);\n  line-height: theme(lineHeight.tight);\n  width: --theme(--Width);\n}\n'
+  for (const file of ['src/a.css', 'src/a.module.css']) {
+    expect(await lintRules(css, tailwindcssConfig, file)).not.toContain('value-keyword-case')
+    expect(await fix(css, tailwindcssConfig, file)).toBe(css)
+    expect(await fix('.a {\n  color: currentColor;\n}\n', tailwindcssConfig, file)).toBe(
+      '.a {\n  color: currentcolor;\n}\n',
+    )
+  }
+  // CSS Modules' own exceptions stay
+  const composes = ".a {\n  composes: fooBar from './x.module.css';\n}\n"
+  expect(await fix(composes, tailwindcssConfig, 'src/a.module.css')).toBe(composes)
+})
 
 describe('.astro files', () => {
   it('lints <style> blocks and style attributes', async () => {

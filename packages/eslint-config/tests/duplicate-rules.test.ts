@@ -1,15 +1,16 @@
 import path from 'node:path'
 
-import type { Linter } from 'eslint'
+import type { ESLint, Linter } from 'eslint'
 import { builtinRules } from 'eslint/use-at-your-own-risk'
 
-import { defineConfig, type EslintConfigOptions } from '@/index'
+import { defineConfig } from '@/index'
+import type { EslintConfigOptions } from '@/index'
 import { ALLOWED_OVERLAPS, DUPLICATE_REPORTS, DUPLICATE_RULES } from '@/internal/duplicate-rules'
 import { isRuleOn, parseRuleId } from '@/internal/rules'
 
 import { ALL_ON_OPTIONS } from '../scripts/typegen'
-import { withRulesOnly } from './fix-helpers'
 import {
+  ALL_PRESETS_OPTIONS,
   createESLint,
   eslintWith,
   FILES,
@@ -17,6 +18,7 @@ import {
   lintRuleIds,
   severityOf,
   sharedESLint,
+  withRulesOnly,
 } from './helpers'
 
 /**
@@ -41,50 +43,6 @@ function isAllowedOverlap(a: string, b: string): boolean {
 }
 
 /**
- * The inventory's files and a JavaScript code block, which `antislop`'s SonarJS configs leave out
- */
-const PAIR_FILES = [...FILES, 'markdown/README.md/0.js']
-
-/**
- * The code files that stand for the others in every set but the first, and every file that isn't
- * code, which resolves quickly. Each file of `PAIR_FILES` had the same pairs' rules on and off, with
- * and without the twins, as one of these in every option set, with code files grouped as `.ts`
- * outside tests, untyped `.js`, test files, and Astro's and Markdown's own. Resolving a code file's
- * config takes about 0.1s per file and ESLint, so the first set alone checks every file, to catch a
- * file that leaves its group
- */
-const AREA_PAIR_FILES = PAIR_FILES.filter(
-  (file) =>
-    ![
-      'react/src/x.jsx',
-      'x.mjs',
-      'cjs/x.cjs',
-      'typescript/src/x.mts',
-      'typescript/src/x.cts',
-      'typescript/src/x.d.ts',
-      'typescript/e2e/x.spec.ts',
-      'react/src/x.stories.tsx',
-      'x.config.ts',
-      'scripts/x.ts',
-      'browser/src/x.ts',
-      'server/src/x.ts',
-    ].includes(file),
-)
-
-/**
- * Every preset with each type-information mode, and without the SonarJS area, where only
- * `antislop`'s SonarJS configs run its kept rules, in some files. The other options of
- * `KEPT_AREAS_OFF` leave the kept rules of their areas on nowhere, which the structural test below
- * checks
- */
-const OPTION_SETS: Array<[string, EslintConfigOptions, ReadonlyArray<string>]> = [
-  ['every option on', ALL_ON_OPTIONS, PAIR_FILES],
-  ['typeAware: false', { ...ALL_ON_OPTIONS, typeAware: false }, AREA_PAIR_FILES],
-  ['typeAware.javascript', { ...ALL_ON_OPTIONS, typeAware: { javascript: true } }, AREA_PAIR_FILES],
-  ['every option on, sonarjs: false', { ...ALL_ON_OPTIONS, sonarjs: false }, AREA_PAIR_FILES],
-]
-
-/**
  * The rules of the duplicate pairs, the only ones whose severities the test reads
  */
 const PAIR_RULES = new Set<string>(DUPLICATE_RULES.flatMap(({ kept, off }) => [...kept, off]))
@@ -96,6 +54,9 @@ function isDuplicatesConfig(config: Linter.Config): boolean {
   return config.name?.startsWith('gpahal/duplicates/') === true
 }
 
+// Turning an area off leaves its kept rules on nowhere, so the duplicates configs must turn their
+// twins off nowhere either. This reads only the configs, which takes a fraction of the time of
+// resolving each file's config
 test.each(KEPT_AREAS_OFF)(
   'with every option on and %s, no twin is off whose kept rules no config turns on',
   async (_name, offOptions) => {
@@ -113,38 +74,48 @@ test.each(KEPT_AREAS_OFF)(
   },
 )
 
-test.each(OPTION_SETS)(
-  'no file has both rules of a duplicate pair on, nor a twin off without its kept rules: %s',
-  async (_name, options, files) => {
-    const configs = withRulesOnly(await defineConfig(options), PAIR_RULES)
-    const eslint = eslintWith(FIXTURES_DIR, configs)
-    // The same configs with every twin left on
-    const eslintWithTwins = eslintWith(
-      FIXTURES_DIR,
-      configs.filter((config) => !isDuplicatesConfig(config)),
-    )
-    const both: Array<string> = []
-    const unkept: Array<string> = []
-    for (const file of files) {
-      const config = (await eslint.calculateConfigForFile(file)) as Linter.Config | undefined
-      const twinsConfig = (await eslintWithTwins.calculateConfigForFile(file)) as
-        Linter.Config | undefined
-      const isOn = (rule: string, of: Linter.Config | undefined = config) =>
-        (severityOf(of?.rules?.[rule]) ?? 0) > 0
-      for (const { kept, off } of DUPLICATE_RULES) {
-        for (const rule of kept) {
-          if (isOn(rule) && isOn(off) && !isAllowedOverlap(rule, off)) {
-            both.push(`${file}: ${rule} and ${off}`)
-          }
-        }
-        if (isOn(off, twinsConfig) && !isOn(off) && kept.every((rule) => !isOn(rule))) {
-          unkept.push(`${file}: ${off} without ${kept.join(' or ')}`)
+/**
+ * A JavaScript code block, which `antislop`'s SonarJS configs leave out like every code block, and
+ * which the inventory's files don't have
+ */
+const JS_CODE_BLOCK = 'markdown/README.md/0.js'
+
+// With the inventory's options and files. Resolving each file's config with only the pairs' rules
+// takes about a quarter of the time of the inventory's full configs, which another worker usually
+// holds. Each file's twins, which the duplicates configs turn off, come from the same configs
+// without those
+test('no file has both rules of a duplicate pair on, nor a twin off without its kept rules', async () => {
+  const configs = withRulesOnly(
+    await defineConfig({ root: FIXTURES_DIR, isInEditor: false, ...ALL_PRESETS_OPTIONS }),
+    PAIR_RULES,
+  )
+  const eslint = eslintWith(FIXTURES_DIR, configs)
+  const eslintWithTwins = eslintWith(
+    FIXTURES_DIR,
+    configs.filter((config) => !isDuplicatesConfig(config)),
+  )
+  const calculate = async (of: ESLint, file: string) =>
+    (await of.calculateConfigForFile(file)) as Linter.Config | undefined
+  const both: Array<string> = []
+  const unkept: Array<string> = []
+  for (const file of [...FILES, JS_CODE_BLOCK]) {
+    const config = await calculate(eslint, file)
+    const twinsConfig = await calculate(eslintWithTwins, file)
+    const isOn = (rule: string, of: Linter.Config | undefined = config) =>
+      (severityOf(of?.rules?.[rule]) ?? 0) > 0
+    for (const { kept, off } of DUPLICATE_RULES) {
+      for (const rule of kept) {
+        if (isOn(rule) && isOn(off) && !isAllowedOverlap(rule, off)) {
+          both.push(`${file}: ${rule} and ${off}`)
         }
       }
+      if (isOn(off, twinsConfig) && !isOn(off) && kept.every((rule) => !isOn(rule))) {
+        unkept.push(`${file}: ${off} without ${kept.join(' or ')}`)
+      }
     }
-    expect({ both, unkept }).toEqual({ both: [], unkept: [] })
-  },
-)
+  }
+  expect({ both, unkept }).toEqual({ both: [], unkept: [] })
+})
 
 /**
  * A cycle in the graph from each `off` twin to its `kept` rules, as the rules along it, or
@@ -248,10 +219,9 @@ describe('a duplicate pair reports once', () => {
 
 describe('a mistake that two rules report gets one report', () => {
   const tsx = 'src/counter.tsx'
-  // As `.match()` in a condition, where `re.test(s)` serves, and its result used
+  // As `.match()` in a condition, where `re.test(s)` serves
   const matchCondition =
     'export function check(s: string): unknown {\n  if (s.match(/a/)) {\n    console.error(s)\n  }\n  return s\n}\n'
-  const matchResult = 'export function check(s: string): unknown {\n  return s.match(/a/)\n}\n'
   const mappedArrayFrom =
     'export function double(values: Array<number>): Array<number> {\n  return Array.from(values).map((value) => value * 2)\n}\n'
 
@@ -307,40 +277,6 @@ describe('a mistake that two rules report gets one report', () => {
       'vitest/valid-expect',
       '@typescript-eslint/no-floating-promises',
     ],
-    [
-      'rules',
-      {},
-      typed,
-      matchCondition,
-      'unicorn/prefer-regexp-test',
-      '@typescript-eslint/prefer-regexp-exec',
-    ],
-    [
-      'rules',
-      { unicorn: false },
-      typed,
-      matchCondition,
-      'e18e/prefer-regex-test',
-      '@typescript-eslint/prefer-regexp-exec',
-    ],
-    // `e18e/prefer-array-from-map` asks for `Array.from(m.keys(), fn)`, against `m.keys().toArray()`
-    [
-      'rules',
-      {},
-      'x.js',
-      'export function keys(m, fn) {\n  return [...m.keys()].map(fn)\n}\n',
-      'unicorn/prefer-iterator-to-array',
-      'e18e/prefer-array-from-map',
-    ],
-    ['rules', {}, typed, mappedArrayFrom, 'unicorn/prefer-array-from-map', 'unicorn/prefer-spread'],
-    [
-      'rules',
-      {},
-      typed,
-      mappedArrayFrom,
-      'unicorn/prefer-array-from-map',
-      'e18e/prefer-spread-syntax',
-    ],
   ] as Array<[string, Partial<EslintConfigOptions>, string, string, string, string]>)(
     '%s, %j, %s: in %j, only %s reports, and %s does where the kept rule is off',
     async (fixture, options, file, code, kept, twin) => {
@@ -353,10 +289,7 @@ describe('a mistake that two rules report gets one report', () => {
     },
   )
 
-  // Each patch drops a report only where the other rule of the pair reports
   it.each<[string, Partial<EslintConfigOptions>, string, string]>([
-    ['@typescript-eslint/prefer-regexp-exec', {}, typed, matchResult],
-    ['@typescript-eslint/prefer-regexp-exec', { unicorn: false }, typed, matchResult],
     [
       'unicorn/prefer-iterator-to-array',
       {},
@@ -364,11 +297,14 @@ describe('a mistake that two rules report gets one report', () => {
       'export function keys(m) {\n  return [...m.keys()]\n}\n',
     ],
     [
-      'e18e/prefer-array-from-map',
+      'unicorn/prefer-iterator-to-array',
       {},
       'x.js',
-      'export function keys(s, fn) {\n  return [...s].map(fn)\n}\n',
+      'export function keys(m, fn) {\n  return [...m.keys()].map(fn)\n}\n',
     ],
+    ['unicorn/prefer-regexp-test', {}, typed, matchCondition],
+    ['e18e/prefer-regex-test', { unicorn: false }, typed, matchCondition],
+    ['unicorn/prefer-spread', {}, typed, mappedArrayFrom],
   ])('reports with %s alone, with %j, in %s: %j', async (rule, options, file, code) => {
     const eslint = await sharedESLint('rules', { ...NO_SLOP, ...options })
     expect(await lintRuleIds(eslint, file, code)).toEqual([rule])

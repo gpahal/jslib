@@ -5,6 +5,7 @@ import type { ESLint, Linter } from 'eslint'
 import { defineConfig } from 'eslint/config'
 
 import { expandBraces } from '@gpahal/internal/globs'
+import { joinList } from '@gpahal/internal/lists'
 import { toArray } from '@gpahal/std/arrays'
 import { describeValue, formatMessage, formatNames, getErrorReason } from '@gpahal/std/errors'
 import { clonePlain, isPlainObject, isRecord } from '@gpahal/std/objects'
@@ -31,16 +32,16 @@ import {
   unescapeGlob,
   withoutLeadingDotSlash,
 } from '@/internal/globs'
-import { AREA_RULE_PREFIXES, PLUGIN_AREAS, type AreaName } from '@/internal/names'
+import { AREA_RULE_PREFIXES, PLUGIN_AREAS } from '@/internal/names'
+import type { AreaName } from '@/internal/names'
 import {
   canRunIn,
   getLanguageIgnores,
   getLanguageKind,
   getLanguageSources,
   getMatchedLanguages,
-  type KindLanguage,
-  type LanguageSource,
 } from '@/internal/preset-languages'
+import type { KindLanguage, LanguageSource } from '@/internal/preset-languages'
 import { checkRelativeGlobsAt } from '@/internal/relative-globs'
 import { getPlugins, isRuleOn, needsTypeInformation, parseRuleId } from '@/internal/rules'
 import type { TypedConfig } from '@/internal/types'
@@ -506,12 +507,6 @@ function checkPresetPlugins(
 
 const CODE_BLOCK_GLOB = new RegExp(String.raw`\.(?:${MARKDOWN_EXTNS.join('|')})/`)
 
-function formatKinds(kinds: ReadonlyArray<string>): string {
-  const others = kinds.slice(0, -1)
-  const last = kinds.at(-1) ?? ''
-  return others.length === 0 ? last : `${others.join(', ')} and ${last}`
-}
-
 export const SCOPE_KEYS = ['files', 'ignores', 'language'] as const
 
 /**
@@ -649,7 +644,7 @@ function failUnrunnable(
   if (nonCode === undefined && kinds.includes(CODE_KIND)) {
     fail(
       [...subjects, ...(config.files === undefined ? [] : ['`files`'])],
-      `${config.files === undefined ? 'has no `files`, so it applies to' : 'can match'} ${formatKinds(kinds)} files, where ${formatNames([rule])} can't run. Limit it to files in a language the rule supports, and set \`language\``,
+      `${config.files === undefined ? 'has no `files`, so it applies to' : 'can match'} ${joinList(kinds, 'and')} files, where ${formatNames([rule])} can't run. Limit it to files in a language the rule supports, and set \`language\``,
     )
   }
   const [target, example] =
@@ -659,12 +654,12 @@ function failUnrunnable(
   if (config.files === undefined) {
     fail(
       subjects,
-      `has no \`files\`, so it applies to ${formatKinds(kinds)} files, where ${formatNames([rule])} can't run. Give it \`files\` limited to ${target}, as in ${example}`,
+      `has no \`files\`, so it applies to ${joinList(kinds, 'and')} files, where ${formatNames([rule])} can't run. Give it \`files\` limited to ${target}, as in ${example}`,
     )
   }
   fail(
     [...subjects, '`files`'],
-    `can match ${formatKinds(kinds)} files, where ${formatNames([rule])} can't run. Limit it to ${target}, as in ${example}`,
+    `can match ${joinList(kinds, 'and')} files, where ${formatNames([rule])} can't run. Limit it to ${target}, as in ${example}`,
   )
 }
 
@@ -1024,7 +1019,7 @@ function checkUntypedOnlyRules(
     ),
     'remove the rule',
   ]
-  const fix = `${fixes.slice(0, -1).join(', ')}${fixes.length > 1 ? ' or ' : ''}${fixes.at(-1) ?? ''}`
+  const fix = joinList(fixes, 'or')
   const blocks =
     kindsFound.has('codeBlock') || kindsFound.has('scriptBlock')
       ? `, as ${kindsFound.has('codeBlock') ? 'code blocks' : 'Astro `<script>` blocks'}${kindsFound.has('codeBlock') && kindsFound.has('scriptBlock') ? ' and Astro `<script>` blocks' : ''} never get type information`
@@ -1642,7 +1637,9 @@ export function scopeUserConfig(
   } else if (files !== undefined && config.language === undefined) {
     parts = splitScoped(config, files, source, context, ignores)
   }
-  // A rejected part is a bug in the split
+  // Rejects a rule that `language` can't run, a rule that can't run in code files in a config
+  // without `files`, and a typed rule for files another config of yours gives a language. Any other
+  // rejected part is a bug in the split
   for (const part of parts) {
     checkRuleLanguages(part, source, context.plugins, context.presets.languages, undefined)
   }

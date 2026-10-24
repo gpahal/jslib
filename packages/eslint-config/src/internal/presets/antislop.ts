@@ -4,7 +4,7 @@ import { isRecord } from '@gpahal/std/objects'
 
 import { CODE_BLOCK_FILES, JSON_FILES, TOML_FILES, YAML_FILES } from '@/internal/files'
 import type { FileSpecs } from '@/internal/globs'
-import { lfLineStarts, withLanguageColumnsRule } from '@/internal/language-columns'
+import { withLanguageColumns } from '@/internal/language-columns'
 import { withSetup } from '@/internal/naming'
 import { importPeers, interopDefault } from '@/internal/peers'
 import type { AntislopOptions, TypedConfig, TypedRules } from '@/internal/types'
@@ -104,12 +104,13 @@ function emDashSentences(text: string): Array<Range> {
 }
 
 /**
- * 0.1.3 splits the text before each position, which takes seconds in a long file; this computes line
- * starts once. Same 1-based lines, counting only `\n`, and 0-based columns, which
- * `withLanguageColumnsRule` maps. A non-`full` `inspection`, which checks changed lines with a
- * helper the plugin doesn't export, runs the stock rule
+ * 0.1.3 splits the text before each position, which takes seconds in a long file; this reports the
+ * language's positions of each sentence. A non-`full` `inspection`, which checks changed lines with
+ * a helper the plugin doesn't export, runs the stock rule, whose 1-based lines count only `\n` and
+ * whose columns are JavaScript's 0-based ones in every file, mapped to the language's
  */
 function linearNoEmDash(rule: Rule.RuleModule): Rule.RuleModule {
+  const stock = withLanguageColumns(rule, { lfLines: true })
   return {
     ...rule,
     create(context) {
@@ -123,7 +124,7 @@ function linearNoEmDash(rule: Rule.RuleModule): Rule.RuleModule {
           : undefined)
       const mode = isRecord(inspection) ? inspection['mode'] : inspection
       if (mode !== 'full' && Boolean(inspection)) {
-        return rule.create(context)
+        return stock.create(context)
       }
       let isInspected = false
       const inspect = (): void => {
@@ -131,26 +132,10 @@ function linearNoEmDash(rule: Rule.RuleModule): Rule.RuleModule {
           return
         }
         isInspected = true
-        const { text } = context.sourceCode
-        // Lazily, as most files have no em dash
-        let lineStarts: Array<number> | undefined
-        const positionOf = (index: number): { line: number; column: number } => {
-          lineStarts ??= lfLineStarts(text)
-          let low = 0
-          let high = lineStarts.length
-          while (low < high) {
-            const middle = (low + high) >>> 1
-            if ((lineStarts[middle] ?? 0) <= index) {
-              low = middle + 1
-            } else {
-              high = middle
-            }
-          }
-          return { line: low, column: index - (lineStarts[low - 1] ?? 0) }
-        }
-        for (const { start, end } of emDashSentences(text)) {
+        const { sourceCode } = context
+        for (const { start, end } of emDashSentences(sourceCode.text)) {
           context.report({
-            loc: { start: positionOf(start), end: positionOf(end) },
+            loc: { start: sourceCode.getLocFromIndex(start), end: sourceCode.getLocFromIndex(end) },
             messageId: 'avoid',
           })
         }
@@ -170,19 +155,16 @@ function linearNoEmDash(rule: Rule.RuleModule): Rule.RuleModule {
 }
 
 /**
- * The same object for the same `plugin`. In 0.1.3, `no-em-dash` reports JavaScript's 0-based columns
- * in every file
+ * The same object for the same `plugin`
  */
 export function wrapSlopPlugin(plugin: ESLint.Plugin): ESLint.Plugin {
   let wrapped = WRAPPED_SLOP_PLUGINS.get(plugin)
   if (wrapped === undefined) {
     const rule = plugin.rules?.['no-em-dash']
-    const linear =
+    wrapped = registerWrappedPlugin(
       rule && 'create' in rule
         ? { ...plugin, rules: { ...plugin.rules, 'no-em-dash': linearNoEmDash(rule) } }
-        : plugin
-    wrapped = registerWrappedPlugin(
-      withLanguageColumnsRule(linear, 'no-em-dash', { lfLines: true }),
+        : plugin,
       plugin,
     )
     WRAPPED_SLOP_PLUGINS.set(plugin, wrapped)

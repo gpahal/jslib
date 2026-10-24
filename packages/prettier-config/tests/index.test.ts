@@ -6,12 +6,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { getDefaultSelectors } from 'eslint-plugin-better-tailwindcss/defaults'
 import { SelectorKind } from 'eslint-plugin-better-tailwindcss/types'
-import { resolveConfig, type Plugin } from 'prettier'
+import { resolveConfig } from 'prettier'
+import type { Plugin } from 'prettier'
 
 import { PATH_OR_FILE_URL_EXPECTED } from '@gpahal/internal/node/paths'
 import { runNodeOk, withTmpProject } from '@gpahal/internal/node/testing'
 
-import defaultConfig, { defineConfig, mergeConfigs, type Config } from '@/index'
+import defaultConfig, { defineConfig, mergeConfigs } from '@/index'
+import type { Config } from '@/index'
 import { MARKDOWN_FILES } from '@/internal/defaults'
 import { SORTER_OPTION_NAMES } from '@/internal/options'
 import {
@@ -21,8 +23,8 @@ import {
   resolveSortImportsPlugin,
   resolveTailwindPlugin,
   warnOfPrettierVersion,
-  type PluginEnvironment,
 } from '@/internal/plugins'
+import type { PluginEnvironment } from '@/internal/plugins'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 
@@ -385,6 +387,78 @@ describe('mergeConfigs', () => {
     ])
   })
 
+  // Prettier would load both copies, and the plain one would replace the preset's, such as the
+  // import sorter's wrapper, which keeps a `@ts-expect-error` above its import
+  it.each([
+    [{}, '@ianvs/prettier-plugin-sort-imports'],
+    [{}, 'prettier-plugin-packagejson'],
+    [{ astro: true }, 'prettier-plugin-astro'],
+    [{ tailwindcss: TAILWINDCSS }, '@ianvs/prettier-plugin-sort-imports'],
+    [{ tailwindcss: TAILWINDCSS }, 'prettier-plugin-tailwindcss'],
+  ])(
+    'throws on a plugin that a preset adds, given by name in another config %#',
+    (options, name) => {
+      const preset = defineConfig({ root: ROOT, ...options })
+      const description = (config: string) =>
+        `\`${name}\` is added by ${config}'s preset. Remove it`
+      expect(() => mergeConfigs(preset, { plugins: ['a', name] })).toThrow(
+        new TypeError(
+          `${PREFIX}: config 2 given to \`mergeConfigs\`: \`plugins[1]\`: ${description('config 1')}`,
+        ),
+      )
+      expect(() => mergeConfigs({ plugins: [name] }, preset)).toThrow(
+        new TypeError(
+          `${PREFIX}: config 1 given to \`mergeConfigs\`: \`plugins[0]\`: ${description('config 2')}`,
+        ),
+      )
+      expect(() =>
+        mergeConfigs(preset, { overrides: [{ files: '*.ts', options: { plugins: [name] } }] }),
+      ).toThrow(
+        new TypeError(
+          `${PREFIX}: config 2 given to \`mergeConfigs\`: \`overrides[0].options.plugins[0]\`: ${description('config 1')}`,
+        ),
+      )
+      expect(() => mergeConfigs({ ...preset, plugins: [...(preset.plugins ?? []), name] })).toThrow(
+        new TypeError(
+          `${PREFIX}: config 1 given to \`mergeConfigs\`: \`plugins[${preset.plugins?.length ?? 0}]\`: ${description('this config')}`,
+        ),
+      )
+    },
+  )
+
+  it('throws on a plugin given by name next to a config that defineConfig built without its own plugin modules', () => {
+    const preset = defineConfig({ root: ROOT, githubAlerts: false, tailwindcss: TAILWINDCSS })
+    expect(() => mergeConfigs(preset, { plugins: ['prettier-plugin-tailwindcss'] })).toThrow(
+      new TypeError(
+        `${PREFIX}: config 2 given to \`mergeConfigs\`: \`plugins[0]\`: \`prettier-plugin-tailwindcss\` is added by config 1's preset. Remove it`,
+      ),
+    )
+  })
+
+  // Neither config comes from `defineConfig`, so neither has a preset
+  it('merges a plugin given by path and by name in configs that defineConfig did not build', () => {
+    const byPath = { plugins: [PACKAGE_JSON_PLUGIN!] }
+    const byName = { plugins: ['prettier-plugin-packagejson'] }
+    expect(mergeConfigs(byPath, byName).plugins).toEqual([
+      PACKAGE_JSON_PLUGIN,
+      'prettier-plugin-packagejson',
+    ])
+    expect(mergeConfigs(byName, byPath).plugins).toEqual([
+      'prettier-plugin-packagejson',
+      PACKAGE_JSON_PLUGIN,
+    ])
+  })
+
+  it('merges configs that defineConfig built, which add the same plugins', () => {
+    const merged = mergeConfigs(baseConfig, defineConfig({ root: ROOT, astro: true }))
+    expect(merged.plugins).toEqual([
+      SORT_IMPORTS_WRAPPER,
+      GITHUB_ALERTS_PLUGIN,
+      PACKAGE_JSON_PLUGIN,
+      ASTRO_PLUGIN,
+    ])
+  })
+
   it.each([
     [
       [{}, { overrides: [{ files: '*.ts', options: { plugins: [1] } }] }],
@@ -444,11 +518,13 @@ async function loadTailwindResolver(): Promise<(base: string, id: string) => str
 }
 
 /**
- * A project with prettier-plugin-tailwindcss of `version` installed, and an environment that
- * resolves the plugin there
+ * A pnpm project with prettier-plugin-tailwindcss of `version` installed, and an environment that
+ * resolves the plugin there. The lockfile makes install commands name pnpm, which they would
+ * otherwise take from `npm_config_user_agent`
  */
 async function installTailwind(version: string | undefined) {
   const project = await withTmpProject('prettier-config', {
+    'pnpm-lock.yaml': "lockfileVersion: '9.0'\n",
     'node_modules/prettier-plugin-tailwindcss/package.json': JSON.stringify({
       name: 'prettier-plugin-tailwindcss',
       version,
@@ -506,7 +582,7 @@ describe('plugin resolution', () => {
     )
     expect(() => resolveSortImportsPlugin(tailwindPath)).toThrow(
       new TypeError(
-        `${PREFIX}: \`sortImports\`: \`prettier-plugin-tailwindcss\` loads \`@ianvs/prettier-plugin-sort-imports\` from where it's installed, and \`@ianvs/prettier-plugin-sort-imports\` 3.7.2 is older than the 4.7 this config needs. Install a newer version, as in \`pnpm add -D @ianvs/prettier-plugin-sort-imports@^4.7\`, or set \`sortImports: false\``,
+        `${PREFIX}: \`sortImports\`: \`prettier-plugin-tailwindcss\` loads \`@ianvs/prettier-plugin-sort-imports\` from where it's installed, and \`@ianvs/prettier-plugin-sort-imports\` 3.7.2 is older than the 4.7 this config needs. Install a newer version, as in \`pnpm add -D "@ianvs/prettier-plugin-sort-imports@^4.7"\`, or set \`sortImports: false\``,
       ),
     )
   })
@@ -515,16 +591,18 @@ describe('plugin resolution', () => {
     await using tailwind = await installTailwind('0.7.2')
     expect(() => resolveTailwindPlugin(tailwind.environment)).toThrow(
       new TypeError(
-        `${PREFIX}: \`tailwindcss\`: \`prettier-plugin-tailwindcss\` 0.7.2 is older than the 0.8 this config needs. Install a newer version, as in \`pnpm add -D prettier-plugin-tailwindcss@^0.8\``,
+        `${PREFIX}: \`tailwindcss\`: \`prettier-plugin-tailwindcss\` 0.7.2 is older than the 0.8 this config needs. Install a newer version, as in \`pnpm add -D "prettier-plugin-tailwindcss@^0.8"\``,
       ),
     )
   })
 
   it.each([
     ['0.9.0', true],
+    ['0.9.0-beta.1', true],
+    ['0.8.9', false],
     ['0.0.0-insiders.5b27f94', false],
   ])(
-    'warns once when the Tailwind plugin is %s, outside the tested range: %s',
+    'warns once when the Tailwind plugin is %s, newer than the tested range: %s',
     async (version, warns) => {
       await using tailwind = await installTailwind(version)
       using emitWarning = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined)
@@ -534,7 +612,7 @@ describe('plugin resolution', () => {
         warns
           ? [
               [
-                `${PREFIX}: \`tailwindcss\`: prettier-plugin-tailwindcss ${version} is outside the tested range >=0.8.0 <0.9.0, so classes or imports may stay unsorted. If they do, install a version in the range, as in \`pnpm add -D "prettier-plugin-tailwindcss@>=0.8.0 <0.9.0"\``,
+                `${PREFIX}: \`tailwindcss\`: prettier-plugin-tailwindcss ${version} is newer than the tested range >=0.8.0 <0.9.0, so classes or imports may stay unsorted. If they do, install a version in the range, as in \`pnpm add -D "prettier-plugin-tailwindcss@>=0.8.0 <0.9.0"\``,
                 { code: 'GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN' },
               ],
             ]
@@ -559,7 +637,7 @@ describe('plugin resolution', () => {
       warns
         ? [
             [
-              `${PREFIX}: \`prettier\`: version ${version} is older than the 3.9 this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`pnpm add -D prettier@^3.9\``,
+              `${PREFIX}: \`prettier\`: version ${version} is older than the 3.9 this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`pnpm add -D "prettier@^3.9"\``,
               { code: 'GPAHAL_PRETTIER_OLD_PRETTIER' },
             ],
           ]
@@ -780,7 +858,7 @@ describe('defineConfig validation', () => {
   it('rejects a missing stylesheet, a folder or a URL other than `file:` as its entry point', () => {
     for (const entryPoint of ['tests/fixtures/missing.css', 'tests/fixtures']) {
       expect(build({ tailwindcss: { entryPoint } })).toThrow(
-        `${PREFIX}: \`tailwindcss.entryPoint\`: path \`${path.join(ROOT, entryPoint)}\` isn't a file`,
+        `${PREFIX}: \`tailwindcss.entryPoint\`: \`${path.join(ROOT, entryPoint)}\` isn't a file`,
       )
     }
     expect(build({ tailwindcss: { entryPoint: new URL('https://example.com/a.css') } })).toThrow(

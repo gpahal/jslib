@@ -1,13 +1,5 @@
-import {
-  chunk,
-  isArray,
-  isArrayOf,
-  isNonEmpty,
-  partition,
-  toArray,
-  unique,
-  type ReadonlyNonEmptyArray,
-} from '@/arrays'
+import { chunk, isArray, isArrayOf, isNonEmpty, partition, toArray, unique } from '@/arrays'
+import type { ReadonlyNonEmptyArray } from '@/arrays'
 
 function isString(item: unknown): item is string {
   return typeof item === 'string'

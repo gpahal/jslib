@@ -6,7 +6,8 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { format, resolveConfig, type Config, type Options } from 'prettier'
+import { format, resolveConfig } from 'prettier'
+import type { Config, Options } from 'prettier'
 
 import { runNode, withTmpProject } from '@gpahal/internal/node/testing'
 

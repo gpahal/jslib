@@ -1,11 +1,7 @@
 // Compiled by the package's `typecheck`, not run
 
-import {
-  defineConfig,
-  mergeConfigs,
-  type SortImportsOptions,
-  type TailwindcssOptions,
-} from '@/index'
+import { defineConfig, mergeConfigs } from '@/index'
+import type { SortImportsOptions, TailwindcssOptions } from '@/index'
 
 const ROOT = import.meta.dirname
 

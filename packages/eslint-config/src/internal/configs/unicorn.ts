@@ -2,7 +2,8 @@ import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 
 import { FILENAME_CASE_IGNORES } from '@/internal/configs/constants'
 import { JSX_FILES } from '@/internal/files'
-import { intersectFiles, type FileSpecs } from '@/internal/globs'
+import { intersectFiles } from '@/internal/globs'
+import type { FileSpecs } from '@/internal/globs'
 import { named } from '@/internal/naming'
 import type { TypedConfig } from '@/internal/types'
 
@@ -38,6 +39,9 @@ export function unicorn({ files }: UnicornOptions): Array<TypedConfig> {
         'unicorn/single-line-block-comment-style': 'off',
         // It strips the ` * ` prefix that comment-layout keeps, so `--fix` never settles
         'unicorn/no-asterisk-prefix-in-documentation-comments': 'off',
+        // `Array.from(s, fn)` for `Array.from(s).map(fn)`, where `unicorn/prefer-spread` asks for
+        // `[...s].map(fn)`
+        'unicorn/prefer-array-from-map': 'off',
         // Naming opinions, which reviews judge better. The first was also the slowest rule
         'unicorn/consistent-boolean-name': 'off',
         'unicorn/consistent-compound-words': 'off',

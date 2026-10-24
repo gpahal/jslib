@@ -10,6 +10,7 @@
   "exports": {
     "./comments": "./build/comments.js",
     "./globs": "./build/globs.js",
+    "./lists": "./build/lists.js",
     "./node/cli": "./build/node/cli.js",
     "./node/json": "./build/node/json.js",
     "./node/options": "./build/node/options.js",
@@ -19,22 +20,25 @@
     "./node/root": "./build/node/root.js",
     "./node/source-maps": "./build/node/source-maps.js",
     "./node/testing": "./build/node/testing.js",
+    "./node/versions": "./build/node/versions.js",
     "./node/zod": "./build/node/zod.js",
     "./package.json": "./package.json"
   },
   "scripts": {
     "build": "tsdown",
     "lint-check": "eslint . --max-warnings 0",
-    "test": "VITEST_CANARIES=0 vitest run --config ../../vitest.config.ts",
+    "test": "vitest run --config ../../vitest.config.ts --project 'tests*'",
     "typecheck": "tsc -p tsconfig.browser.json && tsc && tsc -p tests"
   },
   "dependencies": {
     "@gpahal/std": "workspace:*",
     "@types/node": "^24.19.2",
     "brace-expansion": "^5.0.12",
+    "semver": "^7.8.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@types/semver": "^7.8.0",
     "tsdown": "^0.23.1",
     "typescript": "~6.0.3"
   },

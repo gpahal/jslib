@@ -161,7 +161,11 @@ describe('assertValid', () => {
         z.boolean(),
         typeCheck<() => void>((value) => typeof value === 'function', { expected: 'a function' }),
         strictObject({ refresh: z.optional(z.boolean()) }),
-        z.string().check(z.minLength(5)),
+        z.string().check(
+          z.refine((value) => value.length >= 5, {
+            error: expectedError('a string of at least 5 characters'),
+          }),
+        ),
         z.string().check(z.regex(/^a/)),
       ],
       { error: expectedError('a boolean, a function, an object or a string') },
@@ -183,7 +187,17 @@ describe('assertValid', () => {
 
   it('reports a nested union whose branches all rejected the type as a type mismatch', () => {
     const schema = z.union(
-      [z.boolean(), z.union([z.array(z.string()), z.number().check(z.minimum(5))])],
+      [
+        z.boolean(),
+        z.union([
+          z.array(z.string()),
+          z.number().check(
+            z.refine((value) => value >= 5, {
+              error: expectedError('a number greater than or equal to `5`'),
+            }),
+          ),
+        ]),
+      ],
       { error: expectedError('a boolean, strings or a number') },
     )
     expect(getMessage(schema, 'a')).toBe(
@@ -206,34 +220,15 @@ describe('assertValid', () => {
     )
   })
 
-  it.each([
-    [z.string().check(z.minLength(2)), 'a', 'a string of at least 2 characters', '`"a"`'],
-    [
-      z.array(z.number()).check(z.maxLength(1)),
-      [1, 2],
-      'an array of at most 1 item',
-      'an array of 2 items',
-    ],
-    [z.number().check(z.gt(1)), 1, 'a number greater than `1`', '`1`'],
-    [
-      z.date().check(z.lt(new Date('2020-01-01T00:00:00Z'))),
-      new Date('2020-01-01T00:00:00Z'),
-      'a date before `2020-01-01T00:00:00.000Z`',
-      '`2020-01-01T00:00:00.000Z`',
-    ],
-    [z.int(), 1.5, 'an integer', '`1.5`'],
-  ])('words a size, bound or type issue as expected %#', (schema, value, expected, received) => {
-    expect(getMessage(schema, value)).toBe(
-      `@scope/config: options: expected ${expected}, received ${received}`,
-    )
-  })
-
   it("lowercases Zod's own message for other issues, naming the value of a format issue", () => {
     expect(getMessage(z.string().check(z.regex(/^a/)), 'b')).toBe(
       '@scope/config: options: invalid string: must match pattern /^a/, received `"b"`',
     )
     expect(getMessage(z.number().check(z.multipleOf(2)), 3)).toBe(
       '@scope/config: options: invalid number: must be a multiple of 2',
+    )
+    expect(getMessage(z.string().check(z.minLength(2)), 'a')).toBe(
+      '@scope/config: options: too small: expected string to have >=2 characters',
     )
   })
 

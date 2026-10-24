@@ -1,12 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import {
-  resolveListOption,
-  resolveSubOptions,
-  type ListOption,
-} from '@gpahal/internal/node/options'
-import { toArray } from '@gpahal/std/arrays'
+import { formatSomeNames, joinList } from '@gpahal/internal/lists'
+import { resolveListOption, resolveSubOptions } from '@gpahal/internal/node/options'
+import type { ListOption } from '@gpahal/internal/node/options'
+import { toArray, unique, uniqueBy } from '@gpahal/std/arrays'
 import { formatNames } from '@gpahal/std/errors'
 import { isRecord } from '@gpahal/std/objects'
 
@@ -19,9 +17,8 @@ import {
   isDefaultProjectCandidate,
   isStorybookCandidate,
   STORYBOOK_FOLDER,
-  type DefaultProjectProblem,
-  type ProjectDiscovery,
 } from '@/internal/default-project'
+import type { DefaultProjectProblem, ProjectDiscovery } from '@/internal/default-project'
 import { isInEditorEnv } from '@/internal/editor'
 import {
   ASTRO_FILES,
@@ -58,31 +55,28 @@ import {
   withNegatedGlobs,
   withoutGlobFiles,
   withoutLeadingDotSlash,
-  type FileSpecs,
-  type Scope,
 } from '@/internal/globs'
+import type { FileSpecs, Scope } from '@/internal/globs'
 import { usesReactCompiler, warnOfOptionHints, warnOfPlaywrightTestDir } from '@/internal/hints'
 import { readProjectManifests } from '@/internal/manifests'
-import { GITIGNORE_CONFIG_NAMES, type AreaName } from '@/internal/names'
+import { GITIGNORE_CONFIG_NAMES } from '@/internal/names'
+import type { AreaName } from '@/internal/names'
 import { checkTypescriptInstalled } from '@/internal/peers'
-import { scanProject, type GitIgnores } from '@/internal/project-scan'
-import { withOptionsRoot } from '@/internal/relative-globs'
+import { scanProject } from '@/internal/project-scan'
+import type { GitIgnores } from '@/internal/project-scan'
 import type { EslintConfigOptions, NextjsOptions } from '@/internal/types'
 import type { UntypedKinds } from '@/internal/user-configs'
-import {
-  formatErrorMessage,
-  PREFIX,
-  warnOfSetupOnce,
-  type GpahalWarningCode,
-} from '@/internal/utils'
+import { formatErrorMessage, PREFIX, warnOfSetupOnce } from '@/internal/utils'
+import type { GpahalWarningCode } from '@/internal/utils'
 import {
   checkCodeGlobs,
   checkDefaultProjectGlobs,
   checkRelativeGlobs,
   CODE_FILE_TARGET,
-  type GlobTarget,
 } from '@/internal/validate'
-import { createIgnoreCheck, IgnoreLayers, type IgnoreLayer } from '@/internal/walk'
+import type { GlobTarget } from '@/internal/validate'
+import { createIgnoreCheck, IgnoreLayers } from '@/internal/walk'
+import type { IgnoreLayer } from '@/internal/walk'
 
 /**
  * The options with their defaults applied, and what they imply, worked out once
@@ -180,6 +174,7 @@ export type ResolvedOptions = {
  * Each positive `scope` glob must be able to match a file of `target`
  */
 function getPresetFiles(
+  root: string,
   name: string,
   scope: ReadonlyArray<string> | undefined,
   defaults: Array<string>,
@@ -188,7 +183,7 @@ function getPresetFiles(
   if (scope === undefined) {
     return defaults
   }
-  checkCodeGlobs(name, scope, target)
+  checkCodeGlobs(name, scope, root, target)
   const { positive, negated } = splitGlobs(scope)
   return withNegatedGlobs(intersectFiles(positive, defaults), negated)
 }
@@ -209,23 +204,27 @@ function resolveGlobs(
  * At least one positive glob, each able to match a code file. `[]` defaults must list globs
  */
 function resolveCodeGlobs(
+  root: string,
   name: string,
   option: ListOption | undefined,
   defaults: ReadonlyArray<string>,
 ): Array<string> {
   const globs = resolveGlobs(name, option, defaults)
-  checkCodeGlobs(name, globs, CODE_FILE_TARGET, defaults.length > 0)
+  checkCodeGlobs(name, globs, root, CODE_FILE_TARGET, defaults.length > 0)
   return globs
 }
 
 const COMMONJS_FILE_TARGET: GlobTarget = { extensions: ['js'], description: '`.js` file' }
 
-function resolveCommonjs(option: EslintConfigOptions['commonjs']): ResolvedOptions['commonjs'] {
+function resolveCommonjs(
+  root: string,
+  option: EslintConfigOptions['commonjs'],
+): ResolvedOptions['commonjs'] {
   if (option === undefined || option === false) {
     return { files: [], ignores: [] }
   }
   const globs = resolveGlobs('commonjs.files', resolveSubOptions(option)?.files, ['**/*.js'])
-  checkCodeGlobs('commonjs.files', globs, COMMONJS_FILE_TARGET)
+  checkCodeGlobs('commonjs.files', globs, root, COMMONJS_FILE_TARGET)
   return {
     files: intersectFiles(globsAsFiles(globs), ['**/*.js']),
     // A later `!` glob un-ignores what an earlier one ignores, so non-`.js` files are un-ignored last
@@ -237,13 +236,14 @@ function resolveCommonjs(option: EslintConfigOptions['commonjs']): ResolvedOptio
 }
 
 function resolvePresetGlobs(
+  root: string,
   isOn: Readonly<Record<AreaName, boolean>>,
   name: 'playwright' | 'storybook',
   option: boolean | { files?: ListOption | undefined } | undefined,
   defaults: ReadonlyArray<string>,
 ): Array<string> {
   return isOn[name]
-    ? resolveCodeGlobs(`${name}.files`, resolveSubOptions(option)?.files, defaults)
+    ? resolveCodeGlobs(root, `${name}.files`, resolveSubOptions(option)?.files, defaults)
     : []
 }
 
@@ -411,6 +411,7 @@ function getPackageSourceGlobs(root: string, packageFolders: ReadonlyArray<strin
  * An array as it is, or the defaults through a function. `undefined` for none
  */
 function resolveAllowDefaultProject(
+  root: string,
   options: EslintConfigOptions,
   isTyped: boolean,
   findDefaults: () => Array<string>,
@@ -424,7 +425,7 @@ function resolveAllowDefaultProject(
     option,
     typeof option === 'function' || option === undefined ? findDefaults() : [],
   )
-  checkRelativeGlobs('typeAware.allowDefaultProject', globs)
+  checkRelativeGlobs('typeAware.allowDefaultProject', globs, root)
   checkDefaultProjectGlobs(globs)
   // typescript-eslint matches the globs against paths without a leading `./`
   const relativeGlobs = globs.map((glob) => withoutLeadingDotSlash(glob))
@@ -432,6 +433,7 @@ function resolveAllowDefaultProject(
 }
 
 function resolveTypeAwareIgnores(
+  root: string,
   options: EslintConfigOptions,
   isTyped: boolean,
   isAstro: boolean,
@@ -449,6 +451,7 @@ function resolveTypeAwareIgnores(
     checkCodeGlobs(
       'typeAware.ignores',
       globs,
+      root,
       isAstro
         ? {
             extensions: [...CODE_EXTNS, 'astro'],
@@ -465,7 +468,7 @@ function getTailwindcssTarget(isOn: Readonly<Record<AreaName, boolean>>): GlobTa
   const kinds = ['JavaScript', 'TypeScript', ...extensions.map((extn) => `\`.${extn}\``)]
   return {
     extensions: [...CODE_EXTNS, ...extensions],
-    description: `${kinds.slice(0, -1).join(', ')} or ${kinds.at(-1) ?? ''} file`,
+    description: `${joinList(kinds, 'or')} file`,
   }
 }
 
@@ -519,19 +522,12 @@ function nonMatchingFiles(globs: ReadonlyArray<string>): FileSpecs {
  */
 const warnedTypeRoots = new Set<string>()
 
-function formatExamples(files: ReadonlyArray<string>): string {
-  const shown = files.slice(0, 3)
-  return files.length > shown.length
-    ? `${formatNames(shown)} and ${String(files.length - shown.length)} more`
-    : formatNames(shown, { conjunction: 'and' })
-}
-
 function describeDefaultProjectProblem(
   root: string,
   files: ReadonlyArray<string>,
   problem: DefaultProjectProblem,
 ): string {
-  const examples = formatExamples(files)
+  const examples = formatSomeNames(files, 3)
   const tsconfig = formatNames([path.join(root, 'tsconfig.json')])
   const jsconfig = path.join(root, 'jsconfig.json')
   const { reason, fix } = {
@@ -629,7 +625,7 @@ function warnOfLargeDefaultProject(root: string, files: ReadonlyArray<string>): 
     root,
     formatErrorMessage(
       ['`typeAware.allowDefaultProject`'],
-      `${String(files.length)} files, such as ${formatExamples(files)}, get type information from typescript-eslint's default project, which takes about 8 times as long per file as a tsconfig's. Include them in a tsconfig, list the ones to type in \`typeAware.allowDefaultProject\`, or ignore folders such as fixtures with \`ignores\``,
+      `${String(files.length)} files, such as ${formatSomeNames(files, 3)}, get type information from typescript-eslint's default project, which takes about 8 times as long per file as a tsconfig's. Include them in a tsconfig, list the ones to type in \`typeAware.allowDefaultProject\`, or ignore folders such as fixtures with \`ignores\``,
     ),
     'GPAHAL_LARGE_DEFAULT_PROJECT',
   )
@@ -654,11 +650,7 @@ function warnOfFilesOutsideTsconfigs(
   ) {
     return
   }
-  const shown = files.slice(0, MAX_NAMED_FILES_OUTSIDE_TSCONFIGS)
-  const names =
-    files.length > shown.length
-      ? `${formatNames(shown)} and ${String(files.length - shown.length)} more`
-      : formatNames(shown, { conjunction: 'and' })
+  const names = formatSomeNames(files, MAX_NAMED_FILES_OUTSIDE_TSCONFIGS)
   // From the project, not the run, so a one-file run or an editor gets them too
   const count =
     files.length === 1
@@ -700,12 +692,13 @@ function getNextjsFiles(
   nextjsOptions: Pick<NextjsOptions, 'scope' | 'rootDir'> | undefined,
 ): FileSpecs | undefined {
   if (nextjsOptions?.scope !== undefined) {
-    return getPresetFiles('nextjs.scope', nextjsOptions.scope, CODE_FILES)
+    return getPresetFiles(root, 'nextjs.scope', nextjsOptions.scope, CODE_FILES)
   }
   if (nextjsOptions?.rootDir === undefined) {
     return undefined
   }
   return getPresetFiles(
+    root,
     'nextjs.rootDir',
     toArray(nextjsOptions.rootDir).map((rootDir) => folderGlob(root, path.resolve(root, rootDir))),
     CODE_FILES,
@@ -782,7 +775,7 @@ function findAllowDefaultProject({
     ? discoverProjects(root, tsconfigFiles, configFiles, sourceFiles)
     : undefined
   // Escaped, since typescript-eslint and ESLint read them as globs, where `[slug]` isn't literal
-  const allowDefaultProject = resolveAllowDefaultProject(options, isTyped, () =>
+  const allowDefaultProject = resolveAllowDefaultProject(root, options, isTyped, () =>
     (discovery?.defaultProjectFiles ?? [])
       .filter(
         (file) =>
@@ -823,13 +816,11 @@ function getDefaultProjectFiles({
 }): Array<string> {
   const globs = isFunction ? allowDefaultProject.filter((glob) => !isLiteralGlob(glob)) : []
   const matchesGlobs = globs.length === 0 ? () => false : createGlobMatcher(globs)
-  return new Set([
+  return unique([
     ...allowDefaultProject.filter((glob) => isLiteralGlob(glob)).map((glob) => unescapeGlob(glob)),
     ...matchedFiles,
     ...walkedFiles.filter((file) => matchesGlobs(file)),
   ])
-    .values()
-    .toArray()
 }
 
 function findUserIgnores(root: string, items: ReadonlyArray<unknown>): Array<IgnoreLayer> {
@@ -882,18 +873,15 @@ function createUserIgnoresCheck(
 export function resolveOptions(options: EslintConfigOptions): ResolvedOptions {
   // Normalized, so the walk's `path.join` paths can equal it
   const root = path.resolve(options.root)
-  return withOptionsRoot(root, () => resolveRootedOptions(options, root))
-}
-
-function resolveRootedOptions(options: EslintConfigOptions, root: string): ResolvedOptions {
   const isOn = getEnabledAreas(options)
   const isTypeAware = options.typeAware !== false
-  const typeAwareIgnoreGlobs = resolveTypeAwareIgnores(options, isTypeAware, isOn.astro)
+  const typeAwareIgnoreGlobs = resolveTypeAwareIgnores(root, options, isTypeAware, isOn.astro)
   const isTypeAwareIgnored = createListMatcher(typeAwareIgnoreGlobs)
   const ignores = resolveGlobs('ignores', options.ignores, IGNORES)
-  checkRelativeGlobs('ignores', ignores)
-  const testFiles = resolveCodeGlobs('testFiles', options.testFiles, TEST_FILES)
+  checkRelativeGlobs('ignores', ignores, root)
+  const testFiles = resolveCodeGlobs(root, 'testFiles', options.testFiles, TEST_FILES)
   const playwrightFiles = resolvePresetGlobs(
+    root,
     isOn,
     'playwright',
     options.playwright,
@@ -901,6 +889,7 @@ function resolveRootedOptions(options: EslintConfigOptions, root: string): Resol
   )
   // Playwright's tests, which `testFiles` matches, aren't Vitest's
   const vitestFiles = resolveCodeGlobs(
+    root,
     'vitest.files',
     resolveSubOptions(options.vitest)?.files,
     testFiles,
@@ -910,18 +899,25 @@ function resolveRootedOptions(options: EslintConfigOptions, root: string): Resol
     playwrightFiles,
   )
   const testGlobs = getTestGlobs(testFiles, isOn.vitest ? vitestFiles : [], playwrightFiles)
-  const storybookFiles = resolvePresetGlobs(isOn, 'storybook', options.storybook, STORYBOOK_FILES)
-  const commonjs = resolveCommonjs(options.commonjs)
+  const storybookFiles = resolvePresetGlobs(
+    root,
+    isOn,
+    'storybook',
+    options.storybook,
+    STORYBOOK_FILES,
+  )
+  const commonjs = resolveCommonjs(root, options.commonjs)
   const browser = resolveSubOptions(options.browser)
   const browserFiles =
-    browser === undefined ? [] : resolveCodeGlobs('browser.files', browser.files, [])
+    browser === undefined ? [] : resolveCodeGlobs(root, 'browser.files', browser.files, [])
   const server = resolveSubOptions(options.server)
-  const serverFiles = server === undefined ? [] : resolveCodeGlobs('server.files', server.files, [])
+  const serverFiles =
+    server === undefined ? [] : resolveCodeGlobs(root, 'server.files', server.files, [])
   const allowDefaultProjectOption = resolveSubOptions(options.typeAware)?.allowDefaultProject
   const isDefaultProjectListed = Array.isArray(allowDefaultProjectOption)
   // An array resolves before the walk, which counts the files its globs match
   const listedDefaultProject = isDefaultProjectListed
-    ? resolveAllowDefaultProject(options, isTypeAware, () => [])
+    ? resolveAllowDefaultProject(root, options, isTypeAware, () => [])
     : undefined
   const findsTsconfigFiles =
     (isTypeAware && (!isDefaultProjectListed || isOn.astro)) || isOn.imports
@@ -1047,7 +1043,7 @@ function resolveRootedOptions(options: EslintConfigOptions, root: string): Resol
     nextjsFiles !== undefined && reactScope === undefined
       ? nextjsFiles
       : [
-          ...getPresetFiles('react.scope', reactScope, CODE_FILES),
+          ...getPresetFiles(root, 'react.scope', reactScope, CODE_FILES),
           ...(reactScope === undefined ? [] : (nextjsFiles ?? [])),
         ]
   return {
@@ -1057,15 +1053,14 @@ function resolveRootedOptions(options: EslintConfigOptions, root: string): Resol
     isInEditor: options.isInEditor ?? isInEditorEnv(),
     codeFiles,
     typedCodeFiles: [...TYPED_CODE_FILES, ...(isOn.astro ? ASTRO_FILES : [])],
-    testFiles: new Map(
+    testFiles: uniqueBy(
       [
         ...codeFilesOf('testFiles', testFiles),
         ...(isOn.vitest ? codeFilesOf('vitest.files', vitestFiles) : []),
         ...codeFilesOf('playwright.files', playwrightFiles),
-      ].map((file) => [JSON.stringify(file), file]),
-    )
-      .values()
-      .toArray(),
+      ],
+      (file) => JSON.stringify(file),
+    ),
     testGlobs,
     nonTestFiles: getNonTestFiles(testGlobs),
     vitestFiles: vitestFileSpecs,
@@ -1106,8 +1101,9 @@ function resolveRootedOptions(options: EslintConfigOptions, root: string): Resol
     presetFiles: {
       react: reactFiles,
       nextjs: nextjsFiles ?? reactFiles,
-      node: getPresetFiles('node.scope', resolveSubOptions(options.node)?.scope, CODE_FILES),
+      node: getPresetFiles(root, 'node.scope', resolveSubOptions(options.node)?.scope, CODE_FILES),
       tailwindcss: getPresetFiles(
+        root,
         'tailwindcss.scope',
         resolveSubOptions(options.tailwindcss)?.scope,
         [...codeFiles, ...(isOn.html ? HTML_FILES : [])],
