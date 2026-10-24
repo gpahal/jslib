@@ -9,7 +9,7 @@ export default defineConfig({
   turbo: true,
   vitest: true,
   typescript: { library: true },
-  // `packages/recipes` lists these frameworks only for the setup recipes' temporary projects
+  // Off by default; `false` stops the warnings that `packages/recipes` lists them, which it does only for the setup recipes' temporary projects
   nextjs: false,
   react: false,
   astro: false,
