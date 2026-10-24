@@ -242,8 +242,8 @@ export function checkCorePeerVersions(dir: string = MODULE_DIR): void {
 }
 
 /**
- * One error with one install command for every peer error, or `undefined` when there's one, which
- * says it all. A peer two options need is named once, under the first
+ * One error with one install command for every peer error, or `undefined` for fewer than two, where
+ * the one error says it all. A peer two options need is named once, under the first
  */
 export function combinePeerErrors(errors: ReadonlyArray<unknown>): Error | undefined {
   const problemErrors = errors.filter(

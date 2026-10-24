@@ -785,8 +785,8 @@ function themeFrom(parentPath: string): string | undefined {
 
 /**
  * The files that define the Tailwind theme, for `referenceFiles`: the entry point's import graph
- * and the `tailwindcss/theme.css` next to it, or without an entry point, the one that resolves
- * from `root`
+ * and the `tailwindcss/theme.css` installed at or above its folder, or without an entry point, the
+ * one installed at or above `root`
  *
  * @throws TypeError when the entry point is invalid or unreadable, an import fails to resolve,
  *   read or parse, or `tailwindcss/theme.css` doesn't resolve.

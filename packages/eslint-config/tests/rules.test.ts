@@ -258,7 +258,7 @@ async function problemsOf(eslint: ESLint, filePath: string, code: string): Promi
 }
 
 describe('the toml area', () => {
-  // TOML and Markdown, without the core areas, which lint neither
+  // TOML and Markdown, without the core areas, whose only rule there is `slop/no-em-dash`
   const options = { ...CORE_AREAS_OFF, markdown: true } as const
 
   it('lints a ```toml code block in Markdown', async () => {

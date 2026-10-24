@@ -18,7 +18,7 @@ import { named } from '@/internal/naming'
 import type { ImportsCyclesOptions, TypedConfig, TypedRules } from '@/internal/types'
 
 /**
- * `**` alone never makes ESLint lint a file, so these reach only files other configs match.
+ * A glob of every file alone never makes ESLint lint a file, so these reach only files other configs match.
  * `typescriptParser` parses the TypeScript files import-x reads, such as a dependency's `.d.ts`,
  * where the linted file's parser is ESLint's, as in a JavaScript-only project
  */

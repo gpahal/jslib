@@ -34,8 +34,8 @@ export function withLanguageColumns(
       // Shifting columns is enough while the lines agree, which saves converting each position
       let lineStarts: Array<number> | undefined
       const toLanguageLoc = ({ line, column }: Position): Position => {
-        // A negative column, which places a problem before its line, where no directive can hide
-        // it, as eslint-comments does, stays before it
+        // A negative column stays negative, so the problem stays before its line, where no directive
+        // hides it, as eslint-comments intends
         if (!lfLines || column < 0) {
           return { line, column: column + columnStart }
         }

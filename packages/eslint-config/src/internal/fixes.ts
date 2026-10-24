@@ -288,8 +288,7 @@ const RULES_ON_SETTINGS_KEY = '@gpahal/rules-on'
 const RULES_OPTIONS_SETTINGS_KEY = '@gpahal/rules-options'
 
 /**
- * The settings come from the presets' configs, so a later config or inline comment that turns one
- * on or off doesn't change them
+ * An inline comment that turns one on or off doesn't change the settings
  */
 const RULES_ON_RULES: ReadonlyArray<string> = [
   ...new Set(DUPLICATE_REPORTS.flatMap(({ kept }) => kept)),

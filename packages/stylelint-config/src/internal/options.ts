@@ -113,8 +113,8 @@ export type StylelintConfigOptions = {
   /**
    * Files that define the custom properties, custom media and keyframes the linted files use, as
    * globs or Stylelint's `{ files, customSyntax, loader }` entries. Turns on the `no-unknown-*`
-   * reference rules, adding Tailwind's theme with `tailwindcss` on. An entry that matches no file
-   * throws. See https://github.com/gpahal/jslib/tree/main/packages/stylelint-config#reference-files
+   * reference rules, adding Tailwind's theme with `tailwindcss` on. An entry of paths without glob
+   * syntax, none of which exists, throws. See https://github.com/gpahal/jslib/tree/main/packages/stylelint-config#reference-files
    */
   referenceFiles?: StylelintReferenceFiles | undefined
   /**

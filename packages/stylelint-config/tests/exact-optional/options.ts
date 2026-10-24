@@ -28,10 +28,11 @@ export const withUndefinedOptions = await defineConfig({
     // Leaves the preset's setting on
     'property-no-unknown': undefined,
     'foo/bar': undefined,
-    // Keeps the preset's severity and ignored functions
+    // Keeps the preset's severity, and leaves `ignoreFunctions` unset
     'plugin/use-baseline': [true, { severity: undefined, ignoreFunctions: undefined }],
     'selector-no-deprecated': replace([true, { severity: undefined, disableFix: undefined }]),
-    // A rule's own secondary options take `undefined` too, which keeps the preset's value
+    // A rule's own secondary options take `undefined` too, which keeps the preset's value, or
+    // with `replace()` passes as given
     'function-no-unknown': [true, { ignoreFunctions: undefined }],
     'value-no-vendor-prefix': replace([true, { ignoreValues: undefined }]),
   },

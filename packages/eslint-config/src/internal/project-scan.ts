@@ -329,7 +329,8 @@ export type ProjectScan = {
    */
   hasTypescriptFiles: boolean
   /**
-   * Outside dot folders, in walk order. `[]` without `collectsSourceFiles`
+   * Code files outside dot folders, other than config files and ignored files, in walk order. `[]`
+   * without `collectsSourceFiles`
    */
   sourceFiles: Array<string>
   /**

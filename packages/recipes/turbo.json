@@ -16,8 +16,8 @@
     // `tests/setup-recipes.test.ts`, which the slow child processes of every setup recipe of the
     // repository README make a task of its own. Its projects get the builds of the packages the
     // recipes install, which `^build` hashes, and tsconfig's presets, which have no build. Its
-    // script sets a 10-minute test timeout, since under `pnpm check` on a 4-vCPU CI runner a
-    // recipe takes up to about 3 minutes, past the root limit
+    // script sets a 10-minute test timeout, since under `pnpm check`, or on a 4-vCPU CI runner, a
+    // recipe can take about 3 minutes, past the root limit
     "test-recipes": {
       "dependsOn": ["^build"],
       "inputs": [

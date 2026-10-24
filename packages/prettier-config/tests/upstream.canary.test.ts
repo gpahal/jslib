@@ -1,4 +1,4 @@
-// Canaries for the upstream bugs this package works around. Each runs the stock behaviour, without
+// Canaries for the upstream bugs this package works around. Each runs the stock behavior, without
 // the workaround, and fails once the bug is fixed, naming the workaround to remove
 
 import fs from 'node:fs/promises'
@@ -284,9 +284,8 @@ describe('upstream known issues', () => {
     )
   })
 
-  // Upstream canary for the README's known issue about trailing comments on imports, from
-  // @ianvs/prettier-plugin-sort-imports. When this passes, remove that known issue.
-  // Correct: imports of one group have no blank line between them, as without the trailing comment
+  // From @ianvs/prettier-plugin-sort-imports. Correct: imports of one group have no blank line
+  // between them, as without the trailing comment
   it.fails('known bug: adds a blank line after an import with a trailing comment', async () => {
     const source = [
       "import { z } from 'zod' // trailing",

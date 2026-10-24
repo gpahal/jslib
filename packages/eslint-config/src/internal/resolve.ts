@@ -145,7 +145,8 @@ export type ResolvedOptions = {
    */
   typeAware: Required<Scope> | undefined
   /**
-   * Only JavaScript files, no tsconfig or jsconfig at `root`, and no `needsTypescriptEslint`
+   * Only JavaScript files, no tsconfig or jsconfig at `root`, no `typeAware.javascript`, and no
+   * `needsTypescriptEslint`
    */
   javascriptOnly: boolean
   isAstroTyped: boolean
@@ -157,7 +158,8 @@ export type ResolvedOptions = {
   ignores: Array<string>
   /**
    * Each folder's `tsconfig.json`, or else its `jsconfig.json`, outside the ignores, or `[]` when
-   * neither the import resolver nor the default `allowDefaultProject` needs them
+   * neither the import resolver, the `node` preset, Astro nor the default `allowDefaultProject`
+   * needs them
    */
   tsconfigFiles: Array<string>
   /**
@@ -264,7 +266,7 @@ function codeFilesOf(name: string, globs: ReadonlyArray<string>): FileSpecs {
 }
 
 /**
- * Each but `testFiles` left out when empty or the same as `testFiles`
+ * `vitestFiles` left out when empty or the same as `testFiles`, and `playwrightFiles` when empty
  */
 function getTestGlobs(
   testFiles: ReadonlyArray<string>,
@@ -480,7 +482,7 @@ function getTypedAstroFiles(root: string, projectFolders: ReadonlyArray<string>)
 }
 
 /**
- * Every code file with `typeAware: false`, else untyped JavaScript, code blocks, Astro scripts, and
+ * Every code file with `typeAware: false` or in a JavaScript-only project, else untyped JavaScript, code blocks, Astro scripts, and
  * `.astro` files when no folder has a `tsconfig.json`
  */
 function getUntypedFiles({

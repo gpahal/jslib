@@ -123,8 +123,9 @@ const DIRECTIVE_PLACEMENT_RULE = '@gpahal/markdown/directive-placement'
 
 /**
  * A message about a comment put in a block is narrowed by {@link intersectUnused}. One about an
- * excluded comment gives way to `@gpahal/markdown/directive-placement`, kept where the file's lint
- * finds it unused; with that rule off, it stays without a fix
+ * excluded comment gives way to `@gpahal/markdown/directive-placement`. One about a comment before
+ * a block that takes no directives gives way to that rule's report, which is kept only where the
+ * file's lint finds the directive unused; with that rule off, the message stays without a fix
  */
 export function adjustFileMessages(
   own: Array<Linter.LintMessage>,
@@ -586,8 +587,9 @@ function isSameStructureTogether(
 /**
  * Replaces ESLint's unused-directive removal, which leaves a space, with `getDirectiveRemoval`'s, or
  * drops it when the structure checks reject it, since `getLineRemoval` can't foresee every join,
- * such as table rows. A fix whose range isn't one whole HTML comment is dropped, so an off range,
- * as `@eslint/markdown` gives in tab-indented list items, never deletes text
+ * such as table rows. A fix that neither replaces one whole HTML comment nor edits only the text
+ * inside one is dropped, so an off range, as `@eslint/markdown` gives in tab-indented list items,
+ * never deletes text
  */
 export function fixDirectiveRemovals(
   messages: Array<Linter.LintMessage>,

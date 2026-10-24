@@ -43,7 +43,7 @@ test.each([
     /reference types=["']fixture-peer["']/,
   ],
 ])(
-  'onlyImport still misses %s; remove checkDeclarationImports in tsdown.config.ts when both canaries fail',
+  'onlyImport still misses %s; remove checkDeclarationImports in the root tsdown.config.ts when both canaries fail',
   async (_name, source, reference) => {
     await using project = await withCanaryProject(source)
     await expect(build(project.config)).resolves.toBeDefined()

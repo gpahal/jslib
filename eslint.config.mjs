@@ -9,7 +9,8 @@ export default defineConfig({
   turbo: true,
   vitest: true,
   typescript: { library: true },
-  // Off by default; `false` stops the warnings that `packages/recipes` lists them, which it does only for the setup recipes' temporary projects
+  // `false` stops the `GPAHAL_FRAMEWORK_OPTION_UNSET` warnings that `packages/recipes`' dev
+  // dependencies on Next.js and React raise. It installs them only for the setup recipes' projects
   nextjs: false,
   react: false,
   astro: false,

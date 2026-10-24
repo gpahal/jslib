@@ -183,11 +183,11 @@ export type PrettierConfigOptions = {
   tailwindcss?: boolean | TailwindcssOptions | undefined
   /**
    * Sorts imports with @ianvs/prettier-plugin-sort-imports. The sorter's other exported options,
-   * such as `importOrderSafeSideEffects`, replace the preset's values. Unknown keys throw. On by
-   * default.
+   * such as `importOrderSafeSideEffects`, pass through to it. Unknown keys throw. On by default.
    *
    * Sorting changes the order modules run in. A bare side-effect import and an import under
-   * `// prettier-ignore` are barriers it doesn't cross
+   * `// prettier-ignore` are barriers it doesn't cross, and without `tailwindcss`, so is an import
+   * under a directive such as `// @ts-expect-error`
    */
   sortImports?: boolean | SortImportsOptions | undefined
   /**

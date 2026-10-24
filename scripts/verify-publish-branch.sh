@@ -2,7 +2,8 @@
 # Every release is a commit on the `main` branch that is already the remote `main` and that CI
 # passed, so CI is the only gate. changesets runs `pnpm publish --no-git-checks`, which turns off
 # pnpm's own branch check. `git ls-remote` reads the remote without touching local refs. The `check`
-# job of the CI workflow passes only when every other job does
+# job of the CI workflow passes only when every task job passed, or when `gate` skipped them after a
+# passing run on the merged PR's head
 set -e
 
 # A detached HEAD or another branch fails even at the same commit

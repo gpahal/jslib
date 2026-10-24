@@ -224,8 +224,8 @@ type Job = {
   peers: Array<string>
   omitted?: Array<string>
   /**
-   * Under each preset's options. The default turns off the type information and the areas that load
-   * no optional peer, since loading them makes up most of the time building a config takes. The
+   * Under each preset's options. The default turns off the type information and the core areas of
+   * `CORE_AREAS_OFF`, since loading them makes up most of the time building a config takes. The
    * JavaScript-only project's job passes `{}` to keep them on, to check that none of them needs an
    * optional peer
    */

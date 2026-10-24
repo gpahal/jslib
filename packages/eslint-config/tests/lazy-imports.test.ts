@@ -6,8 +6,9 @@ import { runNodeOk } from '@gpahal/internal/node/testing'
 import { BUILD_DIR } from './helpers'
 
 /**
- * Builds the build's config for each options of `process.argv[2]` in turn, and prints the module URLs that load during each build, each once, since the
- * output would outgrow the child's buffer. A module loads once per process, so a build's URLs leave
+ * Builds the config for each option set in `process.argv[2]` in turn, and prints the URLs of the
+ * modules that load during each build, each once, since the full output would outgrow the child's
+ * buffer. A module loads once per process, so a build's URLs leave
  * out the modules an earlier build loaded. A path that only resolves, as with `require.resolve()`,
  * doesn't count
  */
@@ -75,8 +76,8 @@ function loadedOf(urls: Array<string>, modules: Array<string>): Array<string> {
   return urls.filter((url) => modules.some((module) => url.includes(module)))
 }
 
-// Each process turns half of the areas off, so each area's plugin is checked to stay out while
-// the other half is on, which would load it if they imported it
+// Each process turns some areas off and checks that their plugins stay out while the areas left on,
+// which would load them if they imported them, run
 describe.concurrent('with areas off', () => {
   // eslint-plugin-unicorn's `relative-url-style` imports parse5, and markdown stays on, so this
   // also checks that markdown doesn't load the HTML parser. eslint-plugin-sonarjs and

@@ -14,7 +14,7 @@ export type IgnoreLayer = {
 type GlobMatcher = (relativePath: string) => boolean
 
 /**
- * Each glob is compiled once per walk
+ * Each glob's matcher is made once per walk
  */
 type GlobMatchers = Map<string, GlobMatcher>
 

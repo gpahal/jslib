@@ -778,7 +778,7 @@ test.each([
 })
 
 /**
- * A rule of each area, for its `rules`
+ * An area's options that turn `rule` off
  */
 const off = (rule: string) => ({ rules: { [rule]: 'off' } }) as const
 

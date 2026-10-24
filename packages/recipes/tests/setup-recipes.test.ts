@@ -25,8 +25,8 @@ const README = await fs.readFile(path.join(REPO_DIR, 'README.md'), 'utf8')
 
 /**
  * The folders whose `node_modules` hold the recipes' third-party packages, as this workspace installs
- * them: this package's for the apps' frameworks, and the config packages' for the linters and their
- * plugins
+ * them: this package's for the apps' frameworks, the config packages' for the linters and their
+ * plugins, then the repository root's for the rest, such as TypeScript
  */
 const SOURCE_DIRS = ['recipes', 'stylelint-config', 'eslint-config', 'prettier-config'].map(
   (name) => path.join(REPO_DIR, 'packages', name),
@@ -357,8 +357,8 @@ const ASTRO_ISLAND = {
 }
 
 /**
- * A stand-in for React and its types, which the workspace doesn't install: the JSX runtime that
- * `jsxImportSource: 'react'` loads
+ * A stand-in for React's JSX runtime types, which the Astro case doesn't install: the JSX runtime
+ * that `jsxImportSource: 'react'` loads
  */
 const REACT_STUB = {
   'node_modules/react/package.json': JSON.stringify({

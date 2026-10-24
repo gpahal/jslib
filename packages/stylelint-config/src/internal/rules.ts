@@ -30,7 +30,7 @@ const REPLACE: unique symbol = Symbol('replace')
 export type Replaced<T> = { readonly [REPLACE]: T }
 
 /**
- * A rule's secondary options, each optional and taking `undefined`, which keeps the preset's value
+ * A rule's secondary options, each optional and taking `undefined`, which keeps the inherited value
  */
 type SecondaryOptions<S extends object> = {
   [K in keyof S]?: S[K] | undefined
@@ -38,7 +38,7 @@ type SecondaryOptions<S extends object> = {
 
 /**
  * A rule's setting, or `null` to turn it off, optionally wrapped by {@link replace}. An `undefined`
- * primary option keeps the preset's, so `[undefined, { disableFix: false }]` changes only the
+ * primary option keeps the inherited one, so `[undefined, { disableFix: false }]` changes only the
  * secondary options
  */
 type RuleSettings<P, S extends object> =
@@ -499,8 +499,8 @@ export function mergeUserRules(
 
 /**
  * The preset's rules with the user's merged over them, the preset falling back to `base`, the
- * configs it extends. With `presetOnly`, as for a file type override, only the rules the preset (or
- * the given rules) sets to something other than `null` are kept
+ * configs it extends. With `presetOnly`, as for a file type override, only the user's rules that the
+ * preset, or the given record, sets to something other than `null` merge in
  */
 export function mergeRules(
   preset: StylelintRules,

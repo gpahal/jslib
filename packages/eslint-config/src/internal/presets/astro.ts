@@ -14,7 +14,7 @@ import type { TypedConfig, TypedRules } from '@/internal/types'
 import { formatErrorMessage, warnOfSetupOnce } from '@/internal/utils'
 
 /**
- * The `astro/jsx-a11y/*` rules also need eslint-plugin-jsx-a11y-x where ESLint runs, which
+ * The `astro/jsx-a11y/*` rules also need eslint-plugin-jsx-a11y-x or eslint-plugin-jsx-a11y where ESLint runs, which
  * `checkJsxA11y` checks, since eslint-plugin-astro loads it from the working directory
  */
 export const ASTRO_PEERS: Array<string> = ['eslint-plugin-astro']
@@ -84,7 +84,7 @@ export async function astro({ untyped }: { untyped: Scope }): Promise<Array<Type
       files: ASTRO_FILES,
       rules: tsEslintConfigs.eslintRecommended.rules,
     },
-    // Named `gpahal/astro/<upstream name or index>`, once per name. Without eslint-plugin-jsx-a11y,
+    // Named `gpahal/astro/<upstream name or index>`, once per name. Without a jsx-a11y plugin,
     // the config stays without its rules, so composer calls naming it work anywhere
     ...uniqueBy(
       [

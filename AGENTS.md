@@ -33,7 +33,7 @@ Run commands from the repository root. Read [README.md](README.md) for setup, pa
 
 - Keep comments for contracts, constraints and rationale. Use `/**` for declaration and member comments, `//` elsewhere. An `eslint-disable` needs a reason after `--`.
 - Describe current behavior. Keep Markdown paragraphs unwrapped and add a linked table of contents to READMEs over about 100 lines.
-- The root README's [setup recipes](README.md#setup-recipes) run in `tests/setup-recipes.test.ts` of the private [`packages/recipes`](packages/recipes/README.md), which writes each block under its first-line file-name comment into a pnpm-style project, runs the fixers, then the check with Stylelint at `--max-warnings 0`. It runs as that package's `test-recipes` task, which `pnpm check` runs and `pnpm test` leaves out; run it alone with `pnpm turbo run test-recipes`. Keep that comment on every recipe file block.
+- The root README's [setup recipes](README.md#setup-recipes) run in `tests/setup-recipes.test.ts` of the private [`packages/recipes`](packages/recipes/README.md), which writes each block under its first-line file-name comment into a pnpm-style project and runs the check with Stylelint at `--max-warnings 0`, after the fixers for the minimal and Astro recipes. It runs as that package's `test-recipes` task, which `pnpm check` runs and `pnpm test` leaves out; run it alone with `pnpm turbo run test-recipes`. Keep that comment on every recipe file block.
 - Each std module needs an input contract in its header. Its README examples run through [readme.test.ts](packages/std/tests/readme.test.ts); use the supported literal/error result comments. JSDoc examples must be self-contained and compile against the public declarations.
 - Tests must pass under the CPU contention of `pnpm check`. Don't give a test or hook its own timeout; the root `vitest.config.ts` limit only stops hangs, and the `test-recipes` task's script raises it for the recipes' child processes. Assert on CPU time with `minCpuMs`, never on wall-clock time. Wait on an event rather than a fixed delay, unless the code gives none.
 - A child process that doesn't test a core area's rules or loading turns them off with `CORE_AREAS_OFF` from eslint-config's `tests/helpers.ts`, which loads the config about four times as fast.
@@ -46,7 +46,7 @@ Run commands from the repository root. Read [README.md](README.md) for setup, pa
 After changing ESLint configs, rules or plugins:
 
 1. Run `pnpm --filter @gpahal/eslint-config gen`.
-2. Build, then run `pnpm --filter @gpahal/eslint-config test --update=all tests/inventory.test.ts tests/fix-output.test.ts`.
+2. Run `pnpm --filter @gpahal/eslint-config test --update=all tests/inventory.test.ts tests/fix-output.test.ts`.
 3. Review generated types and snapshot diffs. Fixed TypeScript fixtures must still compile.
 
 Register overlapping ESLint rules in [duplicate-rules.ts](packages/eslint-config/src/internal/duplicate-rules.ts). Add user-config validation to `checkUserConfig` in [user-configs.ts](packages/eslint-config/src/internal/user-configs.ts) so every composer method uses it. Patched rules keep their names so disable comments work.
@@ -55,7 +55,7 @@ After changing Stylelint rules, run `pnpm --filter @gpahal/stylelint-config test
 
 ## New packages
 
-Copy a similar package's manifest, scripts and tsconfigs; test scripts pass `--config ../../vitest.config.ts`, then `--project 'tests*'` for `test` and `--project canaries` for `test-canaries`, which only a package with canaries has. Run `ln -s ../../LICENSE LICENSE` in the package. Add it to `workspaces` in [knip.jsonc][], and to `browser.files` in [eslint.config.mjs][] when it's browser-safe. Add a README with installation and usage, linked from the root README.
+Copy a similar package's manifest, scripts and tsconfigs; test scripts pass `--config ../../vitest.config.ts`, unless the package has its own `vitest.config.ts`, then `--project 'tests*'` for `test` and `--project canaries` for `test-canaries`, which only a package with canaries has. Run `ln -s ../../LICENSE LICENSE` in the package. Add it to `workspaces` in [knip.jsonc][], and to `browser.files` in [eslint.config.mjs][] when it's browser-safe. Add a README with installation and usage, linked from the root README.
 
 [eslint.config.mjs]: eslint.config.mjs
 [knip.jsonc]: knip.jsonc

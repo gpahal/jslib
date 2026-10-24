@@ -46,16 +46,16 @@ function hasBackslashSeparator(glob: string): boolean {
 
 /**
  * A glob that starts with `/` or `..` would match nothing, since ESLint lints no file outside
- * `root`, and a `\` separator escapes the next character instead. `root` is for the fix of a glob
- * that starts with `/`
+ * `root`, and a `\` separator escapes the next character instead. It also throws on a Windows drive letter
+ * or UNC prefix. `root` is for the fix of a glob that starts with `/`
  */
 export function checkRelativeGlobs(name: string, globs: ReadonlyArray<string>, root: string): void {
   checkRelativeGlobsAt([formatNames([name])], globs, root)
 }
 
 /**
- * Also throws on a Windows drive letter or UNC prefix. Without `root`, the fix of a glob that
- * starts with `/` drops the `/`
+ * As {@link checkRelativeGlobs}. Without `root`, the fix of a glob that starts with `/` drops the
+ * `/`
  */
 export function checkRelativeGlobsAt(
   subjects: ReadonlyArray<string>,

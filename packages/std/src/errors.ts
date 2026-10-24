@@ -1,8 +1,8 @@
 /**
  * Error helpers. Contract: the error getters and `toError` accept any thrown value and never throw,
  * reading inner errors 100 levels deep and 10 `cause`s, stopping at a cycle. `assertNever` and
- * `invariant` take any value and throw a `TypeError`. The formatting helpers take trusted values
- * from the developer's own code
+ * `invariant` take any value and throw a `TypeError`. `describeValue` takes any value and never
+ * throws. The other formatting helpers take trusted values from the developer's own code
  */
 
 import { code, describeValue, truncate } from '@/internal/describe'

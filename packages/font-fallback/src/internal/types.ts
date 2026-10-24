@@ -29,8 +29,9 @@ export type FontFallbacksOptions = {
   category?: FontCategory | undefined
   /**
    * The local font families to fall back to, in order, in place of the category's defaults. Each
-   * must be the exact name of a family in `@capsizecss/metrics` with a regular face. A repeated
-   * family, the web font itself in any case, or one too unlike it for a size-adjusted rule throws.
+   * must be the exact name of a family in `@capsizecss/metrics` with a regular face. An empty array, a
+   * repeated family, the web font itself in any case, or one too unlike it for a size-adjusted rule
+   * throws.
    */
   fallbacks?: ReadonlyArray<string> | undefined
   /**
@@ -45,14 +46,14 @@ export type FontFallbacksOptions = {
   /**
    * The web font's `font-family` name, which the fallback family names start with: letters,
    * digits, underscores, periods, single spaces and hyphens, up to 64 characters, so a generated
-   * name such as `__Inter_d65c78` works. Required for a font file, and defaults to the family name
-   * for a family.
+   * name such as `__Inter_d65c78` works. Required for a font file, URL or bytes, and defaults to the
+   * family name for a family.
    */
   name?: string | undefined
   /**
-   * Aborts fetching and reading a font file, and rejects with its reason once it's aborted, or an
-   * `AbortError` if it has none. A signal of another realm, or a polyfill with `aborted`,
-   * `addEventListener` and `removeEventListener`, works too. Parsing is synchronous, so it can't
+   * Aborts fetching and reading a font file and looking up families, and rejects with its reason
+   * once it's aborted, or an `AbortError` if it has none. A signal of another realm, or a polyfill
+   * with `aborted`, `addEventListener` and `removeEventListener`, works too. Parsing is synchronous, so it can't
    * interrupt that.
    */
   signal?: AbortSignal | undefined
@@ -114,6 +115,9 @@ export type FontFallbacks = {
    * a `<style>` element. Add a generic family such as `sans-serif` after it.
    */
   fontFamily: string
+  /**
+   * One rule for each fallback, in order.
+   */
   fallbacks: Array<FontFallback>
   /**
    * For a font file whose line box on Windows differs from its `hhea` one by over 1%, the Windows

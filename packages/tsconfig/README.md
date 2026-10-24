@@ -265,7 +265,7 @@ For a library that runs in the browser, add the DOM library:
 }
 ```
 
-The tests' config sets its own `include`, since the inherited one resolves against the library's folder. When the library's tsconfig sets `declarationDir`, also add `"compilerOptions": { "declarationDir": null }`. `library-tests` can't clear it itself: tsconfck, which Vite, Vitest and vite-tsconfig-paths use, fails on a `null` in an extended config.
+The tests' config sets its own `include`, since the inherited one resolves against the library's folder. When the library's tsconfig sets `declarationDir`, also add `"compilerOptions": { "declarationDir": null }`. `library-tests` can't clear it itself: tsconfck, which Vite 7, Vitest 4 and vite-tsconfig-paths use, fails on a `null` in an extended config.
 
 ### A library built by `tsc`
 

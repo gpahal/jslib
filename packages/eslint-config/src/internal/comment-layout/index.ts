@@ -1,7 +1,8 @@
 /**
  * The `@gpahal/comment-layout` rule: `/**` doc blocks, laid out JSDoc-style, where TypeScript reads
  * JSDoc, and `//` lines elsewhere, except the module header. The README's "Comment layout" section
- * has the contract. Plain `/*` blocks, directives and `/*!` comments, and runs holding one, stay.
+ * has the contract. Directives stay. Plain `/*` blocks outside JSX, `/*!` comments among them,
+ * stay, and so do runs holding a plain block.
  *
  * A fix that could change the code or lose the layout is left out, and a change that moves code to
  * another line is a suggestion. Nothing changes the number of lines a `@ts-expect-error` or

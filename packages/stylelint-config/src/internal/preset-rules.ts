@@ -63,7 +63,7 @@ export function presetRules({
     'number-max-precision': 6,
     // As Tailwind's theme writes them. `bolder` and `lighter` have no number
     'font-weight-notation': ['numeric', { ignore: ['relative'] }],
-    // The Tailwind variant writes hues as numbers, as Tailwind's palette does
+    // The Tailwind variant changes this to `number`, as Tailwind's palette writes hues
     'hue-degree-notation': 'angle',
     'value-keyword-case': ['lower', { ignoreProperties: [FONT_FAMILY_VARIABLE_REGEX] }],
     'selector-no-invalid': true,
