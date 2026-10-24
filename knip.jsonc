@@ -6,8 +6,8 @@
   // `exactOptionalPropertyTypes`
   "workspaces": {
     ".": {
-      "entry": ["*.config.{ts,mjs}"],
-      "project": ["*.{ts,mjs}"],
+      "entry": ["*.config.{ts,mjs}", "scripts/*.ts"],
+      "project": ["*.{ts,mjs}", "scripts/*.ts"],
       // `prettier.config.mjs` loads `@gpahal/prettier-config` from its build, whose config lists this
       // Prettier plugin by path, which knip can't follow
       "ignoreDependencies": ["prettier-plugin-packagejson"]

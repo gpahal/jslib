@@ -8,5 +8,5 @@
     "allowJs": true,
     "checkJs": true
   },
-  "include": ["*.config.ts", "*.config.mjs", "packages/*/tsdown.config.ts"]
+  "include": ["*.config.ts", "*.config.mjs", "packages/*/tsdown.config.ts", "scripts/*.ts"]
 }

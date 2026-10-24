@@ -5,8 +5,9 @@ Run commands from the repository root. [README.md](README.md) has setup and the 
 ## Workflow
 
 - Packages and the root lint and format configs load `build/` output, so run `pnpm build` before a direct package test or typecheck and after changing a preset.
-- Run `pnpm lint-fix`, `pnpm fmt`, then `pnpm check`, the final gate. `pnpm lint`'s cache can miss cross-file type changes.
-- Every change that users of a package can see needs a changeset, and a change to `@gpahal/internal` needs one for each package that bundles it. Write it by hand as `.changeset/<slug>.md`: one `'@gpahal/<name>': patch` line per package between `---` lines, then a sentence on what changed, which becomes the changelog entry. CI fails a pull request that changes a published package without a changeset, so a change no user sees gets an empty one, with nothing between the `---` lines. Don't run `changeset version` or `pnpm cs-version`; the Version workflow applies changesets.
+- Run `pnpm lint-fix`, `pnpm fmt`, then `pnpm check`, the final gate, since `pnpm lint`'s cache can miss cross-file type changes.
+- Before opening a pull request, stage your changes and run `pnpm verify-changesets`, which CI also runs, and add changesets until it passes. It lists each published package whose shipped files changed or that bundles changed `@gpahal/internal` source. Write a changeset by hand as `.changeset/<slug>.md`: a `'@gpahal/<name>': patch` line between `---` lines for each listed package, then a sentence for the changelog. When it asks for a changeset but lists no package, as for a test-only change, write an empty one, with nothing between the `---` lines.
+- Only the Version and Publish workflows version and publish packages, and releases get no git tags.
 
 ## Changes
 
@@ -17,24 +18,23 @@ Run commands from the repository root. [README.md](README.md) has setup and the 
 - Put generic helpers used by multiple packages in std. Configs need independent copies of shared rule values; use `clonePlain`.
 - Put shared code that isn't for publishing in [`@gpahal/internal`](packages/internal/README.md), such as `@gpahal/internal/comments` for block comments. Use `runNode` from its `node/testing` to run Node without pnpm's `NODE_PATH`.
 - Validate options with `assertValid` from `@gpahal/internal/node/zod` and the schemas of `@gpahal/internal/node/options`. When changing list options or merge behavior, update [Lists and merging](README.md#lists-and-merging).
-- Support npm's and pnpm's `node_modules` layouts only, without Yarn Plug'n'Play handling.
+- Support npm's and pnpm's `node_modules` layouts only.
 - When adding a dependency with build scripts, review `allowBuilds` in [pnpm-workspace.yaml](pnpm-workspace.yaml). A dependency loaded by resolved path needs a reasoned `ignoreDependencies` entry in [knip.jsonc][].
 
 ## Errors
 
-- Every thrown message has the shape `<package>: <subject>: <description>`; build it with `formatMessage`, or `formatMessageList` for several issues, from `@gpahal/std/errors`.
+- Build every thrown message with `formatMessage`, or `formatMessageList` for several issues, from `@gpahal/std/errors`, in the shape `<package>: <subject>: <description>`. Keep a caught error as the `cause`.
 - Subjects chain outer to inner: a backticked name or path (`` `typescript.rules` ``, `` `overrides[0].files` ``), or a short noun phrase (`options`, `config 2`, `font <url>`).
 - The description starts lowercase and has no final period. A wrong value reads `expected <what>, received <describeValue(value)>`. A fix follows as a capitalized sentence after `. `.
-- Keep a caught error as the `cause`.
 
 ## Tests and docs
 
 - Keep comments for contracts, constraints and rationale. Docs describe current behavior.
 - Keep Markdown paragraphs unwrapped, and add a linked table of contents to READMEs over about 100 lines.
-- The root README's [setup recipes](README.md#setup-recipes) run as tests in [`packages/recipes`](packages/recipes/README.md), which `pnpm check` runs and `pnpm test` leaves out; run them with `pnpm turbo run test-recipes`. Start every recipe file block with its file-name comment.
+- The root README's [setup recipes](README.md#setup-recipes) run as tests in [`packages/recipes`](packages/recipes/README.md), outside `pnpm test`; run them with `pnpm turbo run test-recipes`. Start every recipe file block with its file-name comment.
 - Each std module needs an input contract in its header. Its README and JSDoc examples run as tests, so keep them self-contained.
-- Tests must pass under the CPU contention of `pnpm check`. Don't give a test or hook its own timeout. Assert on CPU time with `minCpuMs`, never on wall-clock time. Wait on an event rather than a fixed delay, unless the code gives none.
-- A child process that doesn't test a core area's rules or loading turns them off with `CORE_AREAS_OFF` from eslint-config's `tests/helpers.ts`, which loads the config about four times as fast.
+- Tests must pass under the CPU contention of `pnpm check`: keep the default timeouts, assert on CPU time with `minCpuMs`, and wait on an event rather than a fixed delay, unless the code gives none.
+- A child process that doesn't test a core area's rules or loading turns them off with `CORE_AREAS_OFF` from eslint-config's `tests/helpers.ts`.
 - eslint-config and stylelint-config tests share modules within a worker. Add a test file that uses `vi.mock`, sets typescript-eslint's project service options in-process, or expects a once-per-process warning to the isolated files in that package's `vitest.config.ts`.
 - An upstream workaround needs a canary in `tests/**/*.canary.test.ts` that fails when upstream fixes the bug and names what to remove. Only CI runs canaries; run them with `pnpm turbo run test-canaries`.
 
