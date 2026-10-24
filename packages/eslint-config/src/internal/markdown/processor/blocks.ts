@@ -39,8 +39,8 @@ const LANGUAGE_REGEX = /^[\w+#-]*/u
 const JS_LINE_BREAK_REGEX = /\r\n|[\n\r\u{2028}\u{2029}]/gu
 
 /**
- * The languages whose `SourceCode` counts JavaScript's line breaks: JavaScript's, and HTML's,
- * whose parser runs on ESLint's JavaScript language. Other parsers, such as Markdown's, JSON's and
+ * The languages whose `SourceCode` counts JavaScript's line breaks: JavaScript's, and Astro's and
+ * HTML's, whose parsers run on ESLint's JavaScript language. Other parsers, such as Markdown's, JSON's and
  * YAML's, count only Markdown's line breaks
  */
 const JS_LINE_BREAK_EXTENSIONS: ReadonlySet<string> = new Set([...CODE_EXTNS, 'astro', 'html'])

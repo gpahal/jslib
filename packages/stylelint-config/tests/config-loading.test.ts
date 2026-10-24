@@ -14,7 +14,7 @@ import type { StylelintExtendedConfig } from '@/index'
 import { warningsOf } from './helpers'
 
 /**
- * The package's folder, which holds a `package.json`, as `root` requires
+ * The package's folder, an existing folder as `root` requires
  */
 const PACKAGE_ROOT = path.dirname(import.meta.dirname)
 

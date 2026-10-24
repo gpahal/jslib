@@ -7,7 +7,8 @@ import type { Config } from 'stylelint'
 import { defineConfig } from '@/index'
 
 // The rules on for each kind of file, so a change to the preset or an upgrade of a config it
-// extends shows up as a snapshot diff. Update it with `vitest -u` after checking the diff
+// extends shows up as a snapshot diff. Update it with
+// `pnpm --filter @gpahal/stylelint-config test --update=all tests/inventory.test.ts`, then review the diff
 
 const collator = new Intl.Collator('en')
 

@@ -25,8 +25,8 @@ Each module is a subpath. The modules in `src/` are browser-safe: `tsconfig.brow
 
 The JSDoc gives the details. The rules that span modules:
 
-- `node/resolve`'s functions take the caller's `import.meta.resolve`, as `(specifier) => import.meta.resolve(specifier)`, so a package resolves from itself. `resolveFromNodeModules` and `findInstalledPackage` resolve from a user's file through the `node_modules` folders above it, never `NODE_PATH`, which pnpm sets for package scripts.
-- Only tests import `node/testing`. The root ESLint config forbids importing it in `packages/*/src`.
+- `resolvePath` and `isResolvable` take the caller's `import.meta.resolve`, as `(specifier) => import.meta.resolve(specifier)`, so a package resolves from itself. `resolveFromNodeModules` and `findInstalledPackage` resolve from a user's file through the `node_modules` folders above it, never `NODE_PATH`, which pnpm sets for package scripts.
+- Only tests import `node/testing`, and only builds and tests import `node/source-maps`. The root ESLint config forbids importing either in `packages/*/src`.
 
 ## node/options and node/zod
 
@@ -36,7 +36,7 @@ The JSDoc gives the details. The rules that span modules:
 - For a failed union, it reports the branches that took the value's type, or the union's own error when none did. A failed `typeCheck` counts as rejecting the type, so check a type such as a function with `typeCheck` rather than `z.custom`.
 - It returns what the schema outputs, which callers read rather than the value they passed. `strictObject` and `plainObject` output a copy of their own keys without a prototype, so a left-out key never reads an inherited value. A coercing schema, or one with a default, fails to compile.
 
-Neither module imports Zod. Their functions call `loadZod()`, which loads Zod Mini on its first call and returns the instance that `import` gives. A package that builds its schemas inside a function with `z` from `loadZod()`, as prettier-config does, loads no Zod until it checks options.
+Neither module imports Zod. Their functions call `loadZod()`, which loads Zod Mini on its first call and returns the instance that `import` gives. A package that builds its schemas inside a function with `z` from `loadZod()`, as prettier-config and stylelint-config do, loads no Zod until it checks options.
 
 `node/options` builds the schemas of config functions' options on it:
 

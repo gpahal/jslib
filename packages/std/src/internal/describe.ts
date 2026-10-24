@@ -28,8 +28,9 @@ export function truncate(text: string, maxLength: number = MAX_DESCRIBED_LENGTH)
 /**
  * Describe a value for an error message: `a function`, `an array`, `an object` for a plain object,
  * `` an object tagged `Arguments` `` for a plain object with another tag, `` an instance of `Map` ``
- * for another object, or the value in backticks, such as `` `"yes"` ``, `` `1n` `` or `` `-0` ``.
- * Strings and symbol descriptions are quoted as JSON, so the result stays on one line, control and
+ * for another object, `an object that is not plain` for one whose prototype has no named
+ * `constructor`, or the value in backticks, such as `` `"yes"` ``, `` `1n` `` or `` `-0` ``.
+ * Strings are quoted as JSON and symbol descriptions escaped as JSON, so the result stays on one line, control and
  * format characters are escaped as `escapeControls` does, and long values are cut short with `…`.
  * A bigint of more than 10,000 bits is described by its size, such as `a 20000001-bit bigint`. It
  * never throws: an object it can't inspect, such as a revoked proxy, is `an object`

@@ -1,6 +1,6 @@
 /**
- * Module resolution for the packages' own dependencies and optional peers. The functions take the
- * caller's `import.meta.resolve`, so a package resolves from itself, as its bundled build does,
+ * Module resolution for the packages' own dependencies and optional peers. `resolvePath` and
+ * `isResolvable` take the caller's `import.meta.resolve`, so a package resolves from itself, as its bundled build does,
  * not from `@gpahal/internal`. {@link resolveFromNodeModules} resolves from a given file instead,
  * such as a user's stylesheet. Contract: package names from the packages' own code, and absolute
  * paths

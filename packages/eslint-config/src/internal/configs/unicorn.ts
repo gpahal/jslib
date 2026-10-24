@@ -133,7 +133,7 @@ export function unicornTestExemptions({ testFiles }: { testFiles: FileSpecs }): 
 }
 
 /**
- * The presets' ES2024 browser `lib` lacks ES2025's iterator helpers and `Array.fromAsync()`, and
+ * The presets' ES2024 browser `lib` lacks ES2025's iterator helpers and the newer `Array.fromAsync()`, and
  * bundlers targeting browsers without top-level `await`, such as Vite 5 and 6 with `es2020`, fail
  * to build it
  */

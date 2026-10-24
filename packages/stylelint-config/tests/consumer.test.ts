@@ -186,8 +186,8 @@ const FILE_TYPES = {
   'b.css': 'a {\n  color: red;\n  display: block;\n}\n',
 }
 
-// As above, without hoisting for postcss-markdown too, which loads `postcss-html` by name from the
-// working directory, then its own location. This repo hoists `postcss-html` where the latter sees
+// As above, but postcss-markdown can't see a hoisted `postcss-html`. It loads `postcss-html` by name
+// from the working directory, then from its own location. This repo hoists `postcss-html` where the latter sees
 // it, so the project gets copies of this package's build and of postcss-markdown, whose
 // `node_modules` hold only their dependencies
 describe('a pnpm consumer without hoisting', () => {

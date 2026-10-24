@@ -8,7 +8,7 @@ import { isRecord } from '@gpahal/std/objects'
 /**
  * As Node's resolvers walk the folders, whatever the package's `exports` say. Unlike
  * `require.resolve`, it never falls back to `NODE_PATH`, which pnpm sets for package scripts, or
- * global folders, where ES module imports don't look. A package resolving its own name comes first
+ * global folders, where ES module imports don't look
  */
 export function findPackageJson(name: string, dir: string): string | undefined {
   // A package resolves its own name through `exports` before Node looks in `node_modules`

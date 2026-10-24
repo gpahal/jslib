@@ -1,7 +1,7 @@
 /**
  * The `font-fallback` command: parses its arguments, prints the fallbacks and reports errors.
- * Contract: untrusted arguments and stdin bytes, and the streams and folder of the process that
- * runs it
+ * Contract: untrusted argument strings, which errors escape or don't echo, trusted font files, URLs
+ * and stdin bytes, and the streams and folder of the process that runs it
  */
 
 import path from 'node:path'

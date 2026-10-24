@@ -23,7 +23,7 @@ Import each module separately, such as `@gpahal/std/strings`. The JSDoc of each 
 | --- | --- | --- |
 | `arrays` | `isArray`, `isArrayOf`, `isNonEmpty`, `toArray`, `unique`, `uniqueBy`, `chunk`, `partition` | Your own code |
 | `envs` | `isWindows`, `hasDocument`, `isWebWorker` | Globals, read once when the module loads |
-| `errors` | `CustomError`, `getErrorMessage`, `getErrorReason`, `getErrorCode`, `toError`, `describeValue`, `assertNever`, `invariant`, `formatNames`, `formatMessage`, `formatMessageList` | Any thrown value for the getters and `toError`, which never throw. Your own code for the formatting helpers |
+| `errors` | `CustomError`, `getErrorMessage`, `getErrorReason`, `getErrorCode`, `toError`, `describeValue`, `assertNever`, `invariant`, `formatNames`, `formatMessage`, `formatMessageList` | Any thrown value for the getters and `toError`, which never throw. Any value for `describeValue`. Your own code for the other formatting helpers |
 | `functions` | `debounce`, `throttle`, `once`, `memoize` | Your own functions |
 | `hash` | `fnv1a52Hash`, `shortHash` | Any string. Not cryptographic |
 | `match` | `match`, `matchValue` | Your own code. A lookup by key, not pattern matching |
@@ -58,7 +58,7 @@ export const pathSeparator = isWindows ? '\\' : '/'
 export const context = hasDocument ? 'page' : isWebWorker ? 'worker' : 'server'
 ```
 
-`hasDocument` is `true` when a global `document` exists, as in a browser's main thread or Node under jsdom, and `false` in workers, Deno and edge runtimes. `isWebWorker` is `true` in dedicated, shared and service workers.
+`hasDocument` is `true` when a global `document` exists, as in a browser's main thread or Node under jsdom or happy-dom, and `false` in workers, Deno and edge runtimes. `isWebWorker` is `true` in dedicated, shared and service workers.
 
 ### errors
 
@@ -89,7 +89,7 @@ getErrorMessage(new Error('', { cause: new Error('disk full') })) // 'disk full'
 getErrorMessage(new TypeError()) // 'TypeError'
 ```
 
-Thrown messages have the shape `<package>: <subject>: <description>`. `formatMessage` builds one, and `formatMessageList` builds one for several issues. `getErrorReason` gives an error's message without a final period, to append to a description, and escapes control characters as `escapeControls` does, keeping backslashes.
+Thrown messages have the shape `<package>: <subject>: <description>`. `formatMessage` builds one, and `formatMessageList` builds one for several issues. `getErrorReason` gives an error's message without a final period, to append to a description, and escapes control and format characters as `escapeControls` does, keeping backslashes.
 
 ```ts
 import { describeValue, formatMessage, getErrorReason } from '@gpahal/std/errors'
@@ -165,7 +165,7 @@ const area = memoize((width: number, height: number) => width * height, {
 area(2, 3) // 6
 ```
 
-`memoize` compares keys as a `Map` does and holds object keys weakly. Without `key`, the first argument is the key, so a function of more than one parameter needs `key`. A call that throws keeps nothing, and a returned promise is kept even if it rejects.
+`memoize` compares keys as a `Map` does and holds object and function keys weakly. Without `key`, the first argument is the key, so a function of more than one parameter needs `key`. A call that throws keeps nothing, and a returned promise is kept even if it rejects.
 
 `debounce` and `throttle` take `leading` and `trailing` options, and `debounce` also takes `maxWaitMs`, lodash's `maxWait`. The functions they return have `cancel()`, which drops the pending call, and `flush()`, which runs it now. As in lodash, a `flush()` that runs a call starts another wait, so `throttle` keeps its calls `waitMs` apart.
 

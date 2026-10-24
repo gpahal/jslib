@@ -36,7 +36,7 @@ const PSEUDO: StylelintRules = {
 const syntax = (name: string) => ({ syntax: { atRules: { [name]: { prelude: '<ident>' } } } })
 
 /**
- * The globs of each file type below `dir`, as a split config writes them
+ * The globs of each file type below `dir`, as a hand-split config writes them
  */
 const typeGlobs = (dir: string) => [
   `${dir}/**/*.astro`,

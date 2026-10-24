@@ -131,7 +131,7 @@ describe('eslint --fix, then Prettier', () => {
         (rule) => [rule, false],
       ),
     )
-    // The core areas lint none of the Markdown
+    // Of the core areas, only antislop lints Markdown, and this test checks the Markdown area's fixes
     eslint = await createESLint(
       'markdown',
       {

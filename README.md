@@ -75,7 +75,7 @@ Some option names mean different things in each config package:
 | --- | --- | --- | --- |
 | `root` | Required: the absolute path of an existing folder. Relative paths and globs resolve from it | Optional. A relative `tailwindcss.entryPoint`, dot-prefixed plugin paths and bare plugin names resolve from it | Required: the absolute path of an existing folder. Relative paths, globs and module names resolve from it |
 | `tailwindcss` | `{ entryPoint }`; `true` throws | `true` or `{ entryPoint }` | `true` or `{ entryPoint }` |
-| `tailwindcss.entryPoint`, the Tailwind CSS v4 entry stylesheet | Required. A path relative to `root`, an absolute path, or a `file:` URL or URL string, such as `import.meta.resolve('./src/styles.css')` | Optional; without it, classes sort by Tailwind's default theme. An absolute path, a `file:` URL, or a relative path | Optional. A path relative to `root`, an absolute path, or a `file:` URL or URL string |
+| `tailwindcss.entryPoint`, the Tailwind CSS v4 entry stylesheet | Required. A path relative to `root`, an absolute path, or a `file:` URL or URL string, such as `import.meta.resolve('./src/styles.css')` | Optional; without it, classes sort by Tailwind's default theme. An absolute path, a `file:` URL or URL string, or a relative path | Optional. A path relative to `root`, an absolute path, or a `file:` URL or URL string |
 | `astro` | Off by default | Off by default | On by default, so the Astro recipe doesn't set it |
 | `html` | Off by default | n/a | On by default |
 | `markdown: false` | Turns Markdown linting off | Throws, as `markdown: true` does: `markdown` takes Prettier options. List the files in `.prettierignore` to leave them unformatted | Turns linting of styles in Markdown files off |
@@ -658,7 +658,7 @@ After adding or renaming a config file, restart ESLint's server, as [The editor 
 
 ## Adopt in an existing codebase
 
-Every rule the presets turn on is an error, except the warning `vitest/no-disabled-tests`, so the first run can report hundreds of problems. Turn off the conventions you won't adopt before running the fixers, since a fix stays in the tree after you turn its rule off:
+Every rule the presets turn on is an error, except the warnings `vitest/no-disabled-tests` and Stylelint's `plugin/use-baseline`, so the first run can report hundreds of problems. Turn off the conventions you won't adopt before running the fixers, since a fix stays in the tree after you turn its rule off:
 
 1. Prepare the project:
    - Get every TypeScript file into a tsconfig, or list the stragglers in `typeAware.allowDefaultProject`.
@@ -758,6 +758,8 @@ export default defineConfig({
 
 [eslint-config's troubleshooting](packages/eslint-config/README.md#warnings) lists the codes. In a terminal, Node's `--disable-warning=<code>` in `NODE_OPTIONS` works too, but an editor's ESLint server doesn't inherit `NODE_OPTIONS`.
 
+prettier-config warns with `GPAHAL_PRETTIER_OLD_PRETTIER` and `GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN`. It has no `warnings` option, so silence them with `--disable-warning` in `NODE_OPTIONS`.
+
 ## Install hardening
 
 This repository's `pnpm-workspace.yaml` settings don't publish. These pnpm settings guard a project's install:
@@ -840,11 +842,11 @@ Build first: the packages resolve each other through their gitignored `build/` f
 Changesets version and publish the packages:
 
 1. `pnpm cs` adds a changeset interactively, then applies all pending changesets, bumping the versions of the packages they name. `changelog` is off in `.changeset/config.json`, so no `CHANGELOG.md` is written and a changeset's text is discarded. Commit the result on a branch, open a pull request and squash-merge it once `check` passes.
-2. `pnpm cs-publish` publishes from a clean tree with the `main` branch checked out at the commit of `origin/main`, once the latest `check` run on GitHub for that commit has passed. It reads that run with `gh`, which must be logged in, and runs no gates locally. It builds, then runs `changeset publish --no-git-tag`, which skips versions npm already has and creates no git tags, so nothing is tagged locally or pushed to the remote.
+2. `pnpm cs-publish` publishes from a clean tree, with no untracked or ignored files under `packages/*/src`, with the `main` branch checked out at the commit of `origin/main`, once the latest `check` run on GitHub for that commit has passed. It reads that run with `gh`, which must be logged in, and runs no gates locally. It builds, then runs `changeset publish --no-git-tag`, which skips versions npm already has and creates no git tags, so nothing is tagged locally or pushed to the remote.
 
 A bump of `@gpahal/std` also bumps every package that depends on it through `workspace:*`. `@gpahal/internal` is bundled and bumps nothing, so name the packages that bundle it in the changeset.
 
-Each package's `prepublishOnly` fails outside `pnpm cs-publish`, since npm would publish `workspace:*` dependencies as they are and leave out the `LICENSE` symlink. Publishing uses the owner's local npm token, so the packages carry no npm provenance.
+Each published package's `prepublishOnly` fails outside `pnpm cs-publish`, since npm would publish `workspace:*` dependencies as they are and leave out the `LICENSE` symlink. Publishing uses the owner's local npm token, so the packages carry no npm provenance.
 
 ## License
 

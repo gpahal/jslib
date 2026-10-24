@@ -195,7 +195,7 @@ export const UNTYPED_REPORT_ONLY_RULES: ReadonlyArray<string> = [
   'unicorn/no-unnecessary-string-trim', // a zod schema's `trim()`
   'unicorn/no-unreadable-array-destructuring', // indexing a `Set` or another iterable
   'unicorn/no-useless-coercion', // any `.length` counts as a number, but an object's, such as parsed JSON's, can be a string
-  'unicorn/prefer-array-from-async', // `Array.fromAsync` is ES2024
+  'unicorn/prefer-array-from-async', // `Array.fromAsync` is newer than ES2025
   'unicorn/prefer-at', // an array-like without `at`
   'unicorn/prefer-class-fields', // a field named `__proto__` is a property, and assigning it sets the prototype
   'unicorn/prefer-dom-node-append', // an `appendChild` that isn't the DOM's

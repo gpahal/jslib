@@ -3,7 +3,7 @@
  * iterables, async iterables, thenables and signals from the developer's own code. A signal is any
  * object with a boolean `aborted` and `addEventListener` and `removeEventListener` methods, so one
  * from another realm or a polyfill works. An invalid number rejects with a `RangeError`, and an
- * argument of the wrong type with a `TypeError`
+ * argument of the wrong type with a `TypeError`. `mapLimitIterable` throws them instead
  */
 
 import { describeValue } from '@/internal/describe'
@@ -1109,6 +1109,9 @@ export type TrackedPromise<T> = {
    * Settles like the tracked promise
    */
   promise: Promise<T>
+  /**
+   * The tracked promise's status
+   */
   getStatus: () => PromiseStatus
 }
 

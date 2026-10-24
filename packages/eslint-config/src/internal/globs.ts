@@ -9,7 +9,7 @@ import { Minimatch } from 'minimatch'
 const MINIMATCH_OPTIONS = { dot: true } as const
 
 /**
- * A config with only these and `ignores` ignores its files for every config
+ * A config with only these keys and an `ignores` ignores its files for every config
  */
 export const GLOBAL_IGNORES_KEYS: ReadonlySet<string> = new Set(['ignores', 'name', 'basePath'])
 

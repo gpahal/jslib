@@ -11,8 +11,8 @@ import { defineConfig } from '@/index'
 import { fix, lintRules } from './helpers'
 import { TAILWIND_CSS } from './tailwind-fixture'
 
-// The order the repository README recommends: Prettier, then `stylelint --fix`. One run of each
-// settles the files, so running both again changes nothing
+// The repository README runs Prettier, `stylelint --fix`, then Prettier again. Prettier then
+// Stylelint already settles the files, so running both again changes nothing
 
 /**
  * CSS with a media query range for `media-feature-range-notation` and `@gpahal/media-range-spacing`

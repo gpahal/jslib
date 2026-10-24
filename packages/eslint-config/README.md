@@ -224,7 +224,7 @@ export default defineConfig({ root: import.meta.dirname })
   .append({ files: ['scripts/**'], rules: { 'no-console': 'error' } })
 ```
 
-Methods queue changes in call order, and ESLint applies them when it awaits the composer. Overrides through `configs` or composer methods get validation and keep the final guards, such as the config that turns formatting rules off. [Composer methods][] lists the methods.
+Overrides through `configs` or composer methods get validation and keep the final guards, such as the config that turns formatting rules off. [Composer methods][] lists the methods.
 
 ### Register a plugin of your own
 
@@ -300,7 +300,7 @@ export default defineConfig({ root: import.meta.dirname, typeAware: { javascript
 
 Without `typeAware.javascript`, JavaScript files are linted without type information, and a project without TypeScript files or a `tsconfig.json` or `jsconfig.json` at `root` needs only `defineConfig({ root: import.meta.dirname })`. With it, the type-checked rules run on JavaScript files, which must be in a jsconfig or tsconfig. The default project reads only `root`'s `tsconfig.json`, so the jsconfig includes the config files. For `.jsx` files, install `@types/react`, or the `no-unsafe-*` rules report their JSX.
 
-A project with no TypeScript file outside the ignores and dot folders is linted without loading typescript-eslint. JavaScript files get ESLint's parser and the core twins of typescript-eslint's rules, such as `no-unused-vars`. `astro`, `typeAware.allowDefaultProject`, `typescript.rulesTypeAware`, a `typescript.rules` entry or a config in `configs` that names typescript-eslint loads it. A composer method can't load it, so name typescript-eslint rules in `configs`.
+A project with no TypeScript file outside the ignores and dot folders, no `tsconfig.json` or `jsconfig.json` at `root` and no `typeAware.javascript` is linted without loading typescript-eslint. JavaScript files get ESLint's parser and the core twins of typescript-eslint's rules, such as `no-unused-vars`. `astro`, `typeAware.allowDefaultProject`, `typescript.rulesTypeAware`, an `@typescript-eslint/*` rule in `typescript.rules` or a config in `configs` that names typescript-eslint loads it. A composer method can't load it, so name typescript-eslint rules in `configs`.
 
 ### Lint a CommonJS package
 
@@ -320,7 +320,7 @@ module.exports = defineConfig({ root: __dirname, commonjs: true })
 ### Find the config of a file
 
 ```sh
-npx eslint --print-config README.md/0_0.ts
+npx eslint --print-config README.md/1_0.ts
 ```
 
 `--print-config` prints the merged config of one path, here the first code block of a Markdown file, which ESLint lints as a virtual file. Compare the `rules` of two paths to see what an exemption or your config changes. `npx @eslint/config-inspector` shows every config by name, with the files it matches and the rules it sets.
@@ -463,7 +463,7 @@ export default defineConfig({
 })
 ```
 
-`"type": "module"` lints the scripts as ES modules, and `"private": true` keeps the rules for published packages off. `browser` gives the scripts browser globals; without it, they get `no-undef` on every one. A project without a `tsconfig.json` and TypeScript files needs no tsconfig.
+`"type": "module"` lints the scripts as ES modules, and `"private": true` keeps the rules for published packages off. `browser` gives the scripts browser globals; without it, they get `no-undef` on every one.
 
 ### Storybook and Playwright
 
@@ -579,23 +579,23 @@ Globs are relative to `root`. An empty glob, a lone `!`, a glob that starts with
 | `typeAware` | `true` | Type information for TypeScript files, `false` to lint without it, or `{ javascript, allowDefaultProject, ignores }`. `allowDefaultProject` defaults to the config files that no tsconfig lists. `ignores` lists code files to lint without type information. With `false`, disable comments for typed rules are reported as unused; remove them, or run ESLint with `--report-unused-disable-directives-severity off` |
 | `testFiles` | Test files and folders, and test setup files such as `vitest.setup.ts` and `setupTests.ts` | Test code, with looser rules and dev dependencies allowed |
 | `commonjs` | Off | Lints `.js` files as CommonJS, as `.cjs` files are. `true` is every `.js` file, and `{ files }` lists them. `false` turns off the `GPAHAL_COMMONJS_PACKAGE` warning |
-| `ignores` | Framework and tool output, such as `dist`, `.next`, `coverage` and `storybook-static`, Vite's and Vitest's `*.timestamp-*` config bundles, Yarn's `.yarn/releases` and `.yarn/plugins`, generated and minified files, and lockfiles | Globs ESLint ignores. `build`, `out` and `target` aren't ignored, since they can name source folders; list them in `.gitignore` |
+| `ignores` | Framework and tool output, such as `dist`, `.next`, `coverage` and `storybook-static`, Vite's and Vitest's `*.timestamp-*` config bundles, Yarn's `.yarn/releases` and `.yarn/plugins`, generated and minified files, and lockfiles | Globs ESLint ignores. `build`, `out`, `target` and `tmp` aren't ignored, since they can name source folders; list them in `.gitignore` |
 | `gitignore` | `true` | Ignore what the repository's `info/exclude` and `.gitignore` files ignore, and its submodule folders, but not git's global `core.excludesFile`. `{ files }` adds ignore files |
 | `browser`, `server` | Off | `{ files, rules }` for browser or server code, or `false` |
 | `configs` | `[]` | Your own configs, after the presets and exemptions |
 | `allowFormattingRules` | `[]` | Formatting rules, those eslint-config-prettier turns off and the layout rules of html-eslint and eslint-plugin-astro, such as `@html-eslint/indent` and `astro/semi`, that `configs`, the composer's methods and areas' `rules` may turn on. Listing one that a preset leaves out, such as `unicorn/empty-brace-spaces`, keeps it on |
 | `warnings` | `{}` | The [setup warnings](#warnings) to silence, by code, as in `{ GPAHAL_COMMONJS_PACKAGE: false }`. An unknown code or a non-boolean value throws |
 | `isInEditor` | Detected | In an editor, `prefer-const` reports without fixing. Detection reads the variables that VS Code, JetBrains IDEs, Vim, Neovim, Zed and Emacs's shells set. For editors it misses, such as Emacs's eglot and lsp-mode, Sublime Text's LSP and Helix, set it from a variable of the editor's ESLint server settings, as in `isInEditor: process.env.ESLINT_IN_EDITOR === '1'` |
-| `javascript`, `typescript` | Always on | Core and typescript-eslint rules, `{ rules }`. `typescript` also takes `rulesTypeAware`, `library`, `exhaustiveSwitch` and `strictBooleanExpressions`, as [Presets at a glance](#presets-at-a-glance) describes |
+| `javascript`, `typescript` | Always on | Core and typescript-eslint rules, `{ rules }`. `typescript` also takes `rulesTypeAware`, `library`, `exhaustiveSwitch` and `strictBooleanExpressions`, as [Presets at a glance](#presets-at-a-glance) describes. `rulesTypeAware`, `exhaustiveSwitch` and `strictBooleanExpressions` throw with `typeAware: false` |
 | `imports`, `unicorn`, `regexp`, `sonarjs`, `commentLayout`, `e18e`, `eslintComments`, `jsdoc`, `json`, `yaml`, `toml`, `packageJson`, `markdown` | On | Areas, each `false` or `{ rules }`. `imports.removeUnused` makes `--fix` remove unused imports, keeping a value import's module loaded, as [Report-only fixes][] explains. `imports.cycles` turns on `import-x/no-cycle`; `{ maxDepth }` limits how many imports deep it follows. It's off by default for its cost. `e18e` takes `modernization` and `performanceImprovements`, on by default, and `moduleReplacements`, off since `e18e/ban-dependencies` reports packages such as `axios`. All three `false` throws unless `rules` turns a rule on; use `e18e: false` |
 | `pnpm` | On in a pnpm workspace: the nearest `pnpm-workspace.yaml` at or above `root`, up to the git root, is at `root` or its `packages` globs match `root` | `eslint-plugin-pnpm` rules. `true` without `pnpm-workspace.yaml` at or above `root` throws |
-| `react`, `nextjs`, `node` | Off | Presets that take `scope`. `react` takes `refresh` and `compiler`, `nextjs` `rootDir`, and `node` `typeStripping` |
+| `react`, `nextjs`, `node` | Off | Presets that take `scope`. `react` takes `refresh` and `compiler`, `nextjs` `rootDir`, and `node` `typeStripping`. `nextjs` with `react: false` throws |
 | `tailwindcss` | Off | `{ entryPoint, settings, scope, rules }`, or `false`. `entryPoint`, the Tailwind CSS entry stylesheet, is required and must exist, so `true` throws. It takes a path relative to `root`, an absolute path, or a `file:` URL, such as `import.meta.resolve('./src/styles.css')`. `settings` are eslint-plugin-better-tailwindcss's other settings; `settings.entryPoint` throws |
 | `astro`, `html`, `turbo` | Off | Presets, `true` or `{ rules }` |
 | `vitest` | Off | Vitest rules and globals for `testFiles`, or `{ files }`, but not the files of `playwright` |
 | `playwright` | Off | eslint-plugin-playwright's recommended rules for end-to-end tests, or `{ files }`. They get the test exemptions, and not Vitest's rules and globals |
 | `storybook` | Off | eslint-plugin-storybook's recommended rules for stories, and `storybook/no-uninstalled-addons` for `.storybook/main.*`, or `{ files }`. In stories, `react-hooks/rules-of-hooks` and `import-x/no-anonymous-default-export` are off, as in Storybook's config. MDX stories aren't linted. On Storybook 8, `storybook/no-renderer-packages` reports every story |
-| `antislop` | Off | Rules for code that reads as generated without care, from eslint-plugin-slop and sonarjs, which `slop: false` and `sonarjs: false` turn off. `slop/no-em-dash` skips JSON, YAML and TOML files unless `rules` turns it on. `cognitiveComplexity` sets the limit of `sonarjs/cognitive-complexity` |
+| `antislop` | Off | Rules for code that reads as generated without care, from eslint-plugin-slop and sonarjs, which `slop: false` and `sonarjs: false` turn off. `slop/no-em-dash` skips JSON, YAML and TOML files unless `rules` turns it on. `cognitiveComplexity` sets the limit of `sonarjs/cognitive-complexity`, and throws with `sonarjs: false`. `slop: false` and `sonarjs: false` together throw unless `rules` turns a rule on; use `antislop: false` |
 
 `gitignore` walks every folder under `root` that git doesn't ignore each time the config loads, so `.gitignore` edits apply on a reload. The same walk serves `imports` and the default project, so `gitignore: false` alone saves little startup time. As with ESLint's `includeIgnoreFile`, a `.gitignore` rule also ignores files that git tracks. An unreadable ignore file throws; an unreadable folder is skipped. With `core.ignorecase`, as on macOS and Windows, the rules match paths in any case, as git matches them.
 
@@ -651,18 +651,18 @@ Configs after the composer's, such as a later item in a native config array, `--
 
 ### Composer methods
 
-Methods queue changes in call order, and ESLint applies them when it awaits the composer. Invalid configs, unknown names and invalid callback results reject with the call named in the error, as in `` `.override('gpahal/javascript/rules')` ``, and the item for an added config, as in `` `.append()`: item `[0]` ``.
+Methods queue changes in call order, with `.onResolved` callbacks last, and ESLint applies them when it awaits the composer. Invalid configs, unknown names and invalid callback results reject with the call named in the error, as in `` `.override('gpahal/javascript/rules')` ``, and the item for an added config, as in `` `.append()`: item `[0]` ``.
 
 | Method | Effect |
 | --- | --- |
-| `.override(name, config)` | Merges into matching configs. `rules`, `plugins`, `settings`, `languageOptions` and `linterOptions` merge one level deep, and so do `languageOptions.parserOptions` and `languageOptions.globals`. Other keys, such as `files` and `ignores`, replace theirs. A key set to `undefined` changes nothing |
+| `.override(name, config)` | Merges into matching configs. `rules`, `plugins`, `settings`, `languageOptions` and `linterOptions` merge one level deep, and so do `languageOptions.parserOptions` and `languageOptions.globals`. Other keys, such as `files` and `ignores`, replace theirs. A key set to `undefined` changes nothing. `config` can also be a function that gets each matching config and returns its replacement |
 | `.overrideRules(rules)` | Changes existing enabled rules, preserving exemptions; rejects new enabled rules. A severity alone, such as `'warn'`, keeps the rule's options, and an entry with options replaces them. `null` removes a rule, and `undefined` leaves it, though its name must still be a known rule |
 | `.removeRules(...rules)` | Removes the named rules |
 | `.disableRulesFix(...rules)` | Makes the named rules report without fixing in every file, in a config named `user/disable-rules-fix` after the configs as they stand. A rule that a later change registers is covered too. Suggestions stay |
 | `.remove(...names)` | Removes matching configs. Removing the only config that registers a plugin, such as `gpahal/setup`, rejects while the resolved configs turn on that plugin's rules |
 | `.insertBefore(name, ...configs)`, `.insertAfter(name, ...configs)` | Inserts before the first or after the last matching config |
-| `.append(...configs)` | Adds configs after the presets |
-| `.onResolved(callback)` | Inspects or changes resolved configs |
+| `.append(...configs)` | Adds configs after the others, before the guards |
+| `.onResolved(callback)` | Inspects or changes the configs after every other method's changes, whatever the call order |
 | `.clone()` | Returns a new composer with a copy of the changes queued so far, so two configs can diverge from a shared base |
 
 The setup warnings about scanned files wait until ESLint awaits the composer, so they leave out files that a global ignores config of `.append()`, `.insertBefore()` or `.insertAfter()` ignores.
@@ -763,7 +763,7 @@ In a full config, `sonarjs: false` saves about 150 ms and 5 MiB of a small TypeS
 - In browser code, `no-restricted-globals` reports the confusing-browser-globals names that read like local variables, such as `top`, `parent` and `length`, and asks for `globalThis.top`, so `unicorn/no-unnecessary-global-this` is off there. In files without type information, it also reports those that `@typescript-eslint/no-deprecated` reports in typed files: `blur`, `event`, `external`, `name`, `onunload` and `status`. `self`, the usual global in workers, is allowed. In the `react` and `nextjs` scopes, config files, CommonJS files and `server` files are left out.
 - eslint-plugin-sonarjs's security rules, such as `insecure-jwt-token`, `xml-parser-xxe`, `cookie-no-httponly` and `insecure-cookie`. `pseudo-random`, `no-hardcoded-ip`, `publicly-writable-directories`, `file-permissions`, `no-os-command-from-path` and `sql-queries` stay off, since they report ordinary code such as `Math.random()` and `/tmp`, and so does the deprecated `os-command`. Turn any of them on in `sonarjs.rules`.
 - `@gpahal/no-bidi-characters` in every file the config lints, for the bidirectional control characters of Trojan Source.
-- Unicorn's recommended rules, without `prefer-await`, `no-break-in-nested-loop`, `no-this-outside-of-class`, `prefer-number-coercion`, `no-computed-property-existence-check` and `prefer-observer-apis`, which report ordinary code, and without `expiring-todo-comments`, whose reports depend on the date, so a clean commit can fail later. `import-style` takes any import style of `node:path` and `node:util`. `prefer-ternary` leaves guard clauses and multi-line branches alone. `prefer-event-target` is off in the `node` preset's files.
+- Unicorn's recommended rules, without the ones [unicorn.ts](https://github.com/gpahal/jslib/blob/main/packages/eslint-config/src/internal/configs/unicorn.ts) turns off, such as `prefer-await`, `no-break-in-nested-loop`, `no-this-outside-of-class`, `prefer-number-coercion`, `no-computed-property-existence-check` and `prefer-observer-apis`, which report ordinary code, and without `expiring-todo-comments`, whose reports depend on the date, so a clean commit can fail later. `import-style` takes any import style of `node:path` and `node:util`. `prefer-ternary` leaves guard clauses and multi-line branches alone. `prefer-event-target` is off in the `node` preset's files.
 - JSON, JSONC and JSON5, YAML, TOML, `package.json`, and Markdown files with their code blocks. TOML files and ` ```toml ` blocks get eslint-plugin-toml's recommended and layout rules, since Prettier doesn't format TOML. `.jsonc` files, ` ```jsonc ` blocks, `tsconfig.json` and VS Code's settings allow trailing commas, and stay JSONC when a config of yours gives them another language, as `{ files: ['**/*.json'], language: 'json/json' }` does, since ESLint rejects trailing commas in it. A `package.json` without `"private": true` must have the metadata a published package needs, such as `exports`, `files`, `license` and `repository`, so an app should set `"private": true`.
 - With the presets that are off by default: `html` turns on html-eslint's recommended rules without the layout ones, with `no-target-blank`, `require-button-type` and accessibility rules such as `require-input-label`; inline `<script>` in `.html` files isn't linted.
 - `@gpahal/comment-layout` for comments in JS and TS files. `jsdoc/require-returns-description` runs in TypeScript files only, since a JavaScript file's `@returns {T}` may only give `checkJs` its type.
@@ -775,7 +775,7 @@ In a full config, `sonarjs: false` saves about 150 ms and 5 MiB of a small TypeS
 
 #### Report-only fixes
 
-`--fix` aims not to change what JavaScript and TypeScript code does at run time, so a rule whose fix can change it only reports, except for the deliberate fixes listed below. The lists come from an audit of the fixer of every rule the presets turn on, and [fix-policy.ts](src/internal/fix-policy.ts) says what each report-only rule's fix would change. This package's tests don't check what each plugin rule's fix does, so a fixer that changes in a plugin's minor release can change what `--fix` does. Commit your lockfile.
+`--fix` aims not to change what JavaScript and TypeScript code does at run time, so a rule whose fix can change it only reports, except for the deliberate fixes listed below. The lists come from an audit of the fixer of every rule the presets turn on, and [fix-policy.ts](https://github.com/gpahal/jslib/blob/main/packages/eslint-config/src/internal/fix-policy.ts) says what each report-only rule's fix would change. This package's tests don't check what each plugin rule's fix does, so a fixer that changes in a plugin's minor release can change what `--fix` does. Commit your lockfile.
 
 By their options, `@typescript-eslint/no-unused-vars` doesn't remove an unused import unless `imports.removeUnused` is on, `vitest/no-focused-tests` doesn't remove `.only`, and `pnpm/json-valid-catalog` doesn't point a specifier at another catalog. In an editor, `prefer-const` only reports too. Remove `gpahal/fixes/report-only`, `gpahal/fixes/report-only-untyped`, `gpahal/fixes/report-only-code-blocks` or `gpahal/fixes/report-only-library` to turn the fixes of its rules back on. `gpahal/fixes/report-only-library` follows the files of `gpahal/typescript/library`, so override that config to change them.
 
@@ -835,7 +835,7 @@ Where neither rule covers the other, both stay on, and in the files where the ke
 | `window` and `self` in `server` files | `@gpahal/no-browser-globals` | `unicorn/prefer-global-this` |
 | `expect(p).resolves.toBe(1)` without `await` | `vitest/valid-expect` | `no-floating-promises` |
 
-Where two rules ask for opposite changes, the presets turn one off everywhere: `@typescript-eslint/prefer-regexp-exec`, since `unicorn/prefer-regexp-test` asks for `re.test(s)`, and `unicorn/prefer-array-from-map` and `e18e/prefer-array-from-map`, since `unicorn/prefer-spread` and `unicorn/prefer-iterator-to-array` ask for a spread or `toArray()`. `e18e/prefer-spread-syntax` is off too, since `prefer-object-spread`, `prefer-spread` and `unicorn/prefer-spread` cover it.
+Where two rules ask for opposite changes, the presets turn one off everywhere: `@typescript-eslint/prefer-regexp-exec`, since `unicorn/prefer-regexp-test` asks for `re.test(s)`, and `unicorn/prefer-array-from-map` and `e18e/prefer-array-from-map`, since `unicorn/prefer-spread` and `unicorn/prefer-iterator-to-array` ask for a spread or `toArray()`. `e18e/prefer-string-fromcharcode` and `e18e/prefer-array-fill` are off, since `unicorn/prefer-code-point` and `unicorn/no-array-from-fill` ask for `codePointAt` and `Array.from`. `e18e/prefer-spread-syntax` is off too, since `prefer-object-spread`, `prefer-spread` and `unicorn/prefer-spread` cover it.
 
 `unicorn/explicit-length-check` runs only in files without type information, where `strict-boolean-expressions` doesn't.
 
@@ -849,7 +849,7 @@ Where two rules ask for opposite changes, the presets turn one off everywhere: `
 | `@gpahal/no-inline-type-only-export` | `export { type A }`, fixed to `export type { A }` |
 | `@gpahal/no-js-specifier-for-ts` | With `node: { typeStripping: true }`, a relative `./b.js`, `./b.mjs` or `./b.cjs` specifier of an import, `require()`, `require.resolve()` or `import.meta.resolve()`, where no such file exists but `./b.ts`, `./b.mts` or `./b.cts` does, fixed to the TypeScript file |
 | `@gpahal/no-unstrippable-syntax` | With `node: { typeStripping: true }`, syntax that Node's type stripping can't run: named `module` declarations, and outside ambient declarations, enums, namespaces with values, parameter properties, `import x = require('x')`, `export = x`, decorators and `accessor` fields other than `abstract accessor`. `@typescript-eslint/consistent-type-assertions` reports `<T>value` assertions |
-| `@gpahal/no-esm-in-commonjs` | `import`, `export` and `import.meta` in `.cjs` files |
+| `@gpahal/no-esm-in-commonjs` | `import`, `export` and `import.meta` in `.cjs` files and the `.js` files of `commonjs` |
 | `@gpahal/no-node-globals`, `@gpahal/no-node-global-properties` | Node's globals in `browser` files and Astro `<script>` blocks, except as the operand of `typeof`, and `import.meta.dirname`, `import.meta.filename` and `globalThis.process.<x>`, also through `window` or `self`, for any `x` but `env` in `browser` files |
 | `@gpahal/no-node-imports`, `@gpahal/no-node-dynamic-imports` | Imports of Node's built-in modules in `browser` files and Astro `<script>` blocks |
 | `@gpahal/no-browser-globals`, `@gpahal/no-browser-global-properties` | Browser globals that Node lacks in `server` files, except as the operand of `typeof` |

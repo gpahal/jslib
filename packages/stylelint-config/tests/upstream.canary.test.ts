@@ -1,5 +1,5 @@
-// Canaries for the upstream bugs this package works around. Each runs the stock behaviour, without
-// the workaround, and fails once the bug is fixed, naming the workaround to remove
+// Canaries for the upstream bugs and limits this package works around. Each runs the stock behavior
+// without the workaround and fails once upstream changes it, naming the workaround to remove
 
 import path from 'node:path'
 
@@ -197,7 +197,7 @@ describe('upstream workarounds', () => {
   })
 })
 
-describe('upstream contracts', () => {
+describe('upstream limits', () => {
   it('plugin rules: the stock rules are built-ins, and a plugin rule name without `/` is rejected', async () => {
     // So the own rules that replace custom-property-empty-line-before and
     // declaration-empty-line-before take names of their own, and honor disable comments that name

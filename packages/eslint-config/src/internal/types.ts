@@ -104,9 +104,9 @@ export type TypeAwareOptions = {
   javascript?: boolean | undefined
   /**
    * Globs of files that no tsconfig includes, which get type information from a default project
-   * with the compiler options of `root`'s `tsconfig.json`. By default, the
-   * `*.config.{ts,mts,cts,js,mjs,cjs}` files outside the ignores and dot folders that no tsconfig
-   * under `root` lists, found once per process. A config file that a project includes only through
+   * with the compiler options of `root`'s `tsconfig.json`. By default, the config files, such as
+   * `*.config.ts`, `vitest.config.e2e.ts` and `.prettierrc.mjs`, outside the ignores and dot
+   * folders, and the code files in `.storybook` folders, that no tsconfig under `root` lists. A config file that a project includes only through
    * an import stays in the defaults and fails with a message that names the fix.
    *
    * An array replaces the defaults and skips parsing the tsconfigs. A function maps a copy of the
@@ -162,7 +162,7 @@ type PresetScopeOptions = {
    * `['apps/web/**']`. A `!` glob leaves out the files it matches. Every file of the preset's kinds
    * by default, but `react` defaults to `nextjs.scope`, and with both set covers both
    *
-   * @throws TypeError when it lists no globs or only `!` ones, a glob starts with `/` or `..`, or a
+   * @throws TypeError when it lists no globs or only `!` ones, a glob starts with `/` or `..` or has a `\` separator, or a
    *   glob without `!` can't match one of the preset's kinds of files, has more than 4096
    *   characters, nests braces more than 10 deep or has braces that expand to more than 1000 globs
    */
@@ -379,9 +379,9 @@ export type EslintConfigOptions = {
    */
   root: string
   /**
-   * Whether ESLint runs in an editor, where `prefer-const` reports without fixing. Detected from
-   * the variables that VS Code, JetBrains IDEs, Vim, Neovim, Zed and Emacs shells set; set it for
-   * other editors, such as Helix
+   * Whether ESLint runs in an editor, where `prefer-const` reports without fixing and
+   * `imports.removeUnused` removes nothing. Detected from the variables that VS Code, JetBrains
+   * IDEs, Vim, Neovim, Zed and Emacs shells set; set it for other editors, such as Helix
    */
   isInEditor?: boolean | undefined
   /**
@@ -424,7 +424,7 @@ export type EslintConfigOptions = {
   /**
    * Lints `.js` files as CommonJS, as `.cjs` files are: `true` for every `.js` file, or `files`.
    * Off by default, and `defineConfig` warns when `root`'s `package.json` has `"type": "commonjs"`
-   * or no `"type"`. `false` turns the warning off
+   * or no `"type"` and the project has `.js` or `.jsx` files. `false` turns the warning off
    */
   commonjs?: boolean | CommonjsOptions | undefined
   /**
@@ -524,7 +524,8 @@ export type EslintConfigOptions = {
    * jsx-a11y configs, and their `<script>` blocks as browser code. A file gets type information
    * from the nearest `tsconfig.json` above it, if any. Run `astro sync` first
    *
-   * @throws Error when eslint-plugin-jsx-a11y-x can't be loaded from the folder ESLint runs in
+   * Without eslint-plugin-jsx-a11y-x or eslint-plugin-jsx-a11y where ESLint runs, the
+   * `astro/jsx-a11y/*` rules are off and `GPAHAL_ASTRO_JSX_A11Y_MISSING` warns
    */
   astro?: AreaOption<'astro'> | undefined
   /**

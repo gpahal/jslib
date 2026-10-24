@@ -436,7 +436,7 @@ function checkFileUrl(url: URL): CheckedSource {
 /**
  * The regular face of a family of `@capsizecss/metrics`, and its category
  *
- * @throws TypeError if the family is unknown or has no regular face.
+ * @throws TypeError if the family is unknown, is an icon or emoji font, or has no regular face.
  */
 export async function loadFamily(
   source: Extract<CheckedSource, { kind: 'family' }>,

@@ -27,7 +27,7 @@ vi.mock('mdast-util-from-markdown', async (importOriginal) => {
 const language = new GpahalMarkdownLanguage()
 
 /**
- * Markdown, without the core areas, which lint none of it
+ * Markdown, without the core areas, whose only Markdown rule is `slop/no-em-dash`
  */
 const OPTIONS = { ...CORE_AREAS_OFF, markdown: true } as const
 

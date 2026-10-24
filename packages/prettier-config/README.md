@@ -256,7 +256,7 @@ prettier --check --cache .
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `root` | unset | Absolute path of an existing folder. Relative `tailwindcss.entryPoint` paths, dot-prefixed plugin paths and plugin package names resolve from it, and a relative `entryPoint` must exist when the config loads. A plugin name that isn't installed at or above it is left as it is. Without it, Prettier and the Tailwind plugin resolve them, as [Tailwind CSS][] describes |
+| `root` | unset | Absolute path of an existing folder. Relative `tailwindcss.entryPoint` paths, dot-prefixed plugin paths and plugin package names resolve from it, and a relative `entryPoint` must exist when the config loads. A plugin name that isn't installed at or above it is left as it is. Without it, Prettier and the Tailwind plugin resolve them, as [Tailwind CSS][] and [Merging configs][] describe |
 | `astro` | off | Adds `prettier-plugin-astro`. An object is options for `.astro` files |
 | `tailwindcss` | off | Adds `prettier-plugin-tailwindcss`. Keys: `entryPoint`, `functions`, `attributes`, `preserveWhitespace`. The plugin's other options, such as `tailwindPreserveDuplicates`, go in `options` |
 | `sortImports` | on | Sorts imports with `@ianvs/prettier-plugin-sort-imports`, and merges the imports of a module, keeping `import type` apart from value imports, as `@gpahal/eslint-config` writes them. Takes `importOrder` and the sorter's other exported options, checked against the sorter Prettier loads: with `tailwindcss`, the copy the Tailwind plugin finds. Unknown keys throw |
@@ -266,7 +266,7 @@ prettier --check --cache .
 | `options` |  | Options for every file. Their `plugins` add to the preset's |
 | `overrides` |  | Your overrides, after the preset's. Their `plugins` add to the preset's |
 
-Prettier's own options, such as `printWidth` and `semi`, go in `options`: at the top level they throw, as does any other unknown key, with a suggestion when it's close to an option's name. Keys inside `options` aren't checked, since plugins add their own.
+Prettier's own options, such as `printWidth` and `semi`, go in `options`: at the top level they throw, as does any other unknown key, with a suggestion when it's close to an option's name. Other keys inside `options` aren't checked, since plugins add their own.
 
 `markdown`, `astro` and `options` reject the keys the preset's options set: the `importOrder*` keys go in `sortImports`, the Tailwind plugin's `tailwindFunctions`, `tailwindAttributes`, `tailwindStylesheet`, `tailwindEntryPoint` and `tailwindPreserveWhitespace` in `tailwindcss`, and the preset's own options at the top level. Overrides reject only the preset's own options, so an override can set a sorter or Tailwind key for its files. `markdown` and `astro` also reject `plugins`, `overrides`, `files` and `excludeFiles`. To set a sorter key in Markdown or Astro files only, use an override such as `{ files: '*.md', options: { importOrder: [] } }`.
 
@@ -301,7 +301,7 @@ Some files get more:
 
 A relative `tailwindcss.entryPoint` resolves from `root` when it's set. Without `root`, the Tailwind plugin resolves it from the folder of the config file that Prettier finds by searching up from the formatted file, not from a config file given with `--config` or an editor's setting. There, set `root: import.meta.dirname`, or pass a `file:` URL, such as `import.meta.resolve('./src/styles/global.css')`. The file must exist.
 
-With Tailwind on, `defineConfig` throws a `TypeError` if `prettier-plugin-tailwindcss` is older than 0.8, or if it would load no import sorter, or one older than 4.7. An insiders build, versioned `0.0.0-insiders.<commit>`, is accepted. A version newer than the tested range, from 0.9.0 on, its prereleases included, gets a warning, once, with the code `GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN`, since the config relies on how the plugin composes the import sorter.
+With Tailwind on, `defineConfig` throws a `TypeError` if `prettier-plugin-tailwindcss` is older than 0.8, or, while `sortImports` is on, if it would load no import sorter, or one older than 4.7. An insiders build, versioned `0.0.0-insiders.<commit>`, is accepted. A version newer than the tested range, from 0.9.0 on, its prereleases included, gets a warning, once, with the code `GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN`, since the config relies on how the plugin composes the import sorter.
 
 The Tailwind plugin loads the sorter from its own folder. Under pnpm with `hoist: false`, `autoInstallPeers: false` and `dedupePeerDependents: false`, it can't, and `defineConfig` throws: install `@ianvs/prettier-plugin-sort-imports` directly or set `sortImports: false`.
 
@@ -321,8 +321,8 @@ Prettier formats a file with the parser of the last plugin that defines one for 
 | --- | --- | --- |
 | `prettier-plugin-jsdoc` | While `sortImports` is on, unless `tailwindcss` is off and `prettier-plugin-merge` comes after it | Add `prettier-plugin-merge` after it, which runs the sorter and then the plugin, or set `sortImports: false` |
 | `@prettier/plugin-oxc` | As for `prettier-plugin-jsdoc` | Leave it out of `plugins` and set `parser: 'oxc-ts'` (or `'oxc'`) in an override; the sorter's own `oxc-ts` parser loads `@prettier/plugin-oxc`. Or use a fix for `prettier-plugin-jsdoc` |
-| `prettier-plugin-classnames` | Without `tailwindcss`, as for `prettier-plugin-jsdoc`. With `tailwindcss`, while `sortImports` is on, and without `prettier-plugin-merge` after it | Without `tailwindcss`, as for `prettier-plugin-jsdoc`. With it, set `sortImports: false` and add `prettier-plugin-merge` |
-| `prettier-plugin-organize-imports` | While `sortImports` is on, and before `prettier-plugin-merge`, which formats with each plugin as a range that this plugin skips | Set `sortImports: false`, without `prettier-plugin-merge` after it |
+| `prettier-plugin-classnames` | Without `tailwindcss`, as for `prettier-plugin-jsdoc`. With `tailwindcss`, while `sortImports` is on, or without `prettier-plugin-merge` | Without `tailwindcss`, as for `prettier-plugin-jsdoc`. With it, set `sortImports: false` and add `prettier-plugin-merge` |
+| `prettier-plugin-organize-imports` | While `sortImports` is on, or before `prettier-plugin-merge`, which formats with each plugin as a range that this plugin skips | Set `sortImports: false`, without `prettier-plugin-merge` after it |
 | `prettier-plugin-merge` | With `tailwindcss` while `sortImports` is on, since it reads every parser of the sorter that the Tailwind plugin loads, including ones for plugins that aren't installed | Set `sortImports: false` |
 
 The plugins are recognized by package name, by a path into their package, or by a `URL` or `file:` URL string; plugin objects aren't. Each plugin counts once, where it first appears. An override's plugins follow `options.plugins` in its files.

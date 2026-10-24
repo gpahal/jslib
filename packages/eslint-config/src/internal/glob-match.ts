@@ -73,7 +73,7 @@ function canExpandedMatchFile(glob: string, extensions: ReadonlyArray<string>): 
  * Through its brace expansions, as in `src/{client,server}.ts`
  *
  * @throws TypeError when the glob has more than 4096 characters, its braces nest more than 10 deep
- *   or they expand to more than 1000 globs
+ *   or they expand to more than 1000 globs, or a non-empty glob expands to none, as `{,}` does
  */
 export function canMatchFile(
   subjects: ReadonlyArray<string>,

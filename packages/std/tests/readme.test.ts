@@ -5,8 +5,6 @@ import ts from 'typescript'
 
 import { runExample } from './helpers'
 
-// Literal and error comments assert results. Prose comments leave statements executable.
-
 const packageDir = path.join(import.meta.dirname, '..')
 const readme = fs.readFileSync(path.join(packageDir, 'README.md'), 'utf8')
 

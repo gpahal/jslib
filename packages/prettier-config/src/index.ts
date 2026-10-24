@@ -137,8 +137,8 @@ export function defineConfig(configOptions: PrettierConfigOptions): Config {
  * Merge Prettier configs as Prettier would apply them one after another: a later config's option
  * wins, and every config's overrides are kept in order, so an override still wins in its files.
  *
- * Each plugin is kept once, in the order it first appears, with prettier-plugin-tailwindcss, then
- * prettier-plugin-classnames and prettier-plugin-merge, last. A path that `defineConfig` resolved
+ * Each plugin is kept once, in the order it first appears. With prettier-plugin-tailwindcss, it goes
+ * after the others, followed by prettier-plugin-classnames and prettier-plugin-merge. A path that `defineConfig` resolved
  * from a name counts as that name, in the config it returned and in merges of it, not in a copy. An
  * override's `plugins` add to the merged config's. An option that is `undefined` isn't set. The
  * configs are left unchanged.
