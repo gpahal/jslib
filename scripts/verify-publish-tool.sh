@@ -10,7 +10,7 @@ case "${npm_config_user_agent:-}" in
 esac
 
 if [ "$tool" != pnpm ] || [ "${JSLIB_RELEASE:-}" != 1 ]; then
-  echo "Can't publish outside \`pnpm cs-publish\`. Publish with \`pnpm cs-publish\` from the repo root"
+  echo "Can't publish outside \`pnpm cs-publish\`, which the Publish workflow runs"
   exit 1
 fi
 

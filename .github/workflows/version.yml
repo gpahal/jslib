@@ -1,0 +1,50 @@
+name: Version
+
+# Run by hand. Applies the pending changesets on main, bumping versions and writing changelogs, and
+# opens or updates the "Version packages" pull request with the result. Merging it publishes
+# nothing; the Publish workflow does
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Installs the version in `package.json`'s `packageManager` field
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.x
+          check-latest: true
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # `changeset version` with no changesets changes nothing, and the action would open an empty
+      # pull request
+      - name: Check that there are changesets to apply
+        run: |
+          if ! find .changeset -maxdepth 1 -name '*.md' ! -name README.md | grep -q .; then
+            echo "No changesets on main to apply. Merge pull requests with changesets first"
+            exit 1
+          fi
+      # Commits through the GitHub API, so GitHub signs the commit, as the `main` ruleset requires.
+      # GitHub holds the CI runs of a pull request that `GITHUB_TOKEN` opens until someone approves
+      # them. `@changesets/changelog-github` reads `GITHUB_TOKEN`, which the action sets
+      - uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          script: pnpm cs-version
+          commit-message: Version packages
+          pr-title: Version packages
