@@ -87,7 +87,8 @@ jobs:
       # them
       - run: ./scripts/verify-no-git-changes.sh
 
-  # On a pull request, fails when it changes a published package without adding a changeset. The
+  # On a pull request, fails when it changes a published package without adding a changeset, or
+  # changes what a published package ships or bundles without a changeset that names it. The
   # version PR of the Version workflow, which consumes the changesets, is exempt
   changesets:
     if: github.event_name == 'pull_request' && !(github.head_ref == 'changeset-release/main' && github.event.pull_request.user.login == 'github-actions[bot]')
@@ -108,7 +109,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - env:
           BASE_REF: ${{ github.base_ref }}
-        run: pnpm changeset status --since "origin/$BASE_REF"
+        run: pnpm verify-changesets --since "origin/$BASE_REF"
 
   # The status check that the `main` ruleset requires. It passes when every job of `tasks` passed,
   # or when `gate` skipped them, and `changesets` passed or didn't apply

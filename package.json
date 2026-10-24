@@ -18,9 +18,6 @@
     "build": "turbo run build",
     "check": "turbo run build typecheck test test-recipes typecheck-root typecheck-release lint-check lint-check-root fmt-check knip --continue=dependencies-successful",
     "clean": "rm -rf .turbo .eslintcache packages/*/build packages/*/.turbo packages/*/tests/tmp packages/*/*.tsbuildinfo packages/*/tests/*.tsbuildinfo packages/*/tests/*/*.tsbuildinfo packages/*/*.tgz",
-    "cs": "changeset",
-    "cs-publish": "./scripts/verify-publish-ci.sh && ./scripts/verify-no-git-changes.sh && ./scripts/verify-no-ignored-files.sh && turbo run build --force && ./scripts/verify-no-git-changes.sh && JSLIB_RELEASE=1 changeset publish --no-git-tag",
-    "cs-version": "changeset version && prettier . --write --log-level warn",
     "fmt": "prettier . --write",
     "fmt-check": "prettier . --check",
     "knip": "knip",
@@ -31,7 +28,8 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck typecheck-root",
     "typecheck-release": "turbo run typecheck-release",
-    "typecheck-root": "tsc"
+    "typecheck-root": "tsc",
+    "verify-changesets": "node scripts/verify-changesets.ts"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
