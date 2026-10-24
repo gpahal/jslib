@@ -6,7 +6,7 @@ Run commands from the repository root. [README.md](README.md) has setup and the 
 
 - Packages and the root lint and format configs load `build/` output, so run `pnpm build` before a direct package test or typecheck and after changing a preset.
 - Run `pnpm lint-fix`, `pnpm fmt`, then `pnpm check`, the final gate. `pnpm lint`'s cache can miss cross-file type changes.
-- Every change that users of a package can see needs a changeset, and a change to `@gpahal/internal` needs one for each package that bundles it. Write it by hand as `.changeset/<slug>.md`: one `'@gpahal/<name>': patch` line per package between `---` lines, then a sentence on what changed. Don't run `pnpm cs`, which bumps versions.
+- Every change that users of a package can see needs a changeset, and a change to `@gpahal/internal` needs one for each package that bundles it. Write it by hand as `.changeset/<slug>.md`: one `'@gpahal/<name>': patch` line per package between `---` lines, then a sentence on what changed, which becomes the changelog entry. CI fails a pull request that changes a published package without a changeset, so a change no user sees gets an empty one, with nothing between the `---` lines. Don't run `changeset version` or `pnpm cs-version`; the Version workflow applies changesets.
 
 ## Changes
 
