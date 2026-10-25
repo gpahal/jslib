@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/eslint-config",
-  "version": "0.0.141",
+  "version": "0.0.142",
   "description": "Composable flat ESLint config for TypeScript, React, Next.js, Astro, Tailwind CSS, Node, HTML, Turbo, Vitest, Playwright, Storybook, JSON, YAML, TOML and Markdown",
   "keywords": [
     "eslint",
