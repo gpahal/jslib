@@ -32,6 +32,9 @@ jobs:
           check-latest: true
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The root Prettier config loads prettier-config's build. `changeset version` formats the
+      # changelogs it writes with Prettier, as does the step after it
+      - run: pnpm turbo run build --filter=@gpahal/prettier-config
       # `changeset version` with no changesets changes nothing, and the action would open an empty
       # pull request
       - name: Check that there are changesets to apply
