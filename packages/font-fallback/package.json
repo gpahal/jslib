@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/font-fallback",
-  "version": "0.0.60",
+  "version": "0.0.61",
   "description": "Generates size-adjusted CSS font fallbacks from font metrics to reduce layout shift",
   "keywords": [
     "font",
