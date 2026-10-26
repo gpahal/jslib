@@ -1,8 +1,8 @@
 name: Version
 
 # Run by hand. Applies the pending changesets on main, bumping versions and writing changelogs, and
-# opens or updates the "Version packages" pull request with the result. Merging it publishes
-# nothing; the Publish workflow does
+# opens or updates the "Version packages" pull request with the result. Once it's merged and CI
+# passes on `main`, the Publish workflow publishes it
 on:
   workflow_dispatch:
 
