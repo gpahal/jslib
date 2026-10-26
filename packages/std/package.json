@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/std",
-  "version": "0.0.49",
+  "version": "0.0.50",
   "description": "Standard library of TypeScript utilities for arrays, objects, strings, numbers, functions, promises, errors, hashing, lookups, URLs, queues, symbols and environments",
   "keywords": [
     "std",
