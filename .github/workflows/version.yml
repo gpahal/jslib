@@ -1,8 +1,11 @@
 name: Version
 
-# Run by hand. Applies the pending changesets on main, bumping versions and writing changelogs, and
-# opens or updates the "Version packages" pull request with the result. Merging it publishes
-# nothing; the Publish workflow does
+# Run by hand. Applies the pending changesets on main, bumping versions and writing changelogs,
+# opens or updates the "Version packages" pull request with the result, and turns on its auto-merge.
+# GitHub squash-merges it once `check` passes, and once CI passes on `main`, the Publish workflow
+# publishes it. The release GitHub App's token does both, since GitHub holds the CI runs of a pull
+# request that `GITHUB_TOKEN` opens until someone approves them, and a merge by `GITHUB_TOKEN` starts
+# no workflows on `main`
 on:
   workflow_dispatch:
 
@@ -17,9 +20,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Holds the release app's client ID and private key, and only `main` can deploy to it
+    environment: release
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -43,14 +47,31 @@ jobs:
             echo "No changesets on main to apply. Merge pull requests with changesets first"
             exit 1
           fi
-      # Commits through the GitHub API, so GitHub signs the commit, as the `main` ruleset requires.
-      # GitHub holds the CI runs of a pull request that `GITHUB_TOKEN` opens until someone approves
-      # them. `@changesets/changelog-github` reads `GITHUB_TOKEN`, which the action sets. The action
-      # runs `script` without a shell, so `sh -c` runs the two commands. Prettier formats the
-      # changelogs and manifests that `changeset version` writes, so the pull request passes
-      # `fmt-check`
-      - uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+      # Expires when the job ends. Limited to this repository and to what the two steps after it
+      # need
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      # Commits through the GitHub API, so GitHub signs the commit, as the `main` ruleset requires.
+      # `@changesets/changelog-github` reads `GITHUB_TOKEN`, which the action sets to `github-token`.
+      # The action runs `script` without a shell, so `sh -c` runs the two commands. Prettier formats
+      # the changelogs and manifests that `changeset version` writes, so the pull request passes
+      # `fmt-check`
+      - id: version
+        uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
           script: sh -c "pnpm changeset version && pnpm prettier . --write --log-level warn"
           commit-message: Version packages
           pr-title: Version packages
+      # Merges once the ruleset's requirements pass, as the app, so the push to `main` runs CI and
+      # then Publish
+      - name: Turn on auto-merge
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ steps.version.outputs.pr-number }}
+        run: gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --auto --squash

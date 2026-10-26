@@ -89,9 +89,10 @@ jobs:
 
   # On a pull request, fails when it changes a published package without adding a changeset, or
   # changes what a published package ships or bundles without a changeset that names it. The
-  # version PR of the Version workflow, which consumes the changesets, is exempt
+  # version PR of the Version workflow, which consumes the changesets, is exempt. Only accounts and
+  # apps with write access can push its branch to this repository
   changesets:
-    if: github.event_name == 'pull_request' && !(github.head_ref == 'changeset-release/main' && github.event.pull_request.user.login == 'github-actions[bot]')
+    if: github.event_name == 'pull_request' && !(github.head_ref == 'changeset-release/main' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

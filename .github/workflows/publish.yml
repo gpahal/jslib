@@ -1,11 +1,18 @@
 name: Publish
 
-# Run by hand on main. Publishes every public package whose version isn't on npm yet, once CI's
-# `check` passed for the commit. npm's trusted publishing trusts this file in the `npm` environment,
-# so no npm token exists: pnpm exchanges the job's OIDC token for a publish token and attaches
-# provenance. Every package's `prepublishOnly` runs `scripts/verify-publish-tool.sh`, which fails
-# outside this workflow's publish step
+# Runs after CI passes on a push to `main`, and by hand on `main`. Publishes every public package
+# whose version isn't on npm yet, once CI's `check` passed for the commit, so merging the "Version
+# packages" pull request publishes it, and other pushes publish nothing. npm's trusted publishing
+# trusts this file in the `npm` environment, so no npm token exists: pnpm exchanges the job's OIDC
+# token for a publish token and attaches provenance. Every package's `prepublishOnly` runs
+# `scripts/verify-publish-tool.sh`, which fails outside this workflow's publish step
 on:
+  # `branches` matches the head branch of the CI run, which a fork's pull request can name `main`,
+  # so `verify` also requires a push in this repository
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions: {}
@@ -14,15 +21,26 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
+env:
+  # The commit that CI ran on. A `workflow_run` run's own commit is the latest on `main`, which can
+  # be newer
+  SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
 jobs:
-  # Apart from `publish`, so a commit that CI didn't pass fails before the `npm` environment and its
-  # OIDC permission
+  # Apart from `publish`, so a commit that CI didn't pass, or one with nothing to publish, stops
+  # before the `npm` environment and its OIDC permission
   verify:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       checks: read
+      contents: read
+    outputs:
+      unpublished: ${{ steps.unpublished.outputs.unpublished }}
     steps:
       # CI's `check` job must have passed for the commit, so CI stays the only gate. It passes only
       # when every task job passed, or when `gate` skipped them after a passing run on the merged
@@ -33,31 +51,66 @@ jobs:
         run: |
           # A rerun adds a run, so the one started last decides. Prints `<status> <conclusion>`, or
           # nothing when there is no run
-          run=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=check&filter=latest" \
+          run=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs?check_name=check&filter=latest" \
             -q '.check_runs | sort_by(.started_at) | last | select(. != null) | "\(.status) \(.conclusion)"') || {
-            echo "Can't publish: couldn't read the CI runs for $GITHUB_SHA"
+            echo "Can't publish: couldn't read the CI runs for $SHA"
             exit 1
           }
           if [ -z "$run" ]; then
-            echo "Can't publish: no \`check\` run for $GITHUB_SHA yet"
+            echo "Can't publish: no \`check\` run for $SHA yet"
             exit 1
           fi
 
           status=${run%% *}
           conclusion=${run#* }
           if [ "$status" != completed ]; then
-            echo "Can't publish: CI is still running for $GITHUB_SHA ($status). Run Publish again once it passes"
+            echo "Can't publish: CI is still running for $SHA ($status). Run Publish again once it passes"
             exit 1
           fi
           if [ "$conclusion" != success ]; then
-            echo "Can't publish: CI didn't pass for $GITHUB_SHA ($conclusion)"
+            echo "Can't publish: CI didn't pass for $SHA ($conclusion)"
             exit 1
           fi
 
-          echo "CI passed for $GITHUB_SHA"
+          echo "CI passed for $SHA"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+      # Most pushes to `main` bump no version, and skip `publish`
+      - id: unpublished
+        name: Find the versions that npm doesn't have
+        run: |
+          unpublished=false
+          for manifest in packages/*/package.json; do
+            # `<name> <version>` for a public package, and nothing for a private one
+            package=$(jq -r 'select(.private != true) | "\(.name) \(.version)"' "$manifest") || exit 1
+            [ -n "$package" ] || continue
+            name=${package% *}
+            version=${package#* }
+            code=$(curl -sS -o /dev/null -w '%{http_code}' "https://registry.npmjs.org/$name/$version") || {
+              echo "Couldn't read $name@$version from npm"
+              exit 1
+            }
+            case "$code" in
+              200) ;;
+              404)
+                echo "$name@$version isn't on npm"
+                unpublished=true
+                ;;
+              *)
+                echo "Couldn't read $name@$version from npm: HTTP $code"
+                exit 1
+                ;;
+            esac
+          done
+
+          [ "$unpublished" = true ] || echo "npm has every version. Nothing to publish"
+          echo "unpublished=$unpublished" >> "$GITHUB_OUTPUT"
 
   publish:
     needs: verify
+    if: needs.verify.outputs.unpublished == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: npm
@@ -67,6 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ env.SHA }}
           persist-credentials: false
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       # No cache, so the release can't restore files that an earlier run left, and no `registry-url`,
