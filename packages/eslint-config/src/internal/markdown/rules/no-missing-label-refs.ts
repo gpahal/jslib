@@ -21,11 +21,6 @@ const LINE_ENDING_REGEX = /(?:\r?\n|\r)[\t ]*(?:>[\t ]*)*/gu
 const FOOTNOTE_LABEL_REGEX = /^\^\S+$/u
 const ASCII_PUNCTUATION = new Set('!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~')
 
-/**
- * `[` only, `[a]`, `[a][` or `[a][b]`
- */
-type BracketRange = Array<number>
-
 const TEXT_CONTAINER_TYPES = new Set(['heading', 'paragraph', 'tableCell'])
 
 /**
@@ -65,6 +60,9 @@ export const noMissingLabelRefs: MarkdownRuleDefinition<{
     schema: [],
   },
   create(context) {
+    // `[` only, `[a]`, `[a][` or `[a][b]`
+    type BracketRange = Array<number>
+
     const { sourceCode } = context
     const source = sourceCode.text
     const definitions = new Set<string>()

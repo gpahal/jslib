@@ -575,12 +575,6 @@ type ImportGraph = {
   resets?: ReadonlyArray<string> | undefined
 }
 
-/**
- * A file's walk in {@link importGraph}: the prefix it sets last, whether it imports the theme, and
- * the namespaces it resets, all and after the theme
- */
-type FileWalk = ThemeResets & { prefix: string | undefined }
-
 type ThemeResets = {
   hasTheme: boolean
   resets: ReadonlySet<string> | ReadonlyArray<string>
@@ -629,6 +623,10 @@ function importGraph(
   entryPath: string,
   entryCss: string,
 ): ImportGraph & { realPaths: ReadonlySet<string> } {
+  // A file's walk in {@link importGraph}: the prefix it sets last, whether it imports the theme, and
+  // the namespaces it resets, all and after the theme
+  type FileWalk = ThemeResets & { prefix: string | undefined }
+
   const entryRealPath = fs.realpathSync(entryPath)
   const files = [entryPath]
   const listed = new Set([entryRealPath])

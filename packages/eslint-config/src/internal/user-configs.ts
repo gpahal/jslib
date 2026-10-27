@@ -1079,14 +1079,7 @@ export function checkRuleEntries(
       continue
     }
     const severity: unknown = Array.isArray(entry) ? entry[0] : entry
-    if (
-      severity !== 'off' &&
-      severity !== 'warn' &&
-      severity !== 'error' &&
-      severity !== 0 &&
-      severity !== 1 &&
-      severity !== 2
-    ) {
+    if (!(['off', 'warn', 'error', 0, 1, 2] as Array<unknown>).includes(severity)) {
       fail(
         [...subjects, formatNames([rule])],
         `expected a severity ('off', 'warn', 'error', 0, 1 or 2) or a non-empty array starting with one, received ${describeValue(entry)}`,

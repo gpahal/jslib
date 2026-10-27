@@ -67,11 +67,6 @@ type MessageId =
   | 'toOwnLine'
   | 'toLayout'
 
-type Edit = {
-  range: TSESTree.Range
-  text: string
-}
-
 /**
  * As TypeScript and ESLint count lines. Not global, for `split`
  */
@@ -91,11 +86,6 @@ const URL_REGEX = /^https?:\/\/\S+$/u
 function countLineTerminators(value: string): number {
   return value.split(LINE_TERMINATOR_REGEX).length - 1
 }
-
-/**
- * A declaration or member, or the `|` before a union constituent
- */
-type Anchor = TSESTree.Node | TSESTree.Token
 
 /**
  * In the program body or a `declare module`, `declare global` or `namespace` block, imports aside
@@ -340,6 +330,14 @@ export const commentLayout: TSESLint.RuleModule<MessageId> = {
     schema: [],
   },
   create(context) {
+    // A declaration or member, or the `|` before a union constituent
+    type Anchor = TSESTree.Node | TSESTree.Token
+
+    type Edit = {
+      range: TSESTree.Range
+      text: string
+    }
+
     const sourceCode = context.sourceCode
     const text = sourceCode.text
     const anchors: Array<Anchor> = []

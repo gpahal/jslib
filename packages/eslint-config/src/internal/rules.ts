@@ -76,7 +76,7 @@ export function isEnabled(option: unknown, isOnByDefault: boolean | (() => boole
 
 export function isRuleOn(entry: unknown): boolean {
   const severity: unknown = Array.isArray(entry) ? entry[0] : entry
-  return severity !== undefined && severity !== 'off' && severity !== 0
+  return !([undefined, 'off', 0] as Array<unknown>).includes(severity)
 }
 
 function isWarnSeverity(severity: unknown): boolean {

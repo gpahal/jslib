@@ -2,8 +2,6 @@ import type { ESLint, Rule } from 'eslint'
 
 import { withReport } from '@/internal/utils'
 
-type Position = { line: number; column: number }
-
 /**
  * A lone `\r`, or a JavaScript line or paragraph separator
  */
@@ -29,6 +27,8 @@ export function withLanguageColumns(
   return {
     ...rule,
     create(context) {
+      type Position = { line: number; column: number }
+
       const { sourceCode } = context
       const columnStart = sourceCode.getLocFromIndex(0).column
       // Shifting columns is enough while the lines agree, which saves converting each position

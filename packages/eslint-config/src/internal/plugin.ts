@@ -155,11 +155,6 @@ function getDestructuredObject(
     : undefined
 }
 
-type RestrictedProperty = {
-  message: string | undefined
-  allowProperties: ReadonlySet<string> | undefined
-}
-
 /**
  * As in `const { argv } = node` or `({ argv } = node)`
  */
@@ -253,6 +248,11 @@ function globalPropertiesRule(globalObjects: ReadonlyArray<string>): Rule.RuleMo
       },
     },
     create(context) {
+      type RestrictedProperty = {
+        message: string | undefined
+        allowProperties: ReadonlySet<string> | undefined
+      }
+
       const restricted = new Map<string, Map<string, RestrictedProperty>>()
       for (const option of context.options as Array<unknown>) {
         if (!isRecord(option)) {

@@ -387,12 +387,10 @@ function checkNodes(
   }
 }
 
-/**
- * `untypedFunctions`: the Tailwind functions whose result can be of any type
- */
-type SecondaryOptions = { untypedFunctions?: ReadonlyArray<string> | undefined }
-
 const ruleFunction: Rule = (primary: unknown, secondary: unknown) => (root, result) => {
+  // `untypedFunctions`: the Tailwind functions whose result can be of any type
+  type SecondaryOptions = { untypedFunctions?: ReadonlyArray<string> | undefined }
+
   const isValid = validateOptions(
     result,
     ruleName,

@@ -36,8 +36,6 @@ const RUNNER_FREE_ENV = {
   NODE_PATH: '',
 }
 
-type Manifest = { name: string; scripts?: Record<string, string> }
-
 const collator = new Intl.Collator('en')
 
 /**
@@ -54,6 +52,7 @@ async function glob(pattern: string, cwd: string): Promise<Array<string>> {
 
 const packages = await Promise.all(
   (await glob('*/package.json', PACKAGES_DIR)).map(async (file) => {
+    type Manifest = { name: string; scripts?: Record<string, string> }
     const dir = path.join(PACKAGES_DIR, path.dirname(file))
     const manifest = JSON.parse(
       await fs.readFile(path.join(dir, 'package.json'), 'utf8'),

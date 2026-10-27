@@ -52,7 +52,7 @@
     "@gpahal/internal": "workspace:*",
     "eslint-plugin-better-tailwindcss": "^4.10.0",
     "prettier": "^3.9.10",
-    "prettier-plugin-astro": "^1.1.1",
+    "prettier-plugin-astro": "^1.1.2",
     "prettier-plugin-classnames": "^0.10.4",
     "prettier-plugin-merge": "^0.10.1",
     "prettier-plugin-organize-imports": "^4.3.0",
