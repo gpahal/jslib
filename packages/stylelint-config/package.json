@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/stylelint-config",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "description": "Shared Stylelint config presets extending stylelint-config-standard, with a Tailwind CSS v4 variant",
   "keywords": [
     "stylelint",

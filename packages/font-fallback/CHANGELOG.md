@@ -1,5 +1,12 @@
 # @gpahal/font-fallback
 
+## 0.0.62
+
+### Patch Changes
+
+- Updated dependencies [[`edb333f`](https://github.com/gpahal/jslib/commit/edb333f4433409b4b5cc9a98e02a341c2c996c78)]:
+  - @gpahal/std@0.0.51
+
 ## 0.0.61
 
 ### Patch Changes
