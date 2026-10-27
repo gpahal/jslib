@@ -98,8 +98,6 @@ async function runCliInProcess(
   return { stdout: stdout.text(), stderr: stderr.text(), exitCode }
 }
 
-type LookupAll = (hostname: string, options: LookupAllOptions) => Promise<Array<LookupAddress>>
-
 /**
  * The URLs that the stubbed `fetch` received
  */
@@ -111,6 +109,8 @@ const fetched: Array<string> = []
  * resolves to example.com's address
  */
 function stubFetch(): void {
+  type LookupAll = (hostname: string, options: LookupAllOptions) => Promise<Array<LookupAddress>>
+
   vi.spyOn(dns as { lookup: LookupAll }, 'lookup').mockResolvedValue([
     { address: '93.184.215.14', family: 4 },
   ])

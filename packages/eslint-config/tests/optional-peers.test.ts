@@ -119,8 +119,6 @@ test('every optional peer dependency but typescript belongs to a preset', () => 
   )
 })
 
-type CaseResult = { messages?: Array<string>; error?: string }
-
 /**
  * What a project's job does in the child process, from the folder of the project, with its copy of
  * the package. `lint` lints each case's file with its options and gives its messages or the error
@@ -300,6 +298,8 @@ test('checkTypescriptInstalled throws only when typescript is needed and missing
 })
 
 describe('a project with some of the peer dependencies', () => {
+  type CaseResult = { messages?: Array<string>; error?: string }
+
   // Every job's output. Each preset with its peers needs a project of its own
   let outputs: {
     javascriptOnly: Array<CaseResult>

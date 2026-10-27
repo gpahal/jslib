@@ -16,10 +16,6 @@ type Tree<T> =
   | { value: T }
   | { base: Tree<T>; branches: Array<{ files: string | Array<string>; tree: Tree<T> }> }
 type Selected = { config: Config; conditional: boolean }
-/**
- * A projection's values for your config, and for the preset's settings
- */
-type Pair = { own: Config; preset: Config }
 
 function mapTree<T, U>(tree: Tree<T>, map: (value: T) => Tree<U>): Tree<U> {
   const cache = new Map<Tree<T>, Tree<U>>()
@@ -137,8 +133,6 @@ function compile(tree: Tree<Config>): Config {
   return visit(tree)
 }
 
-type Override = NonNullable<Config['overrides']>[number]
-
 /**
  * Select inherited values with Stylelint's shallow, last-writer merging. Unconditional leaves use
  * the collected defaults; a matching inherited override replaces that key before user merging.
@@ -162,6 +156,11 @@ export function preserveConditionalOptions(
   const result = { ...config }
   const projections: Array<Config> = []
   for (const key of KEYS) {
+    type Override = NonNullable<Config['overrides']>[number]
+
+    // A projection's values for your config, and for the preset's settings
+    type Pair = { own: Config; preset: Config }
+
     const { inherited, userTrees } = selectOptions(
       configs,
       overrideConfigs,

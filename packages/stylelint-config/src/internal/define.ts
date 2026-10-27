@@ -77,8 +77,6 @@ import type { TailwindReferences } from '@/internal/tailwindcss'
 
 type Override = NonNullable<Config['overrides']>[number]
 
-type ReferenceFile = Extract<NonNullable<Config['referenceFiles']>, Array<unknown>>[number]
-
 function pickRules(
   rules: Readonly<Record<string, unknown>>,
   isKept: (name: string) => boolean,
@@ -320,6 +318,7 @@ function createConfigBuilder(
     hasOwnReferenceFiles(override),
   ).length
   const referenceFilesFor = (withTailwind: boolean) => {
+    type ReferenceFile = Extract<NonNullable<Config['referenceFiles']>, Array<unknown>>[number]
     const tailwindFiles =
       tailwindcss === false || !withTailwind
         ? undefined

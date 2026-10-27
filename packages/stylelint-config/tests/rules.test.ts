@@ -514,8 +514,6 @@ describe('replace()', () => {
   })
 })
 
-type Options = Omit<StylelintConfigOptions, 'root'>
-
 /**
  * The settings of `names` for `file` under `config`, `null` for a rule that's off
  */
@@ -530,6 +528,8 @@ async function settingsOf(
 }
 
 describe('extended configs beat the preset, and your rules merge over them', () => {
+  type Options = Omit<StylelintConfigOptions, 'root'>
+
   it("appends extends after the preset's, whose rules beat the preset's", async () => {
     await using project = await withTmpProject('stylelint-config-define', {
       'extended.mjs':

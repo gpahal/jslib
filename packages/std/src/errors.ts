@@ -647,11 +647,7 @@ export function formatNames(
   checkStrings('`formatNames`', 'names', names)
   const { conjunction } = options
   const untypedConjunction: unknown = conjunction
-  if (
-    untypedConjunction !== undefined &&
-    untypedConjunction !== 'and' &&
-    untypedConjunction !== 'or'
-  ) {
+  if (!([undefined, 'and', 'or'] as Array<unknown>).includes(untypedConjunction)) {
     throw new TypeError(
       formatMessage(
         '@gpahal/std',

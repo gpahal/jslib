@@ -67,21 +67,6 @@ type FileSystemEntries = {
   directories: ReadonlyArray<string>
 }
 
-/**
- * TypeScript's internal `matchFiles`, which `ts.sys.readDirectory` calls
- */
-type MatchFiles = (
-  path: string,
-  extensions: ReadonlyArray<string> | undefined,
-  excludes: ReadonlyArray<string> | undefined,
-  includes: ReadonlyArray<string> | undefined,
-  useCaseSensitiveFileNames: boolean,
-  currentDirectory: string,
-  depth: number | undefined,
-  getFileSystemEntries: (path: string) => FileSystemEntries,
-  realpath: (path: string) => string,
-) => Array<string>
-
 const NO_ENTRIES: FileSystemEntries = { files: [], directories: [] }
 
 /**
@@ -122,6 +107,19 @@ function listFolder(folder: string): FileSystemEntries {
  * doesn't make the config load walk the disk
  */
 function createParseHost(ts: TypeScript, root: string): TypeScriptModule.ParseConfigFileHost {
+  // TypeScript's internal `matchFiles`, which `ts.sys.readDirectory` calls
+  type MatchFiles = (
+    path: string,
+    extensions: ReadonlyArray<string> | undefined,
+    excludes: ReadonlyArray<string> | undefined,
+    includes: ReadonlyArray<string> | undefined,
+    useCaseSensitiveFileNames: boolean,
+    currentDirectory: string,
+    depth: number | undefined,
+    getFileSystemEntries: (path: string) => FileSystemEntries,
+    realpath: (path: string) => string,
+  ) => Array<string>
+
   const host = {
     ...ts.sys,
     // A config that doesn't parse includes nothing, as the project service would open no project

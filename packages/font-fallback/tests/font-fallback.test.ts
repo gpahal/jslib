@@ -32,7 +32,6 @@ const DESCRIPTOR_VALUE_RULE =
   'a CSS value without surrounding whitespace, control, format, line separator or paragraph separator characters, `;`, `{`, `}`, `<`, `>`, `&`, `"`, `\\`, `!` or comments, whose single quotes, parentheses and brackets are closed and whose `url()` arguments are quoted'
 const NAME_RULE =
   'a font-family name of letters, digits, underscores, periods, single spaces and hyphens, up to 64 characters'
-type FontStackMetrics = Parameters<typeof createFontStack>[0][number]
 
 const OVERRIDE_KEYS = [
   'sizeAdjust',
@@ -49,6 +48,8 @@ describe('rules', () => {
   it('computes the overrides Capsize does for every family with a regular face', async () => {
     const { arial } = entireMetricsCollection
     const faces = Object.values(entireMetricsCollection).flatMap((family) => {
+      type FontStackMetrics = Parameters<typeof createFontStack>[0][number]
+
       // The types leave out a descent of 0 (see `tests/upstream.canary.test.ts`)
       const variants: {
         readonly [variant: string]: unknown

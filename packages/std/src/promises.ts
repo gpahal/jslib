@@ -493,8 +493,6 @@ function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
   )
 }
 
-type CallOutcome<R> = { value: R } | { error: unknown }
-
 /**
  * Map `items`, an iterable or async iterable, with `fn`, as an async iterable of the results in
  * input order. At most `limit` calls run and results wait at once, so a slow consumer slows the
@@ -545,46 +543,6 @@ export function mapLimitIterable<T, R>(
   }
 }
 
-type PendingCall<R> = { outcome: CallOutcome<R> | undefined }
-
-/**
- * An object, so TypeScript's narrowing of locals doesn't hide changes the closures make
- */
-type MapLimitIterableState<R> = {
-  /**
-   * Started calls whose results the consumer hasn't taken
-   */
-  pending: Queue<PendingCall<R>>
-  nextIndex: number
-  isExhausted: boolean
-  /**
-   * At most one async `next` runs at a time
-   */
-  isReading: boolean
-  /**
-   * False once the iterator is done or its `next` failed, which need no closing, as with
-   * `for await...of`
-   */
-  isOpen: boolean
-  /**
-   * A sync generator's `return` throws while its `next` runs, so a failure closes it after
-   */
-  isInSyncNext: boolean
-  /**
-   * So a read that settles later starts no call
-   */
-  isStopped: boolean
-  /**
-   * What the iteration rejects with
-   */
-  failure: { error: unknown } | undefined
-  /**
-   * Resolves the loop's current wait. Each wait has its own promise, so a long run doesn't pile
-   * reactions on one that never settles
-   */
-  wake: (() => void) | undefined
-}
-
 /**
  * Throws a `TypeError` for a result that isn't an object, and what a `done` or `value` getter
  * throws
@@ -622,13 +580,53 @@ async function* runMapLimitIterable<T, R>(
   signal: AbortSignal | undefined,
   caller: string,
 ): AsyncGenerator<R, undefined, undefined> {
+  type CallOutcome = { value: R } | { error: unknown }
+
+  type PendingCall = { outcome: CallOutcome | undefined }
+
+  // An object, so TypeScript's narrowing of locals doesn't hide changes the closures make
+  type MapLimitIterableState = {
+    /**
+     * Started calls whose results the consumer hasn't taken
+     */
+    pending: Queue<PendingCall>
+    nextIndex: number
+    isExhausted: boolean
+    /**
+     * At most one async `next` runs at a time
+     */
+    isReading: boolean
+    /**
+     * False once the iterator is done or its `next` failed, which need no closing, as with
+     * `for await...of`
+     */
+    isOpen: boolean
+    /**
+     * A sync generator's `return` throws while its `next` runs, so a failure closes it after
+     */
+    isInSyncNext: boolean
+    /**
+     * So a read that settles later starts no call
+     */
+    isStopped: boolean
+    /**
+     * What the iteration rejects with
+     */
+    failure: { error: unknown } | undefined
+    /**
+     * Resolves the loop's current wait. Each wait has its own promise, so a long run doesn't pile
+     * reactions on one that never settles
+     */
+    wake: (() => void) | undefined
+  }
+
   if (signal?.aborted === true) {
     throw getAbortReason(signal)
   }
   const controller = new AbortController()
   // Dropped once the mapping no longer reads it, as in `mapLimit`
   let iterator: Iterator<T> | AsyncIterator<T> | undefined = takeIterator(source)
-  const state: MapLimitIterableState<R> = {
+  const state: MapLimitIterableState = {
     pending: createQueue(),
     nextIndex: 0,
     isExhausted: false,
@@ -692,7 +690,7 @@ async function* runMapLimitIterable<T, R>(
 
   const startCall = (value: T) => {
     const index = state.nextIndex++
-    const call: PendingCall<R> = { outcome: undefined }
+    const call: PendingCall = { outcome: undefined }
     state.pending.enqueue(call)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises -- It catches its own errors
     void (async () => {
