@@ -1,5 +1,13 @@
 # @gpahal/prettier-config
 
+## 0.0.48
+
+### Patch Changes
+
+- [#25](https://github.com/gpahal/jslib/pull/25) [`edb333f`](https://github.com/gpahal/jslib/commit/edb333f4433409b4b5cc9a98e02a341c2c996c78) Thanks [@gpahal](https://github.com/gpahal)! - Update `@eslint-react/eslint-plugin` to 5.28.8, `@next/eslint-plugin-next` to 16.4.3 and `prettier-plugin-astro` to 1.1.2 for development and tests, and move single-use type aliases into the blocks that use them.
+- Updated dependencies [[`edb333f`](https://github.com/gpahal/jslib/commit/edb333f4433409b4b5cc9a98e02a341c2c996c78)]:
+  - @gpahal/std@0.0.51
+
 ## 0.0.47
 
 ### Patch Changes

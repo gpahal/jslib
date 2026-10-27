@@ -1,5 +1,15 @@
 # @gpahal/eslint-config
 
+## 0.0.144
+
+### Patch Changes
+
+- [#25](https://github.com/gpahal/jslib/pull/25) [`edb333f`](https://github.com/gpahal/jslib/commit/edb333f4433409b4b5cc9a98e02a341c2c996c78) Thanks [@gpahal](https://github.com/gpahal)! - Update `eslint-plugin-unicorn` to 79.0.0, which checks type aliases in `unicorn/prefer-smaller-scope` and reports more cases in `unicorn/prefer-includes-over-repeated-comparisons`, and `eslint-plugin-package-json` to 1.11.0.
+
+- [#25](https://github.com/gpahal/jslib/pull/25) [`edb333f`](https://github.com/gpahal/jslib/commit/edb333f4433409b4b5cc9a98e02a341c2c996c78) Thanks [@gpahal](https://github.com/gpahal)! - Update `@eslint-react/eslint-plugin` to 5.28.8, `@next/eslint-plugin-next` to 16.4.3 and `prettier-plugin-astro` to 1.1.2 for development and tests, and move single-use type aliases into the blocks that use them.
+- Updated dependencies [[`edb333f`](https://github.com/gpahal/jslib/commit/edb333f4433409b4b5cc9a98e02a341c2c996c78)]:
+  - @gpahal/std@0.0.51
+
 ## 0.0.143
 
 ### Patch Changes
