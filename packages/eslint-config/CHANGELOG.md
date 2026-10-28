@@ -1,5 +1,11 @@
 # @gpahal/eslint-config
 
+## 0.0.145
+
+### Patch Changes
+
+- [#27](https://github.com/gpahal/jslib/pull/27) [`d47e28a`](https://github.com/gpahal/jslib/commit/d47e28af5ba099e99eda0fff871ea5c6391d9e10) Thanks [@gpahal](https://github.com/gpahal)! - Let a Markdown heading end in `...`.
+
 ## 0.0.144
 
 ### Patch Changes
