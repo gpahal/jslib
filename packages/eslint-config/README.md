@@ -900,6 +900,8 @@ Blocks of other languages, such as `sh`, take no directives, and nor do blocks w
 | `@gpahal/markdown/prefer-autolinks` | A link whose text is its URL, fixed to `<https://example.com>` |
 | `@gpahal/markdown/require-alt-text` | An image without alternative text |
 
+`markdown-preferences/no-heading-trailing-punctuation` reports a heading that ends in `.`, `,`, `;` or `:`, but not one that ends in `!`, `?`, `…` or `...`.
+
 A page with a front matter `title:` and a `# H1` gets `@gpahal/markdown/no-multiple-h1`. Drop one, or set the rule's `frontmatterTitle` option to `''` in `markdown.rules`. Turning `prefer-autolinks` off allows a plain `https://example.com` in text, while `no-bare-urls` still reports the cases it covers.
 
 ### Known issues

@@ -133,6 +133,33 @@ describe("`@typescript-eslint/no-meaningless-void-operator`'s patch", () => {
   })
 })
 
+describe("`markdown-preferences/no-heading-trailing-punctuation`'s patch", () => {
+  it('lets a heading end in `...`', async () => {
+    const rule = 'markdown-preferences/no-heading-trailing-punctuation'
+    const eslint = await createFocusedESLint('markdown', new Set([rule]), {
+      markdown: true,
+      typeAware: false,
+    })
+    const markdown = [
+      '# Title',
+      '',
+      '## Wait...',
+      '',
+      '## And then **nothing...**',
+      '',
+      '## Two dots..',
+      '',
+      '## Ends.',
+      '',
+    ].join('\n')
+    const messages = await lintText(eslint, 'README.md', markdown)
+    expect(messages.filter((text) => text.startsWith(`${rule}:`))).toEqual([
+      `${rule}: Headings should not end with punctuation '.'.`,
+      `${rule}: Headings should not end with punctuation '.'.`,
+    ])
+  })
+})
+
 describe("`@typescript-eslint/promise-function-async`'s patch", () => {
   it("doesn't report a function that returns React's `ReactNode`, whose promise React awaits", async () => {
     const eslint = await getPatchedESLint()
