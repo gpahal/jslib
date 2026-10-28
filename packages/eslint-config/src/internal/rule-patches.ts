@@ -343,6 +343,32 @@ function patchMeaninglessVoid(rule: Rule.RuleModule): void {
   })
 }
 
+const HEADING_ELLIPSIS_PATCHED = Symbol('@gpahal/eslint-config heading ellipsis')
+
+/**
+ * Drops `markdown-preferences/no-heading-trailing-punctuation`'s report of the last `.` of a `...`,
+ * so a heading may trail off, as `…` already may
+ */
+function patchHeadingEllipsis(rule: Rule.RuleModule): void {
+  patchCreateOnce(rule, HEADING_ELLIPSIS_PATCHED, (create) => (context) => {
+    if (!hasPatchedFixes(context)) {
+      return create(context)
+    }
+    const { sourceCode } = context
+    return create(
+      withReport(context, (descriptor) => {
+        // The report's `loc` spans the punctuation, and its `node` the heading's last text
+        const loc: unknown = 'loc' in descriptor ? descriptor.loc : undefined
+        const end: unknown = isRecord(loc) ? loc['end'] : undefined
+        const offset = isPosition(end) ? sourceCode.getIndexFromLoc(end) : undefined
+        if (offset === undefined || sourceCode.text.slice(offset - 3, offset) !== '...') {
+          context.report(descriptor)
+        }
+      }),
+    )
+  })
+}
+
 const PROMISE_FUNCTION_ASYNC_PATCHED = Symbol('@gpahal/eslint-config promise-function-async')
 
 function isTypeReference(type: TypeScriptModule.Type): type is TypeScriptModule.TypeReference {
@@ -785,6 +811,13 @@ export function patchRuleSet(
   }
   for (const rule of findPatchTargets('@typescript-eslint/promise-function-async', configs, root)) {
     patchPromiseFunctionAsync(rule)
+  }
+  for (const rule of findPatchTargets(
+    'markdown-preferences/no-heading-trailing-punctuation',
+    configs,
+    root,
+  )) {
+    patchHeadingEllipsis(rule)
   }
   for (const rule of findPatchTargets('unicorn/prefer-spread', configs, root)) {
     patchPreferSpread(rule)

@@ -121,7 +121,7 @@ export async function markdown({
         'markdown-preferences/level1-heading-style': ['error', { style: 'atx' }],
         'markdown-preferences/level2-heading-style': ['error', { style: 'atx' }],
         'markdown-preferences/link-bracket-spacing': ['error', { space: 'never' }],
-        // Without `!`, so a heading may end in `!` or `?`
+        // Without `!`, so a heading may end in `!` or `?`. A patch lets it end in `...`
         'markdown-preferences/no-heading-trailing-punctuation': [
           'error',
           { punctuation: '.,;:。、，；：｡､' },
