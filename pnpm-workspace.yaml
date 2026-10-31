@@ -17,12 +17,6 @@ overrides:
   katex@>=0.11.0 <0.18.2: ^0.18.2
 auditConfig:
   ignoreGhsas:
-    # No fixed release. Reached through Stylelint's and fast-glob's file globs, which only trusted
-    # config and CLI arguments set. Remove once braces ships a fix
-    - GHSA-vfj7-8cjw-p6xm
-    # No fixed 3.x release. prettier-plugin-classnames lists `zod@3.22.4` but runs its own bundled
-    # copy, which only parses trusted Prettier options. Remove once the plugin moves to zod 4.6.6+
-    - GHSA-mrhx-c7xc-m3w5
     # Fixed only in minimatch 11, which drops the `makeRe` that eslint-plugin-import-x calls. ESLint
     # and the other dependents still on minimatch 10 never set the vulnerable `optimizationLevel` 2.
     # Remove once they move to minimatch 11.0.1+
