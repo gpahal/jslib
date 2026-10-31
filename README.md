@@ -780,7 +780,7 @@ allowBuilds:
 An audit of a fresh install reports two advisories:
 
 - [GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7), in KaTeX's renderer, which eslint-config installs through `micromark-extension-math` but never runs. To clear it, add `katex@>=0.11.0 <0.18.2: ^0.18.2` under `overrides` in `pnpm-workspace.yaml`, or with npm, `"overrides": { "katex": "^0.18.2" }` in `package.json`.
-- [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm), in braces, which expands the globs you write, not the files linted. Validate untrusted globs before passing them to Stylelint or stylelint-config's options.
+- [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), in minimatch 10, which ESLint and several plugins install. Only minimatch 11 fixes it, and none of them set the vulnerable `optimizationLevel` 2. To clear it, add `GHSA-g3hv-75wg-m249` under `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`.
 
 ## Lists and merging
 

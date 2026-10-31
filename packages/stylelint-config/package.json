@@ -47,7 +47,7 @@
     "brace-expansion": "^5.0.12",
     "cosmiconfig": "^10.0.1",
     "import-meta-resolve": "^4.2.0",
-    "postcss": "^8.5.31",
+    "postcss": "^8.5.32",
     "postcss-html": "^2.0.0",
     "postcss-markdown": "^2.0.0",
     "stylelint-config-recess-order": "^7.9.0",
@@ -62,7 +62,7 @@
     "prettier": "^3.9.10",
     "stylelint": "^17.16.0",
     "tailwindcss": "^4.3.3",
-    "tsdown": "^0.23.2",
+    "tsdown": "^0.23.3",
     "typescript": "~6.0.3"
   },
   "peerDependencies": {

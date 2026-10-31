@@ -66,7 +66,7 @@
     "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
   },
   "devDependencies": {
-    "tsdown": "^0.23.2",
+    "tsdown": "^0.23.3",
     "typescript": "~6.0.3"
   },
   "engines": {
