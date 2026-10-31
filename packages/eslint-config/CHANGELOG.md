@@ -1,5 +1,13 @@
 # @gpahal/eslint-config
 
+## 0.0.146
+
+### Patch Changes
+
+- [#29](https://github.com/gpahal/jslib/pull/29) [`d8147ef`](https://github.com/gpahal/jslib/commit/d8147ef29e5107ac9c2f0087ad4f5dc9884b3be5) Thanks [@gpahal](https://github.com/gpahal)! - Update `minimatch` to 11.0.2 and other dependencies to their latest minor and patch versions, including `typescript-eslint` 8.72.1, `eslint-plugin-package-json` 1.12.0, `prettier-plugin-packagejson` 3.0.3 and `postcss` 8.5.32.
+- Updated dependencies [[`d8147ef`](https://github.com/gpahal/jslib/commit/d8147ef29e5107ac9c2f0087ad4f5dc9884b3be5)]:
+  - @gpahal/std@0.0.52
+
 ## 0.0.145
 
 ### Patch Changes
