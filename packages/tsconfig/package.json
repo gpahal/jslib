@@ -75,9 +75,9 @@
   },
   "devDependencies": {
     "@gpahal/internal": "workspace:*",
-    "@types/node": "^24.19.2",
-    "publint": "^0.3.25",
-    "typescript": "~6.0.3"
+    "@types/node": "catalog:",
+    "publint": "catalog:",
+    "typescript": "catalog:"
   },
   "peerDependencies": {
     "@types/node": "*",

@@ -43,22 +43,22 @@
   },
   "dependencies": {
     "@gpahal/std": "workspace:*",
-    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
-    "prettier-plugin-packagejson": "^3.0.3",
-    "semver": "^7.8.5",
-    "zod": "^4.6.7"
+    "@ianvs/prettier-plugin-sort-imports": "catalog:",
+    "prettier-plugin-packagejson": "catalog:",
+    "semver": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@gpahal/internal": "workspace:*",
-    "eslint-plugin-better-tailwindcss": "^4.10.0",
-    "prettier": "^3.9.10",
-    "prettier-plugin-astro": "^1.1.2",
-    "prettier-plugin-classnames": "^0.10.5",
-    "prettier-plugin-merge": "^0.10.1",
-    "prettier-plugin-organize-imports": "^4.3.0",
-    "prettier-plugin-tailwindcss": "^0.8.1",
-    "tsdown": "^0.23.3",
-    "typescript": "~6.0.3"
+    "eslint-plugin-better-tailwindcss": "catalog:",
+    "prettier": "catalog:",
+    "prettier-plugin-astro": "catalog:",
+    "prettier-plugin-classnames": "catalog:",
+    "prettier-plugin-merge": "catalog:",
+    "prettier-plugin-organize-imports": "catalog:",
+    "prettier-plugin-tailwindcss": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:"
   },
   "peerDependencies": {
     "prettier": "^3.9",

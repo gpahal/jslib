@@ -47,16 +47,16 @@
     "typecheck-release": "tsc -p tsconfig.release.json && publint --strict && attw --pack . --profile esm-only"
   },
   "dependencies": {
-    "@capsizecss/metrics": "^4.4.0",
+    "@capsizecss/metrics": "catalog:",
     "@gpahal/std": "workspace:*",
-    "fontkitten": "1.0.3",
-    "zod": "^4.6.7"
+    "fontkitten": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@capsizecss/core": "^4.1.3",
+    "@capsizecss/core": "catalog:",
     "@gpahal/internal": "workspace:*",
-    "tsdown": "^0.23.3",
-    "typescript": "~6.0.3"
+    "tsdown": "catalog:",
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=24.22.0"
