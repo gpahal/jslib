@@ -1,6 +1,6 @@
 {
   "name": "@gpahal/prettier-config",
-  "version": "0.0.49",
+  "version": "0.0.50",
   "description": "Shared Prettier config with sorted imports and package.json keys, and optional Astro and Tailwind CSS support",
   "keywords": [
     "prettier",
