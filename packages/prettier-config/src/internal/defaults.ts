@@ -70,9 +70,10 @@ export const TAILWIND_FUNCTIONS: Array<string> = [
 ]
 
 /**
- * Every extension of Prettier's `jsonc` language, whose tools read them without trailing commas.
- * Not `*.sublime-*`, which would also match YAML's `.sublime-syntax`. `tests/format.test.ts` checks
- * the list against Prettier's
+ * Every extension of Prettier's `jsonc` language, which tools such as VS Code's and Sublime Text's
+ * read without trailing commas, but `.hujson`, whose format allows them. Not `*.sublime-*`, which
+ * would also match YAML's `.sublime-syntax`. `tests/format.test.ts` checks the list against
+ * Prettier's
  */
 export const JSONC_FILES: Array<string> = [
   '*.jsonc',

@@ -64,7 +64,7 @@ export async function vitest({
             },
             rules: {
               // `@typescript-eslint/unbound-method`, which is off in test files, but allows
-              // `expect(object.method)`. Added in 1.6.13, the peer range's floor
+              // `expect(object.method)`. Added in 1.6.13
               'vitest/unbound-method': 'error',
             },
           } satisfies TypedConfig,

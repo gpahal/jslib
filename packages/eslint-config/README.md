@@ -38,7 +38,7 @@ Composable flat ESLint config for TypeScript, React, Next.js, Astro, Tailwind CS
 pnpm add -D @gpahal/eslint-config eslint typescript@~6.0.3
 ```
 
-Requires Node 24.22 or later and `eslint` `^10.11`. `typescript` `~6.0.3` is an optional peer that every project but a [JavaScript-only](#lint-a-javascript-project) one needs. TypeScript 7 is not supported right now. `defineConfig` checks the installed versions when the config loads and throws with the install command when one is missing or out of range, as in `peer dependencies: needs eslint ^10.11, but 10.0.0 is installed`. A newer ESLint loads with a `GPAHAL_PEER_NEWER_THAN_RANGE` warning.
+Requires Node 24.22 or later and `eslint` `^10.15.0`. `typescript` `~6.0.3` is an optional peer that every project but a [JavaScript-only](#lint-a-javascript-project) one needs. TypeScript 7 is not supported right now. `defineConfig` checks the installed versions when the config loads and throws with the install command when one is missing or out of range, as in `peer dependencies: needs eslint ^10.15.0, but 10.0.0 is installed`. A newer ESLint loads with a `GPAHAL_PEER_NEWER_THAN_RANGE` warning.
 
 The root README's [Supported setups](https://github.com/gpahal/jslib#supported-setups) explains why to pin `typescript@~6.0.3` and skip `unrs-resolver`'s build script with pnpm 12.
 
@@ -534,7 +534,7 @@ Replace `tseslint.config(...)`, `parserOptions.projectService` and `tsconfigRoot
 
 ### Errors
 
-- **`peer dependencies: needs eslint ^10.11, but 10.0.0 is installed`**, or `typescript ~6.0.3`: run the install command the error names. TypeScript 7 is not supported right now.
+- **`peer dependencies: needs eslint ^10.15.0, but 10.0.0 is installed`**, or `typescript ~6.0.3`: run the install command the error names. TypeScript 7 is not supported right now.
 - **`<file> was not found by the project service`**: a TypeScript file that no tsconfig includes, which `GPAHAL_FILES_OUTSIDE_TSCONFIG` names. Add it to a tsconfig's `include` or to `typeAware.allowDefaultProject`. A file in a dot folder, such as `.storybook/main.ts`, needs the folder named in `include`.
 - **`Too many files (>N) have matched the default project`**: more files matched `typeAware.allowDefaultProject` than the limit `defineConfig` set, which typescript-eslint keeps for the process. A function's globs count only files outside dot folders, so list a dot-folder glob in an array. In an editor, run **ESLint: Restart ESLint Server** after adding config files.
 - **`Unsafe assignment of an error typed value`** in a config file: the default project lacks Node's types or the package's types. Follow the `GPAHAL_DEFAULT_PROJECT_NODE_TYPES` warning.
@@ -889,7 +889,7 @@ Blocks of other languages, such as `sh`, take no directives, and nor do blocks w
 | `@gpahal/markdown/heading-increment` | A heading more than one rank below the closest heading of a lower rank above it. HTML `<h1>`–`<h6>` headings count, and a top-level front matter `title` counts as rank 1. `frontmatterTitle` sets the pattern of the title line, and an empty one turns the check of front matter off |
 | `@gpahal/markdown/lowercase-code-block-language` | A code block language that isn't lower-case, such as `JS`, fixed to `js` |
 | `@gpahal/markdown/max-heading-length` | A heading longer than `max` code points, 80 by default |
-| `@gpahal/markdown/no-bare-urls` | A bare URL that `@gpahal/markdown/prefer-autolinks` doesn't report, such as `www.example.com` |
+| `@gpahal/markdown/no-bare-urls` | A bare URL that `@gpahal/markdown/prefer-autolinks` doesn't report, such as `www.example.com`, fixed to a link, `[www.example.com](http://www.example.com)`. A URL with a character reference, such as `&amp;`, or with `\|` in a table cell isn't fixed, since rewriting it could change its target |
 | `@gpahal/markdown/no-emphasis-as-heading` | A paragraph of only bold or italic text used as a heading, unless the text ends in punctuation, as in `**Note:**`, or the paragraph is in a list item |
 | `@gpahal/markdown/no-missing-atx-heading-space` | A line such as `#Usage:`, fixed to `# Usage:`, or `#Install guide` and `#[derive(Debug)]`, with a suggestion. A lone `#word` is a tag and isn't reported, nor is a hex color such as `#ff00ff` or a C directive such as `#define` |
 | `@gpahal/markdown/no-missing-label-refs` | A full reference, `[text][label]`, a collapsed one, `[label][]`, or a footnote reference, `[^label]`, without a definition. A shortcut `[label]` isn't checked, since it's often prose, as in `[WIP]` |
@@ -909,7 +909,6 @@ A page with a front matter `title:` and a `# H1` gets `@gpahal/markdown/no-multi
 - Plugins' recommended sets, and typescript-eslint's strict and stylistic configs, can add rules in minor releases, which caret ranges admit. Commit your lockfile.
 - `@eslint-react/dom-no-unknown-property` is off, so a hyphenated SVG attribute in JSX, such as `stroke-width`, isn't reported, and React logs `Invalid DOM property` at run time. Turn it on with `react: { rules: { '@eslint-react/dom-no-unknown-property': 'error' } }`; its fix renames them, as `stroke-width` to `strokeWidth`.
 - The `astro` preset doesn't report `target="_blank"` without `rel="noopener"`, or a `<button>` without `type`, since eslint-plugin-astro has no rules for them.
-- `import-x/no-extraneous-dependencies` in eslint-plugin-import-x 4.17.1 crashes on a file with no `package.json` at or above it.
 - eslint-plugin-astro's `astro/jsx-a11y/*` rules crash on an attribute named like an `Object.prototype` key, such as `constructor`, and don't check template-literal and shorthand attributes.
 - astro-eslint-parser gives template JSX the error type unless `@types/react` is installed, and `Astro.props` in pages with `getStaticPaths` too, so the `@typescript-eslint/no-unsafe-*` rules and `restrict-template-expressions` are off in `.astro` files, not in their `<script>` blocks. `unicorn/prefer-module` is off there too, since frontmatter may `return Astro.redirect()`, and `astro/no-unused-css-selector` isn't on, since it can't see a child component's elements.
 - `n/no-unsupported-features/*` report a name in a type, such as `Response` in `Promise<Response>`, so the `node` preset drops reports in type positions.

@@ -612,7 +612,7 @@ describe('plugin resolution', () => {
         warns
           ? [
               [
-                `${PREFIX}: \`tailwindcss\`: prettier-plugin-tailwindcss ${version} is newer than the tested range >=0.8.0 <0.9.0, so classes or imports may stay unsorted. If they do, install a version in the range, as in \`pnpm add -D "prettier-plugin-tailwindcss@>=0.8.0 <0.9.0"\``,
+                `${PREFIX}: \`tailwindcss\`: prettier-plugin-tailwindcss ${version} is newer than the tested range >=0.8.1 <0.9.0, so classes or imports may stay unsorted. If they do, install a version in the range, as in \`pnpm add -D "prettier-plugin-tailwindcss@>=0.8.1 <0.9.0"\``,
                 { code: 'GPAHAL_PRETTIER_UNTESTED_TAILWIND_PLUGIN' },
               ],
             ]
@@ -622,9 +622,9 @@ describe('plugin resolution', () => {
   )
 
   it.each([
-    ['3.8.9', true],
-    ['3.9.0', false],
-  ])('warns once when Prettier is %s, below 3.9: %s', (version, warns) => {
+    ['3.10.0', true],
+    ['3.10.1', false],
+  ])('warns once when Prettier is %s, below 3.10.1: %s', (version, warns) => {
     const environment: PluginEnvironment = {
       ...DEFAULT_PLUGIN_ENVIRONMENT,
       findPackage: (name) =>
@@ -637,7 +637,7 @@ describe('plugin resolution', () => {
       warns
         ? [
             [
-              `${PREFIX}: \`prettier\`: version ${version} is older than the 3.9 this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`pnpm add -D "prettier@^3.9"\``,
+              `${PREFIX}: \`prettier\`: version ${version} is older than the 3.10.1 this config needs, so some files may be formatted wrongly without an error. Install a newer version, as in \`pnpm add -D "prettier@^3.10.1"\``,
               { code: 'GPAHAL_PRETTIER_OLD_PRETTIER' },
             ],
           ]
@@ -710,8 +710,8 @@ describe('in an npm project', () => {
       expect(error).toMatchObject({
         message: [
           `${PREFIX}: options: 2 issues`,
-          '  `astro`: needs `prettier-plugin-astro`, which isn\'t installed. Install it as a dev dependency, as in `npm install -D "prettier-plugin-astro@^1.1"`',
-          '  `tailwindcss`: needs `prettier-plugin-tailwindcss`, which isn\'t installed. Install it as a dev dependency, as in `npm install -D "prettier-plugin-tailwindcss@>=0.8.0 <0.9.0"`',
+          '  `astro`: needs `prettier-plugin-astro`, which isn\'t installed. Install it as a dev dependency, as in `npm install -D "prettier-plugin-astro@^1.1.2"`',
+          '  `tailwindcss`: needs `prettier-plugin-tailwindcss`, which isn\'t installed. Install it as a dev dependency, as in `npm install -D "prettier-plugin-tailwindcss@>=0.8.1 <0.9.0"`',
         ].join('\n'),
         errors: [expect.any(Error), expect.any(Error)],
       })

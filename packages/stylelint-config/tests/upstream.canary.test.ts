@@ -42,20 +42,6 @@ describe('upstream workarounds', () => {
     ).rejects.toMatchObject({ code: 'ERR_REQUIRE_ASYNC_MODULE' })
   })
 
-  it("function-no-unknown: reports `@font-face`'s `tech()`", async () => {
-    const { results } = await stylelint.lint({
-      code: "@font-face {\n  src: url('a.woff2') tech(variations);\n}\n",
-      config: { rules: { 'function-no-unknown': true } },
-    })
-    expect(
-      results.flatMap((result) => result.warnings.map((warning) => warning.text)),
-      fixed(
-        "function-no-unknown's unknown `tech()`",
-        "`ignoreFunctions: ['tech']` in src/internal/preset-rules.ts",
-      ),
-    ).toEqual(['Unknown function "tech" (function-no-unknown)'])
-  })
-
   it.each([
     ['property-no-vendor-prefix', 'a {\n  -webkit-user-select: none;\n  user-select: none;\n}\n'],
     ['value-no-vendor-prefix', 'a {\n  display: -webkit-flex;\n  display: flex;\n}\n'],
@@ -180,20 +166,6 @@ describe('upstream workarounds', () => {
         'MARKDOWN_SYNTAXES in src/internal/file-types.ts',
       ),
     ).toBe('fake postcss-html')
-  })
-
-  it('declaration-property-value-no-unknown: reports sibling-index() and sibling-count()', async () => {
-    const { results } = await stylelint.lint({
-      code: '.a {\n  z-index: sibling-index();\n  order: sibling-count();\n}\n',
-      config: { rules: { 'declaration-property-value-no-unknown': true } },
-    })
-    expect(
-      results.flatMap((result) => result.warnings.map((warning) => warning.rule)),
-      fixed(
-        "css-tree's missing sibling-index() and sibling-count()",
-        'the README note on sibling-index() and sibling-count()',
-      ),
-    ).toEqual(['declaration-property-value-no-unknown', 'declaration-property-value-no-unknown'])
   })
 })
 

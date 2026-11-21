@@ -92,7 +92,7 @@ function fixResultOf(
   own: string,
   primary: unknown,
 ): PostcssResult {
-  const { config = {}, disabledRanges, lexer } = result.stylelint
+  const { config = {}, disabledRanges, lexer, postcss: stylelintPostcss } = result.stylelint
   const stylelintData: PostcssResult['stylelint'] = {
     ruleSeverities: {},
     customMessages: {},
@@ -105,6 +105,7 @@ function fixResultOf(
         ? {}
         : { [stock]: [...rangesOf(disabledRanges, stock), ...rangesOf(disabledRanges, own)] },
     lexer,
+    postcss: stylelintPostcss,
     referenceRoots: [],
     config: {
       fix: config.fix === true,

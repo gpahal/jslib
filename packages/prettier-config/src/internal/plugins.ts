@@ -160,7 +160,7 @@ export function resolvePeerPlugins(
  * The config relies on the plugin's internals, such as how it composes the import sorter, which a
  * new 0.x minor can change
  */
-const TAILWIND_RANGE = '>=0.8.0 <0.9.0'
+const TAILWIND_RANGE = '>=0.8.1 <0.9.0'
 
 /**
  * The upper bound of {@link TAILWIND_RANGE}, from which on, prereleases included, the plugin is
@@ -173,7 +173,7 @@ const UNTESTED_TAILWIND_VERSION = '0.9'
  * `peerDependencies`
  */
 export const PEER_RANGES: Readonly<Record<string, string>> = {
-  'prettier-plugin-astro': '^1.1',
+  'prettier-plugin-astro': '^1.1.2',
   [TAILWIND_PLUGIN]: TAILWIND_RANGE,
 }
 
@@ -229,7 +229,7 @@ function olderThan(name: string, version: unknown, minimum: string): string {
 /**
  * The peer range's lower bound
  */
-const MIN_PRETTIER_VERSION = '3.9'
+const MIN_PRETTIER_VERSION = '3.10.1'
 
 const warned = new Set<string>()
 
@@ -243,7 +243,7 @@ function warnOnce(message: string, code: string): void {
 }
 
 /**
- * Warn once when the Prettier found from `parentPath` is older than 3.9
+ * Warn once when the Prettier found from `parentPath` is older than {@link MIN_PRETTIER_VERSION}
  */
 export function warnOfPrettierVersion(
   environment: PluginEnvironment = DEFAULT_PLUGIN_ENVIRONMENT,

@@ -2,8 +2,6 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import type { Rule } from 'eslint'
-import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import { compileRule } from 'eslint-typegen/core'
 
 import { isRecord } from '@gpahal/std/objects'
@@ -24,7 +22,6 @@ import {
   patchRule,
   TYPEGEN_PATH,
   withAdditionalProperties,
-  withInlinedDefinitions,
 } from '../scripts/typegen'
 
 function sha256(text: string): string {
@@ -73,61 +70,35 @@ test('patches rule schemas so the compiler writes declarations that type-check',
       additionalProperties: true,
     },
   ])
-  const node = { type: 'object', properties: { next: { $ref: '#/definitions/node' } } }
-  expect(
-    withInlinedDefinitions({
-      type: 'object',
-      properties: {
-        a: { $ref: '#/definitions/flags', description: 'A' },
-        b: { $ref: '#/definitions/node' },
-      },
-      definitions: { flags: { type: 'object', additionalProperties: { type: 'boolean' } }, node },
-    }),
-  ).toMatchObject({
-    properties: {
-      a: { type: 'object', additionalProperties: { type: 'boolean' }, description: 'A' },
-      // A recursive `$ref` stays
-      b: { type: 'object', properties: { next: { $ref: '#/definitions/node' } } },
-    },
-  })
-  expect(
-    withInlinedDefinitions({
-      type: 'object',
-      properties: { a: { $ref: '#/$defs/flags' } },
-      $defs: { flags: { type: 'object', additionalProperties: { type: 'boolean' } } },
-    }),
-  ).toMatchObject({
-    properties: { a: { type: 'object', additionalProperties: { type: 'boolean' } } },
-  })
 })
 
-describe('a rule whose schema the compiler would declare a name twice for', () => {
-  const rule = eslintPluginUnicorn.rules?.['name-replacements']
-  const schema = JSON.stringify(rule?.meta?.schema)
-
-  /**
-   * The type declarations of `rule` with `text` as its schema, as `patchRule` patches it
-   */
-  async function declarationsOf(name: string, text: string): Promise<Array<string>> {
-    const patched = await patchRule(name, {
-      create: () => ({}),
-      ...rule,
-      meta: { ...rule?.meta, schema: JSON.parse(text) as Rule.RuleMetaData['schema'] },
-    })
-    return (await compileRule(name, patched)).typeDeclarations
-  }
-
-  it('throws when inlining leaves a name declared twice', async () => {
-    const { definitions, items, ...rest } = JSON.parse(schema) as Record<string, unknown>
-    const first: unknown = Array.isArray(items) ? items[0] : undefined
-    const nested = JSON.stringify({
-      ...rest,
-      items: [{ ...(isRecord(first) && first), definitions }],
-    }).replaceAll('#/definitions/', '#/items/0/definitions/')
-    await expect(declarationsOf('x/nested', nested)).rejects.toThrow(
-      '@gpahal/eslint-config: typegen: `x/nested`: declares a type name twice',
-    )
+// A definition reached twice once compiled to two declarations of one interface, with two index
+// signatures, which `skipLibCheck: false` rejects
+test('the compiler declares each type name once for a definition reached twice', async () => {
+  const rule = patchRule({
+    create: () => ({}),
+    meta: {
+      schema: {
+        type: 'array',
+        items: [
+          {
+            type: 'object',
+            properties: {
+              a: { $ref: '#/definitions/flags' },
+              b: { anyOf: [{ enum: [false] }, { $ref: '#/definitions/flags' }] },
+            },
+            additionalProperties: false,
+          },
+        ],
+        definitions: { flags: { type: 'object', additionalProperties: { type: 'boolean' } } },
+      },
+    },
   })
+  const names = (await compileRule('x/twice', rule)).typeDeclarations.flatMap(
+    (line) => /^(?:interface|type) (\w+)/.exec(line)?.[1] ?? [],
+  )
+  expect(names.length).toBeGreaterThan(1)
+  expect(new Set(names).size).toBe(names.length)
 })
 
 test('names every config uniquely under `gpahal/`', async () => {

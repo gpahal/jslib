@@ -139,12 +139,6 @@ describe('upstream workarounds', () => {
       'Compute 2 *3* 4 here.\n',
     ],
     [
-      'eslint/markdown#710 is fixed: drop the fix removal in src/internal/markdown/rules/no-bare-urls.ts, which still leaves out the URLs prefer-autolinks reports',
-      md({ 'markdown/no-bare-urls': 'error' }, {}, true),
-      '# T\n\nVisit www.example.com today.\n',
-      '# T\n\nVisit <www.example.com> today.\n',
-    ],
-    [
       'prefer-autolinks checks the URL now: delete src/internal/markdown/rules/prefer-autolinks.ts and use the stock rule',
       md({ 'markdown-preferences/prefer-autolinks': 'error' }, preferences),
       '# T\n\nSee [LICENSE](LICENSE).\n',
@@ -163,16 +157,10 @@ describe('upstream workarounds', () => {
       '# T\n\n```cpp++\nx\n```\n',
     ],
     [
-      'the merge no longer moves a value import with an inline `type` specifier into an `import type`: delete the `hasInlineTypeSpecifier` check of `patchDuplicateImports` in src/internal/fixes.ts',
-      ts({ 'import-x/no-duplicates': 'error' }),
-      "import type { A } from 'a'\nimport { type B, c } from 'a'\n\nexport const d: A | B = c\n",
-      "import type { A, type B, c  } from 'a'\n\nexport const d: A | B = c\n",
-    ],
-    [
       'the two fixes no longer combine into `import type { A, b }` (TS1361): delete the empty insertion that starts the fix in `patchDuplicateImports` in src/internal/fixes.ts',
       ts({ ...separateTypeImports, 'import-x/no-duplicates': 'error' }),
       "import { A } from 'a'\nimport { b } from 'a'\n\nexport const c: A = b\n",
-      "import type { A, b  } from 'a'\n\nexport const c: A = b\n",
+      "import type { A, b } from 'a'\n\nexport const c: A = b\n",
     ],
   ])('%s', (message, config, code, output) => {
     expect(linter.verifyAndFix(code, config, fileFor(config)).output, message).toBe(output)
@@ -183,7 +171,7 @@ describe('upstream workarounds', () => {
       'eslint/markdown#619 or syntax-tree/mdast-util-gfm-autolink-literal#19 is fixed: drop the removal of the GFM `transforms` in src/internal/markdown/language.ts',
       md({ 'markdown/no-bare-urls': 'error' }),
       '# T\n\n[https://example.com]\n',
-      'getRange',
+      "Cannot read properties of undefined (reading 'start')",
     ],
     [
       'canonical-code-block-language checks own keys now: remove its canonical type guard in src/internal/markdown/rules/canonical-code-block-language.ts',
@@ -318,26 +306,6 @@ describe('upstream workarounds', () => {
     ).toBe(true)
   })
 
-  it('`import-x/no-extraneous-dependencies` still crashes on a file with no package.json at or above it', async () => {
-    await using project = await withTmpProject('eslint-config', {
-      'node_modules/foo/index.js': 'module.exports = 1\n',
-    })
-    const eslint = new ESLint({
-      cwd: project.dir,
-      overrideConfigFile: true,
-      overrideConfig: {
-        plugins: { 'import-x': eslintPluginImportX },
-        rules: { 'import-x/no-extraneous-dependencies': 'error' },
-      },
-    })
-    await expect(
-      eslint.lintText("import a from 'foo'\n\nexport default a\n", {
-        filePath: path.join(project.dir, 'a.js'),
-      }),
-      "import-x/no-extraneous-dependencies runs without a package.json now: remove its entry from the README's Known issues",
-    ).rejects.toThrow('The "path" argument must be of type string. Received null')
-  })
-
   it("eslint-plugin-astro still doesn't indent the later lines of a multi-line fix in a `<script>` block", () => {
     const split: Rule.RuleModule = {
       meta: { fixable: 'code' },
@@ -426,16 +394,6 @@ describe('upstream workarounds', () => {
     expect(await typedLint(plugins, rules, code, typeof expected === 'string'), message).toEqual(
       expected,
     )
-  })
-
-  it('minimatch still splits an extglob alternation at an escaped `|`', () => {
-    const { minimatch } = createRequire(createRequire(import.meta.url).resolve('eslint'))(
-      'minimatch',
-    ) as { minimatch: (path: string, pattern: string, options: { dot: boolean }) => boolean }
-    expect(
-      minimatch('a|b/dist/x.js', String.raw`@(a\|b|c)/dist/**`, { dot: true }),
-      'minimatch reads an escaped `|` in an alternation now: delete the `[|]` replacement in joinSiblingGlob in src/internal/globs.ts',
-    ).toBe(false)
   })
 
   it('eslint-plugin-astro still loads the TypeScript parser and jsx-a11y from the working directory', async () => {

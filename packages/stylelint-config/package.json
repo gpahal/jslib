@@ -66,8 +66,8 @@
     "typescript": "catalog:"
   },
   "peerDependencies": {
-    "stylelint": "^17.15",
-    "tailwindcss": "^4.3"
+    "stylelint": "^18.0.0",
+    "tailwindcss": "^4.3.5"
   },
   "peerDependenciesMeta": {
     "tailwindcss": {

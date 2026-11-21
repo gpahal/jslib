@@ -295,7 +295,7 @@ function getLineRemoval(
   const { lines, text } = state
   const isBlank = (line: TextLine | undefined): boolean =>
     line === undefined || BLANK_LINE_REGEX.test(text.slice(line.start, line.end))
-  const lastLineIndex = lines.at(-1)?.start === text.length ? lines.length - 2 : lines.length - 1
+  const lastLineIndex = lines.length - (lines.at(-1)?.start === text.length ? 2 : 1)
   const lineAt = (index: number): TextLine | undefined =>
     index >= 0 && index <= lastLineIndex ? lines[index] : undefined
   const startOf = (index: number): number => lines[index]?.start ?? text.length

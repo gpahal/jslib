@@ -33,16 +33,27 @@ function isInTableCell(sourceCode: MarkdownSourceCode, node: Nodes): boolean {
 }
 
 /**
- * An autolink's URL without `|` in a table cell, in an inline link or a bare URL whose source is
- * its text, without a character reference
+ * Whether the link's URL has a character reference, which an autolink resolves again, or a `|` in
+ * a table cell, where parsers disagree on `\|` in an autolink, so rewriting the link could change
+ * its target
+ */
+export function isUnsafeToRewrite(sourceCode: MarkdownSourceCode, node: Link): boolean {
+  return (
+    CHARACTER_REFERENCE_REGEX.test(node.url) ||
+    (node.url.includes('|') && isInTableCell(sourceCode, node))
+  )
+}
+
+/**
+ * An autolink's URL in an inline link or a bare URL whose source is its text, unless
+ * {@link isUnsafeToRewrite}
  */
 function canBeAutolink(sourceCode: MarkdownSourceCode, node: Link): boolean {
   const source = sourceCode.getText(node)
   return (
     AUTOLINK_URL_REGEX.test(node.url) &&
-    !(node.url.includes('|') && isInTableCell(sourceCode, node)) &&
     (source.startsWith('[') || source === toString(node)) &&
-    !CHARACTER_REFERENCE_REGEX.test(node.url)
+    !isUnsafeToRewrite(sourceCode, node)
   )
 }
 

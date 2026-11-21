@@ -149,7 +149,7 @@ describe('defineConfig', () => {
     })
     expect(topLevelRules(added)['function-no-unknown']).toEqual([
       true,
-      { ignoreFunctions: ['tech', 'theme', 'brand'] },
+      { ignoreFunctions: ['theme', 'brand'] },
     ])
     const atRules = added.languageOptions?.syntax?.atRules
     expect(atRules?.['brand-rule']).toEqual({ prelude: '<any-value>?' })

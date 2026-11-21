@@ -10,10 +10,10 @@ type Override = NonNullable<Config['overrides']>[number]
 type ReferenceFile = Extract<NonNullable<Config['referenceFiles']>, Array<unknown>>[number]
 
 /**
- * Stylelint accepts config objects in extends, which its declarations omit
+ * A mutable copy of `extended`, which Stylelint's types want
  */
 export function toStylelintExtends(extended: StylelintExtends): NonNullable<Config['extends']> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Stylelint supports object extends at runtime; consumer tests cover both forms
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Extended config objects may set keys to `undefined`, which Stylelint's types omit and its runtime skips
   return copyArray(extended) as NonNullable<Config['extends']>
 }
 

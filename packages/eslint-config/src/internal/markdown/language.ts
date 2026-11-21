@@ -230,7 +230,7 @@ function getInlineConfigComments(
 }
 
 /**
- * Places directive comments at their offsets in the text. `@eslint/markdown` 8.0.3 adds an offset
+ * Places directive comments at their offsets in the text. `@eslint/markdown` 9.0.0 adds an offset
  * in an HTML node's value to the node's start, but the value has spaces for part of a tab and lacks
  * the container's markers on later lines, so a directive in a tab-indented list item runs past the
  * text, crashing with a `RangeError` or a fix deleting what follows. Remove once
@@ -281,7 +281,7 @@ export class GpahalMarkdownLanguage extends MarkdownLanguage {
   }
 
   override validateLanguageOptions(
-    languageOptions: GpahalMarkdownLanguageOptions | MarkdownLanguageOptions,
+    languageOptions: GpahalMarkdownLanguageOptions | MarkdownLanguageOptions = {},
   ): void {
     const { frontmatter: frontmatterOption, math: mathOption } = languageOptions
     const isValidFrontmatter =
