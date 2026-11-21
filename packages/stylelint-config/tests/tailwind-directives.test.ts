@@ -78,8 +78,8 @@ describe('@gpahal/tailwind-directives', () => {
     '@custom-variant dark (&:where(.dark, .dark *));\n',
     '@custom-variant hocus {\n  &:hover,\n  &:focus {\n    @slot;\n  }\n}\n',
     '@custom-variant 3xl (@media (width >= 120rem));\n',
-    // Tailwind reads an escape of one hex digit as the digit
-    '@utility tab\\0 {\n  tab-size: 4;\n}\n',
+    // Tailwind reads an escape of hex digits as a code point
+    '@utility tab\\31  {\n  tab-size: 4;\n}\n',
     '@utility w-1/2 {\n  width: 50%;\n}\n',
     '@utility tab-* {\n  tab-size: --value(integer, [integer], --tab-size-*, "x");\n  opacity: --modifier(percentage);\n}\n',
     '@variant hocus (&:hover, &:focus);\n',
@@ -90,7 +90,7 @@ describe('@gpahal/tailwind-directives', () => {
   })
 
   // `String.fromCodePoint()` throws on a code point above U+10FFFF
-  it.each([String.raw`\110000`])(
+  it.each([String.raw`\110000`, String.raw`\0`])(
     'reads an escape %s that is no code point as U+FFFD, as Tailwind does',
     async (escape) => {
       const css = `@utility foo${escape} {\n  color: red;\n}\n`

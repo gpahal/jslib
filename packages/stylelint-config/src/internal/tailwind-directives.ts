@@ -90,15 +90,15 @@ const BARE_DATA_TYPES: ReadonlySet<string> = new Set(['number', 'integer', 'rati
 const MAX_CODE_POINT = 0x10_ff_ff
 
 /**
- * `text` with its escapes read as Tailwind reads a `@utility` name: a one-character escape, even a
- * hex digit, is that character, and an invalid code point is U+FFFD
+ * `text` with its escapes read as Tailwind reads a `@utility` name: hex digits are a code point,
+ * an invalid one U+FFFD, and any other escaped character is that character
  */
 function unescape(text: string): string {
-  return text.replaceAll(/\\(?:[\da-f]{1,6}[\t\n\f\r ]?|[\s\S])/gi, (escape) => {
-    if (escape.length <= 2) {
-      return escape.slice(1)
+  return text.replaceAll(/\\(?:([\da-f]{1,6})[\t\n\f\r ]?|([\s\S]))/gi, (_escape, hex, char) => {
+    if (typeof hex !== 'string') {
+      return String(char)
     }
-    const codePoint = Number.parseInt(escape.slice(1).trim(), 16)
+    const codePoint = Number.parseInt(hex, 16)
     const isInvalid =
       codePoint === 0 ||
       codePoint > MAX_CODE_POINT ||

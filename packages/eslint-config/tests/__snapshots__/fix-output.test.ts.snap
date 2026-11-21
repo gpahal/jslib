@@ -139,7 +139,7 @@ export function items(list) {
   },
   "src/duplicate-imports/inline-before-type.ts": {
     "problems": [],
-    "text": "import type {Other, Shape } from './module';
+    "text": "import type {Other, Shape} from './module';
 
 /**
  * Pairs a shape with its id
@@ -151,8 +151,8 @@ export function pair(shape: Shape, other: Other): [Shape, Other] {
   },
   "src/duplicate-imports/inline-beside-type.ts": {
     "problems": [],
-    "text": "import type { Shape,Other } from './module'
-import {  shape } from './module'
+    "text": "import type { Shape, Other } from './module'
+import { shape } from './module'
 
 /**
  * The circle with an id
@@ -192,7 +192,7 @@ export const copy: Shape = { ...shape }
   "src/duplicate-imports/value-to-type.ts": {
     "problems": [],
     "text": "import type { Shape} from './module';
-import { shape  } from './module'
+import { shape } from './module'
 
 /**
  * A copy of the circle

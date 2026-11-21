@@ -82,6 +82,14 @@ test.each([
   expect(await lintRules(css, tailwindcssConfig)).toEqual([rule])
 })
 
+test.each([
+  [':root {\n  --gradient: linar-gradient(red, blue);\n}\n', ['function-no-unknown']],
+  ['a {\n  background: linar-gradient(var(--brand), blue);\n}\n', ['function-no-unknown']],
+  ["@font-face {\n  src: url('a.woff2') tech(variations);\n}\n", []],
+])('the base preset checks function names: %s', async (css, rules) => {
+  expect(await lintRules(css, baseConfig)).toEqual(rules)
+})
+
 /**
  * Whether `code` errors with the base preset, and the rules it reports, with or without `--quiet`
  */
@@ -200,7 +208,7 @@ test.each([
   '@custom-variant 3xl (@media (width >= 120rem));',
   'a {\n  @variant hover:focus {\n    color: red;\n  }\n}',
   'a {\n  @apply font-bold! md:w-1/2 [&>*]:p-4;\n}',
-  'a {\n  margin: theme(spacing[2.5]);\n  color: theme(colors.red.500);\n}',
+  'a {\n  margin: theme(spacing[2.5]);\n}',
   'a {\n  color: --alpha(var(--color-red-500) / 50%);\n  background: theme(--color-missing, red);\n}',
   '@media (width >= theme(--breakpoint-md)) {\n  a {\n    color: red;\n  }\n}',
   '@tailwind utilities source(none);',
@@ -213,6 +221,8 @@ test.each([
   ['a {\n  color: --alpha(red);\n}\n', 'declaration-property-value-no-unknown'],
   // Tailwind CSS v3's
   ['@tailwind base;\n', 'at-rule-prelude-no-invalid'],
+  // A legacy dotted key path, which CSS can't parse. `theme(--color-red-500)` passes
+  ['a {\n  color: theme(colors.red.500);\n}\n', 'value-no-invalid'],
 ])(
   'the tailwindcss preset checks the syntax of Tailwind functions and at-rules: %s',
   async (css, rule) => {
@@ -334,17 +344,15 @@ describe('.html and .md files', () => {
       root: process.cwd(),
       rules: {
         'selector-pseudo-class-no-unknown': [true, { ignorePseudoClasses: ['deep'] }],
-        'declaration-block-single-line-max-declarations': 1,
+        'no-unknown-animations': true,
       },
     })
     const astro = '<style>\n  .a :global(p) :deep(b) {\n    color: red;\n  }\n</style>\n'
     expect(await lintFile(astro, 'src/page.astro', config)).toEqual([])
     // The .md override turns the rule off, which your top-level setting leaves off
-    const markdown = '<style>\n  a { color: red; background: blue; }\n</style>\n'
+    const markdown = '<style>\n  a {\n    animation: spin 1s;\n  }\n</style>\n'
     expect(await lintFile(markdown, 'src/doc.md', config)).toEqual([])
-    expect(await lintFile(markdown, 'src/page.html', config)).toEqual([
-      '2:declaration-block-single-line-max-declarations',
-    ])
+    expect(await lintFile(markdown, 'src/page.html', config)).toEqual(['3:no-unknown-animations'])
   })
 
   it("merges each of your overrides over the preset's settings, not over each other", async () => {

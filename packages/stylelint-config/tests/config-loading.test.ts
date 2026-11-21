@@ -367,7 +367,6 @@ test('keeps native sibling precedence, nested conditions and user merges', async
   expect(resolved?.reportNeedlessDisables).toBe(true)
   const nested = await defineConfig({
     root,
-    // @ts-expect-error - Native Stylelint accepts object extends inside inherited overrides
     extends: {
       extends: first,
       overrides: [
@@ -494,12 +493,15 @@ describe('resolves extended package configs as native Stylelint does', () => {
       "const rule = () => (_root, result) => { result.warn('fake', { rule: 'fake/report' }) }; rule.ruleName = 'fake/report'; module.exports = { ruleName: 'fake/report', rule }",
   }
 
-  it.each(['fake-cfg/strict', 'fake-cfg/data', 'exported-cfg/strict'])('%s', async (entry) => {
-    await using project = await withTmpProject('stylelint-config-package-paths', files)
-    expect(await nativeRules(project.dir, { extends: [entry] })).toContain('color-named')
-    const config = await defineConfig({ root: project.dir, extends: entry })
-    expect(await rulesAt(config, path.join(project.dir, 'a.css'))).toContain('color-named')
-  })
+  it.each(['fake-cfg/strict.js', 'fake-cfg/data.json', 'exported-cfg/strict'])(
+    '%s',
+    async (entry) => {
+      await using project = await withTmpProject('stylelint-config-package-paths', files)
+      expect(await nativeRules(project.dir, { extends: [entry] })).toContain('color-named')
+      const config = await defineConfig({ root: project.dir, extends: entry })
+      expect(await rulesAt(config, path.join(project.dir, 'a.css'))).toContain('color-named')
+    },
+  )
 
   it.each([
     ['exported-cfg/hidden', 'ERR_PACKAGE_PATH_NOT_EXPORTED'],
@@ -519,12 +521,32 @@ describe('resolves extended package configs as native Stylelint does', () => {
     })
   })
 
-  it('resolves an extensionless plugin path', async () => {
+  it.each(['fake-cfg/strict', 'fake-cfg/dir', './node_modules/fake-cfg/strict'])(
+    "rejects %s, which names no file and which native Stylelint can't find",
+    async (entry) => {
+      await using project = await withTmpProject('stylelint-config-package-paths', files)
+      expect(await nativeRules(project.dir, { extends: [entry] })).toContain(
+        `Could not find "${entry}"`,
+      )
+      await expect(defineConfig({ root: project.dir, extends: entry })).rejects.toThrow(
+        `@gpahal/stylelint-config: \`extends[0]\`: can't find \`${entry}\``,
+      )
+    },
+  )
+
+  it('resolves a plugin path with its extension only', async () => {
     await using project = await withTmpProject('stylelint-config-package-paths', files)
-    const options = { plugins: ['fake-plugin/rule'], rules: { 'fake/report': true } }
+    const options = { plugins: ['fake-plugin/rule.js'], rules: { 'fake/report': true } }
     expect(await nativeRules(project.dir, options)).toEqual(['fake/report'])
     const config = await defineConfig({ root: project.dir, ...options })
     expect(await rulesAt(config, path.join(project.dir, 'a.css'))).toContain('fake/report')
+    const extensionless = { ...options, plugins: ['fake-plugin/rule'] }
+    expect(await nativeRules(project.dir, extensionless)).toContain(
+      'Could not find "fake-plugin/rule"',
+    )
+    await expect(defineConfig({ root: project.dir, ...extensionless })).rejects.toThrow(
+      "@gpahal/stylelint-config: `plugins[0]`: can't find `fake-plugin/rule`",
+    )
     await expect(
       defineConfig({ root: project.dir, plugins: ['fake-plugin/missing'] }),
     ).rejects.toThrow("@gpahal/stylelint-config: `plugins[0]`: can't find `fake-plugin/missing`")

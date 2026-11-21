@@ -355,10 +355,13 @@ function isHeldBy(outerMessage: string, message: string, aggregates: AggregatesS
 
 /**
  * Tested on whole code points, since a letter outside the Basic Multilingual Plane is two UTF-16
- * units, neither of them a letter
+ * units, neither of them a letter. The end is `(?![\s\S])` rather than `$`, since V8 in Node 26
+ * doesn't match a letter outside the plane with a character class just before `$`, so
+ * `/[\p{L}\p{N}_]$/u` doesn't match `a𠮷`
  */
 const STARTS_WITH_WORD_CHAR_REGEX = /^[\p{L}\p{N}_]/u
-const ENDS_WITH_WORD_CHAR_REGEX = /[\p{L}\p{N}_]$/u
+// eslint-disable-next-line regexp/prefer-predefined-assertion -- `$` hits the V8 bug above
+const ENDS_WITH_WORD_CHAR_REGEX = /[\p{L}\p{N}_](?![\s\S])/u
 
 /**
  * A search retries from each match whose ends touch other word characters, so it can take time

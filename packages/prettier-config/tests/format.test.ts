@@ -343,13 +343,19 @@ export const c: A | typeof b = b
     }
   })
 
+  it('keeps the trailing commas of HuJSON, which Prettier parses as JSON with comments', async () => {
+    const source = '{\n  // A comment\n  "a": [1, 2],\n}\n'
+    expect(await formatWith(baseConfig, 'policy.hujson', source)).toBe(source)
+  })
+
   // The overrides list the files by hand, so a Prettier upgrade that changes a language fails here.
   // The patterns name only that language's files, so the JSON override sets no option for another
   // language, such as YAML's `.sublime-syntax`
   it.each([
-    ['jsonc', { trailingComma: 'none' }],
-    ['markdown', { proseWrap: 'never' }],
-  ] as const)("matches the files of Prettier's %s language", async (parser, options) => {
+    // HuJSON allows trailing commas
+    ['jsonc', { trailingComma: 'none' }, ['*.hujson']],
+    ['markdown', { proseWrap: 'never' }, []],
+  ] as const)("matches the files of Prettier's %s language", async (parser, options, excluded) => {
     const { languages } = await getSupportInfo()
     const patterns = languages.flatMap((language) =>
       language.parsers.includes(parser)
@@ -359,10 +365,13 @@ export const c: A | typeof b = b
           ]
         : [],
     )
+    expect(patterns).toEqual(expect.arrayContaining([...excluded]))
     const override = baseConfig.overrides?.find((candidate) =>
       Object.entries(options).every(([key, value]) => candidate.options?.[key] === value),
     )
-    expect(new Set([override?.files ?? []].flat())).toEqual(new Set(patterns))
+    expect(new Set([override?.files ?? []].flat())).toEqual(
+      new Set(patterns.filter((pattern) => !(excluded as ReadonlyArray<string>).includes(pattern))),
+    )
   })
 
   // Editors resolve the config with `.editorconfig`, which the preset's settings win over

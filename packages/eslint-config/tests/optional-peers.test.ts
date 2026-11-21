@@ -405,7 +405,7 @@ describe('checkPeerVersions', () => {
     async (version, manifest) => {
       await using project = await withProject({ [NEXT_PLUGIN]: manifest })
       expect(() => checkPeerVersions('nextjs', ['@next/eslint-plugin-next'], project.dir)).toThrow(
-        `@gpahal/eslint-config: \`nextjs\`: needs @next/eslint-plugin-next ^16.3, but ${version} is installed. Run \`pnpm add -D "@next/eslint-plugin-next@^16.3"\``,
+        `@gpahal/eslint-config: \`nextjs\`: needs @next/eslint-plugin-next ^16.4.6, but ${version} is installed. Run \`pnpm add -D "@next/eslint-plugin-next@^16.4.6"\``,
       )
     },
   )
@@ -419,7 +419,7 @@ describe('checkPeerVersions', () => {
       }),
     ).toEqual([
       [
-        '@gpahal/eslint-config: `nextjs`: @next/eslint-plugin-next 17.0.0 is newer than the tested range ^16.3, so its rules may break. If they do, install a version in the range, as in `pnpm add -D "@next/eslint-plugin-next@^16.3"`',
+        '@gpahal/eslint-config: `nextjs`: @next/eslint-plugin-next 17.0.0 is newer than the tested range ^16.4.6, so its rules may break. If they do, install a version in the range, as in `pnpm add -D "@next/eslint-plugin-next@^16.4.6"`',
         'GPAHAL_PEER_NEWER_THAN_RANGE',
       ],
     ])
@@ -495,7 +495,7 @@ test('checkCorePeerVersions rejects ESLint and TypeScript older than their range
     'package-lock.json': '{}\n',
   })
   expect(() => checkCorePeerVersions(project.dir)).toThrow(
-    '@gpahal/eslint-config: peer dependencies: needs eslint ^10.11, but 9.39.0 is installed, and typescript ~6.0.3, but 5.9.3 is installed. Run `npm install -D "eslint@^10.11" "typescript@~6.0.3"`',
+    '@gpahal/eslint-config: peer dependencies: needs eslint ^10.15.0, but 9.39.0 is installed, and typescript ~6.0.3, but 5.9.3 is installed. Run `npm install -D "eslint@^10.15.0" "typescript@~6.0.3"`',
   )
 })
 

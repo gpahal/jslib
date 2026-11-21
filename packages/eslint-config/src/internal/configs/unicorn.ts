@@ -81,6 +81,9 @@ export function unicorn({ files }: UnicornOptions): Array<TypedConfig> {
         // A `ResizeObserver` doesn't give the viewport's width with its scrollbar, as `innerWidth`
         // does, and it doesn't suggest `matchMedia`, the usual replacement
         'unicorn/prefer-observer-apis': 'off',
+        // A function may take its own options before ones it passes on, as `createESLint(dir,
+        // options, eslintOptions)` does, and a subclass of `Error` keeps `(message?, options?)`
+        'unicorn/prefer-options-parameter': 'off',
         // Any style of `node:path` and `node:util` imports passes, such as `import { join } from
         // 'node:path'`
         'unicorn/import-style': ['error', { styles: { path: false, util: false } }],

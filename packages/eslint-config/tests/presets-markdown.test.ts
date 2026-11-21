@@ -126,7 +126,7 @@ describe('markdown linting', () => {
     ])
   })
 
-  it('fixes a code-block problem and a Markdown problem in one run, but not bare URLs', async () => {
+  it('fixes a code-block problem and Markdown problems in one run, a bare `www.` URL included', async () => {
     const eslint = await sharedESLint('markdown', {}, { fix: true })
     const markdown = [
       '# Title',
@@ -140,22 +140,41 @@ describe('markdown linting', () => {
       '',
     ].join('\n')
     const [result] = await eslint.lintText(markdown, { filePath: 'docs.md' })
-    expect(result?.output).toBe(markdown.replace('[ docs ]', '[docs]').replace('var a', 'const a'))
-    expect(result?.messages.map((message) => message.ruleId)).toEqual([
-      '@gpahal/markdown/no-bare-urls',
-    ])
+    expect(result?.output).toBe(
+      markdown
+        .replace('[ docs ]', '[docs]')
+        // eslint-disable-next-line unicorn/prefer-https -- `markdown/no-bare-urls`' fix writes `http://`, as GFM reads a `www.` literal
+        .replace('www.example.com', '[www.example.com](http://www.example.com)')
+        .replace('var a', 'const a'),
+    )
+    expect(result?.messages).toEqual([])
   })
 
-  it('reports a bare URL once: a scheme URL with a fix, and `www.` and email literals without', async () => {
+  it('reports a bare URL once, with a fix unless rewriting it could change its target', async () => {
     const eslint = await sharedESLint('markdown')
-    // `prefer-autolinks` leaves out a URL with a character reference, so `no-bare-urls` keeps it
-    const markdown =
-      '# Title\n\nGo to https://a.dev now.\n\nSee www.a.dev and a@b.dev.\n\nSee https://a.dev/?a=1&amp;b=2.\n'
+    // `prefer-autolinks` leaves out a URL with a character reference or with `|` in a table cell,
+    // so `no-bare-urls` keeps it, without a fix
+    const markdown = [
+      '# Title',
+      '',
+      'Go to https://a.dev now.',
+      '',
+      'See www.a.dev and a@b.dev.',
+      '',
+      'See https://a.dev/?a=1&amp;b=2 and www.a.dev/&lt;x.',
+      '',
+      '| Link |',
+      '| --- |',
+      String.raw`| https://a.dev/a\|b |`,
+      '',
+    ].join('\n')
     expect(await problemsOf(eslint, 'docs.md', markdown)).toEqual([
       '3:7 @gpahal/markdown/prefer-autolinks 2 fix',
-      '5:5 @gpahal/markdown/no-bare-urls 2',
-      '5:19 @gpahal/markdown/no-bare-urls 2',
+      '5:5 @gpahal/markdown/no-bare-urls 2 fix',
+      '5:19 @gpahal/markdown/no-bare-urls 2 fix',
       '7:5 @gpahal/markdown/no-bare-urls 2',
+      '7:36 @gpahal/markdown/no-bare-urls 2',
+      '11:3 @gpahal/markdown/no-bare-urls 2',
     ])
   })
 

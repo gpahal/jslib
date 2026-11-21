@@ -172,7 +172,7 @@ describe("your rule settings keep the ignore* options of every preset layer's se
     ])
     expect(topLevelRules(config)['function-no-unknown']).toEqual([
       true,
-      { ignoreFunctions: ['tech', 'theme', 'brand'], severity: 'warning' },
+      { ignoreFunctions: ['theme', 'brand'], severity: 'warning' },
     ])
     const css =
       '@my-rule;\n\n@theme {\n  --color-x: red;\n}\n\na {\n  color: theme(--color-x);\n}\n'
@@ -670,7 +670,7 @@ describe('extended configs beat the preset, and your rules merge over them', () 
       overrides: [{ files: ['**/*.scss'], extends: [scssConfig] }],
     })
     expect(await settingsOf(config, 'src/a.scss', ['function-no-unknown'])).toEqual({
-      'function-no-unknown': [true, { ignoreFunctions: ['tech'], severity: 'warning' }],
+      'function-no-unknown': [true, { severity: 'warning' }],
     })
   })
 })

@@ -349,17 +349,6 @@ export function optionsInSettings(
 
 const DUPLICATES_PATCHED = Symbol('@gpahal/eslint-config no-duplicates fix')
 
-/**
- * A value import with an inline `type` specifier, as in `import { type A, b } from 'a'`.
- * `importKind` is TypeScript syntax, which the ESTree types lack
- */
-function hasInlineTypeSpecifier(node: ESTree.ImportDeclaration): boolean {
-  return (
-    Reflect.get(node, 'importKind') !== 'type' &&
-    node.specifiers.some((specifier) => Reflect.get(specifier, 'importKind') === 'type')
-  )
-}
-
 const RECORDING_FIXER: Rule.RuleFixer = {
   insertTextAfter: (nodeOrToken, text) =>
     RECORDING_FIXER.insertTextAfterRange(rangeOf(nodeOrToken), text),
@@ -382,17 +371,11 @@ function recordFix(fix: Rule.ReportFixer): Array<Rule.Fix> {
 }
 
 /**
- * Patches `import-x/no-duplicates`' fix, keeping the report:
- *
- * - Drops it for a module with a duplicate holding an inline `type` specifier. The rule groups
- *   `import { type A, b } from 'a'` with `import type { C } from 'a'`, and merges it into that,
- *   writing `import type { C, type A, b }` (TS2206). `import-x/consistent-type-specifier-style`
- *   moves the specifier into its own `import type`, after which the merge is safe
- * - Starts it at the start of the declaration it merges into, so that it overlaps another rule's
- *   fix of that declaration, which ESLint then applies in a later pass. Otherwise
- *   `consistent-type-imports` turning `import { A } from 'a'` into `import type { A } from 'a'`
- *   and the merge of `import { b } from 'a'` into it apply together as `import type { A, b }`
- *   (TS1361)
+ * Patches `import-x/no-duplicates`' fix, keeping the report, to start at the start of the
+ * declaration it merges into, so that it overlaps another rule's fix of that declaration, which
+ * ESLint then applies in a later pass. Otherwise `consistent-type-imports` turning
+ * `import { A } from 'a'` into `import type { A } from 'a'` and the merge of `import { b } from
+ * 'a'` into it apply together as `import type { A, b }` (TS1361)
  */
 function patchDuplicateImports(rule: Rule.RuleModule): void {
   patchCreateOnce(rule, DUPLICATES_PATCHED, (create) => (context) => {
@@ -412,19 +395,10 @@ function patchDuplicateImports(rule: Rule.RuleModule): void {
       ...listeners,
       'Program:exit': (node) => {
         onExit?.(node)
-        const unsafeModules = new Set(
-          reports.flatMap(({ descriptor, declaration }) =>
-            isNodeOfType(declaration, 'ImportDeclaration') && hasInlineTypeSpecifier(declaration)
-              ? [descriptor.data?.['module']]
-              : [],
-          ),
-        )
         for (const { descriptor, declaration } of reports) {
           const { fix } = descriptor
           if (fix == null || !isNodeOfType(declaration, 'ImportDeclaration')) {
             context.report(descriptor)
-          } else if (unsafeModules.has(descriptor.data?.['module'])) {
-            context.report({ ...descriptor, fix: undefined })
           } else {
             context.report({
               ...descriptor,
@@ -785,9 +759,7 @@ export function hasPatchedFixes(context: Rule.RuleContext): boolean {
 
 /**
  * Patches fixes that leave invalid code or change what the code declares, and returns the config
- * that turns the patches on in every file. `import-x/no-duplicates`' patch doesn't check that
- * `consistent-type-specifier-style` is on, so with it off, a duplicate of a module imported with an
- * inline `type` specifier never gets a fix
+ * that turns the patches on in every file
  */
 export function patchUnsafeFixes(
   configs: ReadonlyArray<Pick<Linter.Config, 'plugins'>>,

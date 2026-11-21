@@ -245,14 +245,11 @@ export function rebaseGlob(glob: string, basePath: string, root: string): Array<
 }
 
 /**
- * Joins as an extglob alternation, such as `@(a|b)/dist/`. A `|` in a name is `[|]`, since
- * minimatch splits an alternation at an escaped `|` too
+ * Joins as an extglob alternation, such as `@(a|b)/dist/`
  */
 export function joinSiblingGlob(names: ReadonlyArray<string>, glob: string): string {
   const isNegated = glob.startsWith('!')
-  const escaped = names.map((name) =>
-    names.length === 1 ? escapeGlob(name) : escapeGlob(name).replaceAll(String.raw`\|`, '[|]'),
-  )
+  const escaped = names.map((name) => escapeGlob(name))
   const prefix = names.length === 1 ? (escaped[0] ?? '') : `@(${escaped.join('|')})`
   return `${isNegated ? '!' : ''}${prefix}/${isNegated ? glob.slice(1) : glob}`
 }

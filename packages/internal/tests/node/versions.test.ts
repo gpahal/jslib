@@ -22,6 +22,14 @@ test.each([
 })
 
 test.each([
+  ['4.7.1', true],
+  ['4.7.1-beta.1', true],
+  ['4.7.0', false],
+])('isAtLeast(%j, 4.7.1) is %s', (version, expected) => {
+  expect(isAtLeast(version, '4.7.1')).toBe(expected)
+})
+
+test.each([
   // A prerelease, such as a Next.js canary, counts when inside the range
   ['16.4.0-canary.1', '^16.3', true, false],
   ['16.3.0', '^16.3', true, false],

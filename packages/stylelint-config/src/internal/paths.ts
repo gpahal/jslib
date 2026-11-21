@@ -35,7 +35,7 @@ export function isPortableOverride(override: object): boolean {
 
 /**
  * A glob that matches only `path`, with each glob character in a class such as `[(]`. Stylelint
- * turns backslashes into slashes, so backslash escapes don't survive. `!` stays, since fast-glob
+ * turns backslashes into slashes, so backslash escapes don't survive. `!` stays, since picomatch
  * reads `[!]` as a negated class, and a bare `!` can't start an absolute path or precede a
  * classed `(`
  */
@@ -89,13 +89,6 @@ export function overrideGlobs(files: string | ReadonlyArray<string>, root: strin
 }
 
 /**
- * The suffixes native Stylelint's `resolveSilent` tries, in order, as `fake-cfg/strict` for
- * `fake-cfg/strict.js`
- */
-const PATH_SUFFIXES = ['', '.js', '.json', `${path.sep}index.js`, `${path.sep}index.json`]
-const SPECIFIER_SUFFIXES = ['', '.js', '.json', '/index.js', '/index.json']
-
-/**
  * The stats of `filename`, following symlinks, or `undefined` when it can't be read
  */
 function statOf(filename: string): fs.Stats | undefined {
@@ -118,33 +111,21 @@ export function isPathEntry(entry: string): boolean {
 }
 
 /**
- * The file that `specifier` names from `base`, as native Stylelint resolves it, trying each of
- * {@link PATH_SUFFIXES}. A path keeps `base` as given, so globs on it match through a symlinked
- * root. A package's `exports` apply to each suffixed specifier
+ * The file that `specifier` names from `base`, as native Stylelint's `resolveSilent` resolves it,
+ * with no extension or `index` file added. A path keeps `base` as given, so globs on it match
+ * through a symlinked root
  *
- * @throws Error of resolving `specifier` as given, such as `ERR_PACKAGE_PATH_NOT_EXPORTED` or
- *   `ERR_MODULE_NOT_FOUND`, when no suffix names a file.
+ * @throws Error of resolving a package specifier, such as `ERR_PACKAGE_PATH_NOT_EXPORTED` or
+ *   `ERR_MODULE_NOT_FOUND`.
  */
 export function resolveModulePath(specifier: string, base: string): string | undefined {
   if (isPathEntry(specifier)) {
     const resolved = path.resolve(base, specifier)
-    return PATH_SUFFIXES.map((suffix) => resolved + suffix).find((candidate) => isFile(candidate))
+    return isFile(resolved) ? resolved : undefined
   }
   // The folder's URL, so a resolution error names the folder rather than a file there
-  const parent = pathToFileURL(path.join(base, path.sep)).href
-  let failure: { error: unknown } | undefined
-  for (const [index, suffix] of SPECIFIER_SUFFIXES.entries()) {
-    try {
-      const url = new URL(resolve(specifier + suffix, parent))
-      if (url.protocol === 'file:' && isFile(fileURLToPath(url))) {
-        return fileURLToPath(url)
-      }
-    } catch (error) {
-      if (index === 0) failure = { error }
-    }
-  }
-  if (failure !== undefined) throw failure.error
-  return undefined
+  const url = new URL(resolve(specifier, pathToFileURL(path.join(base, path.sep)).href))
+  return url.protocol === 'file:' && isFile(fileURLToPath(url)) ? fileURLToPath(url) : undefined
 }
 
 function modulePath<T>(value: T, root: string, subject: string): T | string {
@@ -237,6 +218,12 @@ export function normalizeConfigPaths(config: Config, root: string, subject = '')
 }
 
 /**
+ * Glob syntax as tinyglobby, Stylelint's `referenceFiles` globber, finds it, or braces, which it
+ * reads as text
+ */
+const GLOB_SYNTAX_REGEX = /[*?[\](){}]|^!/
+
+/**
  * Check that each `referenceFiles` entry of paths without glob syntax names a path that exists,
  * since Stylelint otherwise fails with a stack trace on every run. An entry with a glob passes to
  * Stylelint unchecked, since matching it would walk the file system on every config load
@@ -255,7 +242,8 @@ export function checkReferencePathsExist(
     if (
       patterns.length === 0 ||
       patterns.some(
-        (pattern) => isGlob(pattern) || statOf(path.resolve(root, pattern)) !== undefined,
+        (pattern) =>
+          GLOB_SYNTAX_REGEX.test(pattern) || statOf(path.resolve(root, pattern)) !== undefined,
       )
     ) {
       continue
@@ -281,13 +269,6 @@ export function checkReferencePathsExist(
           ),
     )
   }
-}
-
-/**
- * Whether `pattern` has glob syntax as fast-glob, Stylelint's `referenceFiles` matcher, finds it
- */
-function isGlob(pattern: string): boolean {
-  return /[*?[\]{}]|^!|[!+@]\(/.test(pattern) || (pattern.includes('(') && pattern.includes('|'))
 }
 
 type Override = NonNullable<Config['overrides']>[number]

@@ -139,8 +139,6 @@ export function fileTypeOverrides({
         files: '*.{md,markdown}',
         customSyntax: markdownSyntax,
         rules: {
-          // Prettier doesn't format the HTML in `.md` files, so nothing would fix a one-line block
-          'declaration-block-single-line-max-declarations': null,
           // A code block can be a partial snippet using the project's definitions. The empty line
           // fix fights Prettier there
           'no-invalid-position-declaration': null,
@@ -229,7 +227,7 @@ function moduleBaseOf(base: string): 'always' | 'maybe' | 'never' {
 
 /**
  * A glob extension that can't match a `.`: a word, or an `@(…)` extglob of words. A brace left after
- * expansion is part of the word, since micromatch, as bash, keeps `{astro}` literal
+ * expansion is part of the word, since picomatch, as bash, keeps `{astro}` literal
  */
 const CLOSED_EXTENSION_REGEX = /^(?:[\w{}-]+|@\([\w{}|-]+\))$/
 
@@ -352,7 +350,7 @@ const CSS_PATTERN = '!(*.@(astro|html|md|markdown)|*.module.css)'
 
 /**
  * A pattern for the names `stem` matches less CSS Modules, only for `*` or a plain prefix before
- * `*`, such as `a*`. A `.` in the prefix could end a `.module` the negation misses, and micromatch
+ * `*`, such as `a*`. A `.` in the prefix could end a `.module` the negation misses, and picomatch
  * mishandles nested negations such as `!(!(a*e)|*.module)`
  */
 function nonModulePattern(stem: string): string | undefined {

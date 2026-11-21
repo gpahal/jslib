@@ -49,8 +49,9 @@ export function presetRules({
   logical?: boolean | undefined
 }): StylelintRules {
   return {
-    // `tech()` is a `@font-face` `src` function, which the rule doesn't know
-    'function-no-unknown': [true, { ignoreFunctions: ['tech'] }],
+    // `stylelint-config-recommended` 19 left it out. `declaration-property-value-no-unknown` skips
+    // custom properties and values with `var()`, where only this rule reports a misspelled function
+    'function-no-unknown': true,
     'color-no-invalid-hex': true,
     'unit-no-unknown': true,
     'function-linear-gradient-no-nonstandard-direction': true,
@@ -66,8 +67,6 @@ export function presetRules({
     // The Tailwind variant changes this to `number`, as Tailwind's palette writes hues
     'hue-degree-notation': 'angle',
     'value-keyword-case': ['lower', { ignoreProperties: [FONT_FAMILY_VARIABLE_REGEX] }],
-    'selector-no-invalid': true,
-    'selector-no-unmatchable': true,
     // Report-only: `:is()`, the fix's replacement, takes its most specific argument's specificity
     'selector-no-deprecated': [true, { disableFix: true }],
     // A scheme-relative URL loads over HTTP from an HTTP page and fails from a `file:` page

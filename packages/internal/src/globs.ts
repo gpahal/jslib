@@ -74,7 +74,7 @@ function hideEscapes(glob: string): { hidden: string; restore: (expanded: string
  * so `{!a,b}` gives `\!a`, the name `!a`, as minimatch reads it, not a negation, and a leading
  * extglob is wrapped instead, so `{!(a),b}` gives `@(!(a))` and `b`.
  *
- * Stylelint 17 matches with micromatch, which differs in places: it reads `a{1..10}.css` as
+ * Stylelint matches with picomatch, which differs in places: it reads `a{1..10}.css` as
  * `a[1-10].css` and `"{a,b}".css` literally. stylelint-config passes the original globs to
  * Stylelint and uses the expansion only to classify and bound them
  *

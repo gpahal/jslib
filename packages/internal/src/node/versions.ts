@@ -25,13 +25,14 @@ export function isInsidersVersion(version: unknown): boolean {
 }
 
 /**
- * Whether `version` is at least `minimum`, a `major.minor` such as `'4.7'`. A prerelease of the
- * minimum, such as `4.7.0-beta.1`, counts, and a version that isn't a string or valid doesn't
+ * Whether `version` is at least `minimum`, a `major.minor` such as `'4.7'` or a version such as
+ * `'4.7.1'`. A prerelease of the minimum, such as `4.7.0-beta.1`, counts, and a version that isn't
+ * a string or valid doesn't
  */
 export function isAtLeast(version: unknown, minimum: string): boolean {
+  const floor = minimum.split('.').length === 2 ? `${minimum}.0` : minimum
   return (
-    typeof version === 'string' &&
-    satisfies(version, `>=${minimum}.0-0`, { includePrerelease: true })
+    typeof version === 'string' && satisfies(version, `>=${floor}-0`, { includePrerelease: true })
   )
 }
 

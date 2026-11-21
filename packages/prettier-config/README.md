@@ -33,7 +33,7 @@ Shared Prettier config with sorted imports and `package.json` keys, and optional
 pnpm add -D @gpahal/prettier-config prettier
 ```
 
-Requires Node 24.22 or later and Prettier `^3.9`. The `astro` option needs `prettier-plugin-astro` `^1.1`, and `tailwindcss` needs `prettier-plugin-tailwindcss` `>=0.8.0 <0.9.0`, both optional peers. With an older Prettier, as npm's `--legacy-peer-deps` allows, the config warns once with the code `GPAHAL_PRETTIER_OLD_PRETTIER`, since some files may be formatted wrongly without an error.
+Requires Node 24.22 or later and Prettier `^3.10.1`. The `astro` option needs `prettier-plugin-astro` `^1.1.2`, and `tailwindcss` needs `prettier-plugin-tailwindcss` `>=0.8.1 <0.9.0`, both optional peers. With an older Prettier, as npm's `--legacy-peer-deps` allows, the config warns once with the code `GPAHAL_PRETTIER_OLD_PRETTIER`, since some files may be formatted wrongly without an error.
 
 ## Quick start
 
@@ -363,7 +363,7 @@ The files with an extension or filename of Prettier's `markdown` language, such 
 
 ### JSON with comments
 
-Every file Prettier parses as JSON with comments, including `.jsonc` and editor config files, gets `trailingComma: 'none'`; use [overrides][Override some files] to change it. Code blocks in Markdown, and files you map to `jsonc` yourself, keep the `trailingComma` of the Markdown or override options.
+Every file Prettier parses as JSON with comments, including `.jsonc` and editor config files, gets `trailingComma: 'none'`, but `.hujson`, whose format allows trailing commas; use [overrides][Override some files] to change it. Code blocks in Markdown, and files you map to `jsonc` yourself, keep the `trailingComma` of the Markdown or override options.
 
 ### Known issues
 

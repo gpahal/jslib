@@ -17,22 +17,23 @@ import { isReset, KEPT_NAMESPACES } from '@/internal/tailwind-theme-function'
 import { linkTailwind } from './helpers'
 
 /**
- * The `globby` that Stylelint globs `referenceFiles` with, which the package doesn't depend on
+ * The tinyglobby `glob` that Stylelint globs `referenceFiles` with, which the package doesn't
+ * depend on
  */
-type Globby = (
+type Glob = (
   patterns: ReadonlyArray<string>,
   options: { absolute: boolean },
 ) => Promise<Array<string>>
 
-function isGlobbyModule(value: unknown): value is { globby: Globby } {
-  return isRecord(value) && typeof value['globby'] === 'function'
+function isGlobModule(value: unknown): value is { glob: Glob } {
+  return isRecord(value) && typeof value['glob'] === 'function'
 }
 
-const globbyModule: unknown = await import(resolve('globby', import.meta.resolve('stylelint')))
-if (!isGlobbyModule(globbyModule)) {
-  throw new TypeError("Stylelint's globby has no `globby` export")
+const globModule: unknown = await import(resolve('tinyglobby', import.meta.resolve('stylelint')))
+if (!isGlobModule(globModule)) {
+  throw new TypeError("Stylelint's tinyglobby has no `glob` export")
 }
-const { globby } = globbyModule
+const { glob: stylelintGlob } = globModule
 
 const THEME = /[/\\]tailwindcss[/\\]theme\.css$/
 
@@ -219,7 +220,7 @@ describe('referenceFiles', () => {
       const [glob] = referenceGlobs(
         (await defineConfig({ root: dir, tailwindcss: { entryPoint } })).referenceFiles,
       )
-      expect(await globby([glob!], { absolute: true })).toEqual([entryPoint])
+      expect(await stylelintGlob([glob!], { absolute: true })).toEqual([entryPoint])
     },
   )
 

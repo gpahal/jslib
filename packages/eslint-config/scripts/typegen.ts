@@ -11,7 +11,6 @@ import type { ESLint, Rule } from 'eslint'
 import { compileRule, flatConfigsToPlugins } from 'eslint-typegen/core'
 import { builtinRules } from 'eslint/use-at-your-own-risk'
 
-import { formatMessage } from '@gpahal/std/errors'
 import { isRecord } from '@gpahal/std/objects'
 
 import { defineConfig } from '../build/index.js'
@@ -70,91 +69,35 @@ export function withAdditionalProperties(schema: unknown): unknown {
     : patched
 }
 
-const DEFINITION_REF_REGEX = /^#\/(definitions|\$defs)\/(.+)$/u
-
 /**
- * Inlines non-recursive `$ref`s to `definitions` or `$defs`. The compiler writes a definition
- * reached twice as an interface with two index signatures, which `skipLibCheck: false` rejects
+ * The rule with {@link withAdditionalProperties} applied to its schema
  */
-export function withInlinedDefinitions(schema: unknown): unknown {
-  const definitionsOf = (keyword: string): Record<string, unknown> =>
-    isRecord(schema) && isRecord(schema[keyword]) ? schema[keyword] : {}
-  const definitions = { definitions: definitionsOf('definitions'), $defs: definitionsOf('$defs') }
-  const inline = (node: unknown, expanding: ReadonlySet<string>): unknown => {
-    const ref = isRecord(node) ? node['$ref'] : undefined
-    const match = typeof ref === 'string' ? DEFINITION_REF_REGEX.exec(ref) : null
-    const [, keyword, name] = match ?? []
-    const source = keyword === '$defs' ? definitions.$defs : definitions.definitions
-    const key = `${keyword ?? ''}/${name ?? ''}`
-    if (
-      name !== undefined &&
-      isRecord(node) &&
-      !expanding.has(key) &&
-      Object.hasOwn(source, name)
-    ) {
-      const { $ref: _ref, ...rest } = node
-      const definition = inline(source[name], new Set([...expanding, key]))
-      const siblings = inline(rest, expanding)
-      return {
-        ...(isRecord(definition) && definition),
-        ...(isRecord(siblings) && siblings),
-      }
-    }
-    return mapSubschemas(node, (subschema) => inline(subschema, expanding))
-  }
-  return inline(schema, new Set())
-}
-
-function hasDuplicateDeclarations(declarations: ReadonlyArray<string>): boolean {
-  const names = declarations.flatMap((line) => /^(?:interface|type) (\w+)/.exec(line)?.[1] ?? [])
-  return new Set(names).size !== names.length
-}
-
-/**
- * Throws when the compiler would still declare a name twice, as for a recursive definition
- */
-export async function patchRule(name: string, rule: Rule.RuleModule): Promise<Rule.RuleModule> {
-  const withSchema = (schema: unknown): Rule.RuleModule => ({
+export function patchRule(rule: Rule.RuleModule): Rule.RuleModule {
+  return {
     ...rule,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- The rule's own schema, patched without changing what it accepts
-    meta: { ...rule.meta, schema: schema as Rule.RuleMetaData['schema'] },
-  })
-  const patched = withSchema(withAdditionalProperties(rule.meta?.schema))
-  if (!hasDuplicateDeclarations((await compileRule(name, patched)).typeDeclarations)) {
-    return patched
+    meta: {
+      ...rule.meta,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- The rule's own schema, patched without changing what it accepts
+      schema: withAdditionalProperties(rule.meta?.schema) as Rule.RuleMetaData['schema'],
+    },
   }
-  const inlined = withSchema(withInlinedDefinitions(patched.meta?.schema))
-  if (hasDuplicateDeclarations((await compileRule(name, inlined)).typeDeclarations)) {
-    throw new Error(
-      formatMessage(
-        '@gpahal/eslint-config',
-        ['typegen', `\`${name}\``],
-        'declares a type name twice after its definitions are inlined, which a consumer with `skipLibCheck: false` rejects. Patch its schema in `patchRule`',
-      ),
-    )
-  }
-  return inlined
 }
 
-async function patchPlugins(
-  plugins: Record<string, ESLint.Plugin>,
-): Promise<Record<string, ESLint.Plugin>> {
-  const entries = await Promise.all(
-    Object.entries(plugins).map(async ([pluginName, plugin]) => {
-      const rules = await Promise.all(
-        Object.entries(plugin.rules ?? {}).map(
-          async ([ruleName, rule]): Promise<[string, typeof rule]> => [
+function patchPlugins(plugins: Record<string, ESLint.Plugin>): Record<string, ESLint.Plugin> {
+  return Object.fromEntries(
+    Object.entries(plugins).map(([pluginName, plugin]) => [
+      pluginName,
+      {
+        ...plugin,
+        rules: Object.fromEntries(
+          Object.entries(plugin.rules ?? {}).map(([ruleName, rule]) => [
             ruleName,
-            typeof rule === 'object'
-              ? await patchRule(pluginName ? `${pluginName}/${ruleName}` : ruleName, rule)
-              : rule,
-          ],
+            typeof rule === 'object' ? patchRule(rule) : rule,
+          ]),
         ),
-      )
-      return [pluginName, { ...plugin, rules: Object.fromEntries(rules) }] as const
-    }),
+      },
+    ]),
   )
-  return Object.fromEntries(entries)
 }
 
 /**
@@ -443,7 +386,7 @@ export async function generateTypegen(): Promise<{ typegen: string; configNames:
       ({ name }) => name === undefined || !isResolvedConfigName(name),
     ),
   ])
-  const rules = await pluginsToRulesDts(await patchPlugins(plugins))
+  const rules = await pluginsToRulesDts(patchPlugins(plugins))
   const names = getConfigNames(configSets)
   return {
     typegen: [

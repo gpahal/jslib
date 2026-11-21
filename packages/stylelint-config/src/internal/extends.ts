@@ -136,8 +136,8 @@ export async function loadExtends(
     if (located === undefined) {
       return fail(
         isPathEntry(entry)
-          ? `can't find ${formatNames([entry])}. Pass a path to a file`
-          : `can't find ${formatNames([entry])} in its package. Pass a file the package has`,
+          ? `can't find ${formatNames([entry])}. Pass a path to a file, with its extension`
+          : `can't find ${formatNames([entry])} in its package. Pass a file the package has, with its extension`,
       )
     }
     let value: unknown

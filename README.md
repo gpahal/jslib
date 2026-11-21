@@ -18,6 +18,7 @@ TypeScript libraries and config presets that I use in my projects, published to 
 - [Troubleshooting](#troubleshooting)
   - [`needs typescript ~6.0.3`, or `ERESOLVE`](#needs-typescript-603-or-eresolve)
   - [`ERR_PNPM_IGNORED_BUILDS`](#err_pnpm_ignored_builds)
+  - [Peer dependency warnings on install](#peer-dependency-warnings-on-install)
   - [`ERR_REQUIRE_ASYNC_MODULE` from Stylelint](#err_require_async_module-from-stylelint)
   - [The editor shows stale ESLint results](#the-editor-shows-stale-eslint-results)
   - [A `GPAHAL_…` warning](#a-gpahal_-warning)
@@ -52,9 +53,9 @@ The packages need Node 24.22 or later on macOS or Linux. They resolve plugins an
 
 | Package | Node | Required peers | Optional peers |
 | --- | --- | --- | --- |
-| `@gpahal/eslint-config` | `>=24.22.0` | `eslint` `^10.11` | `typescript` and the plugins of each preset, listed in [Install](packages/eslint-config/README.md#install) |
-| `@gpahal/prettier-config` | `>=24.22.0` | `prettier` `^3.9` | `prettier-plugin-astro` `^1.1`, `prettier-plugin-tailwindcss` `>=0.8.0 <0.9.0` |
-| `@gpahal/stylelint-config` | `>=24.22.0` | `stylelint` `^17.15` | `tailwindcss` `^4.3` |
+| `@gpahal/eslint-config` | `>=24.22.0` | `eslint` `^10.15.0` | `typescript` and the plugins of each preset, listed in [Install](packages/eslint-config/README.md#install) |
+| `@gpahal/prettier-config` | `>=24.22.0` | `prettier` `^3.10.1` | `prettier-plugin-astro` `^1.1.2`, `prettier-plugin-tailwindcss` `>=0.8.1 <0.9.0` |
+| `@gpahal/stylelint-config` | `>=24.22.0` | `stylelint` `^18.0.0` | `tailwindcss` `^4.3.5` |
 | `@gpahal/tsconfig` | Any | `typescript` `~6.0.3` | `@types/node` `*` |
 | `@gpahal/std` | `>=24.22.0` in Node; any modern browser | None | None |
 | `@gpahal/font-fallback` | `>=24.22.0` | None | None |
@@ -734,6 +735,18 @@ allowBuilds:
   unrs-resolver: false
 ```
 
+### Peer dependency warnings on install
+
+Two plugins that the config packages install haven't widened their peer ranges to the latest majors, which the packages use and test with: `stylelint-plugin-use-baseline` to Stylelint 18 and `eslint-plugin-markdown-preferences` to `@eslint/markdown` 9. pnpm reports them as unmet peers and npm warns `Could not resolve dependency`, and both install anyway. npm also installs `@eslint/markdown` 8 a second time, for `eslint-plugin-markdown-preferences` alone, which still lints with `@eslint/markdown` 9. To silence pnpm, allow the versions:
+
+```yaml
+# pnpm-workspace.yaml
+peerDependencyRules:
+  allowedVersions:
+    eslint-plugin-markdown-preferences>@eslint/markdown: '9'
+    stylelint-plugin-use-baseline>stylelint: '18'
+```
+
 ### `ERR_REQUIRE_ASYNC_MODULE` from Stylelint
 
 The Stylelint config exports `await defineConfig(...)`, and `defineConfig` rejected an option. Stylelint then shows this error instead of the option's. Export `defineConfig(...)` without `await` to see the option's error.
@@ -780,7 +793,7 @@ allowBuilds:
 An audit of a fresh install reports two advisories:
 
 - [GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7), in KaTeX's renderer, which eslint-config installs through `micromark-extension-math` but never runs. To clear it, add `katex@>=0.11.0 <0.18.2: ^0.18.2` under `overrides` in `pnpm-workspace.yaml`, or with npm, `"overrides": { "katex": "^0.18.2" }` in `package.json`.
-- [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), in minimatch 10, which ESLint and several plugins install. Only minimatch 11 fixes it, and none of them set the vulnerable `optimizationLevel` 2. To clear it, add `GHSA-g3hv-75wg-m249` under `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`.
+- [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), in minimatch 10, which eslint-plugin-sonarjs and eslint-plugin-jsx-a11y-x install. Only minimatch 11 fixes it, and neither sets the vulnerable `optimizationLevel` 2. To clear it, add `GHSA-g3hv-75wg-m249` under `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`.
 
 ## Lists and merging
 
