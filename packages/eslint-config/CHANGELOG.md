@@ -1,5 +1,15 @@
 # @gpahal/eslint-config
 
+## 0.0.148
+
+### Patch Changes
+
+- [#33](https://github.com/gpahal/jslib/pull/33) [`6679625`](https://github.com/gpahal/jslib/commit/66796256c115dfe3fada6fdfb57a77a3102e2b31) Thanks [@gpahal](https://github.com/gpahal)! - Require ESLint 10.15.0 and the latest release of each preset's plugin, and update `@eslint/markdown` to 9.0.0, whose `no-bare-urls` fix now links a `www.` URL, though not a URL with a character reference or with `|` in a table cell, which rewriting could retarget. Update `eslint-plugin-unicorn` to 80.0.0, with `unicorn/prefer-options-parameter` off, and `eslint-plugin-import-x` to 4.18.1.
+
+- [#34](https://github.com/gpahal/jslib/pull/34) [`5f9d29d`](https://github.com/gpahal/jslib/commit/5f9d29df335c69150f7d2ce6c2759b2525c64eb5) Thanks [@gpahal](https://github.com/gpahal)! - Require `@eslint-react/eslint-plugin` 5.30.5.
+- Updated dependencies [[`6679625`](https://github.com/gpahal/jslib/commit/66796256c115dfe3fada6fdfb57a77a3102e2b31)]:
+  - @gpahal/std@0.0.54
+
 ## 0.0.147
 
 ### Patch Changes

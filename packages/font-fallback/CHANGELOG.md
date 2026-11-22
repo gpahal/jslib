@@ -1,5 +1,13 @@
 # @gpahal/font-fallback
 
+## 0.0.65
+
+### Patch Changes
+
+- [#33](https://github.com/gpahal/jslib/pull/33) [`6679625`](https://github.com/gpahal/jslib/commit/66796256c115dfe3fada6fdfb57a77a3102e2b31) Thanks [@gpahal](https://github.com/gpahal)! - Update `@capsizecss/metrics` to 4.5.0.
+- Updated dependencies [[`6679625`](https://github.com/gpahal/jslib/commit/66796256c115dfe3fada6fdfb57a77a3102e2b31)]:
+  - @gpahal/std@0.0.54
+
 ## 0.0.64
 
 ### Patch Changes
