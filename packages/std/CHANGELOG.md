@@ -1,5 +1,11 @@
 # @gpahal/std
 
+## 0.0.54
+
+### Patch Changes
+
+- [#33](https://github.com/gpahal/jslib/pull/33) [`6679625`](https://github.com/gpahal/jslib/commit/66796256c115dfe3fada6fdfb57a77a3102e2b31) Thanks [@gpahal](https://github.com/gpahal)! - Fix `getErrorMessage` on Node 26 leaving out an inner message, such as `野家`, that the outer message holds only inside a longer word that starts with a letter outside the Basic Multilingual Plane, such as `𠮷野家`.
+
 ## 0.0.53
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @gpahal/prettier-config
 
+## 0.0.51
+
+### Patch Changes
+
+- [#33](https://github.com/gpahal/jslib/pull/33) [`6679625`](https://github.com/gpahal/jslib/commit/66796256c115dfe3fada6fdfb57a77a3102e2b31) Thanks [@gpahal](https://github.com/gpahal)! - Require Prettier 3.10.1, `prettier-plugin-astro` 1.1.2 and `prettier-plugin-tailwindcss` 0.8.1, and update `prettier-plugin-packagejson` to 3.1.0. `.hujson` files, which Prettier 3.10 parses as `jsonc`, keep their trailing commas, which HuJSON allows.
+- Updated dependencies [[`6679625`](https://github.com/gpahal/jslib/commit/66796256c115dfe3fada6fdfb57a77a3102e2b31)]:
+  - @gpahal/std@0.0.54
+
 ## 0.0.50
 
 ### Patch Changes
