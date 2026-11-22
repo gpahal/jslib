@@ -42,7 +42,7 @@ catalog:
   '@csstools/css-tokenizer': ^4.0.3
   '@e18e/eslint-plugin': ^0.8.1
   '@eslint-community/eslint-plugin-eslint-comments': ^4.8.1
-  '@eslint-react/eslint-plugin': ^5.30.4
+  '@eslint-react/eslint-plugin': ^5.30.5
   '@eslint/config-inspector': ^3.5.0
   '@eslint/js': ^10.0.1
   '@eslint/json': ^2.1.1
@@ -63,7 +63,7 @@ catalog:
   '@typescript-eslint/utils': ^8.73.0
   '@vitejs/plugin-react': ^6.3.0
   '@vitest/eslint-plugin': ^1.6.28
-  astro: ^7.4.12
+  astro: ^7.4.13
   brace-expansion: ^5.0.13
   collapse-white-space: ^2.1.0
   cosmiconfig: ^10.0.1
@@ -96,7 +96,7 @@ catalog:
   globals: ^17.14.0
   hast-util-from-html: ^2.1.0
   import-meta-resolve: ^4.2.0
-  knip: ^6.46.0
+  knip: ^6.46.1
   mdast-util-from-markdown: ^2.1.0
   mdast-util-frontmatter: ^2.0.1
   mdast-util-gfm: ^3.1.0

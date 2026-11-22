@@ -127,7 +127,7 @@
     "unist-util-visit": "catalog:"
   },
   "peerDependencies": {
-    "@eslint-react/eslint-plugin": "^5.30.4",
+    "@eslint-react/eslint-plugin": "^5.30.5",
     "@html-eslint/eslint-plugin": ">=0.68.0 <1.0.0",
     "@html-eslint/parser": ">=0.68.0 <1.0.0",
     "@next/eslint-plugin-next": "^16.4.6",
